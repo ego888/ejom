@@ -1,0 +1,2 @@
+To list directory tree:
+find . -print | sed -e 's;[^/]*/;|___;g;s;___|; |;g' > output.txt

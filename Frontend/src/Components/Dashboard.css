@@ -1,0 +1,66 @@
+.sidebar {
+  width: 140px;
+  background: #fff9c4;
+}
+
+.sidebar-header {
+  background: linear-gradient(45deg, #ffa000, #ffc107);
+  padding: 1rem 0;
+  width: 100%;
+  text-align: center;
+}
+
+.sidebar-header span {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.sidebar-user {
+  color: white;
+  text-decoration: none;
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+}
+
+.sidebar-nav-link {
+  color: #59362a;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  width: 140px;
+}
+
+.sidebar-nav-link i {
+  font-size: 1.75rem;
+}
+
+.sidebar-nav-link span {
+  font-size: 1.5rem;
+  margin-left: 0.25rem;
+}
+
+.sidebar-nav-link:hover {
+  background: rgba(255, 160, 0, 0.1);
+  color: #f57f17;
+  text-decoration: none;
+}
+
+/* Active route styles */
+.sidebar-nav-link.active {
+  color: #e65100;  /* Dark Orange */
+  background: transparent;
+}
+
+.sidebar-nav-link.active:hover {
+  color: #e65100;
+}
+
+.sidebar-nav-link i,
+.sidebar-nav-link span {
+  pointer-events: none;  /* This prevents hover effects on child elements */
+}

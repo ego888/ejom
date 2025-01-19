@@ -1,0 +1,1799 @@
+import axios from 'axios'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { jwtDecode } from 'jwt-decode'
+import AddOrderDetails from './AddOrderDetails'
+import { FaUser, FaProjectDiagram, FaCalendarAlt, FaHashtag, FaPhone, FaClock, FaUserTie, FaPalette, FaClipboardList, FaTruck, FaCheck, FaClipboardCheck, FaEdit, FaTrash, FaTimes, FaRuler } from 'react-icons/fa'
+import { BiRectangle } from 'react-icons/bi'
+import './AddOrder.css'  // Import the CSS file
+import { 
+    validateDetail, 
+    calculateArea, 
+    calculatePrice, 
+    calculateAmount, 
+    formatNumber,
+    handleApiError,
+    calculateTotals,
+    validateOrderData,
+    calculatePerSqFt,
+    calculateOrderTotals,
+    calculatePrintHrs
+} from '../utils/orderUtils';
+
+function AddOrder() {
+    const navigate = useNavigate()
+    const { id } = useParams();  // Get the order ID from URL if it exists
+    const [orderCreated, setOrderCreated] = useState(false)
+    const [orderId, setOrderId] = useState(null)
+    const [currentUser, setCurrentUser] = useState({})
+    const [clients, setClients] = useState([])
+    const [salesEmployees, setSalesEmployees] = useState([])
+    const [artists, setArtists] = useState([])
+    const [error, setError] = useState({
+        clientId: false,
+        projectName: false,
+        preparedBy: false,
+        graphicsBy: false
+    })
+
+    const [data, setData] = useState({
+        clientId: '',
+        projectName: '',
+        preparedBy: '',
+        orderDate: new Date().toISOString().split('T')[0],
+        orderedBy: '',
+        orderReference: '',
+        cellNumber: '',
+        specialInst: '',
+        deliveryInst: '',
+        graphicsBy: '',
+        dueDate: '',
+        dueTime: '',
+        sample: false,
+        reprint: false
+    })
+
+    const [orderDetails, setOrderDetails] = useState([])
+    const [subtotal, setSubtotal] = useState(0)
+    const [totalDiscount, setTotalDiscount] = useState(0)
+    const [grandTotal, setGrandTotal] = useState(0)
+
+    const [isHeaderSaved, setIsHeaderSaved] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(true);
+    const [editingRowId, setEditingRowId] = useState(null);
+
+    const [units, setUnits] = useState([]);
+    const [materials, setMaterials] = useState([]);
+    const [showAllowanceModal, setShowAllowanceModal] = useState(false);
+    const [editedValues, setEditedValues] = useState({});
+    const [editErrors, setEditErrors] = useState({});
+    const [currentDetailId, setCurrentDetailId] = useState(null);
+    const [allowanceValues, setAllowanceValues] = useState({
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0
+    });
+
+    const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
+
+    const [totals, setTotals] = useState({
+        subtotal: 0,
+        totalDiscount: 0,
+        grandTotal: 0
+    });
+
+    const [orderTotals, setOrderTotals] = useState({
+        subtotal: 0,
+        discAmount: data.amountDisc || 0,
+        percentDisc: data.percentDisc || 0,
+        grandTotal: data.grandTotal || 0
+    });
+
+    const [editingDisplayOrder, setEditingDisplayOrder] = useState(null);
+    const [tempDisplayOrder, setTempDisplayOrder] = useState(null);
+
+    const [paymentTerms, setPaymentTerms] = useState([]);
+
+    const [showAllowanceTooltip, setShowAllowanceTooltip] = useState(false);
+    const [tooltipDetail, setTooltipDetail] = useState(null);
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+    const handleDiscountChange = (type, value) => {
+        const subtotal = orderDetails.reduce((sum, detail) => sum + parseFloat(detail.amount || 0), 0);
+        let newDiscAmount, newPercentDisc, newGrandTotal;
+
+        if (type === 'amount') {
+            newDiscAmount = parseFloat(value) || 0;
+            // Ensure discount amount doesn't exceed subtotal
+            newDiscAmount = Math.min(newDiscAmount, subtotal);
+            newPercentDisc = subtotal > 0 ? ((newDiscAmount / subtotal) * 100).toFixed(2) : 0;
+            newGrandTotal = subtotal - newDiscAmount;
+        } else {
+            newPercentDisc = parseFloat(value) || 0;
+            // Ensure percent discount doesn't exceed 100%
+            newPercentDisc = Math.min(newPercentDisc, 100);
+            newDiscAmount = (subtotal * newPercentDisc / 100).toFixed(2);
+            newGrandTotal = subtotal - newDiscAmount;
+        }
+
+        const newTotals = {
+            subtotal,
+            discAmount: parseFloat(newDiscAmount),
+            percentDisc: parseFloat(newPercentDisc),
+            grandTotal: parseFloat(newGrandTotal)
+        };
+
+        setOrderTotals(newTotals);
+
+        // Update the main data state for saving to database
+        setData(prev => ({
+            ...prev,
+            amountDisc: newDiscAmount,
+            percentDisc: newPercentDisc,
+            grandTotal: newGrandTotal
+        }));
+    };
+
+    const fetchOrderDetails = () => {
+        if (!orderId && !id) return;  // Check for both orderId and route id
+
+        const token = localStorage.getItem('token');
+        axios.get(`http://localhost:3000/auth/order_details/${orderId || id}`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+        .then(result => {
+            if (result.data.Status) {
+                setOrderDetails(result.data.Result);
+                calculateOrderTotals(result.data.Result);
+            }
+        })
+        .catch(err => console.log(err));
+    };
+
+    const calculateOrderTotals = (details) => {
+        const totals = calculateTotals(details);
+        setTotals(totals);
+    };
+
+    useEffect(() => {
+        const token = localStorage.getItem('token')
+        const config = {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+
+        // Update all axios calls to use config
+        axios.get('http://localhost:3000/auth/clients', config)
+        .then(result => {
+            if(result.data.Status) {
+                setClients(result.data.Result)
+            }
+        })
+        .catch(err => console.log(err))
+
+        axios.get('http://localhost:3000/auth/sales_employees', config)
+        .then(result => {
+            if(result.data.Status) {
+                setSalesEmployees(result.data.Result)
+            }
+        })
+        .catch(err => console.log(err))
+
+        axios.get('http://localhost:3000/auth/artists', config)
+        .then(result => {
+            if(result.data.Status) {
+                setArtists(result.data.Result)
+            }
+        })
+        .catch(err => console.log(err))
+
+        // Set current user
+        if(token) {
+            const decoded = jwtDecode(token)
+            setCurrentUser(decoded)
+            setData(prev => ({...prev, preparedBy: decoded.id}))
+        }
+    }, [])
+
+    useEffect(() => {
+        const subtotal = orderDetails.reduce((acc, detail) => acc + parseFloat(detail.unitPrice || 0) * parseFloat(detail.quantity || 0), 0)
+        const totalDiscount = orderDetails.reduce((acc, detail) => acc + (parseFloat(detail.unitPrice || 0) * parseFloat(detail.quantity || 0) * (parseFloat(detail.discount || 0) / 100)), 0)
+        const grandTotal = subtotal - totalDiscount
+
+        setSubtotal(subtotal.toFixed(2))
+        setTotalDiscount(totalDiscount.toFixed(2))
+        setGrandTotal(grandTotal.toFixed(2))
+    }, [orderDetails])
+
+    useEffect(() => {
+        if (id) {
+            const token = localStorage.getItem('token');
+            axios.get(`http://localhost:3000/auth/order/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            .then(result => {
+                if (result.data.Status) {
+                    const orderData = result.data.Result;
+                    // Ensure all fields have default values
+                    setData(prev => ({
+                        ...prev,
+                        ...orderData,
+                        orderDate: orderData.orderDate || new Date().toISOString().split('T')[0],
+                        dueDate: orderData.dueDate || '',
+                        dueTime: orderData.dueTime || '',
+                        orderedBy: orderData.orderedBy || '',
+                        orderReference: orderData.orderReference || '',
+                        cellNumber: orderData.cellNumber || '',
+                        specialInst: orderData.specialInst || '',
+                        deliveryInst: orderData.deliveryInst || '',
+                        terms: orderData.terms || '',
+                        amountPaid: orderData.amountPaid || '0'
+                    }));
+                    setIsHeaderSaved(true);
+                    setOrderId(id);
+                }
+            })
+            .catch(err => handleApiError(err, navigate));
+        }
+    }, [id, navigate]);
+
+    const fetchDropdownData = async () => {
+        if (dropdownsLoaded) return; // Skip if already loaded
+        
+        const token = localStorage.getItem('token');
+        try {
+            const [unitsRes, materialsRes] = await Promise.all([
+                axios.get('http://localhost:3000/auth/units', {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                axios.get('http://localhost:3000/auth/materials', {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            ]);
+            
+            if (unitsRes.data.Status) {
+                setUnits(unitsRes.data.Result);
+            }
+            if (materialsRes.data.Status) {
+                setMaterials(materialsRes.data.Result);
+            }
+            setDropdownsLoaded(true);
+        } catch (err) {
+            handleApiError(err, navigate);
+        }
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        
+        // Validate required fields
+        const newError = {};
+        if (!data.clientId) newError.clientId = true;
+        if (!data.projectName) newError.projectName = true;
+        if (!data.graphicsBy) newError.graphicsBy = true;
+        
+        if (Object.keys(newError).length > 0) {
+            setError(newError);
+            return;
+        }
+
+        // Calculate final totals before saving
+        const subtotal = orderDetails.reduce((sum, detail) => sum + parseFloat(detail.amount || 0), 0);
+        const discAmount = parseFloat(orderTotals.discAmount) || 0;
+        const percentDisc = parseFloat(orderTotals.percentDisc) || 0;
+        const grandTotal = subtotal - discAmount;
+
+        // Get current user's name
+        const token = localStorage.getItem('token');
+        const decoded = jwtDecode(token);
+        const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+        // Prepare data with updated totals and handle empty dates
+        const dataToSend = {
+            ...data,
+            status: data.status || 'Open',
+            orderDate: data.orderDate || null,
+            dueDate: data.dueDate || null,
+            orderedBy: data.orderedBy || null,
+            orderReference: data.orderReference || null,
+            cellNumber: data.cellNumber || null,
+            dueTime: data.dueTime || null,
+            specialInst: data.specialInst || null,
+            deliveryInst: data.deliveryInst || null,
+            subtotal: subtotal,
+            amountDisc: discAmount,
+            percentDisc: percentDisc,
+            grandTotal: grandTotal,
+            terms: data.terms,
+            // Add last edited info
+            lastEdited: currentDateTime,
+            editedBy: decoded.name
+        };
+
+        console.log('Data being sent:', dataToSend); // Debug log
+
+        if (orderId) {
+            // Update existing order
+            axios.put(`http://localhost:3000/auth/orders/${orderId}`, dataToSend, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(result => {
+                if (result.data.Status) {
+                    setIsHeaderSaved(true);
+                    setData(prev => ({
+                        ...prev,
+                        ...dataToSend
+                    }));
+                    if (isEditMode) {
+                        handleFinish();
+                    }
+                } else {
+                    alert(result.data.Error);
+                }
+            })
+            .catch(err => handleApiError(err, navigate));
+        } else {
+            // Create new order
+            axios.post('http://localhost:3000/auth/orders', dataToSend, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(result => {
+                if (result.data.Status) {
+                    setOrderId(result.data.Result);
+                    setIsHeaderSaved(true);
+                    setData(prev => ({
+                        ...prev,
+                        id: result.data.Result,
+                        ...dataToSend
+                    }));
+                } else {
+                    alert(result.data.Error);
+                }
+            })
+            .catch(err => handleApiError(err, navigate));
+        }
+    };
+
+    // Helper function for error handling
+    const handleError = (err) => {
+        if (err.response?.status === 401 || 
+            err.response?.data?.Error?.includes('jwt expired') ||
+            err.response?.data?.Error?.includes('invalid token')) {
+            alert('Your session has expired. Please log out and log in again.');
+            localStorage.removeItem('token');
+            navigate('/');
+        } else {
+            alert(err.response?.data?.Error || 'An error occurred');
+        }
+    };
+
+    const handleDetailAdded = () => {
+        fetchOrderDetails()
+    }
+
+    const handleDeleteDetail = (uniqueId) => {
+        if (!window.confirm('Are you sure you want to delete this item?')) return;
+
+        const token = localStorage.getItem('token');
+        const decoded = jwtDecode(token);
+        const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const [orderId, displayOrder] = uniqueId.split('_');
+
+        // First update the order's last edited info
+        const orderUpdateData = {
+            lastEdited: currentDateTime,
+            editedBy: decoded.name
+        };
+
+        // Update order first, then delete detail
+        axios.put(`http://localhost:3000/auth/orders/${orderId}`, orderUpdateData, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(() => {
+            // Now delete the detail using separate orderId and displayOrder
+            return axios.delete(`http://localhost:3000/auth/order_detail/${orderId}/${displayOrder}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        })
+        .then(result => {
+            if (result.data.Status) {
+                fetchOrderDetails();
+            } else {
+                alert(result.data.Error);
+            }
+        })
+        .catch(err => handleApiError(err, navigate));
+    };
+
+    const handleEditDetail = (detail) => {
+        console.log('Raw detail data:', JSON.stringify(detail, null, 2));
+        console.log('Object keys:', Object.keys(detail));
+        
+        // Don't create a new object, just pass the original detail object
+        setEditingDetail(detail);
+        setShowEditModal(true);
+    };
+
+    const handleEditClick = (uniqueId, detail) => {
+        console.log('Edit clicked for unique ID:', uniqueId);
+        console.log('Detail data:', detail);
+        console.log('Material value:', detail.material);
+        
+        if (!dropdownsLoaded) {
+            fetchDropdownData();
+        }
+        setEditingRowId(uniqueId);
+        
+        // Initialize edited values with current detail, preserving all fields
+        const editedDetail = {
+            ...detail,  // Spread all existing properties
+            quantity: detail.quantity || '',
+            width: detail.width || '',
+            height: detail.height || '',
+            unit: detail.unit || '',
+            material: detail.material || '',  // Preserve material
+            perSqFt: detail.perSqFt || '',
+            unitPrice: detail.unitPrice || '',
+            discount: detail.discount || '',
+            amount: detail.amount || '',
+            remarks: detail.remarks || '',
+            itemDescription: detail.itemDescription || ''
+        };
+        
+        console.log('Edited detail being set:', editedDetail);  // Debug log
+        
+        setEditedValues({
+            [uniqueId]: editedDetail
+        });
+    };
+
+    const handleFinish = () => {
+        navigate('/dashboard/orders');
+    };
+
+    const labelStyle = {
+        fontSize: '0.9rem',
+        marginBottom: '0.01rem',
+        marginTop: '0.3rem'
+    }
+
+    const inputStyle = {
+        fontSize: '0.9rem'
+    }
+
+    const dateTimeStyle = {
+        ...inputStyle,
+        color: 'black'  // This will override the browser's default color for date/time inputs
+    }
+
+    const formatNumber = (num) => {
+        return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+    };
+
+    // Handler for input changes with auto-calculation
+    const handleDetailInputChange = (uniqueId, field, value) => {
+        setEditedValues(prev => {
+            const updatedValues = {
+                ...prev,
+                [uniqueId]: {
+                    ...(prev[uniqueId] || {}),
+                    [field]: value
+                }
+            };
+
+            const currentDetail = updatedValues[uniqueId];
+            
+            // Recalculate area when dimensions or unit changes
+            if (['width', 'height', 'unit', 'quantity', 'material'].includes(field)) {
+                const { squareFeet, materialUsage } = calculateArea(
+                    currentDetail.width || 0,
+                    currentDetail.height || 0,
+                    currentDetail.unit,
+                    currentDetail.quantity || 0,
+                    {
+                        top: currentDetail.top || 0,
+                        bottom: currentDetail.bottom || 0,
+                        left: currentDetail.allowanceLeft || 0,
+                        right: currentDetail.allowanceRight || 0
+                    }
+                );
+                
+                // Calculate print hours using the utility function
+                const printHrs = calculatePrintHrs(
+                    squareFeet,
+                    currentDetail.quantity || 0,
+                    currentDetail.material,
+                    materials
+                );
+                console.log('Calculated Print hours:', printHrs);
+                
+                // Calculate price based on new area
+                const perSqFt = parseFloat(currentDetail.perSqFt) || 0;
+                const price = calculatePrice(squareFeet, perSqFt);
+                const amount = calculateAmount(price, currentDetail.discount || 0, currentDetail.quantity || 0);
+                
+                updatedValues[uniqueId] = {
+                    ...currentDetail,
+                    [field]: value,
+                    squareFeet: squareFeet,
+                    materialUsage: materialUsage,
+                    unitPrice: price,
+                    amount: amount,
+                    printHrs: printHrs
+                };
+            }
+            // Recalculate perSqFt when unitPrice changes
+            else if (field === 'unitPrice') {
+                const perSqFt = calculatePerSqFt(value, currentDetail.squareFeet || 0);
+                const amount = calculateAmount(value, currentDetail.discount || 0, currentDetail.quantity || 0);
+                
+                updatedValues[uniqueId] = {
+                    ...currentDetail,
+                    [field]: value,
+                    perSqFt: perSqFt,
+                    amount: amount
+                };
+            }
+            // Recalculate price and amount when perSqFt or discount changes
+            else if (['perSqFt', 'discount'].includes(field)) {
+                const price = calculatePrice(currentDetail.squareFeet || 0, currentDetail.perSqFt || 0);
+                const amount = calculateAmount(price, currentDetail.discount || 0, currentDetail.quantity || 0);
+                
+                updatedValues[uniqueId] = {
+                    ...currentDetail,
+                    [field]: value,
+                    unitPrice: price,
+                    amount: amount
+                };
+            }
+            else {
+                // For other fields, just update the value
+                updatedValues[uniqueId] = {
+                    ...currentDetail,
+                    [field]: value
+                };
+            }
+            
+            return updatedValues;
+        });
+        
+        // Clear error for this field if it exists
+        if (editErrors[uniqueId]?.[field]) {
+            setEditErrors(prev => ({
+                ...prev,
+                [uniqueId]: {
+                    ...(prev[uniqueId] || {}),
+                    [field]: null
+                }
+            }));
+        }
+    };
+
+    const handleSaveDetail = (uniqueId) => {
+        const updatedDetail = editedValues[uniqueId];
+        const errors = validateDetail(updatedDetail);
+
+        if (Object.keys(errors).length > 0) {
+            setEditErrors({ ...editErrors, [uniqueId]: errors });
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        const decoded = jwtDecode(token);
+        const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+        console.log('Values being saved:', updatedDetail); // Debug log
+
+        const sanitizedDetail = {
+            ...updatedDetail,
+            quantity: updatedDetail.quantity || 0,
+            width: updatedDetail.width || 0,
+            height: updatedDetail.height || 0,
+            perSqFt: updatedDetail.perSqFt || 0,
+            unitPrice: updatedDetail.unitPrice || 0,
+            discount: updatedDetail.discount || 0,
+            amount: updatedDetail.amount || 0,
+            squareFeet: updatedDetail.squareFeet || 0,  // Make sure this matches DB field name
+            materialUsage: updatedDetail.materialUsage || 0,  // Make sure this matches DB field name
+            unit: updatedDetail.unit || '',
+            material: updatedDetail.material || '',
+            itemDescription: updatedDetail.itemDescription || '',
+            remarks: updatedDetail.remarks || '',
+            printHrs: updatedDetail.printHrs || 0
+        };
+
+        console.log('Sanitized detail being sent:', sanitizedDetail); // Debug log
+
+        // First update the order's last edited info
+        const orderUpdateData = {
+            lastEdited: currentDateTime,
+            editedBy: decoded.name
+        };
+
+        // Update order first, then save detail
+        const [orderId, displayOrder] = uniqueId.split('_');
+        axios.put(`http://localhost:3000/auth/orders/${orderId}`, orderUpdateData, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(() => {
+            return axios.put(`http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`, sanitizedDetail, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        })
+        .then(result => {
+            if (result.data.Status) {
+                setEditingRowId(null);
+                setEditedValues({});
+                setEditErrors({});
+                fetchOrderDetails();
+            } else {
+                alert(result.data.Error);
+            }
+        })
+        .catch(err => handleApiError(err, navigate));
+    };
+
+    useEffect(() => {
+        const fetchDropdownData = async () => {
+            if (dropdownsLoaded) return; // Skip if already loaded
+            
+            const token = localStorage.getItem('token');
+            try {
+                const [unitsRes, materialsRes] = await Promise.all([
+                    axios.get('http://localhost:3000/auth/units', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                    axios.get('http://localhost:3000/auth/materials', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    })
+                ]);
+                
+                if (unitsRes.data.Status) {
+                    setUnits(unitsRes.data.Result);
+                }
+                if (materialsRes.data.Status) {
+                    setMaterials(materialsRes.data.Result);
+                }
+                setDropdownsLoaded(true);
+            } catch (err) {
+                handleApiError(err, navigate);
+            }
+        };
+        
+        if (isEditMode && !dropdownsLoaded) {
+            fetchDropdownData();
+        }
+    }, [isEditMode, dropdownsLoaded]);
+
+    // Add console log to see the order details data
+    useEffect(() => {
+        const fetchOrderDetails = async () => {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await axios.get(`http://localhost:3000/auth/order_details/${orderId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                console.log('Fetched order details:', response.data);
+                if (response.data.Status) {
+                    setOrderDetails(response.data.Result);
+                    // Initialize orderTotals with saved values from the order
+                    setOrderTotals(prev => ({
+                        ...prev,
+                        discAmount: data.amountDisc || 0,
+                        percentDisc: data.percentDisc || 0
+                    }));
+                }
+            } catch (err) {
+                handleApiError(err, navigate);
+            }
+        };
+
+        if (orderId) {
+            fetchOrderDetails();
+        }
+    }, [orderId]);
+
+    // Add this useEffect to handle automatic recalculations
+    useEffect(() => {
+        const subtotal = orderDetails.reduce((sum, detail) => sum + parseFloat(detail.amount || 0), 0);
+        const discAmount = parseFloat(orderTotals.discAmount) || 0;
+        
+        // Recalculate percent discount based on current discount amount and new subtotal
+        const percentDisc = subtotal > 0 ? ((discAmount / subtotal) * 100).toFixed(2) : 0;
+        
+        // Calculate new grand total
+        const grandTotal = subtotal - discAmount;
+
+        // Update all totals
+        setOrderTotals(prev => ({
+            ...prev,
+            subtotal,
+            percentDisc: parseFloat(percentDisc),
+            grandTotal
+        }));
+
+        // Update main data state for database
+        setData(prev => ({
+            ...prev,
+            amountDisc: discAmount,
+            percentDisc: parseFloat(percentDisc),
+            grandTotal: grandTotal
+        }));
+    }, [orderDetails]); // Dependency on orderDetails
+
+    // Add this function to handle the update
+    const handleDisplayOrderUpdate = async (detail, newOrder) => {
+        console.log('Detail object:', detail);
+        
+        // Validate that we have all required data
+        if (!detail || !detail.Id) {
+            console.error('Missing detail Id:', detail);
+            alert('Error: Could not identify the order detail');
+            return;
+        }
+
+        // Validate that newOrder is a positive integer
+        const orderNum = parseInt(newOrder);
+        if (!Number.isInteger(orderNum) || orderNum <= 0) {
+            alert('Please enter a valid positive integer');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            console.log('Sending update request:', {
+                orderId,
+                detailId: detail.Id,
+                newOrder: orderNum
+            });
+
+            await axios.put(
+                `http://localhost:3000/auth/order_detail_display_order/${orderId}/${detail.Id}`,
+                { displayOrder: orderNum },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            // Refresh the order details
+            fetchOrderDetails();
+            setEditingDisplayOrder(null);
+            setTempDisplayOrder(null);
+        } catch (err) {
+            console.error('Error updating display order:', err);
+            alert('Failed to update display order');
+        }
+    };
+
+    const handleClientChange = (clientId) => {
+        // Convert clientId to number since select values are strings
+        const id = parseInt(clientId);
+        setData(prev => ({...prev, clientId: id}));
+        
+        const token = localStorage.getItem('token');
+        
+        // Fetch complete client data
+        axios.get(`http://localhost:3000/auth/client/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(result => {
+            if (result.data.Status) {
+                const clientData = result.data.Result;
+                console.log('Complete client data:', clientData);
+                setData(prev => ({
+                    ...prev,
+                    clientId: id,
+                    terms: clientData.terms
+                }));
+            }
+        })
+        .catch(err => handleApiError(err, navigate));
+    };
+
+    useEffect(() => {
+        // Fetch payment terms
+        axios.get('http://localhost:3000/auth/payment_terms')
+            .then(result => {
+                if (result.data.Status) {
+                    setPaymentTerms(result.data.Result);
+                }
+            })
+            .catch(err => handleApiError(err, navigate));
+    }, []);
+
+    // Add this function to handle hover
+    const handleAllowanceHover = (detail, event) => {
+        const rect = event.target.getBoundingClientRect();
+        setTooltipPosition({
+            x: rect.left,
+            y: rect.top + window.scrollY - 82
+        });
+        setTooltipDetail(detail);
+        setShowAllowanceTooltip(true);
+    };
+
+    const handleAllowanceLeave = () => {
+        setShowAllowanceTooltip(false);
+    };
+
+    const handleTextareaResize = (e) => {
+        const textarea = e.target;
+        // Reset height to min-height to get accurate scrollHeight
+        textarea.style.height = '31px';
+        // Set height to scrollHeight if content requires more space
+        const scrollHeight = textarea.scrollHeight;
+        if (scrollHeight > 31) {
+            textarea.style.height = scrollHeight + 'px';
+        }
+    };
+
+    return (
+        <div className='px-5 mt-3'>
+            {/* Main Container */}
+            <div className='p-3 rounded border'>
+                {/* Order Header */}
+                <div className='mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between'>
+                    <div className='d-flex align-items-center gap-3'>
+                        <div className='d-flex align-items-center gap-2'>
+                            <FaClipboardList className="text-primary" />
+                            <span>Order No.: </span>
+                            <span className="text-primary">{orderId || 'New Order'}</span>
+                        </div>
+                        {orderId && (
+                            <div className='d-flex align-items-center gap-2'>
+                                <span>Status: </span>
+                                <span className={`badge ${
+                                    data.status === 'Open' ? 'bg-success' :
+                                    data.status === 'In Progress' ? 'bg-warning' :
+                                    data.status === 'Completed' ? 'bg-primary' :
+                                    'bg-secondary'
+                                }`}>
+                                    {data.status}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <div className='d-flex gap-2'>
+                        {orderId && (
+                            <button 
+                                className='btn btn-warning btn-sm'
+                                onClick={() => navigate(`/dashboard/print_order/${orderId}`)}
+                            >
+                                Print Order
+                            </button>
+                        )}
+                        <button 
+                            type='submit' 
+                            className='btn btn-success btn-sm'
+                            onClick={handleSubmit}
+                        >
+                            {isHeaderSaved ? 'Finish Edit' : 'Save Order'}
+                        </button>
+                        <button 
+                            type='button' 
+                            className='btn btn-warning btn-sm'
+                            onClick={() => navigate('/dashboard/orders')}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
+                {/* Form Content */}
+                <div className='d-flex'>
+                    <form className='row g-1 flex-grow-1' onSubmit={handleSubmit} style={{ marginTop: '-0.8rem' }}>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="orderDate" className='form-label' style={labelStyle}>Order Date</label>
+                                <input
+                                    type="date"
+                                    className='form-control rounded-0'
+                                    id="orderDate"
+                                    style={dateTimeStyle}
+                                    value={data.orderDate}
+                                    onChange={e => setData({...data, orderDate: e.target.value})}
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="preparedBy" className='form-label' style={labelStyle}>Prepared By</label>
+                                <select 
+                                    className='form-select rounded-0'
+                                    id="preparedBy"
+                                    style={inputStyle}
+                                    value={data.preparedBy}
+                                    onChange={e => setData({...data, preparedBy: e.target.value})}
+                                    disabled={!isEditMode}
+                                >
+                                    <option value=""></option>
+                                    {salesEmployees.map(employee => (
+                                        <option key={employee.id} value={employee.id}>
+                                            {employee.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="terms" className='form-label' style={labelStyle}>Terms</label>
+                                <input 
+                                    type="text"
+                                    className='form-control rounded-0'
+                                    id="terms"
+                                    style={inputStyle}
+                                    value={data.terms || ''}
+                                    readOnly
+                                />
+                            </div>
+                        </div>
+                        <div className='col-6'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="clientId" className='form-label' style={labelStyle}>
+                                    Client <span className="text-danger">*</span>
+                                </label>
+                                <select 
+                                    className={`form-select rounded-0 ${error.clientId ? 'is-invalid' : ''}`}
+                                    id="clientId"
+                                    style={inputStyle}
+                                    value={data.clientId || ''}
+                                    onChange={e => handleClientChange(e.target.value)}
+                                    disabled={!isEditMode}
+                                    autoFocus={!id}
+                                >
+                                    <option value=""></option>
+                                    {clients.map(client => (
+                                        <option key={client.id} value={client.id}>
+                                            {client.clientName}
+                                        </option>
+                                    ))}
+                                </select>
+                                {error.clientId && <div className="invalid-feedback">Client is required</div>}
+                            </div>
+                        </div>
+                        <div className='col-6'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="projectName" className='form-label' style={labelStyle}>
+                                    Project Name <span className="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className={`form-control rounded-0 ${error.projectName ? 'is-invalid' : ''}`}
+                                    id="projectName"
+                                    style={inputStyle}
+                                    value={data.projectName}
+                                    onChange={e => setData({...data, projectName: e.target.value})}
+                                    disabled={!isEditMode}
+                                />
+                                {error.projectName && <div className="invalid-feedback">Project Name is required</div>}
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="orderedBy" className='form-label' style={labelStyle}>Ordered By</label>
+                                <input
+                                    type="text"
+                                    className='form-control rounded-0'
+                                    id="orderedBy"
+                                    style={inputStyle}
+                                    value={data.orderedBy}
+                                    onChange={e => setData({...data, orderedBy: e.target.value})}
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="orderReference" className='form-label' style={labelStyle}>Order Reference</label>
+                                <input
+                                    type="text"
+                                    className='form-control rounded-0'
+                                    id="orderReference"
+                                    style={inputStyle}
+                                    value={data.orderReference}
+                                    onChange={e => setData({...data, orderReference: e.target.value})}
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="cellNumber" className='form-label' style={labelStyle}>Cell Number</label>
+                                <input
+                                    type="text"
+                                    className='form-control rounded-0'
+                                    id="cellNumber"
+                                    style={inputStyle}
+                                    value={data.cellNumber}
+                                    onChange={e => setData({...data, cellNumber: e.target.value})}
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="dueDate" className='form-label' style={labelStyle}>
+                                    Due Date
+                                </label>
+                                <input
+                                    type="date"
+                                    className='form-control rounded-0'
+                                    id="dueDate"
+                                    style={dateTimeStyle}
+                                    value={data.dueDate}
+                                    onChange={e => setData({...data, dueDate: e.target.value})}
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="dueTime" className='form-label' style={labelStyle}>
+                                    Due Time
+                                </label>
+                                <input
+                                    type="text"
+                                    className='form-control rounded-0'
+                                    id="dueTime"
+                                    style={inputStyle}
+                                    value={data.dueTime}
+                                    onChange={e => setData({...data, dueTime: e.target.value})}
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-4'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="graphicsBy" className='form-label' style={labelStyle}>
+                                    Graphics By <span className="text-danger">*</span>
+                                </label>
+                                <select 
+                                    className={`form-select rounded-0 ${error.graphicsBy ? 'is-invalid' : ''}`}
+                                    id="graphicsBy"
+                                    style={inputStyle}
+                                    value={data.graphicsBy}
+                                    onChange={e => setData({...data, graphicsBy: e.target.value})}
+                                    disabled={!isEditMode}
+                                >
+                                    <option value=""></option>
+                                    {artists.map(artist => (
+                                        <option key={artist.id} value={artist.id}>
+                                            {artist.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {error.graphicsBy && <div className="invalid-feedback">Graphics By is required</div>}
+                            </div>
+                        </div>
+                        <div className='col-6'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="specialInst" className='form-label' style={labelStyle}>Special Instructions</label>
+                                <textarea
+                                    className='form-control rounded-0'
+                                    id="specialInst"
+                                    style={inputStyle}
+                                    value={data.specialInst}
+                                    onChange={e => setData({...data, specialInst: e.target.value})}
+                                    rows="3"
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-6'>
+                            <div className='d-flex flex-column'>
+                                <label htmlFor="deliveryInst" className='form-label' style={labelStyle}>Delivery Instructions</label>
+                                <textarea
+                                    className='form-control rounded-0'
+                                    id="deliveryInst"
+                                    style={inputStyle}
+                                    value={data.deliveryInst}
+                                    onChange={e => setData({...data, deliveryInst: e.target.value})}
+                                    rows="3"
+                                    disabled={!isEditMode}
+                                />
+                            </div>
+                        </div>
+                        <div className='col-12 mt-2 d-flex'>
+                            <div className="form-check form-check-inline d-flex align-items-center">
+                                <input
+                                    type="checkbox"
+                                    className="form-check-input me-2"
+                                    id="sample"
+                                    checked={data.sample}
+                                    onChange={e => setData({...data, sample: e.target.checked})}
+                                    disabled={!isEditMode}
+                                />
+                                <label className="form-label mb-0" style={labelStyle} htmlFor="sample">Sample</label>
+                            </div>
+                            <div className="form-check form-check-inline d-flex align-items-center">
+                                <input
+                                    type="checkbox"
+                                    className="form-check-input me-2"
+                                    id="reprint"
+                                    checked={data.reprint}
+                                    onChange={e => setData({...data, reprint: e.target.checked})}
+                                    disabled={!isEditMode}
+                                />
+                                <label className="form-label mb-0" style={labelStyle} htmlFor="reprint">Reprint</label>
+                            </div>
+                        </div>
+                    </form>
+
+                    {/* New Info Panel */}
+                    <div className='ms-3' style={{ width: '250px', marginTop: '-0.8rem' }}>
+                        <div className='border rounded p-3'>
+                            <div className='mb-2'>
+                                <small className='text-muted'>Edited By</small>
+                                <div>{data.editedBy || '-'}</div>
+                            </div>
+
+                            <div className='mb-2'>
+                                <small className='text-muted'>Production Date</small>
+                                <div>{data.productionDate ? new Date(data.productionDate).toLocaleString('en-CA', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                }).replace(',', '') : '-'}</div>
+                            </div>
+
+                            <div className='mb-2'>
+                                <small className='text-muted'>Ready Date</small>
+                                <div>{data.readyDate ? new Date(data.readyDate).toLocaleString('en-CA', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                }).replace(',', '') : '-'}</div>
+                            </div>
+
+                            <div className='mb-2'>
+                                <small className='text-muted'>Delivery Date</small>
+                                <div>{data.deliveryDate ? new Date(data.deliveryDate).toLocaleString('en-CA', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                }).replace(',', '') : '-'}</div>
+                            </div>
+
+                            <div className='mb-2'>
+                                <small className='text-muted'>Bill Date</small>
+                                <div>{data.billDate ? new Date(data.billDate).toLocaleString('en-CA', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                }).replace(',', '') : '-'}</div>
+                            </div>
+
+                            <div className='mb-2'>
+                                <small className='text-muted'>Last Edited</small>
+                                <div>{data.lastEdited ? new Date(data.lastEdited).toLocaleString('en-CA', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                }).replace(',', '') : '-'}</div>
+                            </div>
+
+                            <div className='mb-2'>
+                                <small className='text-muted'>Total Hours</small>
+                                <div>{data.totalHrs || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Order Details List */}
+                {isHeaderSaved && (
+                    <div className='mt-4'>
+                        <h5>Order Details List</h5>
+                        <table className='order-table table table-striped'>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Qty</th>
+                                    <th>Width</th>
+                                    <th>Height</th>
+                                    <th>Unit</th>
+                                    <th>Material</th>
+                                    <th>Per Sq Ft</th>
+                                    <th>Price</th>
+                                    <th>Disc%</th>
+                                    <th>Amount</th>
+                                    <th>Description</th>
+                                    <th>JO Remarks</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orderDetails.map((detail, index) => {
+                                    const uniqueId = `${detail.orderId}_${detail.displayOrder}`;
+                                    return (
+                                        <tr key={uniqueId}>
+                                            {editingRowId === uniqueId ? (
+                                                <>
+                                                    <td style={{ width: '40px' }}>
+                                                        {/* <input 
+                                                            type="text" 
+                                                            className={`form-control form-control-sm ${editErrors[uniqueId]?.displayOrder ? 'is-invalid' : ''}`}
+                                                            value={editedValues[uniqueId]?.displayOrder || detail.displayOrder}
+                                                            onChange={(e) => handleDetailInputChange(uniqueId, 'displayOrder', e.target.value)}
+                                                        /> */}
+                                                         {detail.displayOrder}
+                                                    </td>
+                                                    <td style={{ width: '60px' }}>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control form-control-sm quantity-input"
+                                                            value={editedValues[uniqueId]?.quantity ? Number(editedValues[uniqueId].quantity).toLocaleString() : detail.quantity.toLocaleString()}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value.replace(/,/g, '');
+                                                                if (!isNaN(value)) {
+                                                                    handleDetailInputChange(uniqueId, 'quantity', value);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input 
+                                                            type="number" 
+                                                            className="form-control form-control-sm dimension-input"
+                                                            value={editedValues[uniqueId]?.width || detail.width}
+                                                            onChange={(e) => handleDetailInputChange(uniqueId, 'width', e.target.value)}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input 
+                                                            type="number" 
+                                                            className="form-control form-control-sm dimension-input"
+                                                            value={editedValues[uniqueId]?.height || detail.height}
+                                                            onChange={(e) => handleDetailInputChange(uniqueId, 'height', e.target.value)}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <select 
+                                                            className="form-control form-control-sm unit-select"
+                                                            value={editedValues[uniqueId]?.unit || detail.unit || ''}
+                                                            onChange={(e) => handleDetailInputChange(uniqueId, 'unit', e.target.value)}
+                                                        >
+                                                            <option value="">Unit</option>
+                                                            {units.map((unit, index) => (
+                                                                <option key={index} value={unit.unit}>
+                                                                    {unit.unit}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <select 
+                                                            className="form-control form-control-sm material-select"
+                                                            value={editedValues[uniqueId]?.material || detail.material || ''}
+                                                            onChange={(e) => handleDetailInputChange(uniqueId, 'material', e.target.value)}
+                                                        >
+                                                            <option value="">Material</option>
+                                                            {materials.map((material, index) => (
+                                                                <option key={index} value={material.Material}>
+                                                                    {material.Material}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control form-control-sm persqft-input"
+                                                            value={editedValues[uniqueId]?.perSqFt ? 
+                                                                editingRowId === uniqueId ? 
+                                                                    editedValues[uniqueId].perSqFt : 
+                                                                    Number(editedValues[uniqueId].perSqFt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 
+                                                                Number(detail.perSqFt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value.replace(/[^\d.-]/g, '');
+                                                                if (!isNaN(value)) {
+                                                                    handleDetailInputChange(uniqueId, 'perSqFt', value);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control form-control-sm price-input"
+                                                            value={editedValues[uniqueId]?.unitPrice ? 
+                                                                editingRowId === uniqueId ? 
+                                                                    editedValues[uniqueId].unitPrice : 
+                                                                    Number(editedValues[uniqueId].unitPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 
+                                                                Number(detail.unitPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value.replace(/[^\d.-]/g, '');
+                                                                if (!isNaN(value)) {
+                                                                    handleDetailInputChange(uniqueId, 'unitPrice', value);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control form-control-sm discount-input"
+                                                            value={editedValues[uniqueId]?.discount ? 
+                                                                editingRowId === uniqueId ? 
+                                                                    editedValues[uniqueId].discount : 
+                                                                    Number(editedValues[uniqueId].discount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 
+                                                                Number(detail.discount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value.replace(/[^\d.-]/g, '');
+                                                                if (!isNaN(value)) {
+                                                                    handleDetailInputChange(uniqueId, 'discount', value);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td className="numeric-cell">
+                                                        {formatNumber(editedValues[uniqueId]?.amount || detail.amount)}
+                                                    </td>
+                                                    <td>
+                                                        <textarea 
+                                                            className="form-control form-control-sm description-input"
+                                                            value={editedValues[uniqueId]?.itemDescription || detail.itemDescription}
+                                                            onChange={(e) => {
+                                                                handleDetailInputChange(uniqueId, 'itemDescription', e.target.value);
+                                                                e.target.style.height = '31px';
+                                                                e.target.style.height = e.target.scrollHeight + 'px';
+                                                            }}
+                                                            rows="1"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <textarea 
+                                                            className="form-control form-control-sm remarks-input"
+                                                            value={editedValues[uniqueId]?.remarks || detail.remarks}
+                                                            onChange={(e) => {
+                                                                handleDetailInputChange(uniqueId, 'remarks', e.target.value);
+                                                                e.target.style.height = '31px';
+                                                                e.target.style.height = e.target.scrollHeight + 'px';
+                                                            }}
+                                                            rows="1"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <div className="d-flex gap-1">
+                                                            <button 
+                                                                className="btn btn-outline-info btn-icon me-1"
+                                                                onClick={() => {
+                                                                    setShowAllowanceTooltip(false);
+                                                                    setCurrentDetailId(uniqueId);
+                                                                    setAllowanceValues({
+                                                                        top: detail.top || 0,
+                                                                        bottom: detail.bottom || 0,
+                                                                        left: detail.allowanceLeft || 0,
+                                                                        right: detail.allowanceRight || 0
+                                                                    });
+                                                                    setShowAllowanceModal(true);
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    setTooltipPosition({
+                                                                        x: rect.left,
+                                                                        y: rect.top + window.scrollY - 82
+                                                                    });
+                                                                    setTooltipDetail(detail);
+                                                                    setShowAllowanceTooltip(true);
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    // Check if we're not hovering over the tooltip
+                                                                    const tooltipElement = document.querySelector('.allowance-tooltip');
+                                                                    if (tooltipElement) {
+                                                                        const tooltipRect = tooltipElement.getBoundingClientRect();
+                                                                        const mouseX = e.clientX;
+                                                                        const mouseY = e.clientY;
+                                                                        
+                                                                        // Only hide if mouse is not over tooltip
+                                                                        if (mouseX < tooltipRect.left || mouseX > tooltipRect.right ||
+                                                                            mouseY < tooltipRect.top || mouseY > tooltipRect.bottom) {
+                                                                            setShowAllowanceTooltip(false);
+                                                                        }
+                                                                    } else {
+                                                                        setShowAllowanceTooltip(false);
+                                                                    }
+                                                                }}
+                                                                title="Allowance"
+                                                            >
+                                                                <BiRectangle size={14} />
+                                                            </button>
+                                                            <button 
+                                                                className="btn btn-outline-success btn-icon me-1"
+                                                                onClick={() => handleSaveDetail(uniqueId)}
+                                                                title="Save"
+                                                            >
+                                                                <FaCheck size={14} />
+                                                            </button>
+                                                            <button 
+                                                                className="btn btn-outline-secondary btn-icon"
+                                                                onClick={() => {
+                                                                    setEditingRowId(null);
+                                                                    setEditedValues({});
+                                                                    setEditErrors({});
+                                                                }}
+                                                                title="Cancel"
+                                                            >
+                                                                <FaTimes size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td>
+                                                        {editingDisplayOrder === `${detail.orderId}_${detail.displayOrder}` ? (
+                                                            <input
+                                                                type="number"
+                                                                className="form-control form-control-sm display-order-input"
+                                                                value={tempDisplayOrder || ''}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                                                    setTempDisplayOrder(value);
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter' || e.key === 'Tab') {
+                                                                        e.preventDefault();
+                                                                        handleDisplayOrderUpdate(detail, tempDisplayOrder);
+                                                                    }
+                                                                }}
+                                                                onBlur={() => {
+                                                                    handleDisplayOrderUpdate(detail, tempDisplayOrder);
+                                                                }}
+                                                                autoFocus
+                                                                min="1"
+                                                                step="1"
+                                                            />
+                                                        ) : (
+                                                            <span 
+                                                                className="display-order-text"
+                                                                onDoubleClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingDisplayOrder(`${detail.orderId}_${detail.displayOrder}`);
+                                                                    setTempDisplayOrder(detail.displayOrder);
+                                                                }}
+                                                            >
+                                                                {detail.displayOrder}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="centered-cell">{Number(detail.quantity).toLocaleString()}</td>
+                                                    <td className="centered-cell">{detail.width}</td>
+                                                    <td className="centered-cell">{detail.height}</td>
+                                                    <td className="centered-cell">{detail.unit}</td>
+                                                    <td className="centered-cell">{detail.material}</td>
+                                                    <td className="centered-cell">{detail.perSqFt}</td>
+                                                    <td className="numeric-cell">{formatNumber(detail.unitPrice)}</td>
+                                                    <td className="numeric-cell">{formatNumber(detail.discount)}</td>
+                                                    <td className="numeric-cell">{formatNumber(detail.amount)}</td>
+                                                    <td>{detail.itemDescription}</td>
+                                                    <td>{detail.remarks}</td>
+                                                    <td>
+                                                        <div className="d-flex gap-1">
+                                                            <button 
+                                                                className="btn btn-outline-info btn-icon me-1"
+                                                                onClick={() => {
+                                                                    setShowAllowanceTooltip(false);
+                                                                    setCurrentDetailId(uniqueId);
+                                                                    setAllowanceValues({
+                                                                        top: detail.top || 0,
+                                                                        bottom: detail.bottom || 0,
+                                                                        left: detail.allowanceLeft || 0,
+                                                                        right: detail.allowanceRight || 0
+                                                                    });
+                                                                    setShowAllowanceModal(true);
+                                                                }}
+                                                                onMouseEnter={(e) => handleAllowanceHover(detail, e)}
+                                                                onMouseLeave={handleAllowanceLeave}
+                                                                title="Allowance"
+                                                            >
+                                                                <BiRectangle size={14} />
+                                                            </button>
+                                                            <button 
+                                                                className="btn btn-outline-info btn-icon me-1"
+                                                                onClick={() => handleEditClick(uniqueId, detail)}
+                                                                title="Edit"
+                                                            >
+                                                                <FaEdit size={14} />
+                                                            </button>
+                                                            <button 
+                                                                className="btn btn-outline-danger btn-icon"
+                                                                onClick={() => handleDeleteDetail(uniqueId)}
+                                                                title="Delete"
+                                                            >
+                                                                <FaTrash size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                        </tr>
+                                    );
+                                })}
+                                {/* Total Rows */}
+                                <tr className="total-row">
+                                    <td colSpan="9" className="text-end">Subtotal</td>
+                                    <td className="numeric-cell">
+                                        {formatNumber(orderTotals.subtotal)}
+                                    </td>
+                                    <td colSpan="3">
+                                        <div className="ms-3 d-flex align-items-center">
+                                            <div style={{ width: '100px', textAlign: 'right' }}>
+                                                <small style={{ fontSize: '1rem' }}>Date Paid:</small>
+                                            </div>
+                                            <div>{data.datePaid}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr className="total-row">
+                                    <td colSpan="9" className="text-end">Disc. Amount</td>
+                                    <td className="numeric-cell">
+                                        <input
+                                            type="number"
+                                            className="form-control form-control-sm text-end"
+                                            value={orderTotals.discAmount}
+                                            onChange={(e) => handleDiscountChange('amount', e.target.value)}
+                                            style={{ width: '100px', display: 'inline-block' }}
+                                        />
+                                    </td>
+                                    <td colSpan="3">
+                                        <div className="ms-3 d-flex align-items-center">
+                                            <div style={{ width: '100px', textAlign: 'right' }}>
+                                                <small style={{ fontSize: '1rem' }}>OR Number:</small>
+                                            </div>
+                                            <div>{data.orNum}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr className="total-row">
+                                    <td colSpan="9" className="text-end">Percent Disc.</td>
+                                    <td className="numeric-cell">
+                                        <input
+                                            type="number"
+                                            className="form-control form-control-sm text-end"
+                                            value={orderTotals.percentDisc}
+                                            onChange={(e) => handleDiscountChange('percent', e.target.value)}
+                                            style={{ width: '100px', display: 'inline-block' }}
+                                        />
+                                    </td>
+                                    <td colSpan="3">
+                                        <div className="ms-3 d-flex align-items-center">
+                                            <div style={{ width: '100px', textAlign: 'right' }}>
+                                                <small style={{ fontSize: '1rem' }}>Amount Paid:</small>
+                                            </div>
+                                            <div style={{ width: '80px', textAlign: 'right' }}>
+                                                {formatNumber(data.amountPaid || 0)}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr className="total-row">
+                                    <td colSpan="9" className="text-end">Grand Total</td>
+                                    <td className="numeric-cell">{formatNumber(orderTotals.grandTotal)}</td>
+                                    <td colSpan="3">
+                                        <div className="ms-3 d-flex align-items-center">
+                                            <div style={{ width: '100px', textAlign: 'right' }}>
+                                                <small style={{ fontSize: '1rem' }}>Balance:</small>
+                                            </div>
+                                            <div style={{ width: '80px', textAlign: 'right' }}>
+                                                {formatNumber(orderTotals.grandTotal - (data.amountPaid || 0))}
+                                            </div>
+                                            <div className="ms-2">
+                                                <small style={{ fontSize: '1rem' }}>
+                                                    ({((orderTotals.grandTotal - (data.amountPaid || 0)) / orderTotals.grandTotal * 100).toFixed(2)}%)
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            {/* Add Order Details - Outside the box */}
+            {isHeaderSaved && (
+                <div className='mt-4'>
+                    <h5>Add Order Details</h5>
+                    <AddOrderDetails 
+                        orderId={orderId} 
+                        onDetailAdded={handleDetailAdded} 
+                    />
+                </div>
+            )}
+
+            {/* Add the Allowance Modal */}
+            {showAllowanceModal && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Edit Allowance</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowAllowanceModal(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="row g-3">
+                                    <div className="d-flex flex-column align-items-center gap-3">
+                                        {/* Top Allowance */}
+                                        <div style={{ width: '200px' }}>
+                                            <label className="form-label text-center w-100">Top Allowance</label>
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                value={allowanceValues.top}
+                                                onChange={(e) => setAllowanceValues(prev => ({...prev, top: e.target.value}))}
+                                            />
+                                        </div>
+
+                                        {/* Left and Right Allowances */}
+                                        <div className="d-flex justify-content-between" style={{ width: '100%' }}>
+                                            <div style={{ width: '200px' }}>
+                                                <label className="form-label text-center w-100">Left Allowance</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={allowanceValues.left}
+                                                    onChange={(e) => setAllowanceValues(prev => ({...prev, left: e.target.value}))}
+                                                />
+                                            </div>
+                                            <div style={{ width: '200px' }}>
+                                                <label className="form-label text-center w-100">Right Allowance</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={allowanceValues.right}
+                                                    onChange={(e) => setAllowanceValues(prev => ({...prev, right: e.target.value}))}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Bottom Allowance */}
+                                        <div style={{ width: '200px' }}>
+                                            <label className="form-label text-center w-100">Bottom Allowance</label>
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                value={allowanceValues.bottom}
+                                                onChange={(e) => setAllowanceValues(prev => ({...prev, bottom: e.target.value}))}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button 
+                                    type="button" 
+                                    className="btn btn-secondary" 
+                                    onClick={() => setShowAllowanceModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                        // Split the currentDetailId to get orderId and displayOrder
+                                        const [orderId, displayOrder] = currentDetailId.split('_');
+                                        
+                                        // Find the current detail from orderDetails
+                                        const currentDetail = orderDetails.find(
+                                            detail => detail.orderId === parseInt(orderId) && 
+                                                     detail.displayOrder === parseInt(displayOrder)
+                                        );
+
+                                        // Calculate area with new allowance values
+                                        const { squareFeet, materialUsage } = calculateArea(
+                                            currentDetail.width,
+                                            currentDetail.height,
+                                            currentDetail.unit,
+                                            currentDetail.quantity,
+                                            {
+                                                top: allowanceValues.top,
+                                                bottom: allowanceValues.bottom,
+                                                left: allowanceValues.left,
+                                                right: allowanceValues.right
+                                            }
+                                        );
+
+                                        // Calculate print hours with new square feet
+                                        const printHrs = calculatePrintHrs(
+                                            squareFeet,
+                                            currentDetail.quantity,
+                                            currentDetail.material,
+                                            materials
+                                        );
+
+                                        console.log('New calculated values:', {
+                                            squareFeet,
+                                            materialUsage,
+                                            printHrs
+                                        });
+
+                                        // Prepare the updated detail with new calculations
+                                        const updatedDetail = {
+                                            ...currentDetail,
+                                            top: allowanceValues.top,
+                                            bottom: allowanceValues.bottom,
+                                            allowanceLeft: allowanceValues.left,
+                                            allowanceRight: allowanceValues.right,
+                                            squareFeet,
+                                            materialUsage,
+                                            printHrs
+                                        };
+
+                                        console.log('Saving detail with new calculations:', updatedDetail);
+
+                                        // Save to database
+                                        const token = localStorage.getItem('token');
+                                        axios.put(`http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`, updatedDetail, {
+                                            headers: { Authorization: `Bearer ${token}` }
+                                        })
+                                        .then(result => {
+                                            if (result.data.Status) {
+                                                // Refresh the order details
+                                                fetchOrderDetails();
+                                                setShowAllowanceModal(false);
+                                            } else {
+                                                alert(result.data.Error);
+                                            }
+                                        })
+                                        .catch(err => {
+                                            console.error('Save error:', err.response || err);
+                                            handleApiError(err, navigate);
+                                        });
+                                    }}
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAllowanceTooltip && tooltipDetail && (
+                <div 
+                    className="position-absolute bg-white shadow-sm border rounded p-2"
+                    style={{
+                        left: tooltipPosition.x,
+                        top: tooltipPosition.y,
+                        zIndex: 1060,
+                        fontSize: '0.875rem'
+                    }}
+                >
+                    <div className="text-center mb-1">Print Hrs: {tooltipDetail.printHrs || 0}</div>
+                    <div className="text-center">T: {tooltipDetail.top || 0}</div>
+                    <div className="d-flex justify-content-between">
+                        <span>L: {tooltipDetail.allowanceLeft || 0}</span>
+                        <span className="ms-3">R: {tooltipDetail.allowanceRight || 0}</span>
+                    </div>
+                    <div className="text-center">B: {tooltipDetail.bottom || 0}</div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+export default AddOrder 
