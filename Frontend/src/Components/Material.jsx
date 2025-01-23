@@ -28,7 +28,7 @@ const Material = () => {
             <div className='d-flex justify-content-center'>
                 <h3>Material List</h3>
             </div>
-            <Link to="/dashboard/add_material" className='btn btn-success'>Add Material</Link>
+            <Link to="/dashboard/material/add" className='btn btn-success'>Add Material</Link>
             <div className='mt-3'>
                 <table className='table'>
                     <thead>
@@ -56,7 +56,7 @@ const Material = () => {
                                 <td className="text-center">${m.Cost}</td>
                                 <td className="text-center">{m.NoIncentive ? 'Yes' : 'No'}</td>
                                 <td className="text-center">
-                                    <Link to={`/dashboard/edit_material/${m.id}`} className='btn btn-info btn-sm me-2'>Edit</Link>
+                                    <Link to={`/dashboard/material/edit/${m.id}`} className='btn btn-info btn-sm me-2'>Edit</Link>
                                     <button className='btn btn-danger btn-sm' onClick={() => handleDelete(m.id)}>Delete</button>
                                 </td>
                             </tr>

@@ -62,9 +62,9 @@ const EditEmployee = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Submitting data:', data) // Debug log
+    console.log("Submitting data:", data); // Debug log
     axios
-      .put("http://localhost:3000/auth/edit_employee/" + id, data)
+      .put("http://localhost:3000/auth/employee/edit/" + id, data)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/employee"); // Navigate to the manage employees screen after saving
@@ -94,9 +94,7 @@ const EditEmployee = () => {
               id="inputName"
               placeholder="Enter Name"
               value={data.name}
-              onChange={(e) =>
-                setData({ ...data, name: e.target.value })
-              }
+              onChange={(e) => setData({ ...data, name: e.target.value })}
             />
           </div>
           <div className="col-12">
@@ -110,9 +108,7 @@ const EditEmployee = () => {
               placeholder="Enter Email"
               autoComplete="off"
               value={data.email}
-              onChange={(e) =>
-                setData({ ...data, email: e.target.value })
-              }
+              onChange={(e) => setData({ ...data, email: e.target.value })}
             />
           </div>{" "}
           <div className="col-12">
@@ -139,9 +135,7 @@ const EditEmployee = () => {
               placeholder="Enter Salary"
               autoComplete="off"
               value={data.salary}
-              onChange={(e) =>
-                setData({ ...data, salary: e.target.value })
-              }
+              onChange={(e) => setData({ ...data, salary: e.target.value })}
             />
           </div>
           <div className="col-12">
@@ -155,9 +149,7 @@ const EditEmployee = () => {
               placeholder="1234 Main St"
               autoComplete="off"
               value={data.address}
-              onChange={(e) =>
-                setData({ ...data, address: e.target.value })
-              }
+              onChange={(e) => setData({ ...data, address: e.target.value })}
             />
           </div>
           <div className="col-12">
@@ -189,9 +181,7 @@ const EditEmployee = () => {
               className="form-check-input"
               id="activeCheckbox"
               checked={data.active}
-              onChange={(e) =>
-                setData({ ...data, active: e.target.checked })
-              }
+              onChange={(e) => setData({ ...data, active: e.target.checked })}
             />
             <label className="form-check-label" htmlFor="activeCheckbox">
               Active
@@ -203,9 +193,7 @@ const EditEmployee = () => {
               className="form-check-input"
               id="salesCheckbox"
               checked={data.sales}
-              onChange={(e) =>
-                setData({ ...data, sales: e.target.checked })
-              }
+              onChange={(e) => setData({ ...data, sales: e.target.checked })}
             />
             <label className="form-check-label" htmlFor="salesCheckbox">
               Sales
@@ -231,9 +219,7 @@ const EditEmployee = () => {
               className="form-check-input"
               id="artistCheckbox"
               checked={data.artist}
-              onChange={(e) =>
-                setData({ ...data, artist: e.target.checked })
-              }
+              onChange={(e) => setData({ ...data, artist: e.target.checked })}
             />
             <label className="form-check-label" htmlFor="artistCheckbox">
               Artist
@@ -259,9 +245,7 @@ const EditEmployee = () => {
               className="form-check-input"
               id="operatorCheckbox"
               checked={data.operator}
-              onChange={(e) =>
-                setData({ ...data, operator: e.target.checked })
-              }
+              onChange={(e) => setData({ ...data, operator: e.target.checked })}
             />
             <label className="form-check-label" htmlFor="operatorCheckbox">
               Operator
@@ -274,9 +258,7 @@ const EditEmployee = () => {
                 className="form-check-input"
                 id="admin"
                 checked={data.admin}
-                onChange={(e) =>
-                  setData({ ...data, admin: e.target.checked })
-                }
+                onChange={(e) => setData({ ...data, admin: e.target.checked })}
               />
               <label className="form-check-label" htmlFor="admin">
                 Admin
@@ -284,15 +266,15 @@ const EditEmployee = () => {
             </div>
           </div>
           <div className="col-12 d-flex justify-content-between">
-            <button type="submit" className="btn btn-primary w-48">
-              Save Employee
-            </button>
             <button
               type="button"
               className="btn btn-warning w-48"
               onClick={handleCancel}
             >
               Cancel
+            </button>
+            <button type="submit" className="btn btn-primary w-48">
+              Save Employee
             </button>
           </div>
         </form>

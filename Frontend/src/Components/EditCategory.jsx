@@ -13,8 +13,8 @@ const EditCategory = () => {
     console.log("Fetching category with id:", id); // Debugging log
     // Fetch category data by ID
     axios
-//    .get("http://localhost:3000/auth/employee/" + id)
-//      .get("http://localhost:3000/auth/category/" + id)
+      //    .get("http://localhost:3000/auth/employee/" + id)
+      //      .get("http://localhost:3000/auth/category/" + id)
       .get(`http://localhost:3000/auth/category/${id}`)
       .then((result) => {
         console.log(result); // Log the result to check if data is returned
@@ -32,7 +32,7 @@ const EditCategory = () => {
     console.log("Updating category:", category);
     // Update category data
     axios
-      .put(`http://localhost:3000/auth/edit_category/${id}`, category)
+      .put("http://localhost:3000/auth/category/edit/" + id, { name: category })
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/category"); // Redirect after successful update
@@ -63,16 +63,17 @@ const EditCategory = () => {
             onChange={(e) => setCategory({ ...category, name: e.target.value })}
           />
         </div>
+        <button
+          type="button"
+          className="btn btn-warning w-48"
+          onClick={handleCancel}
+        >
+          Cancel
+        </button>
+
         <button type="submit" className="btn btn-primary">
           Save Changes
         </button>
-        <button
-              type="button"
-              className="btn btn-warning w-48"
-              onClick={handleCancel}
-            >
-              Cancel
-            </button>
       </form>
     </div>
   );

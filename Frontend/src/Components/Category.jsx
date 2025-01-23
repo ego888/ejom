@@ -23,7 +23,7 @@ const Category = () => {
       <div className="d-flex justify-content-center">
         <h3>Category List</h3>
       </div>
-      <Link to="/dashboard/add_category" className="btn btn-success">
+      <Link to="/dashboard/category/add" className="btn btn-success">
         Add Category
       </Link>
       <div className="mt-3">
@@ -40,7 +40,7 @@ const Category = () => {
                 <td>{c.name}</td>
                 <td>
                   {/* Edit button */}
-                  <Link to={`/dashboard/edit_category/${c.id}`} className="btn btn-btn btn-info btn-sm me-2">
+                  <Link to={`/dashboard/category/edit/${c.id}`} className="btn btn-info btn-sm me-2">
                     Edit
                   </Link>
                 </td>

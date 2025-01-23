@@ -33,13 +33,13 @@ function App() {
           <Route path='/dashboard/employee' element={<Employee />}></Route>
           <Route path='/dashboard/category' element={<Category />}></Route>
           <Route path='/dashboard/profile' element={<Profile />}></Route>
-          <Route path='/dashboard/add_category' element={<AddCategory />}></Route>
-          <Route path="/dashboard/edit_category/:id" element={<EditCategory />} />
-          <Route path='/dashboard/add_employee' element={<AddEmployee />}></Route>
-          <Route path='/dashboard/edit_employee/:id' element={<EditEmployee />}></Route>
+          <Route path='/dashboard/category/add' element={<AddCategory />}></Route>
+          <Route path="/dashboard/category/edit/:id" element={<EditCategory />} />
+          <Route path='/dashboard/employee/add' element={<AddEmployee />}></Route>
+          <Route path='/dashboard/employee/edit/:id' element={<EditEmployee />}></Route>
           <Route path="/dashboard/material" element={<Material />} />
-          <Route path="/dashboard/add_material" element={<AddMaterial />} />
-          <Route path="/dashboard/edit_material/:id" element={<EditMaterial />} />
+          <Route path="/dashboard/material/add" element={<AddMaterial />} />
+          <Route path="/dashboard/material/edit/:id" element={<EditMaterial />} />
           <Route path="/dashboard/client" element={<Client />} />
           <Route path="/dashboard/client/add" element={<AddClient />} />
           <Route path="/dashboard/client/edit/:id" element={<EditClient />} />

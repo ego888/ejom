@@ -95,7 +95,7 @@ router.get("/category", (req, res) => {
 //   });
 // });
 
-router.post("/add_category", (req, res) => {
+router.post("/category/add", (req, res) => {
   const sql = "INSERT INTO category (`name`) VALUES (?)";
   con.query(sql, [req.body.category], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
@@ -119,12 +119,12 @@ router.get("/category/:id", (req, res) => {
 });
 
 
-router.put("/edit_category/:id", (req, res) => {
+router.put("/category/edit/:id", (req, res) => {
   const id = req.params.id;
   const sql = "UPDATE category SET name = ? WHERE id = ?";
   con.query(sql, [req.body.name, id], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
-    return res.json({ Status: true });
+    if(err) return res.json({Status: false, Error: "Query Error"});
+    return res.json({Status: true});
   });
 });
 
@@ -145,7 +145,7 @@ const upload = multer({
 });
 // end imag eupload
 
-router.post("/add_employee", upload.single("image"), (req, res) => {
+router.post("/employee/add", upload.single("image"), (req, res) => {
   const { name, email, password, address, category_id } = req.body;
   const salary = req.body.salary || 0;  // Use 0 if salary is empty
   const sales = req.body.sales === 'true' ? 1 : 0;
@@ -206,7 +206,7 @@ router.get("/employee/:id", (req, res) => {
   });
 });
 
-router.put("/edit_employee/:id", (req, res) => {
+router.put("/employee/edit/:id", (req, res) => {
   const id = req.params.id;
   let sql, values;
 
@@ -227,7 +227,7 @@ router.put("/edit_employee/:id", (req, res) => {
       values = [
         req.body.name,
         req.body.email,
-        hash,  // Use the hashed password
+        hash,
         req.body.salary,
         req.body.category_id,
         req.body.active,
@@ -249,7 +249,6 @@ router.put("/edit_employee/:id", (req, res) => {
       });
     });
   } else {
-    // If no password provided, update without password
     sql = `UPDATE employee 
            SET name = ?, email = ?, salary = ?, 
                category_id = ?, active = ?, sales = ?, accounting = ?, 
@@ -281,12 +280,12 @@ router.put("/edit_employee/:id", (req, res) => {
   }
 });
 
-router.delete("/delete_employee/:id", (req, res) => {
+router.delete("/employee/delete/:id", (req, res) => {
   const id = req.params.id;
   const sql = "delete from employee where id = ?";
   con.query(sql, [id], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" + err });
-    return res.json({ Status: true, Result: result });
+    if(err) return res.json({Status: false, Error: "Query Error" + err});
+    return res.json({Status: true, Result: result});
   });
 });
 
@@ -345,7 +344,7 @@ router.get("/material/:id", (req, res) => {
     });
 });
 
-router.post("/add_material", (req, res) => {
+router.post("/material/add", (req, res) => {
     const sql = `INSERT INTO material 
         (Material, Description, SqFtPerHour, MinimumPrice, FixWidth, FixHeight, Cost, NoIncentive) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -370,7 +369,7 @@ router.post("/add_material", (req, res) => {
     });
 });
 
-router.put("/edit_material/:id", (req, res) => {
+router.put("/material/edit/:id", (req, res) => {
     const id = req.params.id;
     const sql = `UPDATE material 
         SET Material = ?, 
@@ -404,7 +403,7 @@ router.put("/edit_material/:id", (req, res) => {
     });
 });
 
-router.delete("/delete_material/:id", (req, res) => {
+router.delete("/material/delete/:id", (req, res) => {
     const id = req.params.id;
     const sql = "DELETE FROM material WHERE id = ?";
     con.query(sql, [id], (err, result) => {
@@ -451,7 +450,7 @@ router.get("/client/:id", (req, res) => {
 });
 
 // Add new client
-router.post("/add_client", (req, res) => {
+router.post("/client/add", (req, res) => {
     const sql = `
         INSERT INTO client 
         (clientName, contact, telNo, faxNo, celNo, email, 
@@ -536,7 +535,7 @@ router.put("/edit_client/:id", (req, res) => {
 });
 
 // Delete client
-router.delete("/delete_client/:id", (req, res) => {
+router.delete("/client/delete/:id", (req, res) => {
     const id = req.params.id;
     const sql = "DELETE FROM client WHERE id = ?";
     con.query(sql, [id], (err, result) => {
@@ -1404,12 +1403,12 @@ router.get('/order-statuses', (req, res) => {
 });
 
 router.get('/payment_terms', (req, res) => {
-    const sql = "SELECT * FROM paymentTerms ORDER BY days ASC"
+    const sql = "SELECT * FROM paymentTerms ORDER BY days ASC";
     con.query(sql, (err, result) => {
-        if(err) return res.json({Status: false, Error: "Query Error"})
-        return res.json({Status: true, Result: result})
-    })
-}) 
+        if(err) return res.json({Status: false, Error: "Query Error"});
+        return res.json({Status: true, Result: result});
+    });
+});
 
 // Add a route to get unique status options
 router.get('/order-statuses', (req, res) => {
