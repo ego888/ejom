@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import Button from "./UI/Button";
 
 const EditClient = () => {
   const [client, setClient] = useState({
@@ -281,16 +282,17 @@ const EditClient = () => {
             ></textarea>
           </div>
 
-          <button
-            type="button"
-            className="btn btn-warning w-48"
-            onClick={() => navigate("/dashboard/client")}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary">
-            Save Changes
-          </button>
+          <div className="d-flex justify-content-end gap-2">
+            <Button
+              variant="cancel"
+              onClick={() => navigate("/dashboard/client")}
+            >
+              Cancel
+            </Button>
+            <Button variant="save" type="submit">
+              Save Changes
+            </Button>
+          </div>
         </form>
       </div>
     </div>

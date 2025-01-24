@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import Button from "./UI/Button";
 
 const EditCategory = () => {
   const { id } = useParams(); // Get the category ID from the URL
@@ -48,33 +49,34 @@ const EditCategory = () => {
   };
 
   return (
-    <div className="px-5 mt-3">
-      <h3>Edit Category</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-3">
-          <label htmlFor="categoryName" className="form-label">
-            Category Name
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            id="categoryName"
-            value={category.name}
-            onChange={(e) => setCategory({ ...category, name: e.target.value })}
-          />
-        </div>
-        <button
-          type="button"
-          className="btn btn-warning w-48"
-          onClick={handleCancel}
-        >
-          Cancel
-        </button>
-
-        <button type="submit" className="btn btn-primary">
-          Save Changes
-        </button>
-      </form>
+    <div className="d-flex justify-content-center align-items-center mt-3">
+      <div className="p-3 rounded w-50 border">
+        <h3 className="text-center">Edit Category</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label htmlFor="categoryName" className="form-label">
+              Category Name
+            </label>
+            <input
+              type="text"
+              className="form-control rounded-0"
+              id="categoryName"
+              value={category.name}
+              onChange={(e) =>
+                setCategory({ ...category, name: e.target.value })
+              }
+            />
+          </div>
+          <div className="d-flex justify-content-end gap-2">
+            <Button variant="cancel" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button variant="save" type="submit">
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

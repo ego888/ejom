@@ -1,0 +1,163 @@
+.custom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Size variants */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  min-height: 24px;
+}
+
+.btn-md {
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  min-height: 32px;
+}
+
+.btn-lg {
+  padding: 0.5rem 1rem;
+  font-size: 1.25rem;
+}
+
+/* Button variants */
+.btn-add {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-add:hover {
+  background-color: #218838;
+}
+
+.btn-edit {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-edit:hover {
+  background-color: #138496;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #c82333;
+}
+
+.btn-save {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-save:hover {
+  background-color: #218838;
+}
+
+.btn-print {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-print:hover {
+  background-color: #5a6268;
+}
+
+.btn-view {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-view:hover {
+  background-color: #0056b3;
+}
+
+.btn-cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background-color: #5a6268;
+}
+
+/* Primary variant (default) */
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+/* Disabled state */
+.custom-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Custom icon spacing */
+.btn svg {
+  width: 1em;
+  height: 1em;
+}
+
+/* Add any custom styles that aren't covered by Bootstrap here */
+
+/* Base button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  border-radius: 4px;
+  transition: all 0.2s;
+  border: none;
+}
+
+/* Icon-only button */
+.btn-icon-only {
+  padding: 0.375rem;
+  width: 32px;
+  height: 32px;
+}
+
+.btn-icon-only.btn-sm {
+  padding: 0.25rem;
+  width: 24px;
+  height: 24px;
+}
+
+/* Hover effects */
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Disabled state */
+.btn:disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* Icon sizing */
+.btn svg {
+  width: 1em;
+  height: 1em;
+}

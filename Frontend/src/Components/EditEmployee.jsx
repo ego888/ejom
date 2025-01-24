@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import Button from "./UI/Button";
 
 const EditEmployee = () => {
   const { id } = useParams();
@@ -265,17 +266,13 @@ const EditEmployee = () => {
               </label>
             </div>
           </div>
-          <div className="col-12 d-flex justify-content-between">
-            <button
-              type="button"
-              className="btn btn-warning w-48"
-              onClick={handleCancel}
-            >
+          <div className="col-12 d-flex justify-content-end gap-2">
+            <Button variant="cancel" onClick={handleCancel}>
               Cancel
-            </button>
-            <button type="submit" className="btn btn-primary w-48">
+            </Button>
+            <Button variant="save" type="submit">
               Save Employee
-            </button>
+            </Button>
           </div>
         </form>
       </div>

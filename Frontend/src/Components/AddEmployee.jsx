@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Button from "./UI/Button";
 
 const AddEmployee = () => {
   const [employee, setEmployee] = useState({
@@ -144,108 +145,141 @@ const AddEmployee = () => {
               }
             />
           </div>
-          <div className='col-12'>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
                 className="form-check-input"
                 id="active"
                 checked={employee.active}
-                onChange={(e) => setEmployee({...employee, active: e.target.checked})}
+                onChange={(e) =>
+                  setEmployee({ ...employee, active: e.target.checked })
+                }
               />
-              <label className="form-check-label" htmlFor="active">Active</label>
+              <label className="form-check-label" htmlFor="active">
+                Active
+              </label>
             </div>
           </div>
-          <div className='col-12'>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
                 className="form-check-input"
                 id="sales"
                 checked={employee.sales}
-                onChange={(e) => setEmployee({...employee, sales: e.target.checked})}
+                onChange={(e) =>
+                  setEmployee({ ...employee, sales: e.target.checked })
+                }
               />
-              <label className="form-check-label" htmlFor="sales">Sales</label>
+              <label className="form-check-label" htmlFor="sales">
+                Sales
+              </label>
             </div>
           </div>
-          <div className='col-12'>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
                 className="form-check-input"
                 id="accounting"
                 checked={employee.accounting}
-                onChange={(e) => setEmployee({...employee, accounting: e.target.checked})}
+                onChange={(e) =>
+                  setEmployee({ ...employee, accounting: e.target.checked })
+                }
               />
-              <label className="form-check-label" htmlFor="accounting">Accounting</label>
+              <label className="form-check-label" htmlFor="accounting">
+                Accounting
+              </label>
             </div>
           </div>
-          <div className='col-12'>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
                 className="form-check-input"
                 id="artist"
                 checked={employee.artist}
-                onChange={(e) => setEmployee({...employee, artist: e.target.checked})}
+                onChange={(e) =>
+                  setEmployee({ ...employee, artist: e.target.checked })
+                }
               />
-              <label className="form-check-label" htmlFor="artist">Artist</label>
+              <label className="form-check-label" htmlFor="artist">
+                Artist
+              </label>
             </div>
           </div>
-          <div className='col-12'>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
                 className="form-check-input"
                 id="production"
                 checked={employee.production}
-                onChange={(e) => setEmployee({...employee, production: e.target.checked})}
+                onChange={(e) =>
+                  setEmployee({ ...employee, production: e.target.checked })
+                }
               />
-              <label className="form-check-label" htmlFor="production">Production</label>
+              <label className="form-check-label" htmlFor="production">
+                Production
+              </label>
             </div>
           </div>
-          <div className='col-12'>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
                 className="form-check-input"
                 id="operator"
                 checked={employee.operator}
-                onChange={(e) => setEmployee({...employee, operator: e.target.checked})}
+                onChange={(e) =>
+                  setEmployee({ ...employee, operator: e.target.checked })
+                }
               />
-              <label className="form-check-label" htmlFor="operator">Operator</label>
+              <label className="form-check-label" htmlFor="operator">
+                Operator
+              </label>
             </div>
           </div>
-          <div className='col-12'>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
                 className="form-check-input"
                 id="admin"
                 checked={employee.admin}
-                onChange={(e) => setEmployee({...employee, admin: e.target.checked})}
+                onChange={(e) =>
+                  setEmployee({ ...employee, admin: e.target.checked })
+                }
               />
-              <label className="form-check-label" htmlFor="admin">Admin</label>
+              <label className="form-check-label" htmlFor="admin">
+                Admin
+              </label>
             </div>
           </div>
-          <div className='col-12 mb-3'>
-            <label htmlFor="image" className='form-label'>Select Image</label>
+          <div className="col-12 mb-3">
+            <label htmlFor="image" className="form-label">
+              Select Image
+            </label>
             <input
               type="file"
-              name='image'
-              className='form-control rounded-0'
-              onChange={(e) => setEmployee({...employee, image: e.target.files[0]})}
+              name="image"
+              className="form-control rounded-0"
+              onChange={(e) =>
+                setEmployee({ ...employee, image: e.target.files[0] })
+              }
             />
           </div>
-          <div className='col-12 d-flex gap-3'>
-            <button 
-              type='button' 
-              className='btn btn-warning flex-grow-1'
-              onClick={() => navigate('/dashboard/employee')}
+          <div className="col-12 d-flex justify-content-end gap-2">
+            <Button
+              variant="cancel"
+              onClick={() => navigate("/dashboard/employee")}
             >
               Cancel
-            </button>
-            <button type='submit' className='btn btn-success flex-grow-1'>Add Employee</button>
+            </Button>
+            <Button variant="save" type="submit">
+              Add Employee
+            </Button>
           </div>
         </form>
       </div>

@@ -1,388 +1,401 @@
 /* Table Styles */
 .order-table {
-    width: 100%;
-    margin-bottom: 1rem;
-    color: #212529;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-    table-layout: auto;  /* This allows the table to expand */
+  width: 100%;
+  margin-bottom: 1rem;
+  color: #212529;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  table-layout: auto; /* This allows the table to expand */
 }
 
 .order-table th,
 .order-table td {
-    padding: 0.75rem;
-    vertical-align: middle;
-    border-top: 1px solid #dee2e6;
+  padding: 0.75rem;
+  vertical-align: middle;
+  border-top: 1px solid #dee2e6;
 }
 
 .order-table thead th {
-    vertical-align: middle;
-    border-bottom: 2px solid #dee2e6;
-    background-color: #f8f9fa;
-    font-weight: bold;
-    white-space: nowrap;
+  vertical-align: middle;
+  border-bottom: 2px solid #dee2e6;
+  background-color: #f8f9fa;
+  font-weight: bold;
+  white-space: nowrap;
 }
 
 .order-table tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.075);
+  background-color: rgba(0, 0, 0, 0.075);
 }
 
 /* Form Field Styles */
 .order-form {
-    margin-bottom: 2rem;
+  margin-bottom: 2rem;
 }
 
 .order-form .form-control {
-    font-size: 0.9rem;
-    padding: 0.375rem 0.75rem;
+  font-size: 0.9rem;
+  padding: 0.375rem 0.75rem;
 }
 
 .order-form .form-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
 }
 
 /* Numeric Fields */
 .numeric-cell {
-    text-align: right;
-    font-family: inherit;
-    font-size: 0.9rem !important;
-    font-variant-numeric: tabular-nums;  /* For better number alignment */
+  text-align: right;
+  font-family: inherit;
+  font-size: 0.9rem !important;
+  font-variant-numeric: tabular-nums; /* For better number alignment */
 }
 
 .centered-cell {
-    text-align: right;  /* Changed from center to right for consistency */
-    font-size: 0.9rem !important;
-    font-variant-numeric: tabular-nums;  /* For better number alignment */
+  text-align: right; /* Changed from center to right for consistency */
+  font-size: 0.9rem !important;
+  font-variant-numeric: tabular-nums; /* For better number alignment */
 }
 
-.order-table td, .order-table th {
-    font-size: 0.9rem !important;
-    font-family: inherit;
-    padding: 0.5rem;
+.order-table td,
+.order-table th {
+  font-size: 0.9rem !important;
+  font-family: inherit;
+  padding: 0.5rem;
 }
 
 /* Total Rows */
 .total-row td {
-    font-weight: bold;
-    background-color: #f8f9fa;
+  font-weight: bold;
+  background-color: #f8f9fa;
 }
 
 /* Responsive Design */
 @media (max-width: 1200px) {
-    .order-table {
-        font-size: 0.85rem;
-    }
-    
-    .order-table th,
-    .order-table td {
-        padding: 0.5rem;
-    }
+  .order-table {
+    font-size: 0.85rem;
+  }
+
+  .order-table th,
+  .order-table td {
+    padding: 0.5rem;
+  }
 }
 
 @media (max-width: 992px) {
-    .order-form .form-control {
-        font-size: 0.85rem;
-    }
+  .order-form .form-control {
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 768px) {
-    .order-table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
+  .order-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
 
 /* Add these to your existing CSS */
 .btn-icon {
-    padding: 0.25rem 0.4rem;
-    line-height: 1;
-    border-radius: 0.2rem;
+  padding: 0.25rem 0.4rem;
+  line-height: 1;
+  border-radius: 0.2rem;
 }
 
 .btn-icon:hover {
-    background-color: rgba(0, 0, 0, 0.08);
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 /* Optional: Add tooltip on hover */
 [title] {
-    position: relative;
-    cursor: pointer;
+  position: relative;
+  cursor: pointer;
 }
 
 .order-header {
-    border-bottom: 2px solid #dee2e6;
-    padding-bottom: 1rem;
+  border-bottom: 2px solid #dee2e6;
+  padding-bottom: 1rem;
 }
 
 .order-list {
-    background-color: #fff;
-    padding: 1rem;
-    border-radius: 0.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: #fff;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .add-order-details {
-    background-color: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 0.25rem;
-    border: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid #dee2e6;
 }
 
 .add-order-details h5 {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 /* Base table cell padding */
 .order-table td {
-    padding: 2px !important;
-    box-sizing: border-box;
-    text-align: center;
+  padding: 2px !important;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 /* Consistent input padding for all form controls */
 .order-table td input.form-control,
 .order-table td select.form-select,
 .order-table td textarea.form-control {
-    padding: 2px 4px !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
+  padding: 2px 4px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* Override Bootstrap's default padding */
 .order-table .form-control-sm {
-    padding: 2px 4px !important;
-    min-height: 24px !important;
-    height: 24px !important;
+  padding: 2px 4px !important;
+  min-height: 24px !important;
+  height: 24px !important;
 }
 
 /* Adjust the height of textareas */
 .order-table td textarea.description-input,
 .order-table td textarea.remarks-input {
-    min-height: 24px !important;
-    height: 24px !important;
+  min-height: 24px !important;
+  height: 24px !important;
 }
 
 /* Remove select arrow */
 .order-table td select.form-select {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: none;
-    padding-right: 4px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;
+  padding-right: 4px;
 }
 
 /* Field-specific widths for edit boxes */
 .order-table td input.quantity-input.form-control {
-    width: 100% !important;
-    min-width: 50px !important;
-    text-align: center !important;
-    padding: 2px 4px !important;
-    font-variant-numeric: tabular-nums;
+  width: 100% !important;
+  min-width: 50px !important;
+  text-align: center !important;
+  padding: 2px 4px !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .order-table td input.dimension-input {
-    width: 100% !important;
-    min-width: 50px !important;
-    text-align: center !important;
+  width: 100% !important;
+  min-width: 50px !important;
+  text-align: center !important;
 }
 
 .order-table td select.unit-select {
-    width: 100% !important;
-    min-width: 50px !important;
-    text-align: center;
+  width: 100% !important;
+  min-width: 50px !important;
+  text-align: center;
 }
 
 .order-table td select.material-select {
-    width: 100% !important;
-    min-width: 80px !important;
-    text-align: center;
+  width: 100% !important;
+  min-width: 80px !important;
+  text-align: center;
 }
 
 .order-table td input.persqft-input {
-    width: 100% !important;
-    min-width: 50px !important;
-    text-align: center;
+  width: 100% !important;
+  min-width: 50px !important;
+  text-align: center;
 }
 
 .order-table td input.price-input {
-    width: 100% !important;
-    min-width: 70px !important;
-    text-align: right;
-    font-variant-numeric: tabular-nums;  /* For better number alignment */
+  width: 100% !important;
+  min-width: 70px !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums; /* For better number alignment */
 }
 
 .order-table td input.discount-input {
-    width: 100% !important;
-    min-width: 50px !important;
-    text-align: right;
+  width: 100% !important;
+  min-width: 50px !important;
+  text-align: right;
 }
 
 .order-table td input.amount-input {
-    width: 100% !important;
-    min-width: 80px !important;
-    text-align: right;
+  width: 100% !important;
+  min-width: 80px !important;
+  text-align: right;
 }
 
 .order-table td textarea.description-input,
 .order-table td textarea.remarks-input {
-    width: 100% !important;
-    min-width: 120px !important;
+  width: 100% !important;
+  min-width: 120px !important;
 }
 
 /* Override Bootstrap's form-control styles */
 .order-table td textarea.form-control {
-    height: 31px !important;
-    min-height: 31px !important;
-    padding: 2px 4px !important;
+  height: 31px !important;
+  min-height: 31px !important;
+  padding: 2px 4px !important;
 }
 
 /* Override any potential Bootstrap sizing classes */
 .order-table td textarea.form-control-sm {
-    height: 31px !important;
-    min-height: 31px !important;
-    padding: 2px 4px !important;
+  height: 31px !important;
+  min-height: 31px !important;
+  padding: 2px 4px !important;
 }
 
 /* Display order input specific width */
 .order-table td input.display-order-input {
-    width: 50px !important;
-    min-width: 50px !important;
-    text-align: center;
+  width: 50px !important;
+  min-width: 50px !important;
+  text-align: center;
 }
 
 /* Hide spinner buttons for number inputs */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 input[type="number"] {
-    -webkit-appearance: textfield;
-    -moz-appearance: textfield;
-    appearance: textfield;
-    padding-right: 5px !important;
+  -webkit-appearance: textfield;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  padding-right: 5px !important;
 }
 
 /* Style for select dropdowns */
 .form-select {
-    padding-right: 24px !important;
+  padding-right: 24px !important;
 }
 
 /* Form control base styles */
-.form-control, .form-select, .form-check-label {
-    font-size: 0.9rem !important;
+.form-control,
+.form-select,
+.form-check-label {
+  font-size: 0.9rem !important;
 }
 
 /* Column width constraints */
 .order-table th:nth-child(1),
-.order-table td:nth-child(1) {  /* Display Order column */
-    width: 5%;
-    min-width: 50px;
-    text-align: center !important;
+.order-table td:nth-child(1) {
+  /* Display Order column */
+  width: 5%;
+  min-width: 50px;
+  text-align: center !important;
 }
 
 .order-table th:nth-child(2),
-.order-table td:nth-child(2) {  /* Quantity column */
-    width: 7%;
-    min-width: 60px;
-    text-align: center !important;
+.order-table td:nth-child(2) {
+  /* Quantity column */
+  width: 7%;
+  min-width: 60px;
+  text-align: center !important;
 }
 
 .order-table th:nth-child(3),
 .order-table td:nth-child(3),
 .order-table th:nth-child(4),
-.order-table td:nth-child(4) {  /* Width and Height columns */
-    width: 8%;
-    min-width: 70px;
-    text-align: center !important;
+.order-table td:nth-child(4) {
+  /* Width and Height columns */
+  width: 8%;
+  min-width: 70px;
+  text-align: center !important;
 }
 
 .order-table th:nth-child(5),
-.order-table td:nth-child(5) {  /* Unit column */
-    width: 6%;
-    min-width: 50px;
-    text-align: center;
+.order-table td:nth-child(5) {
+  /* Unit column */
+  width: 6%;
+  min-width: 50px;
+  text-align: center;
 }
 
 .order-table th:nth-child(6),
-.order-table td:nth-child(6) {  /* Material column */
-    width: 10%;
-    min-width: 80px;
-    text-align: center;
+.order-table td:nth-child(6) {
+  /* Material column */
+  width: 10%;
+  min-width: 80px;
+  text-align: center;
 }
 
 .order-table th:nth-child(7),
-.order-table td:nth-child(7) {  /* Per Sq Ft column */
-    width: 8%;
-    min-width: 50px;
-    text-align: center;
+.order-table td:nth-child(7) {
+  /* Per Sq Ft column */
+  width: 8%;
+  min-width: 50px;
+  text-align: center;
 }
 
 .order-table th:nth-child(8),
-.order-table td:nth-child(8) {  /* Price column */
-    width: 8%;
-    min-width: 70px;
-    text-align: right;
+.order-table td:nth-child(8) {
+  /* Price column */
+  width: 8%;
+  min-width: 70px;
+  text-align: right;
 }
 
 .order-table th:nth-child(9),
-.order-table td:nth-child(9) {  /* Discount column */
-    width: 8%;
-    min-width: 50px;
-    text-align: right;
+.order-table td:nth-child(9) {
+  /* Discount column */
+  width: 8%;
+  min-width: 50px;
+  text-align: right;
 }
 
 .order-table th:nth-child(10),
-.order-table td:nth-child(10) {  /* Amount column */
-    width: 10%;
-    min-width: 80px;
-    text-align: right;
-    padding-right: 6px !important;
+.order-table td:nth-child(10) {
+  /* Amount column */
+  width: 10%;
+  min-width: 80px;
+  text-align: right;
+  padding-right: 6px !important;
 }
 
-.order-table th:nth-child(11) {  /* Description header */
-    width: 15%;
-    min-width: 120px;
-    text-align: center !important;
+.order-table th:nth-child(11) {
+  /* Description header */
+  width: 15%;
+  min-width: 120px;
+  text-align: center !important;
 }
 
-.order-table td:nth-child(11) {  /* Description cell */
-    width: 15%;
-    min-width: 120px;
-    text-align: left !important;
-    padding-left: 6px !important;
+.order-table td:nth-child(11) {
+  /* Description cell */
+  width: 15%;
+  min-width: 120px;
+  text-align: left !important;
+  padding-left: 6px !important;
 }
 
 .order-table th:nth-child(12),
-.order-table td:nth-child(12) {  /* Remarks column */
-    width: 10%;
-    min-width: 100px;
-    text-align: left;
+.order-table td:nth-child(12) {
+  /* Remarks column */
+  width: 10%;
+  min-width: 100px;
+  text-align: left;
 }
 
 .order-table th:nth-child(13),
-.order-table td:nth-child(13) {  /* Action column */
-    width: 5%;
-    min-width: 100px;
-    text-align: center;
+.order-table td:nth-child(13) {
+  /* Action column */
+  width: 5%;
+  min-width: 100px;
+  text-align: center;
 }
 
 /* Add numeric formatting for display mode */
 .centered-cell {
-    text-align: center !important;
-    font-variant-numeric: tabular-nums;
-    padding: 2px 4px !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 4px !important;
 }
 
 .numeric-cell {
-    text-align: right !important;
-    font-variant-numeric: tabular-nums;
-    padding-right: 8px !important;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  padding-right: 8px !important;
 }
-
-
-
