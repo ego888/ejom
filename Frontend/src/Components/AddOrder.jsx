@@ -1000,13 +1000,13 @@ function AddOrder() {
           </div>
         </div>
 
-        <div className="d-flex">
+        <div className="d-flex flex-column flex-xl-row">
           <form
             className="row g-1 flex-grow-1"
             onSubmit={handleSubmit}
             style={{ marginTop: "-0.8rem" }}
           >
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="orderDate"
@@ -1028,7 +1028,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="preparedBy"
@@ -1050,7 +1050,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="terms"
@@ -1069,7 +1069,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-6">
+            <div className="col-12 col-md-6">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="clientId"
@@ -1095,7 +1095,7 @@ function AddOrder() {
                 )}
               </div>
             </div>
-            <div className="col-6">
+            <div className="col-12 col-md-6">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="projectName"
@@ -1124,7 +1124,7 @@ function AddOrder() {
                 )}
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="orderedBy"
@@ -1146,7 +1146,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="orderReference"
@@ -1168,7 +1168,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="cellNumber"
@@ -1190,7 +1190,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="dueDate"
@@ -1212,7 +1212,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="dueTime"
@@ -1234,7 +1234,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="graphicsBy"
@@ -1263,7 +1263,7 @@ function AddOrder() {
                 )}
               </div>
             </div>
-            <div className="col-6">
+            <div className="col-12 col-md-6">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="specialInst"
@@ -1285,7 +1285,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-6">
+            <div className="col-12 col-md-6">
               <div className="d-flex flex-column">
                 <label
                   htmlFor="deliveryInst"
@@ -1307,7 +1307,7 @@ function AddOrder() {
                 />
               </div>
             </div>
-            <div className="col-12 mt-2 d-flex">
+            <div className="col-12 col-md-12 mt-2 d-flex">
               <div className="form-check form-check-inline d-flex align-items-center">
                 <input
                   type="checkbox"
@@ -1350,7 +1350,7 @@ function AddOrder() {
           </form>
 
           <div
-            className="ms-3"
+            className="form-sidebar ms-xl-3"
             style={{ width: "250px", marginTop: "-0.8rem" }}
           >
             <div className="border rounded p-3">
@@ -1460,555 +1460,624 @@ function AddOrder() {
         {isHeaderSaved && (
           <div className="mt-4">
             <h5>Order Details List</h5>
-            <table className="order-table table table-striped">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Qty</th>
-                  <th>Width</th>
-                  <th>Height</th>
-                  <th>Unit</th>
-                  <th>Material</th>
-                  <th>Per Sq Ft</th>
-                  <th>Price</th>
-                  <th>Disc%</th>
-                  <th>Amount</th>
-                  <th>Description</th>
-                  <th>JO Remarks</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderDetails.map((detail, index) => {
-                  const uniqueId = `${detail.orderId}_${detail.displayOrder}`;
-                  return (
-                    <tr key={uniqueId}>
-                      {editingRowId === uniqueId ? (
-                        <>
-                          <td style={{ width: "40px" }}>
-                            {detail.displayOrder}
-                          </td>
-                          <td style={{ width: "60px" }}>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm quantity-input"
-                              value={
-                                editedValues[uniqueId]?.quantity
-                                  ? Number(
-                                      editedValues[uniqueId].quantity
-                                    ).toLocaleString()
-                                  : detail.quantity.toLocaleString()
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/,/g, "");
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "quantity",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              className="form-control form-control-sm dimension-input"
-                              value={
-                                editedValues[uniqueId]?.width || detail.width
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "width",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              className="form-control form-control-sm dimension-input"
-                              value={
-                                editedValues[uniqueId]?.height || detail.height
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "height",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </td>
-                          <td>
-                            <Dropdown
-                              variant="table"
-                              value={
-                                editedValues[uniqueId]?.unit ||
-                                detail.unit ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "unit",
-                                  e.target.value
-                                )
-                              }
-                              options={units}
-                              placeholder="Unit"
-                              labelKey="unit"
-                              valueKey="unit"
-                            />
-                          </td>
-                          <td>
-                            <Dropdown
-                              variant="table"
-                              value={
-                                editedValues[uniqueId]?.material ||
-                                detail.material ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "material",
-                                  e.target.value
-                                )
-                              }
-                              options={materials}
-                              placeholder="Material"
-                              labelKey="Material"
-                              valueKey="Material"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm persqft-input"
-                              value={
-                                editedValues[uniqueId]?.perSqFt
-                                  ? editingRowId === uniqueId
-                                    ? editedValues[uniqueId].perSqFt
-                                    : Number(
-                                        editedValues[uniqueId].perSqFt
-                                      ).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })
-                                  : Number(detail.perSqFt).toLocaleString(
-                                      undefined,
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      }
-                                    )
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[^\d.-]/g,
-                                  ""
-                                );
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "perSqFt",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm price-input"
-                              value={
-                                editedValues[uniqueId]?.unitPrice
-                                  ? editingRowId === uniqueId
-                                    ? editedValues[uniqueId].unitPrice
-                                    : Number(
-                                        editedValues[uniqueId].unitPrice
-                                      ).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })
-                                  : Number(detail.unitPrice).toLocaleString(
-                                      undefined,
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      }
-                                    )
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[^\d.-]/g,
-                                  ""
-                                );
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "unitPrice",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm discount-input"
-                              value={
-                                editedValues[uniqueId]?.discount
-                                  ? editingRowId === uniqueId
-                                    ? editedValues[uniqueId].discount
-                                    : Number(
-                                        editedValues[uniqueId].discount
-                                      ).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })
-                                  : Number(detail.discount).toLocaleString(
-                                      undefined,
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      }
-                                    )
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[^\d.-]/g,
-                                  ""
-                                );
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "discount",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td className="numeric-cell">
-                            {formatNumber(
-                              editedValues[uniqueId]?.amount || detail.amount
-                            )}
-                          </td>
-                          <td>
-                            <textarea
-                              className="form-control form-control-sm description-input"
-                              value={
-                                editedValues[uniqueId]?.itemDescription ||
-                                detail.itemDescription
-                              }
-                              onChange={(e) => {
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "itemDescription",
-                                  e.target.value
-                                );
-                                e.target.style.height = "31px";
-                                e.target.style.height =
-                                  e.target.scrollHeight + "px";
-                              }}
-                              rows="1"
-                            />
-                          </td>
-                          <td>
-                            <textarea
-                              className="form-control form-control-sm remarks-input"
-                              value={
-                                editedValues[uniqueId]?.remarks ||
-                                detail.remarks
-                              }
-                              onChange={(e) => {
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "remarks",
-                                  e.target.value
-                                );
-                                e.target.style.height = "31px";
-                                e.target.style.height =
-                                  e.target.scrollHeight + "px";
-                              }}
-                              rows="1"
-                            />
-                          </td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <Button
-                                variant="view"
-                                iconOnly
-                                size="sm"
-                                icon={<BiRectangle size={14} />}
-                                onClick={() => {
-                                  setShowAllowanceTooltip(false);
-                                  setCurrentDetailId(uniqueId);
-                                  setAllowanceValues({
-                                    top: detail.top || 0,
-                                    bottom: detail.bottom || 0,
-                                    left: detail.allowanceLeft || 0,
-                                    right: detail.allowanceRight || 0,
-                                  });
-                                  setShowAllowanceModal(true);
-                                }}
-                                onMouseEnter={(e) => {
-                                  const rect =
-                                    e.currentTarget.getBoundingClientRect();
-                                  setTooltipPosition({
-                                    x: rect.left,
-                                    y: rect.top + window.scrollY - 82,
-                                  });
-                                  setTooltipDetail(detail);
-                                  setShowAllowanceTooltip(true);
-                                }}
-                                onMouseLeave={handleAllowanceLeave}
-                              />
-                              <Button
-                                variant="save"
-                                iconOnly
-                                size="sm"
-                                onClick={() => handleSaveDetail(uniqueId)}
-                              />
-                              <Button
-                                variant="cancel"
-                                iconOnly
-                                size="sm"
-                                onClick={() => {
-                                  setEditingRowId(null);
-                                  setEditedValues({});
-                                  setEditErrors({});
-                                }}
-                              />
-                            </div>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td>
-                            {editingDisplayOrder ===
-                            `${detail.orderId}_${detail.displayOrder}` ? (
+            <div className="order-details-wrapper">
+              <table className="order-table table table-striped">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Qty</th>
+                    <th className="hide-tablet">Width</th>
+                    <th className="hide-tablet">Height</th>
+                    <th>Unit</th>
+                    <th>Material</th>
+                    <th className="hide-tablet">Per Sq Ft</th>
+                    <th>Price</th>
+                    <th>Disc%</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                    <th className="hide-tablet">JO Remarks</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderDetails.map((detail, index) => {
+                    const uniqueId = `${detail.orderId}_${detail.displayOrder}`;
+                    return (
+                      <tr key={uniqueId}>
+                        {editingRowId === uniqueId ? (
+                          <>
+                            <td data-label="#" style={{ width: "40px" }}>
+                              {detail.displayOrder}
+                            </td>
+                            <td data-label="Qty" style={{ width: "60px" }}>
                               <input
-                                type="number"
-                                className="form-control form-control-sm display-order-input"
-                                value={tempDisplayOrder || ""}
+                                type="text"
+                                className="form-control form-control-sm quantity-input"
+                                value={
+                                  editedValues[uniqueId]?.quantity
+                                    ? Number(
+                                        editedValues[uniqueId].quantity
+                                      ).toLocaleString()
+                                    : detail.quantity.toLocaleString()
+                                }
                                 onChange={(e) => {
                                   const value = e.target.value.replace(
-                                    /[^0-9]/g,
+                                    /,/g,
                                     ""
                                   );
-                                  setTempDisplayOrder(value);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === "Tab") {
-                                    e.preventDefault();
-                                    handleDisplayOrderUpdate(
-                                      detail,
-                                      tempDisplayOrder
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "quantity",
+                                      value
                                     );
                                   }
                                 }}
-                                onBlur={() => {
-                                  handleDisplayOrderUpdate(
-                                    detail,
-                                    tempDisplayOrder
-                                  );
-                                }}
-                                autoFocus
-                                min="1"
-                                step="1"
                               />
-                            ) : (
-                              <span
-                                className="display-order-text"
-                                onDoubleClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingDisplayOrder(
-                                    `${detail.orderId}_${detail.displayOrder}`
-                                  );
-                                  setTempDisplayOrder(detail.displayOrder);
-                                }}
-                              >
-                                {detail.displayOrder}
-                              </span>
-                            )}
-                          </td>
-                          <td className="centered-cell">
-                            {Number(detail.quantity).toLocaleString()}
-                          </td>
-                          <td className="centered-cell">{detail.width}</td>
-                          <td className="centered-cell">{detail.height}</td>
-                          <td className="centered-cell">{detail.unit}</td>
-                          <td className="centered-cell">{detail.material}</td>
-                          <td className="centered-cell">{detail.perSqFt}</td>
-                          <td className="numeric-cell">
-                            {formatNumber(detail.unitPrice)}
-                          </td>
-                          <td className="numeric-cell">
-                            {formatNumber(detail.discount)}
-                          </td>
-                          <td className="numeric-cell">
-                            {formatNumber(detail.amount)}
-                          </td>
-                          <td>{detail.itemDescription}</td>
-                          <td>{detail.remarks}</td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <Button
-                                variant="view"
-                                iconOnly
-                                size="sm"
-                                icon={<BiRectangle size={14} />}
-                                onClick={() => {
-                                  setShowAllowanceTooltip(false);
-                                  setCurrentDetailId(uniqueId);
-                                  setAllowanceValues({
-                                    top: detail.top || 0,
-                                    bottom: detail.bottom || 0,
-                                    left: detail.allowanceLeft || 0,
-                                    right: detail.allowanceRight || 0,
-                                  });
-                                  setShowAllowanceModal(true);
-                                }}
-                                onMouseEnter={(e) => {
-                                  const rect =
-                                    e.currentTarget.getBoundingClientRect();
-                                  setTooltipPosition({
-                                    x: rect.left,
-                                    y: rect.top + window.scrollY - 82,
-                                  });
-                                  setTooltipDetail(detail);
-                                  setShowAllowanceTooltip(true);
-                                }}
-                                onMouseLeave={handleAllowanceLeave}
-                              />
-                              <Button
-                                variant="edit"
-                                iconOnly
-                                size="sm"
-                                onClick={() =>
-                                  handleEditClick(uniqueId, detail)
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm dimension-input"
+                                value={
+                                  editedValues[uniqueId]?.width || detail.width
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "width",
+                                    e.target.value
+                                  )
                                 }
                               />
-                              <Button
-                                variant="delete"
-                                iconOnly
-                                size="sm"
-                                onClick={() => handleDeleteDetail(uniqueId)}
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm dimension-input"
+                                value={
+                                  editedValues[uniqueId]?.height ||
+                                  detail.height
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "height",
+                                    e.target.value
+                                  )
+                                }
                               />
-                            </div>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  );
-                })}
-                <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Subtotal
-                  </td>
-                  <td className="numeric-cell">
-                    {formatNumber(orderTotals.subtotal)}
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>Date Paid:</small>
-                      </div>
-                      <div>{data.datePaid}</div>
-                    </div>
-                  </td>
-                </tr>
-                <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Disc. Amount
-                  </td>
-                  <td className="numeric-cell">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-end"
-                      value={orderTotals.discAmount}
-                      onChange={(e) =>
-                        handleDiscountChange("amount", e.target.value)
-                      }
-                      style={{ width: "100px", display: "inline-block" }}
-                    />
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>OR Number:</small>
-                      </div>
-                      <div>{data.orNum}</div>
-                    </div>
-                  </td>
-                </tr>
-                <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Percent Disc.
-                  </td>
-                  <td className="numeric-cell">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-end"
-                      value={orderTotals.percentDisc}
-                      onChange={(e) =>
-                        handleDiscountChange("percent", e.target.value)
-                      }
-                      style={{ width: "100px", display: "inline-block" }}
-                    />
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>Amount Paid:</small>
-                      </div>
-                      <div style={{ width: "80px", textAlign: "right" }}>
-                        {formatNumber(data.amountPaid || 0)}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Grand Total
-                  </td>
-                  <td className="numeric-cell">
-                    {formatNumber(orderTotals.grandTotal)}
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>Balance:</small>
-                      </div>
-                      <div style={{ width: "80px", textAlign: "right" }}>
-                        {formatNumber(
-                          orderTotals.grandTotal - (data.amountPaid || 0)
+                            </td>
+                            <td>
+                              <Dropdown
+                                variant="table"
+                                value={
+                                  editedValues[uniqueId]?.unit ||
+                                  detail.unit ||
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "unit",
+                                    e.target.value
+                                  )
+                                }
+                                options={units}
+                                placeholder="Unit"
+                                labelKey="unit"
+                                valueKey="unit"
+                              />
+                            </td>
+                            <td>
+                              <Dropdown
+                                variant="table"
+                                value={
+                                  editedValues[uniqueId]?.material ||
+                                  detail.material ||
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "material",
+                                    e.target.value
+                                  )
+                                }
+                                options={materials}
+                                placeholder="Material"
+                                labelKey="Material"
+                                valueKey="Material"
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm persqft-input"
+                                value={
+                                  editedValues[uniqueId]?.perSqFt
+                                    ? editingRowId === uniqueId
+                                      ? editedValues[uniqueId].perSqFt
+                                      : Number(
+                                          editedValues[uniqueId].perSqFt
+                                        ).toLocaleString(undefined, {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })
+                                    : Number(detail.perSqFt).toLocaleString(
+                                        undefined,
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "perSqFt",
+                                      value
+                                    );
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm price-input"
+                                value={
+                                  editedValues[uniqueId]?.unitPrice
+                                    ? editingRowId === uniqueId
+                                      ? editedValues[uniqueId].unitPrice
+                                      : Number(
+                                          editedValues[uniqueId].unitPrice
+                                        ).toLocaleString(undefined, {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })
+                                    : Number(detail.unitPrice).toLocaleString(
+                                        undefined,
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "unitPrice",
+                                      value
+                                    );
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm discount-input"
+                                value={
+                                  editedValues[uniqueId]?.discount
+                                    ? editingRowId === uniqueId
+                                      ? editedValues[uniqueId].discount
+                                      : Number(
+                                          editedValues[uniqueId].discount
+                                        ).toLocaleString(undefined, {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })
+                                    : Number(detail.discount).toLocaleString(
+                                        undefined,
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "discount",
+                                      value
+                                    );
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td>
+                              {formatNumber(
+                                editedValues[uniqueId]?.amount || detail.amount
+                              )}
+                            </td>
+                            <td>
+                              <textarea
+                                className="form-control form-control-sm description-input"
+                                value={
+                                  editedValues[uniqueId]?.itemDescription ||
+                                  detail.itemDescription
+                                }
+                                onChange={(e) => {
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "itemDescription",
+                                    e.target.value
+                                  );
+                                  e.target.style.height = "31px";
+                                  e.target.style.height =
+                                    e.target.scrollHeight + "px";
+                                }}
+                                rows="1"
+                              />
+                            </td>
+                            <td>
+                              <textarea
+                                className="form-control form-control-sm remarks-input"
+                                value={
+                                  editedValues[uniqueId]?.remarks ||
+                                  detail.remarks
+                                }
+                                onChange={(e) => {
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "remarks",
+                                    e.target.value
+                                  );
+                                  e.target.style.height = "31px";
+                                  e.target.style.height =
+                                    e.target.scrollHeight + "px";
+                                }}
+                                rows="1"
+                              />
+                            </td>
+                            <td>
+                              <div className="d-flex gap-1">
+                                <Button
+                                  variant="view"
+                                  iconOnly
+                                  size="sm"
+                                  icon={<BiRectangle size={14} />}
+                                  onClick={() => {
+                                    setShowAllowanceTooltip(false);
+                                    setCurrentDetailId(uniqueId);
+                                    setAllowanceValues({
+                                      top: detail.top || 0,
+                                      bottom: detail.bottom || 0,
+                                      left: detail.allowanceLeft || 0,
+                                      right: detail.allowanceRight || 0,
+                                    });
+                                    setShowAllowanceModal(true);
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const rect =
+                                      e.currentTarget.getBoundingClientRect();
+                                    setTooltipPosition({
+                                      x: rect.left,
+                                      y: rect.top + window.scrollY - 82,
+                                    });
+                                    setTooltipDetail(detail);
+                                    setShowAllowanceTooltip(true);
+                                  }}
+                                  onMouseLeave={handleAllowanceLeave}
+                                />
+                                <Button
+                                  variant="save"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => handleSaveDetail(uniqueId)}
+                                />
+                                <Button
+                                  variant="cancel"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingRowId(null);
+                                    setEditedValues({});
+                                    setEditErrors({});
+                                  }}
+                                />
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td data-label="#">
+                              <div className="d-md-none">
+                                <span>{detail.displayOrder}</span>
+                              </div>
+                              <span className="d-none d-md-block">
+                                {detail.displayOrder}
+                              </span>
+                            </td>
+                            <td data-label="Qty" className="centered-cell">
+                              {Number(detail.quantity).toLocaleString()}
+                            </td>
+                            <td
+                              data-label="Width"
+                              className="centered-cell hide-tablet"
+                            >
+                              {detail.width}
+                            </td>
+                            <td
+                              data-label="Height"
+                              className="centered-cell hide-tablet"
+                            >
+                              {detail.height}
+                            </td>
+                            <td data-label="Unit" className="centered-cell">
+                              {detail.unit}
+                            </td>
+                            <td data-label="Material" className="centered-cell">
+                              {detail.material}
+                            </td>
+                            <td
+                              data-label="Per Sq Ft"
+                              className="centered-cell hide-tablet"
+                            >
+                              {detail.perSqFt}
+                            </td>
+                            <td data-label="Price" className="numeric-cell">
+                              {formatNumber(detail.unitPrice)}
+                            </td>
+                            <td data-label="Disc%" className="numeric-cell">
+                              {formatNumber(detail.discount)}
+                            </td>
+                            <td data-label="Amount" className="numeric-cell">
+                              {formatNumber(detail.amount)}
+                            </td>
+                            <td data-label="Description">
+                              {detail.itemDescription}
+                            </td>
+                            <td data-label="JO Remarks" className="hide-tablet">
+                              {detail.remarks}
+                            </td>
+                            <td data-label="Action">
+                              <div className="d-flex gap-1">
+                                <Button
+                                  variant="view"
+                                  iconOnly
+                                  size="sm"
+                                  icon={<BiRectangle size={14} />}
+                                  onClick={() => {
+                                    setShowAllowanceTooltip(false);
+                                    setCurrentDetailId(uniqueId);
+                                    setAllowanceValues({
+                                      top: detail.top || 0,
+                                      bottom: detail.bottom || 0,
+                                      left: detail.allowanceLeft || 0,
+                                      right: detail.allowanceRight || 0,
+                                    });
+                                    setShowAllowanceModal(true);
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const rect =
+                                      e.currentTarget.getBoundingClientRect();
+                                    setTooltipPosition({
+                                      x: rect.left,
+                                      y: rect.top + window.scrollY - 82,
+                                    });
+                                    setTooltipDetail(detail);
+                                    setShowAllowanceTooltip(true);
+                                  }}
+                                  onMouseLeave={handleAllowanceLeave}
+                                />
+                                <Button
+                                  variant="edit"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() =>
+                                    handleEditClick(uniqueId, detail)
+                                  }
+                                />
+                                <Button
+                                  variant="delete"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => handleDeleteDetail(uniqueId)}
+                                />
+                              </div>
+                            </td>
+                          </>
                         )}
+                      </tr>
+                    );
+                  })}
+
+                  {/* Totals section with payment sidebar */}
+                  <tr>
+                    <td colSpan="8"></td>
+                    <td className="text-end pe-2">Subtotal</td>
+                    <td className="numeric-cell">
+                      {formatNumber(orderTotals.subtotal)}
+                    </td>
+                    <td
+                      colSpan="3"
+                      rowSpan="4"
+                      className="d-none d-md-table-cell"
+                    >
+                      <div className="payment-sidebar">
+                        <div className="d-flex flex-column gap-2">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                Date Paid:
+                              </small>
+                            </div>
+                            <div>{data.datePaid || "-"}</div>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                OR Number:
+                              </small>
+                            </div>
+                            <div>{data.orNum || "-"}</div>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                Amount Paid:
+                              </small>
+                            </div>
+                            <div
+                              className="text-end"
+                              style={{ minWidth: "80px" }}
+                            >
+                              {formatNumber(data.amountPaid || 0)}
+                            </div>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                Balance:
+                              </small>
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                              <div
+                                className="text-end"
+                                style={{ minWidth: "80px" }}
+                              >
+                                {formatNumber(
+                                  orderTotals.grandTotal -
+                                    (data.amountPaid || 0)
+                                )}
+                              </div>
+                              <small style={{ fontSize: "1rem" }}>
+                                (
+                                {(
+                                  ((orderTotals.grandTotal -
+                                    (data.amountPaid || 0)) /
+                                    orderTotals.grandTotal) *
+                                  100
+                                ).toFixed(2)}
+                                %)
+                              </small>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="ms-2">
-                        <small style={{ fontSize: "1rem" }}>
-                          (
-                          {(
-                            ((orderTotals.grandTotal - (data.amountPaid || 0)) /
-                              orderTotals.grandTotal) *
-                            100
-                          ).toFixed(2)}
-                          %)
-                        </small>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan="8"></td>
+                    <td className="text-end pe-2">Disc. Amount</td>
+                    <td className="numeric-cell">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm text-end"
+                        value={orderTotals.discAmount}
+                        onChange={(e) =>
+                          handleDiscountChange("amount", e.target.value)
+                        }
+                        style={{ width: "100px", display: "inline-block" }}
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan="8"></td>
+                    <td className="text-end pe-2">Percent Disc.</td>
+                    <td className="numeric-cell">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm text-end"
+                        value={orderTotals.percentDisc}
+                        onChange={(e) =>
+                          handleDiscountChange("percent", e.target.value)
+                        }
+                        style={{ width: "100px", display: "inline-block" }}
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan="8"></td>
+                    <td className="text-end pe-2">Grand Total</td>
+                    <td className="numeric-cell">
+                      {formatNumber(orderTotals.grandTotal)}
+                    </td>
+                  </tr>
+
+                  {/* Mobile Payment Details */}
+                  <tr className="d-md-none">
+                    <td colSpan="13">
+                      <div className="payment-sidebar">
+                        <div className="d-flex flex-column gap-2">
+                          <div className="d-flex justify-content-between">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                Date Paid:
+                              </small>
+                            </div>
+                            <div>{data.datePaid || "-"}</div>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                OR Number:
+                              </small>
+                            </div>
+                            <div>{data.orNum || "-"}</div>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                Amount Paid:
+                              </small>
+                            </div>
+                            <div className="text-end">
+                              {formatNumber(data.amountPaid || 0)}
+                            </div>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <div className="text-end">
+                              <small style={{ fontSize: "1rem" }}>
+                                Balance:
+                              </small>
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                              <div
+                                className="text-end"
+                                style={{ minWidth: "80px" }}
+                              >
+                                {formatNumber(
+                                  orderTotals.grandTotal -
+                                    (data.amountPaid || 0)
+                                )}
+                              </div>
+                              <small style={{ fontSize: "1rem" }}>
+                                (
+                                {(
+                                  ((orderTotals.grandTotal -
+                                    (data.amountPaid || 0)) /
+                                    orderTotals.grandTotal) *
+                                  100
+                                ).toFixed(2)}
+                                %)
+                              </small>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

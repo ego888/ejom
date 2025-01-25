@@ -71,7 +71,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
+@media (max-width: 1000px) {
   .order-table {
     font-size: 0.85rem;
   }
@@ -398,4 +398,224 @@ input[type="number"] {
   text-align: right !important;
   font-variant-numeric: tabular-nums;
   padding-right: 8px !important;
+}
+
+/* Responsive Table Styles */
+.order-details-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  position: relative;
+}
+
+.order-table {
+  width: 100%;
+  min-width: 900px; /* Reduced from 1200px to allow more flexibility */
+}
+
+@media (min-width: 1001px) {
+  .order-table {
+    min-width: 1200px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1000px) {
+  .order-table {
+    min-width: 900px;
+  }
+
+  /* Hide less important columns */
+  .order-table .hide-tablet {
+    display: none;
+  }
+}
+
+/* Mobile View: max-width 767px */
+@media (max-width: 767px) {
+  /* Override Bootstrap's table-striped styles */
+  .table-striped > tbody > tr,
+  .table-striped > tbody > tr:nth-of-type(odd),
+  .table-striped > tbody > tr:nth-of-type(even),
+  .table-striped tbody tr,
+  .table-striped tbody tr:hover,
+  .order-table tbody tr,
+  .order-table.table-striped tbody tr {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  .order-table {
+    min-width: unset;
+    border: none;
+  }
+
+  .order-table thead {
+    display: none;
+  }
+
+  .order-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+  }
+
+  .order-table td {
+    display: flex;
+    padding: 0.5rem 0;
+    border: none;
+    align-items: center;
+  }
+
+  .order-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    width: 120px;
+    min-width: 120px;
+    text-align: right;
+    margin-right: 1rem;
+  }
+
+  /* Display order header styling */
+  .order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  /* Separate display order and amount in header */
+  .order-card-header .display-order {
+    font-weight: 600;
+  }
+
+  .order-card-header .amount {
+    text-align: right;
+  }
+
+  .order-card-body {
+    display: none;
+  }
+
+  .order-card-body.expanded {
+    display: block;
+  }
+
+  .order-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #dee2e6;
+  }
+
+  /* Handle edit mode inputs */
+  .order-table input,
+  .order-table select,
+  .order-table textarea {
+    width: calc(100% - 120px);
+  }
+
+  /* Mobile Responsive Totals */
+  .order-table tr:has(+ tr td.payment-sidebar) {
+    display: flex;
+    padding: 0.5rem;
+    border: none;
+  }
+
+  .order-table tr:has(+ tr td.payment-sidebar) td:first-child {
+    display: none;
+  }
+
+  .order-table tr:has(+ tr td.payment-sidebar) td.text-end {
+    flex: 1;
+    text-align: right;
+    padding-right: 1rem;
+  }
+
+  .order-table tr:has(+ tr td.payment-sidebar) td.numeric-cell {
+    width: 120px;
+    text-align: right;
+  }
+
+  .order-table tr:has(+ tr td.payment-sidebar) td:last-child {
+    display: none;
+  }
+
+  .payment-sidebar {
+    border-left: none;
+    border-top: 1px solid #dee2e6;
+    margin-left: 0;
+    margin-top: 1rem;
+    padding: 1rem 0;
+  }
+
+  .form-row > div {
+    width: 100% !important;
+  }
+
+  .form-sidebar {
+    margin-top: 1rem !important; /* Increased margin to prevent overlap with checkboxes */
+  }
+}
+
+/* Tablet View: 768px to 1000px */
+@media (min-width: 768px) and (max-width: 1000px) {
+  .order-table {
+    min-width: 900px;
+  }
+
+  /* Hide less important columns */
+  .order-table .hide-tablet {
+    display: none;
+  }
+
+  .form-sidebar {
+    margin-top: 1rem;
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* Totals Section */
+.order-table tr:has(+ tr td.payment-sidebar) td {
+  border: none;
+  padding: 0.5rem;
+}
+
+.order-table tr:has(+ tr td.payment-sidebar) td.numeric-cell {
+  width: 150px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Payment sidebar layout */
+.payment-sidebar {
+  padding: 1rem;
+  border-left: 1px solid #dee2e6;
+  margin-left: 2rem;
+}
+
+.payment-sidebar .d-flex {
+  gap: 0.5rem !important;
+}
+
+.payment-sidebar small {
+  text-align: right;
+  min-width: 100px;
+}
+
+.payment-sidebar .text-end {
+  min-width: 80px;
+  text-align: right;
+}
+
+/* Tablet Responsive Totals */
+@media (min-width: 768px) and (max-width: 1000px) {
+  .order-table {
+    min-width: 900px;
+  }
 }
