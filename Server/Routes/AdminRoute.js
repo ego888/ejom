@@ -1213,7 +1213,7 @@ router.post("/orders", (req, res) => {
             specialInst, deliveryInst, graphicsBy, dueDate, 
             dueTime, sample, reprint, totalAmount, amountDisc,
             percentDisc, grandTotal, terms, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
   const values = [
@@ -1231,11 +1231,12 @@ router.post("/orders", (req, res) => {
     req.body.dueTime || null,
     req.body.sample ? 1 : 0,
     req.body.reprint ? 1 : 0,
-    req.body.subtotal || 0,
+    req.body.totalAmount || 0,
     req.body.amountDisc || 0,
     req.body.percentDisc || 0,
     req.body.grandTotal || 0,
     req.body.terms || "",
+    "Open",
   ];
 
   con.query(sql, values, (err, result) => {

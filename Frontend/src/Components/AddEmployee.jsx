@@ -57,7 +57,7 @@ const AddEmployee = () => {
 
     // Sending the formData via POST request
     axios
-      .post(`${ServerIP}/auth/add_employee`, formData)
+      .post(`${ServerIP}/auth/employee/add`, formData)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/employee"); // Redirect after successful employee creation

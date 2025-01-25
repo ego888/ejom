@@ -72,7 +72,7 @@ const AddClient = () => {
     };
 
     axios
-      .post(`${ServerIP}/auth/add_client`, formData)
+      .post(`${ServerIP}/auth/client/add`, formData)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/client");

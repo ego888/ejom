@@ -1018,7 +1018,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="orderDate"
                   style={dateTimeStyle}
-                  value={data.orderDate}
+                  value={data.orderDate || ""}
                   onChange={(e) =>
                     setData({ ...data, orderDate: e.target.value })
                   }
@@ -1136,7 +1136,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="orderedBy"
                   style={inputStyle}
-                  value={data.orderedBy}
+                  value={data.orderedBy || ""}
                   onChange={(e) =>
                     setData({ ...data, orderedBy: e.target.value })
                   }
@@ -1158,7 +1158,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="orderReference"
                   style={inputStyle}
-                  value={data.orderReference}
+                  value={data.orderReference || ""}
                   onChange={(e) =>
                     setData({ ...data, orderReference: e.target.value })
                   }
@@ -1180,7 +1180,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="cellNumber"
                   style={inputStyle}
-                  value={data.cellNumber}
+                  value={data.cellNumber || ""}
                   onChange={(e) =>
                     setData({ ...data, cellNumber: e.target.value })
                   }
@@ -1202,7 +1202,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="dueDate"
                   style={dateTimeStyle}
-                  value={data.dueDate}
+                  value={data.dueDate || ""}
                   onChange={(e) =>
                     setData({ ...data, dueDate: e.target.value })
                   }
@@ -1224,7 +1224,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="dueTime"
                   style={inputStyle}
-                  value={data.dueTime}
+                  value={data.dueTime || ""}
                   onChange={(e) =>
                     setData({ ...data, dueTime: e.target.value })
                   }
@@ -1274,7 +1274,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="specialInst"
                   style={inputStyle}
-                  value={data.specialInst}
+                  value={data.specialInst || ""}
                   onChange={(e) =>
                     setData({ ...data, specialInst: e.target.value })
                   }
@@ -1296,7 +1296,7 @@ function AddOrder() {
                   className="form-control rounded-0"
                   id="deliveryInst"
                   style={inputStyle}
-                  value={data.deliveryInst}
+                  value={data.deliveryInst || ""}
                   onChange={(e) =>
                     setData({ ...data, deliveryInst: e.target.value })
                   }

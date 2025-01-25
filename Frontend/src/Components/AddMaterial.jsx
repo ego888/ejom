@@ -40,7 +40,7 @@ const AddMaterial = () => {
     };
 
     axios
-      .post(`${ServerIP}/auth/add_material`, formData)
+      .post(`${ServerIP}/auth/material/add`, formData)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/material");
