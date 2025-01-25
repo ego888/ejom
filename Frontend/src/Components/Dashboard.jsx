@@ -12,6 +12,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import AddOrder from "./AddOrder";
 import "./Dashboard.css";
+import { ServerIP } from "../config";
 
 const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -162,7 +163,7 @@ const Dashboard = () => {
             </ul>
           </div>
         </div>
-        <div className="col p-0 m-0">
+        <div className="col p-0 main-content">
           <Outlet />
         </div>
       </div>

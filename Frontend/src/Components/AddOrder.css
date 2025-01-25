@@ -47,14 +47,12 @@
 .numeric-cell {
   text-align: right;
   font-family: inherit;
-  font-size: 0.9rem !important;
-  font-variant-numeric: tabular-nums; /* For better number alignment */
+  font-size: 0.9rem;
 }
 
 .centered-cell {
   text-align: right; /* Changed from center to right for consistency */
-  font-size: 0.9rem !important;
-  font-variant-numeric: tabular-nums; /* For better number alignment */
+  font-size: 0.9rem;
 }
 
 .order-table td,
@@ -285,8 +283,8 @@ input[type="number"] {
 .order-table td:nth-child(1) {
   /* Display Order column */
   width: 5%;
-  min-width: 50px;
-  text-align: center !important;
+  min-width: 20px;
+  text-align: center;
 }
 
 .order-table th:nth-child(2),
@@ -294,7 +292,7 @@ input[type="number"] {
   /* Quantity column */
   width: 7%;
   min-width: 60px;
-  text-align: center !important;
+  text-align: center;
 }
 
 .order-table th:nth-child(3),
@@ -304,7 +302,7 @@ input[type="number"] {
   /* Width and Height columns */
   width: 8%;
   min-width: 70px;
-  text-align: center !important;
+  text-align: center;
 }
 
 .order-table th:nth-child(5),
@@ -353,7 +351,7 @@ input[type="number"] {
   width: 10%;
   min-width: 80px;
   text-align: right;
-  padding-right: 6px !important;
+  padding-right: 6px;
 }
 
 .order-table th:nth-child(11) {
@@ -368,7 +366,7 @@ input[type="number"] {
   width: 15%;
   min-width: 120px;
   text-align: left !important;
-  padding-left: 6px !important;
+  padding-left: 8px !important;
 }
 
 .order-table th:nth-child(12),
@@ -387,15 +385,6 @@ input[type="number"] {
   text-align: center;
 }
 
-/* Add numeric formatting for display mode */
-.centered-cell {
-  text-align: center !important;
-  font-variant-numeric: tabular-nums;
-  padding: 2px 4px !important;
-}
-
-.numeric-cell {
-  text-align: right !important;
-  font-variant-numeric: tabular-nums;
-  padding-right: 8px !important;
+.nowrap {
+  white-space: nowrap;
 }

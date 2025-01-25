@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const EditCategory = () => {
   const { id } = useParams(); // Get the category ID from the URL
@@ -14,9 +15,9 @@ const EditCategory = () => {
     console.log("Fetching category with id:", id); // Debugging log
     // Fetch category data by ID
     axios
-      //    .get("http://localhost:3000/auth/employee/" + id)
-      //      .get("http://localhost:3000/auth/category/" + id)
-      .get(`http://localhost:3000/auth/category/${id}`)
+      //    .get(`${ServerIP}/auth/employee/" + id)
+      //      .get(`${ServerIP}/auth/category/" + id)
+      .get(`${ServerIP}/auth/category/${id}`)
       .then((result) => {
         console.log(result); // Log the result to check if data is returned
         if (result.data.Status) {
@@ -33,7 +34,7 @@ const EditCategory = () => {
     console.log("Updating category:", category);
     // Update category data
     axios
-      .put("http://localhost:3000/auth/category/edit/" + id, { name: category })
+      .put(`${ServerIP}/auth/category/edit/${id}`, { name: category })
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/category"); // Redirect after successful update

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 function Orders() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ function Orders() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:3000/auth/orders", {
+      const response = await axios.get(`${ServerIP}/auth/orders`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           page: currentPage,
@@ -61,12 +62,9 @@ function Orders() {
     const fetchStatusOptions = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(
-          "http://localhost:3000/auth/order-statuses",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const response = await axios.get(`${ServerIP}/auth/order-statuses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (response.data.Status) {
           const sortedStatuses = response.data.Result.sort(
             (a, b) => a.step - b.step

@@ -1,4 +1,12 @@
+.main-content {
+  margin-left: 140px;
+}
+
 .sidebar {
+  position: fixed; /* Fix the sidebar */
+  top: 0;
+  bottom: 0;
+  left: 0;
   width: 140px;
   background: #fff9c4;
 }

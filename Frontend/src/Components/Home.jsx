@@ -1,5 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { ServerIP } from "../config";
 
 const Home = () => {
   const [adminTotal, setAdminTotal] = useState(0);
@@ -15,7 +16,7 @@ const Home = () => {
   }, []);
 
   const AdminRecords = () => {
-    axios.get("http://localhost:3000/auth/admin_records").then((result) => {
+    axios.get(`${ServerIP}/auth/admin_records`).then((result) => {
       if (result.data.Status) {
         setAdmins(result.data.Result);
       } else {
@@ -24,21 +25,21 @@ const Home = () => {
     });
   };
   const adminCount = () => {
-    axios.get("http://localhost:3000/auth/admin_count").then((result) => {
+    axios.get(`${ServerIP}/auth/admin_count`).then((result) => {
       if (result.data.Status) {
         setAdminTotal(result.data.Result[0].admin);
       }
     });
   };
   const employeeCount = () => {
-    axios.get("http://localhost:3000/auth/employee_count").then((result) => {
+    axios.get(`${ServerIP}/auth/employee_count`).then((result) => {
       if (result.data.Status) {
         setemployeeTotal(result.data.Result[0].employee);
       }
     });
   };
   const salaryCount = () => {
-    axios.get("http://localhost:3000/auth/salary_count").then((result) => {
+    axios.get(`${ServerIP}/auth/salary_count`).then((result) => {
       if (result.data.Status) {
         setSalaryTotal(result.data.Result[0].salaryOFEmp);
       } else {

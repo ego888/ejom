@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
+import { ServerIP } from "../config";
 
 const EditEmployee = () => {
   const { id } = useParams();
@@ -26,7 +27,7 @@ const EditEmployee = () => {
   useEffect(() => {
     // Fetch categories
     axios
-      .get("http://localhost:3000/auth/category")
+      .get(`${ServerIP}/auth/category`)
       .then((result) => {
         if (result.data.Status) {
           setCategory(result.data.Result);
@@ -38,7 +39,7 @@ const EditEmployee = () => {
 
     // Fetch employee details
     axios
-      .get("http://localhost:3000/auth/get_employee/" + id)
+      .get(`${ServerIP}/auth/get_employee/${id}`)
       .then((result) => {
         if (result.data.Status) {
           const employeeData = result.data.Result[0];
@@ -66,7 +67,7 @@ const EditEmployee = () => {
     e.preventDefault();
     console.log("Submitting data:", data); // Debug log
     axios
-      .put("http://localhost:3000/auth/employee/edit/" + id, data)
+      .put(`${ServerIP}/auth/employee/edit/${id}`, data)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/employee"); // Navigate to the manage employees screen after saving

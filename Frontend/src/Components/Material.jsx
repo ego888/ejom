@@ -2,13 +2,14 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const Material = () => {
   const [material, setMaterial] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get("http://localhost:3000/auth/material").then((result) => {
+    axios.get(`${ServerIP}/auth/material`).then((result) => {
       if (result.data.Status) {
         setMaterial(result.data.Result);
       }
@@ -17,13 +18,11 @@ const Material = () => {
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this material?")) {
-      axios
-        .delete("http://localhost:3000/auth/delete_material/" + id)
-        .then((result) => {
-          if (result.data.Status) {
-            window.location.reload();
-          }
-        });
+      axios.delete(`${ServerIP}/auth/delete_material/${id}`).then((result) => {
+        if (result.data.Status) {
+          window.location.reload();
+        }
+      });
     }
   };
 

@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const Category = () => {
   const [category, setCategory] = useState([]);
@@ -9,7 +10,7 @@ const Category = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/auth/category")
+      .get(`${ServerIP}/auth/category`)
       .then((result) => {
         if (result.data.Status) {
           setCategory(result.data.Result);

@@ -2,12 +2,13 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const Client = () => {
   const [clients, setClients] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:3000/auth/client").then((result) => {
+    axios.get(`${ServerIP}/auth/client`).then((result) => {
       if (result.data.Status) {
         setClients(result.data.Result);
       }
@@ -16,13 +17,11 @@ const Client = () => {
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this client?")) {
-      axios
-        .delete("http://localhost:3000/auth/delete_client/" + id)
-        .then((result) => {
-          if (result.data.Status) {
-            window.location.reload();
-          }
-        });
+      axios.delete(`${ServerIP}/auth/delete_client/${id}`).then((result) => {
+        if (result.data.Status) {
+          window.location.reload();
+        }
+      });
     }
   };
 

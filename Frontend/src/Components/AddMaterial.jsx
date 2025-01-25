@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const AddMaterial = () => {
   const [material, setMaterial] = useState({
@@ -39,7 +40,7 @@ const AddMaterial = () => {
     };
 
     axios
-      .post("http://localhost:3000/auth/add_material", formData)
+      .post(`${ServerIP}/auth/add_material`, formData)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/material");

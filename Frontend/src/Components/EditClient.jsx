@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
+import { ServerIP } from "../config";
 
 const EditClient = () => {
   const [client, setClient] = useState({
@@ -28,7 +29,7 @@ const EditClient = () => {
 
   useEffect(() => {
     // Fetch client data
-    axios.get("http://localhost:3000/auth/client/" + id).then((result) => {
+    axios.get(`${ServerIP}/auth/client/${id}`).then((result) => {
       if (result.data.Status) {
         setClient({
           ...result.data.Result,
@@ -38,7 +39,7 @@ const EditClient = () => {
 
     // Fetch sales employees
     axios
-      .get("http://localhost:3000/auth/sales_employees")
+      .get(`${ServerIP}/auth/sales_employees`)
       .then((result) => {
         if (result.data.Status) {
           setSalesPeople(result.data.Result);
@@ -50,7 +51,7 @@ const EditClient = () => {
 
     // Fetch payment terms
     axios
-      .get("http://localhost:3000/auth/payment_terms")
+      .get(`${ServerIP}/auth/payment_terms`)
       .then((result) => {
         if (result.data.Status) {
           setPaymentTerms(result.data.Result);
@@ -75,7 +76,7 @@ const EditClient = () => {
     }
 
     axios
-      .put("http://localhost:3000/auth/edit_client/" + id, client)
+      .put(`${ServerIP}/auth/edit_client/${id}`, client)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/client");

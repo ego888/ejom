@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ServerIP } from "../config";
 useEffect;
 
 const Start = () => {
@@ -8,7 +9,7 @@ const Start = () => {
   axios.defaults.withCredentials = true;
   useEffect(() => {
     axios
-      .get("http://localhost:3000/verify")
+      .get(`${ServerIP}/verify`)
       .then((result) => {
         if (result.data.Status) {
           if (result.data.role === "admin") {

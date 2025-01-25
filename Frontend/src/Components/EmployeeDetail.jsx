@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const EmployeeDetail = () => {
   const [employee, setEmployee] = useState([]);
@@ -10,7 +11,7 @@ const EmployeeDetail = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/employee/detail/" + id)
+      .get(`${ServerIP}/employee/detail/${id}`)
       .then((result) => {
         setEmployee(result.data[0]);
       })
@@ -19,7 +20,7 @@ const EmployeeDetail = () => {
 
   const handleLogout = () => {
     axios
-      .get("http://localhost:3000/employee/logout")
+      .get(`${ServerIP}/employee/logout`)
       .then((result) => {
         if (result.data.Status) {
           localStorage.removeItem("valid");
@@ -36,7 +37,7 @@ const EmployeeDetail = () => {
       </div>
       <div className="d-flex justify-content-center flex-column align-items-center mt-3">
         <img
-          src={`http://localhost:3000/Images/` + employee.image}
+          src={`${ServerIP}/Images/` + employee.image}
           className="emp_det_image"
           alt={employee.name}
         />

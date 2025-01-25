@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 import {
   validateDetail,
   calculateArea,
@@ -44,7 +45,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
     const fetchUnits = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:3000/auth/units", {
+        const response = await axios.get(`${ServerIP}/auth/units`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.Status) {
@@ -63,14 +64,11 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
     const fetchMaterials = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(
-          "http://localhost:3000/auth/materials",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await axios.get(`${ServerIP}/auth/materials`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (response.data.Status) {
           console.log("Materials for edit:", response.data.Result); // Debug log
           setMaterials(response.data.Result);
@@ -194,7 +192,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
       const token = localStorage.getItem("token");
       console.log("Fetching next display order for orderId:", orderId); // Debug log
       const response = await axios.get(
-        `http://localhost:3000/auth/next_display_order/${orderId}`,
+        `${ServerIP}/auth/next_display_order/${orderId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log("Response from next_display_order:", response.data); // Debug log
@@ -292,7 +290,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
 
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        "http://localhost:3000/auth/add_order_detail",
+        `${ServerIP}/auth/add_order_detail`,
         submissionData,
         {
           headers: {

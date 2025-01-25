@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const EditMaterial = () => {
   const [material, setMaterial] = useState({
@@ -19,7 +20,7 @@ const EditMaterial = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/auth/material/" + id)
+      .get(`${ServerIP}/auth/material/${id}`)
       .then((result) => {
         setMaterial({
           material: result.data.Result.Material,
@@ -49,7 +50,7 @@ const EditMaterial = () => {
     }
 
     axios
-      .put("http://localhost:3000/auth/material/edit/" + id, material)
+      .put(`${ServerIP}/auth/material/edit/${id}`, material)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/material");

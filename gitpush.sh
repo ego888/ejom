@@ -10,6 +10,6 @@ fi
 # Git commands
 git add .
 git commit -m "$1"
-git push origin ui-standardization
+git push origin main
 
 

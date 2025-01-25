@@ -40,6 +40,7 @@ import {
 } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import Input from "./UI/Input";
+import { ServerIP } from "../config";
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -165,7 +166,7 @@ function AddOrder() {
 
     const token = localStorage.getItem("token");
     axios
-      .get(`http://localhost:3000/auth/order_details/${orderId || id}`, {
+      .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -194,7 +195,7 @@ function AddOrder() {
 
     // Update all axios calls to use config
     axios
-      .get("http://localhost:3000/auth/clients", config)
+      .get(`${ServerIP}/auth/clients`, config)
       .then((result) => {
         if (result.data.Status) {
           setClients(result.data.Result);
@@ -203,7 +204,7 @@ function AddOrder() {
       .catch((err) => console.log(err));
 
     axios
-      .get("http://localhost:3000/auth/sales_employees", config)
+      .get(`${ServerIP}/auth/sales_employees`, config)
       .then((result) => {
         if (result.data.Status) {
           setSalesEmployees(result.data.Result);
@@ -212,7 +213,7 @@ function AddOrder() {
       .catch((err) => console.log(err));
 
     axios
-      .get("http://localhost:3000/auth/artists", config)
+      .get(`${ServerIP}/auth/artists`, config)
       .then((result) => {
         if (result.data.Status) {
           setArtists(result.data.Result);
@@ -254,7 +255,7 @@ function AddOrder() {
     if (id) {
       const token = localStorage.getItem("token");
       axios
-        .get(`http://localhost:3000/auth/order/${id}`, {
+        .get(`${ServerIP}/auth/order/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -293,10 +294,10 @@ function AddOrder() {
     const token = localStorage.getItem("token");
     try {
       const [unitsRes, materialsRes] = await Promise.all([
-        axios.get("http://localhost:3000/auth/units", {
+        axios.get(`${ServerIP}/auth/units`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get("http://localhost:3000/auth/materials", {
+        axios.get(`${ServerIP}/auth/materials`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -371,7 +372,7 @@ function AddOrder() {
     if (orderId) {
       // Update existing order
       axios
-        .put(`http://localhost:3000/auth/orders/${orderId}`, dataToSend, {
+        .put(`${ServerIP}/auth/orders/${orderId}`, dataToSend, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((result) => {
@@ -392,7 +393,7 @@ function AddOrder() {
     } else {
       // Create new order
       axios
-        .post("http://localhost:3000/auth/orders", dataToSend, {
+        .post(`${ServerIP}/auth/orders`, dataToSend, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((result) => {
@@ -465,19 +466,16 @@ function AddOrder() {
     Promise.all([
       // Update order with only the three fields using new endpoint
       axios.put(
-        `http://localhost:3000/auth/orders/${orderId}/update_edited_info`,
+        `${ServerIP}/auth/orders/${orderId}/update_edited_info`,
         orderUpdateData,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       ),
       // Delete the detail
-      axios.delete(
-        `http://localhost:3000/auth/order_detail/${orderId}/${displayOrder}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      ),
+      axios.delete(`${ServerIP}/auth/order_detail/${orderId}/${displayOrder}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     ])
       .then(([orderResult, detailResult]) => {
         if (detailResult.data.Status) {
@@ -738,7 +736,7 @@ function AddOrder() {
     Promise.all([
       // Update order with only the three fields using new endpoint
       axios.put(
-        `http://localhost:3000/auth/orders/${orderId}/update_edited_info`,
+        `${ServerIP}/auth/orders/${orderId}/update_edited_info`,
         orderUpdateData,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -746,7 +744,7 @@ function AddOrder() {
       ),
       // Update order detail
       axios.put(
-        `http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`,
+        `${ServerIP}/auth/order_details/${orderId}/${displayOrder}`,
         sanitizedDetail,
         { headers: { Authorization: `Bearer ${token}` } }
       ),
@@ -778,10 +776,10 @@ function AddOrder() {
       const token = localStorage.getItem("token");
       try {
         const [unitsRes, materialsRes] = await Promise.all([
-          axios.get("http://localhost:3000/auth/units", {
+          axios.get(`${ServerIP}/auth/units`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("http://localhost:3000/auth/materials", {
+          axios.get(`${ServerIP}/auth/materials`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -809,7 +807,7 @@ function AddOrder() {
       const token = localStorage.getItem("token");
       try {
         const response = await axios.get(
-          `http://localhost:3000/auth/order_details/${orderId}`,
+          `${ServerIP}/auth/order_details/${orderId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -893,7 +891,7 @@ function AddOrder() {
       });
 
       await axios.put(
-        `http://localhost:3000/auth/order_detail_display_order/${orderId}/${detail.Id}`,
+        `${ServerIP}/auth/order_detail_display_order/${orderId}/${detail.Id}`,
         { displayOrder: orderNum },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -917,7 +915,7 @@ function AddOrder() {
 
     // Fetch complete client data
     axios
-      .get(`http://localhost:3000/auth/client/${id}`, {
+      .get(`${ServerIP}/auth/client/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((result) => {
@@ -937,7 +935,7 @@ function AddOrder() {
   useEffect(() => {
     // Fetch payment terms
     axios
-      .get("http://localhost:3000/auth/payment_terms")
+      .get(`${ServerIP}/auth/payment_terms`)
       .then((result) => {
         if (result.data.Status) {
           setPaymentTerms(result.data.Result);
@@ -973,7 +971,7 @@ function AddOrder() {
   };
 
   return (
-    <div className="px-5 mt-3">
+    <div className="px-4 mt-3">
       <div className="p-3 rounded border">
         <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
           <div className="d-flex align-items-center gap-3">
@@ -1464,15 +1462,15 @@ function AddOrder() {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Qty</th>
-                  <th>Width</th>
-                  <th>Height</th>
+                  <th className="text-center">Qty</th>
+                  <th className="text-center">Width</th>
+                  <th className="text-center">Height</th>
                   <th>Unit</th>
                   <th>Material</th>
-                  <th>Per Sq Ft</th>
-                  <th>Price</th>
-                  <th>Disc%</th>
-                  <th>Amount</th>
+                  <th className="text-end">Per Sq Ft</th>
+                  <th className="text-end">Price</th>
+                  <th className="text-end">Disc%</th>
+                  <th className="text-end">Amount</th>
                   <th>Description</th>
                   <th>JO Remarks</th>
                   <th>Action</th>
@@ -1911,9 +1909,15 @@ function AddOrder() {
                   );
                 })}
                 <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Subtotal
-                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td className="text-end pe-2">Subtotal:</td>
                   <td className="numeric-cell">
                     {formatNumber(orderTotals.subtotal)}
                   </td>
@@ -1927,9 +1931,15 @@ function AddOrder() {
                   </td>
                 </tr>
                 <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Disc. Amount
-                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td className="text-end pe-2 nowrap">Disc. Amount:</td>
                   <td className="numeric-cell">
                     <input
                       type="number"
@@ -1951,9 +1961,15 @@ function AddOrder() {
                   </td>
                 </tr>
                 <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Percent Disc.
-                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td className="text-end pe-2">Percent Disc.:</td>
                   <td className="numeric-cell">
                     <input
                       type="number"
@@ -1977,9 +1993,15 @@ function AddOrder() {
                   </td>
                 </tr>
                 <tr className="total-row">
-                  <td colSpan="9" className="text-end">
-                    Grand Total
-                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td className="text-end pe-2">Grand Total:</td>
                   <td className="numeric-cell">
                     {formatNumber(orderTotals.grandTotal)}
                   </td>
@@ -2067,7 +2089,7 @@ function AddOrder() {
                 const token = localStorage.getItem("token");
                 try {
                   await axios.put(
-                    `http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`,
+                    `${ServerIP}/auth/order_details/${orderId}/${displayOrder}`,
                     updatedDetail,
                     { headers: { Authorization: `Bearer ${token}` } }
                   );

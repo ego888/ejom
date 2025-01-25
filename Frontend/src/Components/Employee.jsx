@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import { ServerIP } from "../config";
 
 const Employee = () => {
   const [employee, setEmployee] = useState([]);
@@ -9,7 +10,7 @@ const Employee = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/auth/employee")
+      .get(`${ServerIP}/auth/employee`)
       .then((result) => {
         if (result.data.Status) {
           setEmployee(result.data.Result);
@@ -22,15 +23,13 @@ const Employee = () => {
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this employee?")) {
-      axios
-        .delete("http://localhost:3000/auth/delete_employee/" + id)
-        .then((result) => {
-          if (result.data.Status) {
-            window.location.reload();
-          } else {
-            alert(result.data.Error);
-          }
-        });
+      axios.delete(`${ServerIP}/auth/delete_employee/${id}`).then((result) => {
+        if (result.data.Status) {
+          window.location.reload();
+        } else {
+          alert(result.data.Error);
+        }
+      });
     }
   };
 
@@ -78,7 +77,7 @@ const Employee = () => {
                 <td className="text-center">{e.name}</td>
                 <td className="text-center">
                   <img
-                    src={`http://localhost:3000/Images/` + e.image}
+                    src={`${ServerIP}/Images/` + e.image}
                     alt=""
                     className="employee_image"
                   />

@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useState } from "react";
 import "./style.css";
 import { useNavigate } from "react-router-dom";
+import { ServerIP } from "../config";
 
 const Login = () => {
   const [values, setValues] = useState({
@@ -15,7 +16,7 @@ const Login = () => {
     event.preventDefault();
     console.log("Attempting login...");
     axios
-      .post("http://localhost:3000/auth/login", values)
+      .post(`${ServerIP}/auth/login`, values)
       .then((result) => {
         console.log("Login response:", result.data);
         if (result.data.loginStatus) {

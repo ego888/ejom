@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
+import { ServerIP } from "../config";
 
 const AddEmployee = () => {
   const [employee, setEmployee] = useState({
@@ -25,7 +26,7 @@ const AddEmployee = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/auth/category")
+      .get(`${ServerIP}/auth/category`)
       .then((result) => {
         if (result.data.Status) {
           setCategory(result.data.Result);
@@ -56,7 +57,7 @@ const AddEmployee = () => {
 
     // Sending the formData via POST request
     axios
-      .post("http://localhost:3000/auth/add_employee", formData)
+      .post(`${ServerIP}/auth/add_employee`, formData)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/employee"); // Redirect after successful employee creation

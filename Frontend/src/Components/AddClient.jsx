@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
+import { ServerIP } from "../config";
 
 const AddClient = () => {
   const [client, setClient] = useState({
@@ -28,7 +29,7 @@ const AddClient = () => {
   useEffect(() => {
     // Fetch sales employees
     axios
-      .get("http://localhost:3000/auth/sales_employees")
+      .get(`${ServerIP}/auth/sales_employees`)
       .then((result) => {
         if (result.data.Status) {
           setSalesPeople(result.data.Result);
@@ -40,7 +41,7 @@ const AddClient = () => {
 
     // Fetch payment terms
     axios
-      .get("http://localhost:3000/auth/payment_terms")
+      .get(`${ServerIP}/auth/payment_terms`)
       .then((result) => {
         if (result.data.Status) {
           setPaymentTerms(result.data.Result);
@@ -71,7 +72,7 @@ const AddClient = () => {
     };
 
     axios
-      .post("http://localhost:3000/auth/add_client", formData)
+      .post(`${ServerIP}/auth/add_client`, formData)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/client");
