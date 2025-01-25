@@ -277,6 +277,7 @@ function AddOrder() {
               deliveryInst: orderData.deliveryInst || "",
               terms: orderData.terms || "",
               amountPaid: orderData.amountPaid || "0",
+              totalHrs: orderData.totalHrs || 0, // Set totalHrs from order record
             }));
             setIsHeaderSaved(true);
             setOrderId(id);
@@ -441,31 +442,54 @@ function AddOrder() {
       .replace("T", " ");
     const [orderId, displayOrder] = uniqueId.split("_");
 
-    // First update the order's last edited info
+    // Update orderDetails by removing the deleted detail first to calculate new totals
+    const updatedDetails = orderDetails.filter(
+      (detail) =>
+        !(
+          detail.orderId === parseInt(orderId) &&
+          detail.displayOrder === parseInt(displayOrder)
+        )
+    );
+
+    // Calculate new totals
+    const totals = calculateTotals(updatedDetails);
+
+    // Update order's last edited info and totalHrs
     const orderUpdateData = {
       lastEdited: currentDateTime,
       editedBy: decoded.name,
+      totalHrs: totals.totalHrs,
     };
 
     // Update order first, then delete detail
-    axios
-      .put(`http://localhost:3000/auth/orders/${orderId}`, orderUpdateData, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then(() => {
-        // Now delete the detail using separate orderId and displayOrder
-        return axios.delete(
-          `http://localhost:3000/auth/order_detail/${orderId}/${displayOrder}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-      })
-      .then((result) => {
-        if (result.data.Status) {
-          fetchOrderDetails();
+    Promise.all([
+      // Update order with only the three fields using new endpoint
+      axios.put(
+        `http://localhost:3000/auth/orders/${orderId}/update_edited_info`,
+        orderUpdateData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
+      // Delete the detail
+      axios.delete(
+        `http://localhost:3000/auth/order_detail/${orderId}/${displayOrder}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
+    ])
+      .then(([orderResult, detailResult]) => {
+        if (detailResult.data.Status) {
+          // Update local states
+          setOrderDetails(updatedDetails);
+          setTotals(totals);
+          setData((prev) => ({
+            ...prev,
+            totalHrs: totals.totalHrs,
+          }));
         } else {
-          alert(result.data.Error);
+          alert(detailResult.data.Error);
         }
       })
       .catch((err) => handleApiError(err, navigate));
@@ -679,8 +703,8 @@ function AddOrder() {
       unitPrice: updatedDetail.unitPrice || 0,
       discount: updatedDetail.discount || 0,
       amount: updatedDetail.amount || 0,
-      squareFeet: updatedDetail.squareFeet || 0, // Make sure this matches DB field name
-      materialUsage: updatedDetail.materialUsage || 0, // Make sure this matches DB field name
+      squareFeet: updatedDetail.squareFeet || 0,
+      materialUsage: updatedDetail.materialUsage || 0,
       unit: updatedDetail.unit || "",
       material: updatedDetail.material || "",
       itemDescription: updatedDetail.itemDescription || "",
@@ -688,35 +712,60 @@ function AddOrder() {
       printHrs: updatedDetail.printHrs || 0,
     };
 
-    console.log("Sanitized detail being sent:", sanitizedDetail); // Debug log
+    console.log("Sanitized detail being sent:", sanitizedDetail);
 
-    // First update the order's last edited info
+    const [orderId, displayOrder] = uniqueId.split("_");
+
+    // Update the detail in orderDetails first to calculate new totals
+    const updatedDetails = orderDetails.map((detail) =>
+      detail.orderId === parseInt(orderId) &&
+      detail.displayOrder === parseInt(displayOrder)
+        ? { ...detail, ...sanitizedDetail }
+        : detail
+    );
+
+    // Calculate new totals
+    const totals = calculateTotals(updatedDetails);
+
+    // Update order's last edited info and totalHrs only
     const orderUpdateData = {
       lastEdited: currentDateTime,
       editedBy: decoded.name,
+      totalHrs: totals.totalHrs,
     };
 
-    // Update order first, then save detail
-    const [orderId, displayOrder] = uniqueId.split("_");
-    axios
-      .put(`http://localhost:3000/auth/orders/${orderId}`, orderUpdateData, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then(() => {
-        return axios.put(
-          `http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`,
-          sanitizedDetail,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      })
-      .then((result) => {
-        if (result.data.Status) {
+    // Save both updates
+    Promise.all([
+      // Update order with only the three fields using new endpoint
+      axios.put(
+        `http://localhost:3000/auth/orders/${orderId}/update_edited_info`,
+        orderUpdateData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
+      // Update order detail
+      axios.put(
+        `http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`,
+        sanitizedDetail,
+        { headers: { Authorization: `Bearer ${token}` } }
+      ),
+    ])
+      .then(([orderResult, detailResult]) => {
+        if (detailResult.data.Status) {
           setEditingRowId(null);
           setEditedValues({});
           setEditErrors({});
-          fetchOrderDetails();
+
+          // Update local states
+          setOrderDetails(updatedDetails);
+          setTotals(totals);
+          setData((prev) => ({
+            ...prev,
+            totalHrs: totals.totalHrs,
+          }));
         } else {
-          alert(result.data.Error);
+          alert(detailResult.data.Error);
         }
       })
       .catch((err) => handleApiError(err, navigate));

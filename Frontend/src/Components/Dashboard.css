@@ -52,7 +52,7 @@
 
 /* Active route styles */
 .sidebar-nav-link.active {
-  color: #e65100;  /* Dark Orange */
+  color: #e65100; /* Dark Orange */
   background: transparent;
 }
 
@@ -62,5 +62,5 @@
 
 .sidebar-nav-link i,
 .sidebar-nav-link span {
-  pointer-events: none;  /* This prevents hover effects on child elements */
+  pointer-events: none; /* This prevents hover effects on child elements */
 }
