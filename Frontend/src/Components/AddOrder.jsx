@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import AddOrderDetails from "./AddOrderDetails";
 import Button from "./UI/Button";
+import Dropdown from "./UI/Dropdown";
 import {
   FaUser,
   FaProjectDiagram,
@@ -985,23 +986,17 @@ function AddOrder() {
                 >
                   Prepared By
                 </label>
-                <select
-                  className="form-select rounded-0"
+                <Dropdown
+                  variant="form"
                   id="preparedBy"
-                  style={inputStyle}
                   value={data.preparedBy}
                   onChange={(e) =>
                     setData({ ...data, preparedBy: e.target.value })
                   }
+                  options={salesEmployees}
                   disabled={!isEditMode}
-                >
-                  <option value=""></option>
-                  {salesEmployees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder=""
+                />
               </div>
             </div>
             <div className="col-4">
@@ -1032,24 +1027,18 @@ function AddOrder() {
                 >
                   Client <span className="text-danger">*</span>
                 </label>
-                <select
-                  className={`form-select rounded-0 ${
-                    error.clientId ? "is-invalid" : ""
-                  }`}
+                <Dropdown
+                  variant="form"
                   id="clientId"
-                  style={inputStyle}
                   value={data.clientId || ""}
                   onChange={(e) => handleClientChange(e.target.value)}
+                  options={clients}
                   disabled={!isEditMode}
-                  autoFocus={!id}
-                >
-                  <option value=""></option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.clientName}
-                    </option>
-                  ))}
-                </select>
+                  error={error.clientId}
+                  required
+                  placeholder=""
+                  labelKey="clientName"
+                />
                 {error.clientId && (
                   <div className="invalid-feedback">Client is required</div>
                 )}
@@ -1203,25 +1192,19 @@ function AddOrder() {
                 >
                   Graphics By <span className="text-danger">*</span>
                 </label>
-                <select
-                  className={`form-select rounded-0 ${
-                    error.graphicsBy ? "is-invalid" : ""
-                  }`}
+                <Dropdown
+                  variant="form"
                   id="graphicsBy"
-                  style={inputStyle}
                   value={data.graphicsBy}
                   onChange={(e) =>
                     setData({ ...data, graphicsBy: e.target.value })
                   }
+                  options={artists}
                   disabled={!isEditMode}
-                >
-                  <option value=""></option>
-                  {artists.map((artist) => (
-                    <option key={artist.id} value={artist.id}>
-                      {artist.name}
-                    </option>
-                  ))}
-                </select>
+                  error={error.graphicsBy}
+                  required
+                  placeholder=""
+                />
                 {error.graphicsBy && (
                   <div className="invalid-feedback">
                     Graphics By is required
@@ -1510,8 +1493,8 @@ function AddOrder() {
                             />
                           </td>
                           <td>
-                            <select
-                              className="form-control form-control-sm unit-select"
+                            <Dropdown
+                              variant="table"
                               value={
                                 editedValues[uniqueId]?.unit ||
                                 detail.unit ||
@@ -1524,18 +1507,15 @@ function AddOrder() {
                                   e.target.value
                                 )
                               }
-                            >
-                              <option value="">Unit</option>
-                              {units.map((unit, index) => (
-                                <option key={index} value={unit.unit}>
-                                  {unit.unit}
-                                </option>
-                              ))}
-                            </select>
+                              options={units}
+                              placeholder="Unit"
+                              labelKey="unit"
+                              valueKey="unit"
+                            />
                           </td>
                           <td>
-                            <select
-                              className="form-control form-control-sm material-select"
+                            <Dropdown
+                              variant="table"
                               value={
                                 editedValues[uniqueId]?.material ||
                                 detail.material ||
@@ -1548,14 +1528,11 @@ function AddOrder() {
                                   e.target.value
                                 )
                               }
-                            >
-                              <option value="">Material</option>
-                              {materials.map((material, index) => (
-                                <option key={index} value={material.Material}>
-                                  {material.Material}
-                                </option>
-                              ))}
-                            </select>
+                              options={materials}
+                              placeholder="Material"
+                              labelKey="Material"
+                              valueKey="Material"
+                            />
                           </td>
                           <td>
                             <input

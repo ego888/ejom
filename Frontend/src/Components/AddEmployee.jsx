@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import Dropdown from "./UI/Dropdown";
 
 const AddEmployee = () => {
   const [employee, setEmployee] = useState({
@@ -143,6 +144,27 @@ const AddEmployee = () => {
               onChange={(e) =>
                 setEmployee({ ...employee, address: e.target.value })
               }
+            />
+          </div>
+          <div className="col-12">
+            <label htmlFor="category" className="form-label">
+              Category
+            </label>
+            <Dropdown
+              variant="form"
+              id="category"
+              name="category"
+              value={employee.category_id || ""}
+              onChange={(e) =>
+                setEmployee({
+                  ...employee,
+                  category_id: parseInt(e.target.value),
+                })
+              }
+              options={category}
+              placeholder="Select Category"
+              labelKey="name"
+              valueKey="id"
             />
           </div>
           <div className="col-12">

@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import Dropdown from "./UI/Dropdown";
 
 const AddClient = () => {
   const [client, setClient] = useState({
@@ -207,40 +208,38 @@ const AddClient = () => {
             </div>
             <div className="col-md-6 mb-3">
               <label htmlFor="terms">Terms:</label>
-              <select
+              <Dropdown
+                variant="form"
+                id="terms"
                 name="terms"
-                className="form-select rounded-0"
+                value={client.terms}
                 onChange={(e) =>
                   setClient({ ...client, terms: e.target.value })
                 }
-              >
-                <option value="">Select Terms</option>
-                {paymentTerms.map((term) => (
-                  <option key={term.terms} value={term.terms}>
-                    {term.terms}
-                  </option>
-                ))}
-              </select>
+                options={paymentTerms}
+                placeholder="Select Terms"
+                labelKey="terms"
+                valueKey="terms"
+              />
             </div>
           </div>
 
           <div className="row">
             <div className="col-md-6 mb-3">
               <label htmlFor="salesId">Sales Person:</label>
-              <select
+              <Dropdown
+                variant="form"
+                id="salesId"
                 name="salesId"
-                className="form-select rounded-0"
+                value={client.salesId}
                 onChange={(e) =>
                   setClient({ ...client, salesId: e.target.value })
                 }
-              >
-                <option value="">Select Sales Person</option>
-                {salesPeople.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name}
-                  </option>
-                ))}
-              </select>
+                options={salesPeople}
+                placeholder="Select Sales Person"
+                labelKey="name"
+                valueKey="id"
+              />
             </div>
             <div className="col-md-6 mb-3">
               <label htmlFor="creditLimit">Credit Limit:</label>

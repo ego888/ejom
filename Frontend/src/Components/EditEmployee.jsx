@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "./UI/Button";
+import Dropdown from "./UI/Dropdown";
 
 const EditEmployee = () => {
   const { id } = useParams();
@@ -157,24 +158,22 @@ const EditEmployee = () => {
             <label htmlFor="category" className="form-label">
               Category
             </label>
-            <select
-              name="category"
+            <Dropdown
+              variant="form"
               id="category"
-              className="form-select"
-              value={data.category_id} // Bind the value to employee.category_id
+              name="category"
+              value={data.category_id || ""}
               onChange={(e) =>
                 setData({
                   ...data,
                   category_id: parseInt(e.target.value),
                 })
-              } // Parse to integer
-            >
-              {category.map((c) => (
-                <option value={c.id} key={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              }
+              options={category}
+              placeholder="Select Category"
+              labelKey="name"
+              valueKey="id"
+            />
           </div>
           <div className="col-12 form-check">
             <input
