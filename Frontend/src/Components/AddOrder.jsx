@@ -38,6 +38,8 @@ import {
   calculateOrderTotals,
   calculatePrintHrs,
 } from "../utils/orderUtils";
+import Modal from "./UI/Modal";
+import Input from "./UI/Input";
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -1972,223 +1974,177 @@ function AddOrder() {
         </div>
       )}
 
-      {showAllowanceModal && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Edit Allowance</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowAllowanceModal(false)}
-                ></button>
+      {/* Allowance Modal */}
+      <Modal
+        variant="form"
+        show={showAllowanceModal}
+        onClose={() => setShowAllowanceModal(false)}
+        title="Edit Allowance"
+        footer={
+          <div className="d-flex justify-content-end gap-2">
+            <Button
+              variant="cancel"
+              onClick={() => setShowAllowanceModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="save"
+              onClick={async () => {
+                const [orderId, displayOrder] = currentDetailId.split("_");
+                const currentDetail = orderDetails.find(
+                  (d) =>
+                    d.orderId === parseInt(orderId) &&
+                    d.displayOrder === parseInt(displayOrder)
+                );
+
+                const { squareFeet, materialUsage, printHrs } = calculateValues(
+                  currentDetail,
+                  allowanceValues
+                );
+
+                const updatedDetail = {
+                  ...currentDetail,
+                  squareFeet,
+                  materialUsage,
+                  printHrs,
+                  top: allowanceValues.top,
+                  bottom: allowanceValues.bottom,
+                  allowanceLeft: allowanceValues.left,
+                  allowanceRight: allowanceValues.right,
+                };
+
+                // Save to database first
+                const token = localStorage.getItem("token");
+                try {
+                  await axios.put(
+                    `http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`,
+                    updatedDetail,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+
+                  // Update local state only after successful save
+                  const updatedDetails = orderDetails.map((detail) =>
+                    detail.orderId === parseInt(orderId) &&
+                    detail.displayOrder === parseInt(displayOrder)
+                      ? updatedDetail
+                      : detail
+                  );
+                  setOrderDetails(updatedDetails);
+
+                  // Recalculate totals
+                  calculateOrderTotals(updatedDetails);
+
+                  // Update the main data state
+                  setData((prev) => ({
+                    ...prev,
+                    orderDetails: updatedDetails,
+                  }));
+
+                  // Refresh the order details
+                  fetchOrderDetails();
+
+                  // Close the modal
+                  setShowAllowanceModal(false);
+                } catch (err) {
+                  console.error("Error saving allowance:", err);
+                  alert("Failed to save allowance changes");
+                }
+              }}
+            >
+              Save
+            </Button>
+          </div>
+        }
+      >
+        <div className="row g-3">
+          <div className="d-flex flex-column align-items-center gap-3">
+            <div style={{ width: "200px" }}>
+              <label className="form-label text-center w-100">
+                Top Allowance
+              </label>
+              <Input
+                variant="form"
+                type="number"
+                value={allowanceValues.top}
+                onChange={(e) =>
+                  setAllowanceValues((prev) => ({
+                    ...prev,
+                    top: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="d-flex gap-3">
+              <div style={{ width: "200px" }}>
+                <label className="form-label text-center w-100">
+                  Left Allowance
+                </label>
+                <Input
+                  variant="form"
+                  type="number"
+                  value={allowanceValues.left}
+                  onChange={(e) =>
+                    setAllowanceValues((prev) => ({
+                      ...prev,
+                      left: e.target.value,
+                    }))
+                  }
+                />
               </div>
-              <div className="modal-body">
-                <div className="row g-3">
-                  <div className="d-flex flex-column align-items-center gap-3">
-                    <div style={{ width: "200px" }}>
-                      <label className="form-label text-center w-100">
-                        Top Allowance
-                      </label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={allowanceValues.top}
-                        onChange={(e) =>
-                          setAllowanceValues((prev) => ({
-                            ...prev,
-                            top: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div
-                      className="d-flex justify-content-between"
-                      style={{ width: "100%" }}
-                    >
-                      <div style={{ width: "200px" }}>
-                        <label className="form-label text-center w-100">
-                          Left Allowance
-                        </label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          value={allowanceValues.left}
-                          onChange={(e) =>
-                            setAllowanceValues((prev) => ({
-                              ...prev,
-                              left: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div style={{ width: "200px" }}>
-                        <label className="form-label text-center w-100">
-                          Right Allowance
-                        </label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          value={allowanceValues.right}
-                          onChange={(e) =>
-                            setAllowanceValues((prev) => ({
-                              ...prev,
-                              right: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ width: "200px" }}>
-                      <label className="form-label text-center w-100">
-                        Bottom Allowance
-                      </label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={allowanceValues.bottom}
-                        onChange={(e) =>
-                          setAllowanceValues((prev) => ({
-                            ...prev,
-                            bottom: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
+              <div style={{ width: "200px" }}>
+                <label className="form-label text-center w-100">
+                  Right Allowance
+                </label>
+                <Input
+                  variant="form"
+                  type="number"
+                  value={allowanceValues.right}
+                  onChange={(e) =>
+                    setAllowanceValues((prev) => ({
+                      ...prev,
+                      right: e.target.value,
+                    }))
+                  }
+                />
               </div>
-              <div className="modal-footer">
-                <div className="d-flex justify-content-end gap-2">
-                  <Button
-                    variant="cancel"
-                    onClick={() => setShowAllowanceModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="save"
-                    onClick={async () => {
-                      const [orderId, displayOrder] =
-                        currentDetailId.split("_");
-
-                      const currentDetail = orderDetails.find(
-                        (detail) =>
-                          detail.orderId === parseInt(orderId) &&
-                          detail.displayOrder === parseInt(displayOrder)
-                      );
-
-                      const { squareFeet, materialUsage } = calculateArea(
-                        currentDetail.width,
-                        currentDetail.height,
-                        currentDetail.unit,
-                        currentDetail.quantity,
-                        {
-                          top: allowanceValues.top,
-                          bottom: allowanceValues.bottom,
-                          left: allowanceValues.left,
-                          right: allowanceValues.right,
-                        }
-                      );
-
-                      const printHrs = calculatePrintHrs(
-                        squareFeet,
-                        currentDetail.quantity,
-                        currentDetail.material,
-                        materials
-                      );
-
-                      console.log("New calculated values:", {
-                        squareFeet,
-                        materialUsage,
-                        printHrs,
-                      });
-
-                      const updatedDetail = {
-                        ...currentDetail,
-                        squareFeet,
-                        materialUsage,
-                        printHrs,
-                        top: allowanceValues.top,
-                        bottom: allowanceValues.bottom,
-                        allowanceLeft: allowanceValues.left,
-                        allowanceRight: allowanceValues.right,
-                      };
-
-                      // Save to database first
-                      const token = localStorage.getItem("token");
-                      try {
-                        await axios.put(
-                          `http://localhost:3000/auth/order_details/${orderId}/${displayOrder}`,
-                          updatedDetail,
-                          { headers: { Authorization: `Bearer ${token}` } }
-                        );
-
-                        // Update local state only after successful save
-                        const updatedDetails = orderDetails.map((detail) =>
-                          detail.orderId === parseInt(orderId) &&
-                          detail.displayOrder === parseInt(displayOrder)
-                            ? updatedDetail
-                            : detail
-                        );
-                        setOrderDetails(updatedDetails);
-
-                        // Recalculate totals
-                        calculateOrderTotals(updatedDetails);
-
-                        // Update the main data state
-                        setData((prev) => ({
-                          ...prev,
-                          orderDetails: updatedDetails,
-                        }));
-
-                        // Refresh the order details
-                        fetchOrderDetails();
-
-                        // Close the modal
-                        setShowAllowanceModal(false);
-                      } catch (err) {
-                        console.error("Error saving allowance:", err);
-                        alert("Failed to save allowance changes");
-                      }
-                    }}
-                  >
-                    Save
-                  </Button>
-                </div>
-              </div>
+            </div>
+            <div style={{ width: "200px" }}>
+              <label className="form-label text-center w-100">
+                Bottom Allowance
+              </label>
+              <Input
+                variant="form"
+                type="number"
+                value={allowanceValues.bottom}
+                onChange={(e) =>
+                  setAllowanceValues((prev) => ({
+                    ...prev,
+                    bottom: e.target.value,
+                  }))
+                }
+              />
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {showAllowanceTooltip && tooltipDetail && (
-        <div
-          className="position-absolute bg-white shadow-sm border rounded p-2"
-          style={{
-            left: tooltipPosition.x,
-            top: tooltipPosition.y,
-            zIndex: 1060,
-            fontSize: "0.875rem",
-          }}
-        >
-          <div className="text-center mb-1">
-            Print Hrs: {tooltipDetail.printHrs || 0}
-          </div>
-          <div className="text-center">T: {tooltipDetail.top || 0}</div>
-          <div className="d-flex justify-content-between">
-            <span>L: {tooltipDetail.allowanceLeft || 0}</span>
-            <span className="ms-3">R: {tooltipDetail.allowanceRight || 0}</span>
-          </div>
-          <div className="text-center">B: {tooltipDetail.bottom || 0}</div>
+      {/* Allowance Tooltip */}
+      <Modal
+        variant="tooltip"
+        show={showAllowanceTooltip && tooltipDetail}
+        position={tooltipPosition}
+      >
+        <div className="text-center mb-1">
+          Print Hrs: {tooltipDetail?.printHrs || 0}
         </div>
-      )}
+        <div className="text-center">T: {tooltipDetail?.top || 0}</div>
+        <div className="d-flex justify-content-between">
+          <span>L: {tooltipDetail?.allowanceLeft || 0}</span>
+          <span className="ms-3">R: {tooltipDetail?.allowanceRight || 0}</span>
+        </div>
+        <div className="text-center">B: {tooltipDetail?.bottom || 0}</div>
+      </Modal>
     </div>
   );
 }
