@@ -314,8 +314,8 @@ function AddOrder() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = (e, isPrintAction = false) => {
+    e?.preventDefault();
 
     // Validate required fields
     const newError = {};
@@ -382,7 +382,7 @@ function AddOrder() {
               ...prev,
               ...dataToSend,
             }));
-            if (isEditMode) {
+            if (isEditMode && !isPrintAction) {
               handleFinish();
             }
           } else {
@@ -970,22 +970,29 @@ function AddOrder() {
     }
   };
 
+  const handlePrintOrder = () => {
+    if (orderDetails.length === 0) {
+      window.alert(
+        "Cannot print order. No order details found. Please add order details first."
+      );
+      return;
+    }
+    navigate(`/dashboard/print_order/${id}`);
+  };
+
   return (
     <div className="px-4 mt-3">
       <div className="p-3 rounded border">
         <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
           <div className="d-flex align-items-center gap-3">
-            <h3>{id ? "Edit Order" : "Add New Order"}</h3>
+            <h3 className="m-0">
+              {id ? `Edit Order #${data.orderId}` : "Add New Order"}
+            </h3>
           </div>
           <div className="d-flex gap-2">
-            {orderId && (
-              <Button
-                variant="print"
-                onClick={() => navigate(`/dashboard/print_order/${orderId}`)}
-              >
-                Print Order
-              </Button>
-            )}
+            <Button variant="print" onClick={handlePrintOrder}>
+              Print Order
+            </Button>
             <Button variant="save" onClick={handleSubmit}>
               {isHeaderSaved ? "Finish Edit" : "Save Order"}
             </Button>
