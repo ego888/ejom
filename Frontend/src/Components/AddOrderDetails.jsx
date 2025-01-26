@@ -335,7 +335,6 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
 
   return (
     <div className="add-order-details">
-      <h5>Add Order Details</h5>
       <form onSubmit={handleSubmit}>
         <div className="table-responsive">
           <table className="order-table">

@@ -5,24 +5,6 @@ import { jwtDecode } from "jwt-decode";
 import AddOrderDetails from "./AddOrderDetails";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
-import {
-  FaUser,
-  FaProjectDiagram,
-  FaCalendarAlt,
-  FaHashtag,
-  FaPhone,
-  FaClock,
-  FaUserTie,
-  FaPalette,
-  FaClipboardList,
-  FaTruck,
-  FaCheck,
-  FaClipboardCheck,
-  FaEdit,
-  FaTrash,
-  FaTimes,
-  FaRuler,
-} from "react-icons/fa";
 import { BiRectangle } from "react-icons/bi";
 import "./AddOrder.css"; // Import the CSS file
 import {
@@ -33,9 +15,7 @@ import {
   formatNumber,
   handleApiError,
   calculateTotals,
-  validateOrderData,
   calculatePerSqFt,
-  calculateOrderTotals,
   calculatePrintHrs,
 } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
@@ -174,15 +154,11 @@ function AddOrder() {
       .then((result) => {
         if (result.data.Status) {
           setOrderDetails(result.data.Result);
-          calculateOrderTotals(result.data.Result);
+          const totals = calculateTotals(result.data.Result);
+          setTotals(totals);
         }
       })
       .catch((err) => console.log(err));
-  };
-
-  const calculateOrderTotals = (details) => {
-    const totals = calculateTotals(details);
-    setTotals(totals);
   };
 
   useEffect(() => {
@@ -430,6 +406,40 @@ function AddOrder() {
 
   const handleDetailAdded = () => {
     fetchOrderDetails();
+    const token = localStorage.getItem("token");
+    axios
+      .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((result) => {
+        if (result.data.Status) {
+          setOrderDetails(result.data.Result);
+          const totals = calculateTotals(result.data.Result);
+          setTotals(totals);
+          setData((prev) => ({
+            ...prev,
+            totalHrs: totals.totalHrs,
+          }));
+
+          // Update order with new totalHrs
+          const orderUpdateData = {
+            lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
+            editedBy: jwtDecode(token).name,
+            totalHrs: totals.totalHrs,
+          };
+
+          axios.put(
+            `${ServerIP}/auth/orders/${orderId || id}/update_edited_info`,
+            orderUpdateData,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+        }
+      })
+      .catch((err) => console.log(err));
   };
 
   const handleDeleteDetail = (uniqueId) => {
@@ -493,15 +503,6 @@ function AddOrder() {
       .catch((err) => handleApiError(err, navigate));
   };
 
-  const handleEditDetail = (detail) => {
-    console.log("Raw detail data:", JSON.stringify(detail, null, 2));
-    console.log("Object keys:", Object.keys(detail));
-
-    // Don't create a new object, just pass the original detail object
-    setEditingDetail(detail);
-    setShowEditModal(true);
-  };
-
   const handleEditClick = (uniqueId, detail) => {
     console.log("Edit clicked for unique ID:", uniqueId);
     console.log("Detail data:", detail);
@@ -552,13 +553,6 @@ function AddOrder() {
   const dateTimeStyle = {
     ...inputStyle,
     color: "black", // This will override the browser's default color for date/time inputs
-  };
-
-  const formatNumber = (num) => {
-    return new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(num);
   };
 
   // Handler for input changes with auto-calculation
@@ -2085,7 +2079,8 @@ function AddOrder() {
                   setOrderDetails(updatedDetails);
 
                   // Recalculate totals
-                  calculateOrderTotals(updatedDetails);
+                  const totals = calculateTotals(updatedDetails);
+                  setTotals(totals);
 
                   // Update the main data state
                   setData((prev) => ({

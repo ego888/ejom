@@ -139,7 +139,7 @@ function PrintOrder() {
       <div className="header-box mb-3">
         <div className="d-flex align-items-center justify-content-between mb-2">
           {/* Left-aligned: Job Order */}
-          <h3 className="m-0 text-start">Job Order #{data.orderId}</h3>
+          <h3 className="m-0 text-start">Job Order #{data.orderId || ""}</h3>
 
           {/* Centered: Logo */}
           <div className="flex-grow-1 d-flex justify-content-center">
@@ -160,19 +160,19 @@ function PrintOrder() {
         <div className="header-grid">
           <div className="header-item">
             <span className="label">Client:</span>{" "}
-            <span className="field-value">{data.clientName}</span>
+            <span className="field-value">{data.clientName || ""}</span>
           </div>
           <div className="header-item">
             <span className="label">Project:</span>{" "}
-            <span className="field-value">{data.projectName}</span>
+            <span className="field-value">{data.projectName || ""}</span>
           </div>
           <div className="header-item">
             <span className="label">Ordered By:</span>{" "}
-            <span className="field-value">{data.orderedBy || "-"}</span>
+            <span className="field-value">{data.orderedBy || ""}</span>
           </div>
           <div className="header-item">
             <span className="label">Order Reference:</span>{" "}
-            <span className="field-value">{data.orderReference || "-"}</span>
+            <span className="field-value">{data.orderReference || ""}</span>
           </div>
           <div className="header-item">
             <span className="label">Order Date:</span>{" "}
@@ -185,17 +185,16 @@ function PrintOrder() {
           <div className="header-item">
             <span className="label">Due:</span>{" "}
             <span className="label">
-              {data.dueDate ? new Date(data.dueDate).toLocaleDateString() : "-"}{" "}
-              {data.dueTime || ""}
+              {data.dueDate || ""} {data.dueTime || ""}
             </span>
           </div>
           <div className="header-item">
             <span className="label">Graphics:</span>{" "}
-            <span className="label">{employees[data.graphicsBy] || "-"}</span>
+            <span className="label">{employees[data.graphicsBy] || ""}</span>
           </div>
           <div className="header-item">
             <span className="label">Prepared By:</span>{" "}
-            <span className="label">{employees[data.preparedBy] || "-"}</span>
+            <span className="label">{employees[data.preparedBy] || ""}</span>
           </div>
         </div>
         <div className="instructions-grid mt-2">
@@ -203,7 +202,7 @@ function PrintOrder() {
             <div className="instruction-item d-flex justify-content-between">
               <div>
                 <span className="label">Special Instructions:</span>{" "}
-                <span className="label">{data.specialInst}</span>
+                <span className="label">{data.specialInst || ""}</span>
               </div>
               <div className="checkmarks">
                 {data.sample && <span>☑ Sample</span>}
@@ -214,7 +213,7 @@ function PrintOrder() {
             <div className="instruction-item d-flex justify-content-between">
               <div>
                 <span className="label">Delivery Instructions:</span>{" "}
-                <span className="label">{data.deliveryInst}</span>
+                <span className="label">{data.deliveryInst || ""}</span>
               </div>
               <div className="checkmarks">
                 {data.reprint && <span>☑ Reprint</span>}
@@ -285,7 +284,9 @@ function PrintOrder() {
       {/* Total Hours */}
       <div className="text-end">
         <span className="label">Total Hours:</span>{" "}
-        <span className="field-value">{data.totalHrs || 0}</span>
+        <span className="field-value" style={{ marginRight: "15px" }}>
+          {data.totalHrs || ""}
+        </span>
       </div>
 
       {/* Page Info and Print DateTime */}
