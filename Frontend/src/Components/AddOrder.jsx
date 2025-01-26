@@ -944,32 +944,6 @@ function AddOrder() {
       .catch((err) => handleApiError(err, navigate));
   }, []);
 
-  // Add this function to handle hover
-  const handleAllowanceHover = (detail, event) => {
-    const rect = event.target.getBoundingClientRect();
-    setTooltipPosition({
-      x: rect.left,
-      y: rect.top + window.scrollY - 82,
-    });
-    setTooltipDetail(detail);
-    setShowAllowanceTooltip(true);
-  };
-
-  const handleAllowanceLeave = () => {
-    setShowAllowanceTooltip(false);
-  };
-
-  const handleTextareaResize = (e) => {
-    const textarea = e.target;
-    // Reset height to min-height to get accurate scrollHeight
-    textarea.style.height = "31px";
-    // Set height to scrollHeight if content requires more space
-    const scrollHeight = textarea.scrollHeight;
-    if (scrollHeight > 31) {
-      textarea.style.height = scrollHeight + "px";
-    }
-  };
-
   const handlePrintOrder = () => {
     if (orderDetails.length === 0) {
       window.alert(
@@ -1764,17 +1738,15 @@ function AddOrder() {
                                   });
                                   setShowAllowanceModal(true);
                                 }}
-                                onMouseEnter={(e) => {
-                                  const rect =
-                                    e.currentTarget.getBoundingClientRect();
-                                  setTooltipPosition({
-                                    x: rect.left,
-                                    y: rect.top + window.scrollY - 82,
-                                  });
-                                  setTooltipDetail(detail);
-                                  setShowAllowanceTooltip(true);
-                                }}
-                                onMouseLeave={handleAllowanceLeave}
+                                // onMouseOver={(e) => {
+                                //   const rect =
+                                //     e.currentTarget.getBoundingClientRect();
+                                //   setTooltipPosition({
+                                //     x: rect.left,
+                                //     y: rect.top + window.scrollY - 82,
+                                //   });
+                                //   setTooltipDetail(detail);
+                                // }}
                               />
                               <Button
                                 variant="save"
@@ -1882,17 +1854,19 @@ function AddOrder() {
                                   });
                                   setShowAllowanceModal(true);
                                 }}
-                                onMouseEnter={(e) => {
+                                onMouseOver={(e) => {
                                   const rect =
                                     e.currentTarget.getBoundingClientRect();
                                   setTooltipPosition({
-                                    x: rect.left,
+                                    x: rect.left + 25,
                                     y: rect.top + window.scrollY - 82,
                                   });
                                   setTooltipDetail(detail);
                                   setShowAllowanceTooltip(true);
                                 }}
-                                onMouseLeave={handleAllowanceLeave}
+                                onMouseLeave={() => {
+                                  setShowAllowanceTooltip(false);
+                                }}
                               />
                               <Button
                                 variant="edit"
@@ -2222,6 +2196,9 @@ function AddOrder() {
           <span className="ms-3">R: {tooltipDetail?.allowanceRight || 0}</span>
         </div>
         <div className="text-center">B: {tooltipDetail?.bottom || 0}</div>
+        <div className="text-center">
+          Usage: {tooltipDetail?.materialUsage || 0}
+        </div>
       </Modal>
     </div>
   );
