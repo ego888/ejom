@@ -954,26 +954,38 @@ function AddOrder() {
       const token = localStorage.getItem("token");
       const newNoPrintValue = currentNoPrint === 1 ? 0 : 1;
 
+      // Optimistically update the UI first
+      setOrderDetails((prevDetails) =>
+        prevDetails.map((detail) =>
+          detail.orderId === parseInt(orderId) &&
+          detail.displayOrder === parseInt(displayOrder)
+            ? { ...detail, noPrint: newNoPrintValue }
+            : detail
+        )
+      );
+
+      // Then make the API call
       const response = await axios.put(
         `${ServerIP}/auth/order_detail_noprint/${orderId}/${displayOrder}`,
         { noPrint: newNoPrintValue },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data.Status) {
-        // Update the local state
+      if (!response.data.Status) {
+        // If the API call fails, revert the optimistic update
         setOrderDetails((prevDetails) =>
           prevDetails.map((detail) =>
             detail.orderId === parseInt(orderId) &&
             detail.displayOrder === parseInt(displayOrder)
-              ? { ...detail, noPrint: newNoPrintValue }
+              ? { ...detail, noPrint: currentNoPrint }
               : detail
           )
         );
+        throw new Error("Failed to update print status");
       }
     } catch (error) {
       console.error("Error toggling noPrint status:", error);
-      alert("Failed to update print status");
+      handleApiError(error);
     }
   };
 
@@ -1486,7 +1498,8 @@ function AddOrder() {
                   return (
                     <tr
                       key={uniqueId}
-                      style={{ color: detail.noPrint === 1 ? "red" : "black" }}
+                      className={detail.noPrint === 1 ? "no-print" : ""}
+                      data-toggleable="true"
                       onDoubleClick={() =>
                         handleNoPrintToggle(
                           detail.orderId,

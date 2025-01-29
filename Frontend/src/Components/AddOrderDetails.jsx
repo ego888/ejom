@@ -196,7 +196,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log("Response from next_display_order:", response.data); // Debug log
-      const nextOrder = response.data.nextDisplayOrder || 5;
+      const nextOrder = response.data.Result || 5;
       console.log("Next order number will be:", nextOrder); // Debug log
       return nextOrder;
     } catch (err) {

@@ -438,4 +438,30 @@ router.get("/units", (req, res) => {
   });
 });
 
+// Get next display order number for order details
+router.get("/next_display_order/:orderId", (req, res) => {
+  const { orderId } = req.params;
+  const sql =
+    "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
+
+  console.log("Order ID:", orderId);
+  con.query(sql, [orderId], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    // If maxOrder is 0, it means no records exist yet
+    const maxOrder = result[0].maxOrder;
+    const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
+
+    console.log("Current max order:", maxOrder);
+    console.log("Next display order:", nextDisplayOrder);
+
+    return res.json({
+      Status: true,
+      Result: nextDisplayOrder,
+    });
+  });
+});
+
 export { router as OrderRouter };
