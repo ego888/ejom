@@ -333,22 +333,11 @@ router.put("/quote_detail_display_order/:quoteId/:detailId", (req, res) => {
 // Get quote statuses
 router.get("/quote-statuses", (req, res) => {
   const sql = `
-        SELECT DISTINCT status as statusId, 
-        CASE 
-            WHEN status = 'Open' THEN 1
-            WHEN status = 'Printed' THEN 2
-            WHEN status = 'Prod' THEN 3
-            WHEN status = 'Finish' THEN 4
-            WHEN status = 'Delivered' THEN 5
-            WHEN status = 'Billed' THEN 6
-            WHEN status = 'Close' THEN 7
-            WHEN status = 'Cancel' THEN 8
-            ELSE 9
-        END as step
-        FROM quoteStatus 
-        WHERE status IS NOT NULL
-        ORDER BY step
-    `;
+    SELECT 
+      statusId,
+      step
+    FROM orderStatus 
+    ORDER BY step ASC`;
 
   con.query(sql, (err, result) => {
     if (err) {

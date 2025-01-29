@@ -1609,7 +1609,7 @@ function AddQuote() {
                     )}
                   </tr>
                 ))}
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -1625,7 +1625,7 @@ function AddQuote() {
                   </td>
                   <td colSpan="3"></td>
                 </tr>
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -1649,7 +1649,7 @@ function AddQuote() {
                   </td>
                   <td colSpan="3"></td>
                 </tr>
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -1673,7 +1673,7 @@ function AddQuote() {
                   </td>
                   <td colSpan="3"></td>
                 </tr>
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>

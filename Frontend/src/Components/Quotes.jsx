@@ -55,8 +55,20 @@ function Quotes() {
 
   // Fetch quotes when parameters change
   useEffect(() => {
-    fetchQuotes();
-  }, [currentPage, recordsPerPage, sortConfig, searchTerm, selectedStatuses]);
+    if (selectedStatuses.length === 0 && statusOptions.length > 0) {
+      setQuotes([]);
+      setTotalCount(0);
+    } else {
+      fetchQuotes();
+    }
+  }, [
+    currentPage,
+    recordsPerPage,
+    sortConfig,
+    searchTerm,
+    selectedStatuses,
+    statusOptions,
+  ]);
 
   // Fetch status options
   useEffect(() => {
@@ -71,6 +83,15 @@ function Quotes() {
             (a, b) => a.step - b.step
           );
           setStatusOptions(sortedStatuses);
+
+          // Set first two statuses (Open and Printed) as selected by default
+          const firstTwoStatuses = sortedStatuses
+            .slice(0, 2)
+            .map((s) => s.statusId);
+          setSelectedStatuses(firstTwoStatuses);
+
+          // Update All checkbox state
+          setIsAllChecked(firstTwoStatuses.length === sortedStatuses.length);
         }
       } catch (err) {
         console.error("Error fetching status options:", err);
@@ -110,6 +131,9 @@ function Quotes() {
       : [...selectedStatuses, statusId];
     setSelectedStatuses(updatedStatuses);
     setCurrentPage(1);
+
+    // Update All checkbox state
+    setIsAllChecked(updatedStatuses.length === statusOptions.length);
   };
 
   // Helper function for sort indicator
@@ -168,10 +192,8 @@ function Quotes() {
   const handleAllCheckbox = (e) => {
     if (e.target.checked) {
       setSelectedStatuses(statusOptions.map((s) => s.statusId));
-      setIsProdChecked(true);
     } else {
       setSelectedStatuses([]);
-      setIsProdChecked(false);
     }
     setIsAllChecked(e.target.checked);
   };
@@ -236,8 +258,6 @@ function Quotes() {
                 <th>Percent Discount</th>
                 <th>Grand Total</th>
                 <th>Total Hours</th>
-                <th>Telephone Number</th>
-                <th>Fax Number</th>
                 <th>Status Remarks</th>
                 <th>Reference ID</th>
                 <th>Edited By</th>
@@ -312,8 +332,6 @@ function Quotes() {
                       : ""}
                   </td>
                   <td>{quote.totalHrs || ""}</td>
-                  <td>{quote.telNum || ""}</td>
-                  <td>{quote.faxNum || ""}</td>
                   <td>{quote.statusRem || ""}</td>
                   <td>{quote.refId || ""}</td>
                   <td>{quote.editedBy || ""}</td>
@@ -323,8 +341,9 @@ function Quotes() {
           </table>
         </div>
 
-        {/* Pagination section */}
-        <div className="quote-pagination d-flex justify-content-between align-items-start mt-3">
+        {/* Pagination and Filters Section */}
+        <div className="d-flex justify-content-between align-items-start mt-3">
+          {/* Records per page selector */}
           <div className="d-flex align-items-center gap-2">
             <select
               className="form-select form-select-sm quote-records-info"
@@ -355,21 +374,28 @@ function Quotes() {
             </div>
           </div>
 
-          {/* Status filter section */}
-          <div className="quote-status-filter d-flex flex-column align-items-center gap-0">
-            <div className="d-flex gap-1">
+          {/* Status filter badges */}
+          <div
+            className="d-flex flex-column align-items-center gap-0"
+            style={{ minWidth: "400px" }}
+          >
+            {/* Status Badges */}
+            <div className="d-flex justify-content-center gap-1 w-100">
               {statusOptions.map((status) => (
                 <button
                   key={status.statusId}
-                  className={`btn btn-sm ${
+                  className={`badge ${
                     selectedStatuses.includes(status.statusId)
-                      ? "btn-primary"
-                      : "btn-outline-secondary"
+                      ? "bg-primary"
+                      : "bg-secondary"
                   }`}
                   onClick={() => handleStatusFilter(status.statusId)}
                   style={{
-                    padding: "0.1rem 0.5rem",
+                    border: "none",
+                    cursor: "pointer",
                     fontSize: "0.75rem",
+                    minWidth: "60px",
+                    padding: "0.35em 0.65em",
                   }}
                 >
                   {status.statusId}
@@ -377,36 +403,29 @@ function Quotes() {
               ))}
             </div>
 
-            {/* Prod Checkbox */}
+            {/* All Checkbox */}
             <div
               className="position-relative w-100"
               style={{ padding: "0.25rem 0" }}
             >
-              <div className="d-flex justify-content-center">
-                <div className="d-flex align-items-center px-2">
-                  <input
-                    type="checkbox"
-                    className="form-check-input me-1 quote-checkbox"
-                    ref={(el) => {
-                      if (el) {
-                        el.indeterminate = isProdIndeterminate();
-                      }
-                    }}
-                    checked={isProdChecked}
-                    onChange={handleProdCheckbox}
-                  />
-                  <label className="form-check-label">Prod</label>
-                </div>
-              </div>
-            </div>
-
-            {/* All Checkbox */}
-            <div
-              className="position-relative w-100"
-              style={{ padding: "0rem 0" }}
-            >
-              <div className="d-flex justify-content-center">
-                <div className="d-flex align-items-center px-2">
+              <div
+                className="position-absolute"
+                style={{
+                  height: "1px",
+                  backgroundColor: "#ccc",
+                  width: "100%",
+                  top: "50%",
+                  zIndex: 0,
+                }}
+              ></div>
+              <div
+                className="d-flex justify-content-center"
+                style={{ position: "relative", zIndex: 1 }}
+              >
+                <div
+                  className="d-flex align-items-center px-2"
+                  style={{ backgroundColor: "transparent" }}
+                >
                   <input
                     type="checkbox"
                     className="form-check-input me-1 quote-checkbox"
@@ -423,6 +442,80 @@ function Quotes() {
               </div>
             </div>
           </div>
+
+          {/* Pagination */}
+          <nav>
+            <ul className="pagination pagination-sm mb-0">
+              <li
+                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  First
+                </button>
+              </li>
+              <li
+                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  Previous
+                </button>
+              </li>
+              {[...Array(totalPages)].map((_, i) => (
+                <li
+                  key={i + 1}
+                  className={`page-item ${
+                    currentPage === i + 1 ? "active" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(i + 1)}
+                    style={{ fontSize: "0.75rem" }}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li
+                className={`page-item ${
+                  currentPage === totalPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  Next
+                </button>
+              </li>
+              <li
+                className={`page-item ${
+                  currentPage === totalPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  Last
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </div>

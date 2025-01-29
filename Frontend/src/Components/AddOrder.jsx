@@ -1926,7 +1926,7 @@ function AddOrder() {
                     </tr>
                   );
                 })}
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -1948,7 +1948,7 @@ function AddOrder() {
                     </div>
                   </td>
                 </tr>
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -1978,7 +1978,7 @@ function AddOrder() {
                     </div>
                   </td>
                 </tr>
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -2010,7 +2010,7 @@ function AddOrder() {
                     </div>
                   </td>
                 </tr>
-                <tr className="total-row">
+                <tr>
                   <td></td>
                   <td></td>
                   <td></td>
