@@ -13,6 +13,7 @@ import { jwtDecode } from "jwt-decode";
 import AddOrder from "./AddOrder";
 import "./Dashboard.css";
 import { ServerIP } from "../config";
+import logo from "../assets/Go Large logo 2009C2 small.jpg";
 
 const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -64,6 +65,7 @@ const Dashboard = () => {
         <div className="col-auto col-md-2 col-xl-1 px-0 sidebar">
           <div className="d-flex flex-column align-items-center align-items-sm-start min-vh-100">
             <div className="sidebar-header">
+              <img src={logo} alt="Company Logo" className="img-fluid mb-2" />
               <span className="fw-bolder">Job Order Monitoring System</span>
               <Link to="/dashboard" className="sidebar-user">
                 <i className="bi bi-person-circle me-2"></i>
@@ -86,6 +88,17 @@ const Dashboard = () => {
                 >
                   <i className="bi-speedometer2"></i>
                   <span className="d-none d-sm-inline">Dashboard</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/dashboard/quotes"
+                  className={({ isActive }) =>
+                    `sidebar-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  <i className="bi-file-earmark-text"></i>
+                  <span className="d-none d-sm-inline">Quotes</span>
                 </NavLink>
               </li>
               <li>

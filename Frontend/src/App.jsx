@@ -20,6 +20,8 @@ import EditClient from "./Components/EditClient";
 import Orders from "./Components/Orders";
 import AddOrder from "./Components/AddOrder";
 import PrintOrder from "./Components/PrintOrder";
+import Quotes from "./Components/Quotes";
+import AddQuote from "./Components/AddQuote";
 import PrivateRoute from "./Components/PrivateRoute";
 
 function App() {
@@ -72,6 +74,12 @@ function App() {
           <Route path="/dashboard/client" element={<Client />} />
           <Route path="/dashboard/client/add" element={<AddClient />} />
           <Route path="/dashboard/client/edit/:id" element={<EditClient />} />
+          <Route path="/dashboard/quotes" element={<Quotes />}></Route>
+          <Route path="/dashboard/quotes/add" element={<AddQuote />}></Route>
+          <Route
+            path="/dashboard/quotes/edit/:id"
+            element={<AddQuote />}
+          ></Route>
           <Route path="/dashboard/orders" element={<Orders />}></Route>
           <Route path="/dashboard/orders/add" element={<AddOrder />}></Route>
           <Route

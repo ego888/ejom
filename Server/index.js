@@ -1,8 +1,10 @@
 import express from "express";
 import cors from "cors";
-import { adminRouter } from "./Routes/AdminRoute.js";
+import { AdminRouter } from "./Routes/AdminRoute.js";
 import { EmployeeRouter } from "./Routes/EmployeeRoute.js";
-import Jwt from "jsonwebtoken";
+import { QuoteRouter } from "./Routes/QuoteRoute.js";
+import { OrderRouter } from "./Routes/OrderRoute.js";
+import { verifyUser } from "./middleware.js";
 import cookieParser from "cookie-parser";
 
 const app = express();
@@ -16,25 +18,15 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
-app.use("/auth", adminRouter);
+
+app.use("/auth", AdminRouter);
+app.use("/auth", QuoteRouter);
+app.use("/auth", OrderRouter);
 app.use("/employee", EmployeeRouter);
 app.use(express.static("Public"));
 
-const verifyUser = (req, res, next) => {
-  const token = req.cookies.token;
-  if (token) {
-    Jwt.verify(token, "jwt_secret_key", (err, decoded) => {
-      if (err) return res.json({ Status: false, Error: "Wrong Token" });
-      req.id = decoded.id;
-      req.role = decoded.role;
-      next();
-    });
-  } else {
-    return res.json({ Status: false, Error: "Not autheticated" });
-  }
-};
 app.get("/verify", verifyUser, (req, res) => {
-  return res.json({ Status: true, role: req.role, id: req.id });
+  return res.json({ Status: true, role: req.user.role, id: req.user.id });
 });
 
 app.listen(3000, () => {

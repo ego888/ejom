@@ -1,0 +1,112 @@
+:root {
+  --quote-bg-color: #b3e6ff;
+  --quote-border-color: #b3bbe5;
+  --quote-border-light: #99d6ff;
+  --quote-border-hover: #70c7ff;
+}
+
+.quote-page-background {
+  background-color: var(--quote-bg-color);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.quote-header {
+  background-color: var(--quote-bg-color);
+  padding: 15px;
+  border-radius: 4px;
+  border-bottom: 2px solid var(--quote-border-color);
+}
+
+.quote-form-container {
+  background-color: var(--quote-bg-color);
+  border: 2px solid var(--quote-border-color);
+  border-radius: 4px;
+}
+
+.quote-section-header {
+  background-color: var(--quote-bg-color);
+  border-bottom: 2px solid var(--quote-border-color);
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.quote-search {
+  background-color: var(--quote-bg-color);
+  border: 1px solid var(--quote-border-light);
+}
+
+.quote-search:focus {
+  background-color: var(--quote-bg-color);
+  border-color: var(--quote-border-hover);
+  box-shadow: 0 0 0 0.2rem rgba(179, 230, 255, 0.25);
+}
+
+.quote-pagination {
+  background-color: var(--quote-bg-color);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--quote-border-color);
+}
+
+.quote-checkbox {
+  background-color: var(--quote-bg-color);
+}
+
+.quote-checkbox:checked {
+  background-color: var(--quote-border-hover);
+  border-color: var(--quote-border-color);
+}
+
+.quote-status-filter {
+  background-color: var(--quote-bg-color);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--quote-border-color);
+}
+
+.quote-table-container {
+  background-color: var(--quote-bg-color);
+  padding: 15px;
+  border-radius: 4px;
+  border: 2px solid var(--quote-border-color);
+}
+
+.quote-table-container table thead {
+  background-color: var(--quote-bg-color);
+}
+
+.quote-table-container table thead th {
+  background-color: var(--quote-bg-color);
+  border-bottom: 2px solid var(--quote-border-color);
+  font-weight: 600;
+}
+
+.quote-records-info {
+  background-color: var(--quote-bg-color);
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--quote-border-color);
+}
+
+.quote-details-header {
+  background-color: var(--quote-bg-color);
+  padding: 10px;
+  border-bottom: 2px solid var(--quote-border-color);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+/* Form label styling */
+.form-label {
+  text-align: center;
+  font-weight: bold;
+  width: 100%;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* Remove required asterisk */
+.form-label::after {
+  content: none !important;
+}

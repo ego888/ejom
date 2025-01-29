@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
+import { verifyUser } from "../middleware.js";
 
 const router = express.Router();
 
@@ -636,207 +637,28 @@ router.put("/edit_employee/:id", (req, res) => {
   });
 });
 
-// Update the orders route to handle pagination, sorting, filtering and search
-router.get("/orders", async (req, res) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "orderID",
-    sortDirection = "DESC",
-    search = "",
-    statuses = "",
-  } = req.query;
-
-  const offset = (page - 1) * limit;
-  const statusArray = statuses ? statuses.split(",") : [];
-
-  try {
-    // Build the WHERE clause for search and status filtering
-    let whereClause = "1 = 1"; // Always true condition to start
-    let params = [];
-
-    if (search) {
-      whereClause += ` AND (
-                o.orderID LIKE ? OR 
-                c.clientName LIKE ? OR 
-                o.projectName LIKE ? OR 
-                o.orderedBy LIKE ? OR 
-                o.drnum LIKE ? OR 
-                o.invoiceNum LIKE ? OR 
-                o.ornum LIKE ? OR 
-                e.name LIKE ? OR 
-                o.orderReference LIKE ?
-            )`;
-      const searchTerm = `%${search}%`;
-      params = [...params, ...Array(9).fill(searchTerm)];
-    }
-
-    if (statusArray.length > 0) {
-      whereClause += ` AND o.status IN (${statusArray
-        .map(() => "?")
-        .join(",")})`;
-      params = [...params, ...statusArray];
-    }
-
-    // Count total records query
-    const countSql = `
-            SELECT COUNT(DISTINCT o.orderID) as total
-            FROM orders o
-            LEFT JOIN client c ON o.clientId = c.id
-            LEFT JOIN employee e ON o.preparedBy = e.id
-            WHERE ${whereClause}
-        `;
-
-    // Main data query
-    const dataSql = `
-            SELECT 
-                o.orderID as id, 
-                o.clientId, 
-                c.clientName, 
-                o.projectName, 
-                o.orderedBy, 
-                o.orderDate, 
-                o.dueDate, 
-                o.dueTime,
-                o.status, 
-                o.drnum, 
-                o.invoiceNum as invnum, 
-                o.totalAmount,
-                o.amountDisc,
-                o.percentDisc,
-                o.grandTotal,
-                o.ornum, 
-                o.amountPaid, 
-                o.datePaid,
-                e.name as salesName, 
-                o.orderReference
-            FROM orders o
-            LEFT JOIN client c ON o.clientId = c.id
-            LEFT JOIN employee e ON o.preparedBy = e.id
-            WHERE ${whereClause}
-            ORDER BY ${sortBy} ${sortDirection}
-            LIMIT ? OFFSET ?
-        `;
-
-    // Execute count query
-    const [countResult] = await new Promise((resolve, reject) => {
-      con.query(countSql, params, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
-
-    // Execute data query
-    const orders = await new Promise((resolve, reject) => {
-      con.query(
-        dataSql,
-        [...params, Number(limit), Number(offset)],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
-
-    return res.json({
-      Status: true,
-      Result: {
-        orders,
-        total: countResult.total,
-        page: Number(page),
-        totalPages: Math.ceil(countResult.total / limit),
-      },
-    });
-  } catch (err) {
-    console.error("Error in orders route:", err);
-    return res.json({
-      Status: false,
-      Error: "Failed to fetch orders",
-      Details: err.message,
-    });
-  }
+// Get clients (if not already exists)
+router.get("/clients", (req, res) => {
+  const sql = "SELECT id, clientName, terms FROM client";
+  con.query(sql, (err, result) => {
+    if (err) return res.json({ Status: false, Error: "Query Error" });
+    return res.json({ Status: true, Result: result });
+  });
 });
 
-// Get sales employees (where sales = true)
-router.get("/sales_employees", (req, res) => {
-  const sql =
-    "SELECT id, name FROM employee WHERE sales = true AND active = true ORDER BY name";
+// Get materials
+router.get("/materials", (req, res) => {
+  const sql = "SELECT * FROM material ORDER BY Material";
   con.query(sql, (err, result) => {
     if (err) {
-      console.log(err);
+      console.log("Error fetching materials:", err);
       return res.json({ Status: false, Error: "Query Error" });
     }
     return res.json({ Status: true, Result: result });
   });
 });
 
-// Get artists (where artist = true)
-router.get("/artists", (req, res) => {
-  const sql =
-    "SELECT id, name FROM employee WHERE artist = true AND active = true ORDER BY name";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
-// Update the verifyUser middleware with proper error response
-const verifyUser = (req, res, next) => {
-  console.log("Verifying token...");
-  const token = req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    console.log("No token provided");
-    return res.status(401).json({
-      Status: false,
-      Error: "Token not provided",
-      Code: "NO_TOKEN",
-    });
-  }
-
-  console.log("Token received:", token);
-
-  try {
-    const decoded = jwt.verify(token, "jwt-secret-key");
-    console.log("Token decoded:", decoded);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.log("Token verification error:", error.name, error.message);
-
-    // Send proper error response based on error type
-    if (error.name === "TokenExpiredError") {
-      console.log("Token expired at:", error.expiredAt);
-      return res.status(401).json({
-        Status: false,
-        Error: "Session expired. Please login again.",
-        Code: "TOKEN_EXPIRED",
-        expiredAt: error.expiredAt,
-      });
-    }
-
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        Status: false,
-        Error: "Invalid token format",
-        Code: "INVALID_TOKEN",
-      });
-    }
-
-    // Generic token error
-    return res.status(401).json({
-      Status: false,
-      Error: "Authentication failed",
-      Code: "AUTH_FAILED",
-      details: error.message,
-    });
-  }
-};
-
-// Use the middleware in your routes
+// Use the imported verifyUser middleware in routes
 router.post("/add_order", verifyUser, (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -928,88 +750,6 @@ router.post("/add_order", verifyUser, (req, res) => {
     console.log("Token Error:", error);
     return res.json({ Status: false, Error: "Invalid token" });
   }
-});
-
-// Get clients (if not already exists)
-router.get("/clients", (req, res) => {
-  const sql = "SELECT id, clientName, terms FROM client";
-  con.query(sql, (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
-    return res.json({ Status: true, Result: result });
-  });
-});
-
-// Add order detail
-router.post("/add_order_detail", (req, res) => {
-  console.log("Insertfdsfsdafdsing data:", req.body);
-
-  // Create a new object without printHrs first
-  const { printHrs, ...otherData } = req.body;
-
-  // Then add printHrs explicitly as a number
-  const data = {
-    ...otherData,
-    printHrs: Number(printHrs || 0), // Explicitly convert to number
-  };
-
-  console.log("Data being inserted (after transformation):", data);
-  console.log("printHrs value:", data.printHrs); // Log the specific value
-
-  const sql = "INSERT INTO order_details SET ?";
-
-  con.query(sql, data, (err, result) => {
-    if (err) {
-      console.log("SQL Error:", err);
-      return res.json({ Status: false, Error: "Failed to add order detail" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
-// Get order details
-router.get("/order_details/:orderId", (req, res) => {
-  const sql = `
-        SELECT * FROM order_details 
-        WHERE orderId = ? 
-        ORDER BY displayOrder
-    `;
-
-  con.query(sql, [req.params.orderId], (err, result) => {
-    if (err) {
-      console.log("Select Error:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
-// Delete order detail
-router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
-  const orderId = req.params.orderId;
-  const displayOrder = req.params.displayOrder;
-
-  const sql =
-    "DELETE FROM order_details WHERE orderId = ? AND displayOrder = ?";
-
-  con.query(sql, [orderId, displayOrder], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true });
-  });
-});
-
-// Get units
-router.get("/units", (req, res) => {
-  const sql = "SELECT * FROM units ORDER BY unit";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Error fetching units:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
 });
 
 // Get materials
@@ -1507,4 +1247,4 @@ router.put("/orders/:orderId/update_edited_info", (req, res) => {
   });
 });
 
-export { router as adminRouter };
+export { router as AdminRouter };

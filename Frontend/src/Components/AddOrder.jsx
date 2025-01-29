@@ -948,6 +948,35 @@ function AddOrder() {
     navigate(`/dashboard/print_order/${id}`);
   };
 
+  // Add this new function to handle noPrint toggle
+  const handleNoPrintToggle = async (orderId, displayOrder, currentNoPrint) => {
+    try {
+      const token = localStorage.getItem("token");
+      const newNoPrintValue = currentNoPrint === 1 ? 0 : 1;
+
+      const response = await axios.put(
+        `${ServerIP}/auth/order_detail_noprint/${orderId}/${displayOrder}`,
+        { noPrint: newNoPrintValue },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.Status) {
+        // Update the local state
+        setOrderDetails((prevDetails) =>
+          prevDetails.map((detail) =>
+            detail.orderId === parseInt(orderId) &&
+            detail.displayOrder === parseInt(displayOrder)
+              ? { ...detail, noPrint: newNoPrintValue }
+              : detail
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling noPrint status:", error);
+      alert("Failed to update print status");
+    }
+  };
+
   return (
     <div className="px-4 mt-3">
       <div className="p-3 rounded border">
@@ -1455,7 +1484,17 @@ function AddOrder() {
                 {orderDetails.map((detail, index) => {
                   const uniqueId = `${detail.orderId}_${detail.displayOrder}`;
                   return (
-                    <tr key={uniqueId}>
+                    <tr
+                      key={uniqueId}
+                      style={{ color: detail.noPrint === 1 ? "red" : "black" }}
+                      onDoubleClick={() =>
+                        handleNoPrintToggle(
+                          detail.orderId,
+                          detail.displayOrder,
+                          detail.noPrint
+                        )
+                      }
+                    >
                       {editingRowId === uniqueId ? (
                         <>
                           <td style={{ width: "40px" }}>
@@ -1732,15 +1771,6 @@ function AddOrder() {
                                   });
                                   setShowAllowanceModal(true);
                                 }}
-                                // onMouseOver={(e) => {
-                                //   const rect =
-                                //     e.currentTarget.getBoundingClientRect();
-                                //   setTooltipPosition({
-                                //     x: rect.left,
-                                //     y: rect.top + window.scrollY - 82,
-                                //   });
-                                //   setTooltipDetail(detail);
-                                // }}
                               />
                               <Button
                                 variant="save"
