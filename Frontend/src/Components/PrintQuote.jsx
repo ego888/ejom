@@ -236,33 +236,38 @@ function PrintQuote() {
             </div>
           </div>
           <div className="totals-right">
-            <div className="total-row">
-              <span>Total Amount:</span>
-              <span>
-                {Number(quote.totalAmount).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-            <div className="total-row">
-              <span>Disc. Amount:</span>
-              <span>
-                {Number(quote.amountDiscount || 0).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-            <div className="total-row">
-              <span>Disc. %:</span>
-              <span>
-                {Number(quote.percentDisc || 0).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
+            {Number(quote.amountDiscount) > 0 ? (
+              // Show all totals when there's a discount
+              <>
+                <div className="total-row">
+                  <span>Total Amount:</span>
+                  <span>
+                    {Number(quote.totalAmount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+                <div className="total-row">
+                  <span>Disc. Amount:</span>
+                  <span>
+                    {Number(quote.amountDiscount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+                <div className="total-row">
+                  <span>Disc. %:</span>
+                  <span>
+                    {Number(quote.percentDisc).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              </>
+            ) : null}
             <div className="total-row grand-total">
               <span>Grand Total:</span>
               <span>

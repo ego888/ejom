@@ -106,6 +106,9 @@
   margin-bottom: 0.5rem;
 }
 
+.form-amount-label {
+  font-weight: bold;
+}
 /* Remove required asterisk */
 .form-label::after {
   content: none !important;

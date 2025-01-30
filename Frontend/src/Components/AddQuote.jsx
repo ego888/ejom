@@ -177,7 +177,9 @@ function AddQuote() {
     } else {
       newDiscAmount = Math.min(parseFloat(value) || 0, subtotal);
       newPercentDisc =
-        subtotal > 0 ? Math.min((newDiscAmount / subtotal) * 100, 99.99) : 0;
+        subtotal > 0
+          ? Math.min(((newDiscAmount / subtotal) * 100).toFixed(2), 99.99)
+          : 0;
       newGrandTotal = Number(subtotal - newDiscAmount).toFixed(2);
     }
 
@@ -526,8 +528,11 @@ function AddQuote() {
       ? parseFloat(data.amountDiscount || 0)
       : 0;
 
+    // Calculate percentage discount based on amount discount and subtotal
     const currentPercentDisc = preserveDiscounts
-      ? parseFloat(data.percentDisc || 0)
+      ? subtotal > 0
+        ? ((currentAmountDisc / subtotal) * 100).toFixed(2)
+        : 0
       : 0;
 
     // Calculate grand total using amount discount directly
@@ -564,10 +569,19 @@ function AddQuote() {
         setQuoteDetails(detailsWithPrintHours);
         const totals = calculateQuoteTotals(detailsWithPrintHours, true);
 
+        // Calculate percentage discount based on amount discount and subtotal
+        const newPercentDisc =
+          totals.subtotal > 0
+            ? Math.min(
+                ((data.amountDiscount / totals.subtotal) * 100).toFixed(2),
+                99.99
+              )
+            : 0;
+
         const newTotals = {
           totalAmount: totals.subtotal,
           amountDiscount: data.amountDiscount,
-          percentDisc: data.percentDisc,
+          percentDisc: newPercentDisc,
           grandTotal: totals.grandTotal,
           totalHrs: totals.totalHrs,
           editedBy: currentUser.name,
@@ -1387,7 +1401,7 @@ function AddQuote() {
             </div>
             <table className="quote-table table table-hover">
               <thead>
-                <tr>
+                <tr style={{ borderBottom: "2px solid lightgrey" }}>
                   <th>#</th>
                   <th className="text-center">Qty</th>
                   <th className="text-center">Width</th>
@@ -1752,7 +1766,7 @@ function AddQuote() {
                     )}
                   </tr>
                 ))}
-                <tr>
+                <tr style={{ borderTop: "2px solid lightgrey" }}>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -1762,7 +1776,7 @@ function AddQuote() {
                   <td></td>
                   <td></td>
                   <td></td>
-                  <td className="text-end pe-2">Subtotal:</td>
+                  <td className="text-end pe-2 form-amount-label">Subtotal:</td>
                   <td className="numeric-cell">
                     {formatDisplay(data.totalAmount)}
                   </td>
@@ -1778,7 +1792,9 @@ function AddQuote() {
                   <td></td>
                   <td></td>
                   <td></td>
-                  <td className="text-end pe-2 nowrap">Disc. Amount:</td>
+                  <td className="text-end pe-2 form-amount-label">
+                    Disc. Amount:
+                  </td>
                   <td className="numeric-cell">
                     <input
                       type="number"
@@ -1802,7 +1818,9 @@ function AddQuote() {
                   <td></td>
                   <td></td>
                   <td></td>
-                  <td className="text-end pe-2">Percent Disc.:</td>
+                  <td className="text-end pe-2 form-amount-label">
+                    Percent Disc.
+                  </td>
                   <td className="numeric-cell">
                     <input
                       type="number"
@@ -1826,7 +1844,9 @@ function AddQuote() {
                   <td></td>
                   <td></td>
                   <td></td>
-                  <td className="text-end pe-2">Grand Total:</td>
+                  <td className="text-end pe-2 form-amount-label">
+                    Grand Total:
+                  </td>
                   <td className="numeric-cell">
                     {formatDisplay(data.grandTotal)}
                   </td>

@@ -1926,7 +1926,7 @@ function AddOrder() {
                     </tr>
                   );
                 })}
-                <tr>
+                <tr style={{ borderTop: "2px solid lightgrey" }}>
                   <td></td>
                   <td></td>
                   <td></td>
