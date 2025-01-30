@@ -23,6 +23,7 @@ import PrintOrder from "./Components/PrintOrder";
 import Quotes from "./Components/Quotes";
 import AddQuote from "./Components/AddQuote";
 import PrivateRoute from "./Components/PrivateRoute";
+import PrintQuote from "./Components/PrintQuote";
 
 function App() {
   return (
@@ -34,6 +35,14 @@ function App() {
           element={
             <PrivateRoute>
               <PrintOrder />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard/print_quote/:id"
+          element={
+            <PrivateRoute>
+              <PrintQuote />
             </PrivateRoute>
           }
         />

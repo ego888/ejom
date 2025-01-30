@@ -481,7 +481,6 @@ router.get("/order-statuses", verifyUser, (req, res) => {
         Details: err.message,
       });
     }
-    console.log("Order statuses result:", result); // Debug log
     return res.json({ Status: true, Result: result });
   });
 });

@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import AddQuoteDetails from "./AddQuoteDetails";
@@ -21,6 +21,7 @@ import {
 import Modal from "./UI/Modal";
 import Input from "./UI/Input";
 import { ServerIP } from "../config";
+import { debounce } from "lodash";
 
 function AddQuote() {
   const navigate = useNavigate();
@@ -85,13 +86,6 @@ function AddQuote() {
 
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
 
-  const [orderTotals, setOrderTotals] = useState({
-    subtotal: 0,
-    amountDiscount: 0,
-    percentDisc: 0,
-    grandTotal: 0,
-  });
-
   const [editingDisplayOrder, setEditingDisplayOrder] = useState(null);
   const [tempDisplayOrder, setTempDisplayOrder] = useState(null);
 
@@ -101,41 +95,111 @@ function AddQuote() {
   const [tooltipDetail, setTooltipDetail] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Move haveTotalsChanged to the top, before any hooks
+  const haveTotalsChanged = (newTotals, savedTotals) => {
+    return (
+      newTotals.totalAmount !== savedTotals.totalAmount ||
+      newTotals.amountDiscount !== savedTotals.amountDiscount ||
+      newTotals.percentDisc !== savedTotals.percentDisc ||
+      newTotals.grandTotal !== savedTotals.grandTotal ||
+      newTotals.totalHrs !== savedTotals.totalHrs
+    );
+  };
+
+  // Rest of your state declarations...
+  const [lastSavedTotals, setLastSavedTotals] = useState({
+    totalAmount: 0,
+    amountDiscount: 0,
+    percentDisc: 0,
+    grandTotal: 0,
+    totalHrs: 0,
+  });
+
+  // Modify debouncedUpdateTotals to handle the percentDisc range
+  const debouncedUpdateTotals = useCallback(
+    debounce((totals) => {
+      if (isInitialLoad) return;
+
+      // Ensure percentDisc is within valid range (assuming decimal(3,2) in MySQL)
+      const validatedTotals = {
+        ...totals,
+        percentDisc: Math.min(
+          Math.max(parseFloat(totals.percentDisc) || 0, 0),
+          99.99
+        ),
+      };
+
+      if (!haveTotalsChanged(validatedTotals, lastSavedTotals)) return;
+
+      const token = localStorage.getItem("token");
+      axios
+        .put(
+          `${ServerIP}/auth/quotes/update_totals/${orderId || id}`,
+          validatedTotals,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        )
+        .then(() => {
+          setLastSavedTotals(validatedTotals);
+        })
+        .catch((error) => {
+          console.error("Error updating totals:", error);
+          handleApiError(error, navigate);
+        });
+    }, 5000),
+    [isInitialLoad, orderId, id, lastSavedTotals, navigate]
+  );
+
+  // Clean up the debounced function when component unmounts
+  useEffect(() => {
+    return () => {
+      debouncedUpdateTotals.cancel();
+    };
+  }, [debouncedUpdateTotals]);
+
   const handleDiscountChange = (type, value) => {
+    if (isInitialLoad) return;
+
     const subtotal = quoteDetails.reduce(
       (sum, detail) => sum + parseFloat(detail.amount || 0),
       0
     );
     let newDiscAmount, newPercentDisc, newGrandTotal;
 
-    if (type === "amount") {
-      newDiscAmount = parseFloat(value) || 0;
-      newDiscAmount = Math.min(newDiscAmount, subtotal);
-      newPercentDisc =
-        subtotal > 0 ? ((newDiscAmount / subtotal) * 100).toFixed(2) : 0;
-      newGrandTotal = subtotal - newDiscAmount;
+    if (type === "percent") {
+      // Ensure percent is within valid range
+      newPercentDisc = Math.min(Math.max(parseFloat(value) || 0, 0), 99.99);
+      newDiscAmount = (subtotal * newPercentDisc) / 100;
+      newGrandTotal = Number(subtotal - newDiscAmount).toFixed(2);
     } else {
-      newPercentDisc = parseFloat(value) || 0;
-      newPercentDisc = Math.min(newPercentDisc, 100);
-      newDiscAmount = ((subtotal * newPercentDisc) / 100).toFixed(2);
-      newGrandTotal = subtotal - newDiscAmount;
+      newDiscAmount = Math.min(parseFloat(value) || 0, subtotal);
+      newPercentDisc =
+        subtotal > 0 ? Math.min((newDiscAmount / subtotal) * 100, 99.99) : 0;
+      newGrandTotal = Number(subtotal - newDiscAmount).toFixed(2);
     }
 
     const newTotals = {
-      subtotal,
-      amountDiscount: parseFloat(newDiscAmount),
-      percentDisc: parseFloat(newPercentDisc),
-      grandTotal: parseFloat(newGrandTotal),
-    };
-
-    setOrderTotals(newTotals);
-
-    setData((prev) => ({
-      ...prev,
+      totalAmount: Number(subtotal).toFixed(2),
       amountDiscount: newDiscAmount,
       percentDisc: newPercentDisc,
-      grandTotal: newGrandTotal,
-    }));
+      grandTotal: Number(newGrandTotal).toFixed(2),
+      totalHrs: data.totalHrs,
+      editedBy: currentUser.name,
+    };
+
+    if (haveTotalsChanged(newTotals, lastSavedTotals)) {
+      setData((prev) => ({
+        ...prev,
+        ...newTotals,
+      }));
+
+      if (orderId || id) {
+        debouncedUpdateTotals(newTotals);
+      }
+    }
   };
 
   const fetchQuoteDetails = () => {
@@ -151,8 +215,24 @@ function AddQuote() {
       .then((result) => {
         if (result.data.Status) {
           setQuoteDetails(result.data.Result);
-          const totals = calculateTotals(result.data.Result);
-          setTotals(totals);
+          if (!isInitialLoad) {
+            const totals = calculateQuoteTotals(result.data.Result, true);
+            const newTotals = {
+              totalAmount: parseFloat(totals.subtotal),
+              amountDiscount: parseFloat(totals.amountDiscount),
+              percentDisc: parseFloat(totals.percentDisc),
+              grandTotal: parseFloat(totals.grandTotal),
+              totalHrs: parseFloat(totals.totalHrs),
+            };
+
+            setData((prev) => ({
+              ...prev,
+              ...newTotals,
+            }));
+
+            // Update lastSavedTotals after fetching details
+            setLastSavedTotals(newTotals);
+          }
         }
       })
       .catch((err) => console.log(err));
@@ -226,6 +306,7 @@ function AddQuote() {
     if (id) {
       console.log("Fetching quote with ID:", id);
       const token = localStorage.getItem("token");
+      setIsInitialLoad(true);
       axios
         .get(`${ServerIP}/auth/quote/${id}`, {
           headers: {
@@ -236,12 +317,13 @@ function AddQuote() {
           console.log("Quote fetch result:", result.data);
           if (result.data.Status) {
             const quoteData = result.data.Result;
-            console.log("Quote data to be set:", quoteData);
-            setData((prev) => ({
-              ...prev,
-              clientId: quoteData.clientId,
-              projectName: quoteData.projectName,
-              preparedBy: quoteData.preparedBy,
+            console.log("Raw quote data:", quoteData);
+
+            // Set all the data at once with proper type conversion
+            const initialData = {
+              clientId: parseInt(quoteData.clientId),
+              projectName: quoteData.projectName || "",
+              preparedBy: parseInt(quoteData.preparedBy),
               quoteDate:
                 quoteData.quoteDate || new Date().toISOString().split("T")[0],
               orderedBy: quoteData.orderedBy || "",
@@ -251,29 +333,40 @@ function AddQuote() {
               telNum: quoteData.telNum || "",
               specialInst: quoteData.statusRem || "",
               dueDate: quoteData.dueDate || "",
-              totalAmount: quoteData.totalAmount || 0,
-              amountDiscount: quoteData.amountDiscount || 0,
-              percentDisc: quoteData.percentDisc || 0,
-              grandTotal: quoteData.grandTotal || 0,
+              totalAmount: quoteData.totalAmount
+                ? parseFloat(quoteData.totalAmount)
+                : 0,
+              amountDiscount: quoteData.amountDiscount
+                ? parseFloat(quoteData.amountDiscount)
+                : 0,
+              percentDisc: quoteData.percentDisc
+                ? parseFloat(quoteData.percentDisc)
+                : 0,
+              grandTotal: quoteData.grandTotal
+                ? parseFloat(quoteData.grandTotal)
+                : 0,
+              totalHrs: quoteData.totalHrs ? parseFloat(quoteData.totalHrs) : 0,
               editedBy: quoteData.editedBy || "",
               lastEdited: quoteData.lastedited || "",
-              totalHrs: quoteData.totalHrs || 0,
-              orderId: quoteData.quoteId,
+              orderId: parseInt(quoteData.quoteId),
               terms: quoteData.terms || "",
               status: quoteData.status || "Open",
-            }));
+            };
+
+            console.log("Setting initial data with proper types:", initialData);
+            setData(initialData);
+            // Set initial lastSavedTotals
+            setLastSavedTotals({
+              totalAmount: parseFloat(quoteData.totalAmount) || 0,
+              amountDiscount: parseFloat(quoteData.amountDiscount) || 0,
+              percentDisc: parseFloat(quoteData.percentDisc) || 0,
+              grandTotal: parseFloat(quoteData.grandTotal) || 0,
+              totalHrs: parseFloat(quoteData.totalHrs) || 0,
+            });
             setIsHeaderSaved(true);
             setOrderId(id);
-            // Fetch order details after setting the quote data
             fetchQuoteDetails();
-
-            // Also set the orderTotals state
-            setOrderTotals({
-              subtotal: quoteData.totalAmount || 0,
-              amountDiscount: quoteData.amountDiscount || 0,
-              percentDisc: quoteData.percentDisc || 0,
-              grandTotal: quoteData.grandTotal || 0,
-            });
+            setIsInitialLoad(false);
           }
         })
         .catch((err) => {
@@ -419,28 +512,31 @@ function AddQuote() {
     }
   };
 
-  const calculateQuoteTotals = (quoteDetails) => {
-    // Initialize variables for aggregation
+  const calculateQuoteTotals = (quoteDetails, preserveDiscounts = true) => {
     let subtotal = 0;
     let totalHrs = 0;
 
-    // Single iteration over the array
     quoteDetails.forEach((detail) => {
       subtotal += parseFloat(detail.amount || 0);
       totalHrs += parseFloat(detail.printHours || 0);
     });
 
-    // Calculate discount and grand total
-    const amountDiscount = parseFloat(orderTotals.amountDiscount || 0);
-    const percentDisc = parseFloat(orderTotals.percentDisc || 0);
-    const totalDiscount = amountDiscount + (subtotal * percentDisc) / 100;
-    const grandTotal = subtotal - totalDiscount;
+    // Get current discount values - ensure they're numbers
+    const currentAmountDisc = preserveDiscounts
+      ? parseFloat(data.amountDiscount || 0)
+      : 0;
+
+    const currentPercentDisc = preserveDiscounts
+      ? parseFloat(data.percentDisc || 0)
+      : 0;
+
+    // Calculate grand total using amount discount directly
+    const grandTotal = subtotal - currentAmountDisc;
 
     return {
       subtotal,
-      amountDiscount,
-      percentDisc,
-      totalDiscount,
+      amountDiscount: currentAmountDisc,
+      percentDisc: currentPercentDisc,
       grandTotal,
       totalHrs,
     };
@@ -452,9 +548,6 @@ function AddQuote() {
         `${ServerIP}/auth/quote_details/${quoteId}`
       );
       if (response.data.Status) {
-        console.log("Fetched quote details:", response.data.Result);
-
-        // Calculate print hours for each detail
         const detailsWithPrintHours = response.data.Result.map((detail) => {
           if (detail.material && detail.squareFeet && detail.quantity) {
             const printHrs = calculatePrintHrs(
@@ -463,36 +556,34 @@ function AddQuote() {
               detail.material,
               materials
             );
-            console.log("Calculated print hours for detail:", {
-              squareFeet: detail.squareFeet,
-              quantity: detail.quantity,
-              material: detail.material,
-              printHrs,
-            });
             return { ...detail, printHours: printHrs };
           }
           return detail;
         });
 
         setQuoteDetails(detailsWithPrintHours);
+        const totals = calculateQuoteTotals(detailsWithPrintHours, true);
 
-        // Calculate totals using the new function
-        const totals = calculateQuoteTotals(detailsWithPrintHours);
-
-        // Update the data state with new totals
-        setData((prev) => ({
-          ...prev,
+        const newTotals = {
           totalAmount: totals.subtotal,
-          amountDiscount: totals.amountDiscount,
+          amountDiscount: data.amountDiscount,
+          percentDisc: data.percentDisc,
           grandTotal: totals.grandTotal,
           totalHrs: totals.totalHrs,
-        }));
+          editedBy: currentUser.name,
+        };
 
-        setOrderTotals((prev) => ({
-          ...prev,
-          subtotal: totals.subtotal,
-          grandTotal: totals.grandTotal,
-        }));
+        // Only update if values have changed
+        if (haveTotalsChanged(newTotals, data)) {
+          setData((prev) => ({
+            ...prev,
+            ...newTotals,
+          }));
+
+          if (!isInitialLoad) {
+            debouncedUpdateTotals(newTotals);
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching quote details:", error);
@@ -513,7 +604,6 @@ function AddQuote() {
         )
     );
 
-    // Calculate new totals using calculateQuoteTotals instead of calculateTotals
     const totals = calculateQuoteTotals(updatedDetails);
 
     Promise.all([
@@ -524,13 +614,8 @@ function AddQuote() {
       .then(([detailResult]) => {
         if (detailResult.data.Status) {
           setQuoteDetails(updatedDetails);
-          // Update order totals
-          setOrderTotals({
-            subtotal: totals.subtotal,
-            amountDiscount: totals.amountDiscount,
-            percentDisc: totals.percentDisc,
-            grandTotal: totals.grandTotal,
-          });
+
+          // Update local state
           setData((prev) => ({
             ...prev,
             totalAmount: totals.subtotal,
@@ -539,6 +624,16 @@ function AddQuote() {
             grandTotal: totals.grandTotal,
             totalHrs: totals.totalHrs,
           }));
+
+          // Queue update to server
+          debouncedUpdateTotals({
+            totalAmount: totals.subtotal,
+            amountDiscount: totals.amountDiscount,
+            percentDisc: totals.percentDisc,
+            grandTotal: totals.grandTotal,
+            totalHrs: totals.totalHrs,
+            editedBy: currentUser.name,
+          });
         } else {
           alert(detailResult.data.Error);
         }
@@ -581,7 +676,34 @@ function AddQuote() {
   };
 
   const handleFinish = () => {
-    navigate("/dashboard/quotes");
+    // Force an immediate update before navigating
+    debouncedUpdateTotals.cancel();
+    updateTotalsToServer({
+      totalAmount: data.totalAmount,
+      amountDiscount: data.amountDiscount,
+      percentDisc: data.percentDisc,
+      grandTotal: data.grandTotal,
+      totalHrs: data.totalHrs,
+      editedBy: currentUser.name,
+    }).then(() => {
+      navigate("/dashboard/quotes");
+    });
+  };
+
+  // Add this new function to handle navigation
+  const handleNavigation = () => {
+    // Force an immediate update before navigating
+    debouncedUpdateTotals.cancel();
+    updateTotalsToServer({
+      totalAmount: data.totalAmount,
+      amountDiscount: data.amountDiscount,
+      percentDisc: data.percentDisc,
+      grandTotal: data.grandTotal,
+      totalHrs: data.totalHrs,
+      editedBy: currentUser.name,
+    }).then(() => {
+      navigate("/dashboard/quotes");
+    });
   };
 
   const labelStyle = {
@@ -778,8 +900,8 @@ function AddQuote() {
             {
               ...data,
               totalAmount: totals.subtotal,
-              amountDiscount: orderTotals.amountDiscount,
-              percentDisc: orderTotals.percentDisc,
+              amountDiscount: totals.amountDiscount,
+              percentDisc: totals.percentDisc,
               grandTotal: totals.grandTotal,
               totalHrs: totals.totalHrs,
               editedBy: currentUser.name,
@@ -795,18 +917,11 @@ function AddQuote() {
 
           if (quoteUpdateResponse.data.Status) {
             // Update local state
-            setOrderTotals({
-              subtotal: totals.subtotal,
-              amountDiscount: orderTotals.amountDiscount,
-              percentDisc: orderTotals.percentDisc,
-              grandTotal: totals.grandTotal,
-            });
-
             setData((prev) => ({
               ...prev,
               totalAmount: totals.subtotal,
-              amountDiscount: orderTotals.amountDiscount,
-              percentDisc: orderTotals.percentDisc,
+              amountDiscount: totals.amountDiscount,
+              percentDisc: totals.percentDisc,
               grandTotal: totals.grandTotal,
               totalHrs: totals.totalHrs,
             }));
@@ -934,14 +1049,45 @@ function AddQuote() {
       .catch((err) => handleApiError(err, navigate));
   }, []);
 
-  const handlePrintOrder = () => {
+  const handlePrintQuote = () => {
     if (quoteDetails.length === 0) {
       window.alert(
-        "Cannot print quote. No quote details found. Please add quote details first."
+        "Cannot print order. No order details found. Please add order details first."
       );
       return;
     }
     navigate(`/dashboard/print_quote/${id}`);
+    //    window.open(`/dashboard/print_quote/${id}`, "_blank");
+  };
+
+  const updateTotalsToServer = async (totals) => {
+    // Skip update if we're in initial load
+    if (isInitialLoad) return;
+
+    // Check if the totals have actually changed from last saved values
+    if (!haveTotalsChanged(totals, lastSavedTotals)) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${ServerIP}/auth/quotes/update_totals/${orderId || id}`,
+        totals,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // After successful update, update the lastSavedTotals
+      setLastSavedTotals(totals);
+    } catch (error) {
+      console.error("Error updating totals:", error);
+      handleApiError(error, navigate);
+    }
+  };
+
+  // Add a format function for display
+  const formatDisplay = (number) => {
+    return Number(number).toFixed(2);
   };
 
   return (
@@ -954,16 +1100,13 @@ function AddQuote() {
             </h3>
           </div>
           <div className="d-flex gap-2">
-            <Button variant="print" onClick={handlePrintOrder}>
+            <Button variant="print" onClick={handlePrintQuote} disabled={!id}>
               Print Quote
             </Button>
             <Button variant="save" onClick={handleSubmit}>
               {isHeaderSaved ? "Finish Edit" : "Save Quote"}
             </Button>
-            <Button
-              variant="cancel"
-              onClick={() => navigate("/dashboard/quotes")}
-            >
+            <Button variant="cancel" onClick={handleNavigation}>
               Cancel
             </Button>
           </div>
@@ -1467,17 +1610,17 @@ function AddQuote() {
                           />
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(
+                          {formatDisplay(
                             editedValues[
                               `${detail.quoteId}_${detail.displayOrder}`
                             ]?.amount || detail.amount
                           )}
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.materialUsage)}
+                          {formatDisplay(detail.materialUsage)}
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.printHours)}
+                          {formatDisplay(detail.printHours)}
                         </td>
                         <td>
                           <div className="d-flex gap-1">
@@ -1562,23 +1705,23 @@ function AddQuote() {
                         <td className="centered-cell">{detail.unit}</td>
                         <td className="centered-cell">{detail.material}</td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.persqft)}
+                          {formatDisplay(detail.persqft)}
                         </td>
                         <td>{detail.itemDescription}</td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.unitPrice)}
+                          {formatDisplay(detail.unitPrice)}
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.discount)}
+                          {formatDisplay(detail.discount)}
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.amount)}
+                          {formatDisplay(detail.amount)}
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.materialUsage)}
+                          {formatDisplay(detail.materialUsage)}
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.printHours)}
+                          {formatDisplay(detail.printHours)}
                         </td>
                         <td>
                           <div className="d-flex gap-1">
@@ -1621,7 +1764,7 @@ function AddQuote() {
                   <td></td>
                   <td className="text-end pe-2">Subtotal:</td>
                   <td className="numeric-cell">
-                    {formatNumber(orderTotals.subtotal)}
+                    {formatDisplay(data.totalAmount)}
                   </td>
                   <td colSpan="3"></td>
                 </tr>
@@ -1640,7 +1783,7 @@ function AddQuote() {
                     <input
                       type="number"
                       className="form-control form-control-sm text-end"
-                      value={orderTotals.amountDiscount}
+                      value={data.amountDiscount}
                       onChange={(e) =>
                         handleDiscountChange("amount", e.target.value)
                       }
@@ -1664,7 +1807,7 @@ function AddQuote() {
                     <input
                       type="number"
                       className="form-control form-control-sm text-end"
-                      value={orderTotals.percentDisc}
+                      value={data.percentDisc}
                       onChange={(e) =>
                         handleDiscountChange("percent", e.target.value)
                       }
@@ -1685,7 +1828,7 @@ function AddQuote() {
                   <td></td>
                   <td className="text-end pe-2">Grand Total:</td>
                   <td className="numeric-cell">
-                    {formatNumber(orderTotals.grandTotal)}
+                    {formatDisplay(data.grandTotal)}
                   </td>
                   <td colSpan="3"></td>
                 </tr>
