@@ -43,21 +43,16 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
 
   const getNextDisplayOrder = async () => {
     try {
-      console.log("Fetching next display order for quoteId:", quoteId);
       const response = await axios.get(
         `${ServerIP}/auth/next_display_quote/${quoteId}`
       );
-      console.log("Next display order response:", response.data);
 
       if (response.data.Status) {
         const nextOrder = response.data.Result;
-        console.log("Setting next display order to:", nextOrder);
         return nextOrder;
       }
-      console.error("Error getting next display order:", response.data.Error);
       return 5;
     } catch (error) {
-      console.error("Exception getting next display order:", error);
       return 5;
     }
   };
@@ -75,11 +70,9 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
     ])
       .then(([unitsRes, materialsRes, nextOrder]) => {
         if (unitsRes.data.Status) {
-          console.log("Units data:", unitsRes.data.Result);
           setUnits(unitsRes.data.Result);
         }
         if (materialsRes.data.Status) {
-          console.log("Materials data:", materialsRes.data.Result);
           setMaterials(materialsRes.data.Result);
         }
         setNextDisplayOrder(nextOrder);
@@ -207,7 +200,6 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
 
     try {
       const nextOrder = await getNextDisplayOrder();
-      console.log("Got next display order:", nextOrder);
 
       if (!nextOrder) {
         console.error("Failed to get next display order");
@@ -260,7 +252,6 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
         perSqFt: detail.perSqFt || 0,
       };
 
-      console.log("Sending data to server:", dataToSend);
       const token = localStorage.getItem("token");
       const response = await axios.post(
         `${ServerIP}/auth/add_quote_detail`,

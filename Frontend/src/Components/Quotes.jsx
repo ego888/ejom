@@ -19,9 +19,11 @@ function Quotes() {
     direction: "desc",
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
-  const [isProdChecked, setIsProdChecked] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState(() => {
+    const saved = localStorage.getItem("quoteStatusFilters");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isAllChecked, setIsAllChecked] = useState(false);
 
   const fetchQuotes = async () => {
@@ -84,14 +86,26 @@ function Quotes() {
           );
           setStatusOptions(sortedStatuses);
 
-          // Set first two statuses (Open and Printed) as selected by default
-          const firstTwoStatuses = sortedStatuses
-            .slice(0, 2)
-            .map((s) => s.statusId);
-          setSelectedStatuses(firstTwoStatuses);
-
-          // Update All checkbox state
-          setIsAllChecked(firstTwoStatuses.length === sortedStatuses.length);
+          // Get saved filters or default to first two statuses
+          const saved = localStorage.getItem("quoteStatusFilters");
+          if (saved) {
+            const savedStatuses = JSON.parse(saved);
+            setSelectedStatuses(savedStatuses);
+            // Update All checkbox state based on saved statuses
+            setIsAllChecked(savedStatuses.length === sortedStatuses.length);
+          } else {
+            // Define firstTwoStatuses before using it
+            const firstTwoStatuses = sortedStatuses
+              .slice(0, 2)
+              .map((s) => s.statusId);
+            setSelectedStatuses(firstTwoStatuses);
+            localStorage.setItem(
+              "quoteStatusFilters",
+              JSON.stringify(firstTwoStatuses)
+            );
+            // Update All checkbox state based on first two statuses
+            setIsAllChecked(firstTwoStatuses.length === sortedStatuses.length);
+          }
         }
       } catch (err) {
         console.error("Error fetching status options:", err);
@@ -126,14 +140,17 @@ function Quotes() {
 
   // Status filter handlers
   const handleStatusFilter = (statusId) => {
-    const updatedStatuses = selectedStatuses.includes(statusId)
-      ? selectedStatuses.filter((s) => s !== statusId)
-      : [...selectedStatuses, statusId];
-    setSelectedStatuses(updatedStatuses);
-    setCurrentPage(1);
-
-    // Update All checkbox state
-    setIsAllChecked(updatedStatuses.length === statusOptions.length);
+    setSelectedStatuses((prev) => {
+      let newStatuses;
+      if (prev.includes(statusId)) {
+        newStatuses = prev.filter((s) => s !== statusId);
+      } else {
+        newStatuses = [...prev, statusId];
+      }
+      // Save to localStorage
+      localStorage.setItem("quoteStatusFilters", JSON.stringify(newStatuses));
+      return newStatuses;
+    });
   };
 
   // Helper function for sort indicator
@@ -169,17 +186,16 @@ function Quotes() {
     );
   };
 
-  const handleProdCheckbox = (e) => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  const handleAllCheckbox = (e) => {
+    let newStatuses = [];
     if (e.target.checked) {
-      const newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-      setSelectedStatuses(newStatuses);
-    } else {
-      setSelectedStatuses(
-        selectedStatuses.filter((s) => !prodStatuses.includes(s))
-      );
+      newStatuses = statusOptions.map((s) => s.statusId);
     }
-    setIsProdChecked(e.target.checked);
+    setSelectedStatuses(newStatuses);
+    setIsAllChecked(e.target.checked);
+
+    // Save to localStorage
+    localStorage.setItem("quoteStatusFilters", JSON.stringify(newStatuses));
   };
 
   const isAllIndeterminate = () => {
@@ -187,15 +203,6 @@ function Quotes() {
       selectedStatuses.length > 0 &&
       selectedStatuses.length < statusOptions.length
     );
-  };
-
-  const handleAllCheckbox = (e) => {
-    if (e.target.checked) {
-      setSelectedStatuses(statusOptions.map((s) => s.statusId));
-    } else {
-      setSelectedStatuses([]);
-    }
-    setIsAllChecked(e.target.checked);
   };
 
   return (
@@ -303,13 +310,16 @@ function Quotes() {
                   <td>
                     <span
                       className={`badge ${
-                        quote.status === "Open"
+                        quote.status === "Closed"
                           ? "bg-success"
-                          : quote.status === "In Progress"
+                          : quote.status === "Open" ||
+                            quote.status === "Printed"
                           ? "bg-warning"
-                          : quote.status === "Completed"
-                          ? "bg-primary"
-                          : "bg-secondary"
+                          : quote.status === "Loss"
+                          ? "bg-danger"
+                          : quote.status === "Requote"
+                          ? "bg-secondary"
+                          : "bg-primary"
                       }`}
                     >
                       {quote.status}
@@ -423,12 +433,12 @@ function Quotes() {
                 style={{ position: "relative", zIndex: 1 }}
               >
                 <div
-                  className="d-flex align-items-center px-2"
+                  className="d-flex align-items-center bg-white px-2"
                   style={{ backgroundColor: "transparent" }}
                 >
                   <input
                     type="checkbox"
-                    className="form-check-input me-1 quote-checkbox"
+                    className="form-check-input me-1"
                     ref={(el) => {
                       if (el) {
                         el.indeterminate = isAllIndeterminate();

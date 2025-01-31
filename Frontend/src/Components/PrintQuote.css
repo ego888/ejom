@@ -72,27 +72,28 @@
 
 /* Quote Info Styles */
 .quote-info {
-  display: flex;
-  justify-content: space-between;
-  margin: 15px 0;
-}
-
-.quote-info-left,
-.quote-info-right {
-  width: 48%;
+  margin: 20px 0;
 }
 
 .info-row {
-  margin-bottom: 5px;
   display: flex;
+  margin-bottom: 10px;
+  gap: 20px;
+  justify-content: space-between;
 }
 
-.label {
-  width: 100px;
-  font-weight: normal;
+.info-item {
+  flex: 0 1 30%;
+  display: flex;
+  gap: 10px;
 }
 
-.value {
+.info-item .label {
+  font-weight: bold;
+  min-width: 100px;
+}
+
+.info-item .value {
   flex: 1;
 }
 
@@ -256,4 +257,17 @@
     padding-top: 0.25in;
     box-shadow: none;
   } */
+
+  .quote-info {
+    margin: 15px 0;
+  }
+
+  .info-row {
+    margin-bottom: 8px;
+    gap: 15px;
+  }
+
+  .info-item .label {
+    min-width: 90px;
+  }
 }

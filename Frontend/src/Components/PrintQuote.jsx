@@ -11,8 +11,10 @@ function PrintQuote() {
   const [quote, setQuote] = useState(null);
   const [quoteDetails, setQuoteDetails] = useState([]);
   const [client, setClient] = useState(null);
+  const [companyInfo, setCompanyInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [logoLoaded, setLogoLoaded] = useState(false);
+  const [isPrintCompleted, setPrintCompleted] = useState(false);
 
   // Preload logo
   useEffect(() => {
@@ -25,14 +27,18 @@ function PrintQuote() {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        const [quoteResponse, employeesResponse] = await Promise.all([
-          axios.get(`${ServerIP}/auth/quote/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${ServerIP}/auth/sales_employees`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+        const [quoteResponse, employeesResponse, companyResponse] =
+          await Promise.all([
+            axios.get(`${ServerIP}/auth/quote/${id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+            axios.get(`${ServerIP}/auth/sales_employees`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+            axios.get(`${ServerIP}/auth/company-control`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+          ]);
 
         if (quoteResponse.data.Status) {
           const quoteData = quoteResponse.data.Result;
@@ -69,9 +75,14 @@ function PrintQuote() {
           if (detailsResponse.data.Status) {
             setQuoteDetails(detailsResponse.data.Result);
           }
+
+          // Set company info
+          if (companyResponse.data.Status) {
+            setCompanyInfo(companyResponse.data.Result);
+          }
         }
       } catch (err) {
-        console.error("Error fetching quote data:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
@@ -89,6 +100,28 @@ function PrintQuote() {
 
       // Handle print completion
       const handlePrintEvent = () => {
+        // Check if the print was completed (not cancelled)
+        //        if (window.matchMedia("print").matches) {
+        setPrintCompleted(true);
+        const token = localStorage.getItem("token");
+        console.log("Updating status for quote id:", id); // Debug log
+
+        axios
+          .put(
+            `${ServerIP}/auth/quote/status/${id}`,
+            { status: "Printed" },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          )
+          .then((response) => {
+            console.log("Status update response:", response); // Debug log
+          })
+          .catch((err) => {
+            console.error("Error updating quote status:", err);
+          });
+        //        }
+
         setTimeout(() => {
           navigate(`/dashboard/quotes/edit/${id}`, { replace: true });
         }, 100);
@@ -103,7 +136,7 @@ function PrintQuote() {
     }
   }, [loading, quote, logoLoaded, id, navigate]);
 
-  if (loading || !quote || !client || !logoLoaded) {
+  if (loading || !quote || !client || !companyInfo || !logoLoaded) {
     return <div>Loading...</div>;
   }
 
@@ -116,64 +149,77 @@ function PrintQuote() {
             <img src={GoLargeLogo} alt="Company Logo" className="logo" />
           </div>
           <div className="header-right">
-            <p>Rabaya St., Kimba</p>
-            <p>Talisay City 6045, Philippines</p>
-            <p>Telfax# 427-7137</p>
+            <p>{companyInfo?.companyAddress1}</p>
+            <p>{companyInfo?.companyAddress2}</p>
+            <p>Tel: {companyInfo?.companyPhone}</p>
+            <p>Email: {companyInfo?.companyEmail}</p>
           </div>
         </div>
 
         <hr className="divider" />
         <div className="quote-title">
-          <h1>Q U O T A T I O N</h1>
+          {/* prettier-ignore */}
+          <h1>Q  U  O  T  A  T  I  O  N</h1>
         </div>
         <hr className="divider" />
 
         {/* Quote Info */}
         <div className="quote-info">
-          <div className="quote-info-left">
-            <div className="info-row">
+          <div className="info-row">
+            <div className="info-item">
               <span className="label">Quote No:</span>
               <span className="value">{quote.quoteId}</span>
             </div>
-            <div className="info-row">
-              <span className="label">Client:</span>
-              <span className="value">{client.clientName}</span>
-            </div>
-            <div className="info-row">
-              <span className="label">Ordered By:</span>
-              <span className="value">{quote.orderedBy}</span>
-            </div>
-            <div className="info-row">
-              <span className="label">Email:</span>
-              <span className="value">{quote.email}</span>
-            </div>{" "}
-            <div className="info-row">
-              <span className="label">Cell No.:</span>
-              <span className="value">{quote.cellNumber}</span>
-            </div>
-          </div>
-          <div className="quote-info-right">
-            <div className="info-row">
+            <div className="info-item">
               <span className="label">Quote Date:</span>
               <span className="value">
                 {new Date(quote.quoteDate).toLocaleDateString()}
               </span>
             </div>
-            <div className="info-row">
+          </div>
+
+          <div className="info-row">
+            <div className="info-item">
+              <span className="label">Client:</span>
+              <span className="value">{client.clientName}</span>
+            </div>
+            <div className="info-item">
+              <span className="label">Terms:</span>
+              <span className="value">{quote.terms || "30 DAYS"}</span>
+            </div>
+          </div>
+
+          <div className="info-row">
+            <div className="info-item">
               <span className="label">Project Name:</span>
               <span className="value">{quote.projectName}</span>
             </div>
-            <div className="info-row">
+            <div className="info-item">
+              <span className="label">Ordered By:</span>
+              <span className="value">{quote.orderedBy}</span>
+            </div>
+            <div className="info-item">
               <span className="label">Due Date:</span>
               <span className="value">
                 {quote.dueDate
                   ? new Date(quote.dueDate).toLocaleDateString()
                   : ""}
               </span>
-            </div>{" "}
-            <div className="info-row">
+            </div>
+          </div>
+
+          <div className="info-row">
+            <div className="info-item">
+              <span className="label">Email:</span>
+              <span className="value">{client.email}</span>
+            </div>
+            <div className="info-item">
               <span className="label">Tel. No.:</span>
-              <span className="value">{quote.telNum}</span>
+              <span className="value">{client.phone}</span>
+            </div>
+            <div className="info-item">
+              <span className="label">Cell No.:</span>
+              <span className="value">{client.mobile}</span>
             </div>
           </div>
         </div>
@@ -231,8 +277,7 @@ function PrintQuote() {
               <span className="line">{quote.preparedByName}</span>
             </div>
             <div className="terms-delivery">
-              <div>Terms: {quote.terms || "30 DAYS"}</div>
-              <div>Delivery: First delivery within 1-2 days.</div>
+              <div>Delivery: {companyInfo?.quoteDelivery}</div>
             </div>
           </div>
           <div className="totals-right">
@@ -282,11 +327,7 @@ function PrintQuote() {
 
         {/* Approval Section */}
         <div className="approval-section">
-          <p>
-            We hereby approve the above quotation and authorize GO LARGE
-            GRAPHICS, INC. to produce and fulfill the same for our account.
-            (Please date and sign in full)
-          </p>
+          <p>{companyInfo?.quoteApproval}</p>
           <div className="signature-section">
             <div className="signature-block">
               <span>

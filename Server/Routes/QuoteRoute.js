@@ -205,7 +205,7 @@ router.get("/quote-statuses", (req, res) => {
     SELECT 
       statusId,
       step
-    FROM orderStatus 
+    FROM quoteStatus 
     ORDER BY step ASC
   `;
 
@@ -453,6 +453,21 @@ router.put("/quote_details/:quoteId/:displayOrder", (req, res) => {
       return res.json({ Status: true });
     }
   );
+});
+
+// Update quote status
+router.put("/quote/status/:id", (req, res) => {
+  const id = req.params.id;
+  const { status } = req.body;
+  console.log("quoteId:", id, "Status:", status);
+  const sql = "UPDATE quotes SET status = ? WHERE quoteId = ?";
+  con.query(sql, [status, id], (err, result) => {
+    if (err) {
+      console.error("Error updating quote status:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    return res.json({ Status: true, Result: result });
+  });
 });
 
 // ============= POST Routes =============

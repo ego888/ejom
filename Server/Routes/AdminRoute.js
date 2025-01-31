@@ -666,6 +666,18 @@ router.get("/payment_terms", (req, res) => {
   });
 });
 
+// Get company control info
+router.get("/company-control", (req, res) => {
+  const sql = "SELECT * FROM jomControl LIMIT 1";
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.error("Error fetching company control:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    return res.json({ Status: true, Result: result[0] });
+  });
+});
+
 // Add this error handling middleware after all your routes
 router.use((err, req, res, next) => {
   console.error("Router Error:", err);

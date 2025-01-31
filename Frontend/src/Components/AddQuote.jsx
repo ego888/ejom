@@ -306,7 +306,6 @@ function AddQuote() {
 
   useEffect(() => {
     if (id) {
-      console.log("Fetching quote with ID:", id);
       const token = localStorage.getItem("token");
       setIsInitialLoad(true);
       axios
@@ -316,7 +315,6 @@ function AddQuote() {
           },
         })
         .then((result) => {
-          console.log("Quote fetch result:", result.data);
           if (result.data.Status) {
             const quoteData = result.data.Result;
             console.log("Raw quote data:", quoteData);
@@ -355,7 +353,6 @@ function AddQuote() {
               status: quoteData.status || "Open",
             };
 
-            console.log("Setting initial data with proper types:", initialData);
             setData(initialData);
             // Set initial lastSavedTotals
             setLastSavedTotals({
@@ -451,8 +448,6 @@ function AddQuote() {
       status: data.status,
       terms: data.terms || null,
     };
-
-    console.log("Quote data being sent:", dataToSend);
 
     if (!isHeaderSaved) {
       // Create new quote
@@ -681,9 +676,6 @@ function AddQuote() {
       itemDescription: detail.itemDescription || "",
     };
 
-    console.log("Edited detail being set:", editedDetail);
-    console.log("persqft in edited detail:", editedDetail.persqft);
-
     setEditedValues({
       [uniqueId]: editedDetail,
     });
@@ -860,8 +852,6 @@ function AddQuote() {
         return;
       }
 
-      console.log("Saving detail with values:", editedDetail);
-
       const dataToSend = {
         ...editedDetail,
         quoteId: parseInt(quoteId),
@@ -880,8 +870,6 @@ function AddQuote() {
         materialUsage: editedDetail.materialUsage || 0,
         printHours: editedDetail.printHours || 0,
       };
-
-      console.log("Data being sent to server:", dataToSend);
 
       const token = localStorage.getItem("token");
       const response = await axios.put(
@@ -985,8 +973,6 @@ function AddQuote() {
 
   // Add this function to handle the update
   const handleDisplayOrderUpdate = async (detail, newOrder) => {
-    console.log("Detail object:", detail);
-
     // Validate that we have all required data
     if (!detail || !detail.Id) {
       console.error("Missing detail Id:", detail);
@@ -1040,7 +1026,6 @@ function AddQuote() {
       .then((result) => {
         if (result.data.Status) {
           const clientData = result.data.Result;
-          console.log("Complete client data:", clientData);
           setData((prev) => ({
             ...prev,
             clientId: id,
@@ -1104,6 +1089,61 @@ function AddQuote() {
     return Number(number).toFixed(2);
   };
 
+  // Add these handler functions
+  const handleLoss = () => {
+    const token = localStorage.getItem("token");
+    axios
+      .put(
+        `${ServerIP}/auth/quote/status/${orderId || id}`,
+        { status: "Loss" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(() => {
+        navigate("/dashboard/quotes");
+      })
+      .catch((err) => {
+        console.error("Error updating quote status:", err);
+      });
+  };
+
+  const handleMakeJO = () => {
+    const token = localStorage.getItem("token");
+    axios
+      .put(
+        `${ServerIP}/auth/quote/status/${orderId || id}`,
+        { status: "Closed" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(() => {
+        navigate("/dashboard/quotes");
+      })
+      .catch((err) => {
+        console.error("Error updating quote status:", err);
+      });
+  };
+
+  const handleRequote = () => {
+    const token = localStorage.getItem("token");
+    axios
+      .put(
+        `${ServerIP}/auth/quote/status/${orderId || id}`,
+        { status: "Requote" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(() => {
+        navigate("/dashboard/quotes");
+      })
+      .catch((err) => {
+        console.error("Error updating quote status:", err);
+      });
+  };
+
   return (
     <div className="px-4 mt-3 quote-page-background">
       <div className="p-3 rounded quote-form-container">
@@ -1114,9 +1154,22 @@ function AddQuote() {
             </h3>
           </div>
           <div className="d-flex gap-2">
-            <Button variant="print" onClick={handlePrintQuote} disabled={!id}>
-              Print Quote
-            </Button>
+            {isHeaderSaved && (
+              <>
+                <Button variant="delete" onClick={handleLoss}>
+                  Loss
+                </Button>
+                <Button variant="save" onClick={handleMakeJO}>
+                  Make JO
+                </Button>
+                <Button variant="warning" onClick={handleRequote}>
+                  Requote
+                </Button>
+                <Button variant="print" onClick={handlePrintQuote}>
+                  Print Quote
+                </Button>
+              </>
+            )}
             <Button variant="save" onClick={handleSubmit}>
               {isHeaderSaved ? "Finish Edit" : "Save Quote"}
             </Button>

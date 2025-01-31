@@ -18,8 +18,11 @@ function Orders() {
     direction: "desc",
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState(() => {
+    const saved = localStorage.getItem("orderStatusFilters");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isProdChecked, setIsProdChecked] = useState(false);
   const [isAllChecked, setIsAllChecked] = useState(false);
 
@@ -73,63 +76,55 @@ function Orders() {
   useEffect(() => {
     const fetchStatusOptions = async () => {
       try {
-        console.log("Fetching status options..."); // Debug log
         const token = localStorage.getItem("token");
-        console.log("Token:", token ? "exists" : "missing"); // Debug log
         const response = await axios.get(`${ServerIP}/auth/order-statuses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Full API Response:", response); // Debug log
-        console.log("Status response data:", response.data); // Debug log
         if (response.data.Status) {
           const sortedStatuses = response.data.Result.sort(
             (a, b) => a.step - b.step
           );
-          console.log("Sorted statuses:", sortedStatuses); // Debug log
           setStatusOptions(sortedStatuses);
 
-          // Set first 5 statuses as selected by default
-          const firstFiveStatuses = sortedStatuses
-            .slice(0, 5)
-            .map((s) => s.statusId);
-          setSelectedStatuses(firstFiveStatuses);
+          // Get saved filters or default to first two statuses
+          const saved = localStorage.getItem("orderStatusFilters");
+          if (saved) {
+            const savedStatuses = JSON.parse(saved);
+            setSelectedStatuses(savedStatuses);
 
-          // Check if all prod statuses are included in the first 5
-          const prodStatuses = sortedStatuses
-            .slice(2, 6)
-            .map((s) => s.statusId);
-          const selectedProdStatuses = firstFiveStatuses.filter((s) =>
-            prodStatuses.includes(s)
-          );
-          setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
-        } else {
-          console.log("API returned Status: false"); // Debug log
+            // Update Prod checkbox state
+            const prodStatuses = sortedStatuses
+              .slice(2, 6)
+              .map((s) => s.statusId);
+            const selectedProdStatuses = savedStatuses.filter((s) =>
+              prodStatuses.includes(s)
+            );
+            setIsProdChecked(
+              selectedProdStatuses.length === prodStatuses.length
+            );
+
+            // Update All checkbox state
+            setIsAllChecked(savedStatuses.length === sortedStatuses.length);
+          } else {
+            // Default to first two statuses
+            const firstTwoStatuses = sortedStatuses
+              .slice(0, 2)
+              .map((s) => s.statusId);
+            setSelectedStatuses(firstTwoStatuses);
+            localStorage.setItem(
+              "orderStatusFilters",
+              JSON.stringify(firstTwoStatuses)
+            );
+            setIsProdChecked(false);
+            setIsAllChecked(false);
+          }
         }
       } catch (err) {
-        console.error("Detailed error fetching status options:", {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status,
-        });
-
-        // Handle token expiration
-        if (
-          err.response?.status === 401 ||
-          err.response?.data?.Error === "jwt expired" ||
-          err.message.includes("jwt expired")
-        ) {
-          localStorage.removeItem("token");
-          alert("Your session has expired. Please log in again.");
-          navigate("/");
-          return;
-        }
-
-        // For other errors, show the fallback status buttons
-        setStatusOptions([]);
+        console.error("Error fetching status options:", err);
       }
     };
     fetchStatusOptions();
-  }, [navigate]);
+  }, []);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -157,21 +152,29 @@ function Orders() {
 
   // Status filter handlers
   const handleStatusFilter = (statusId) => {
-    const updatedStatuses = selectedStatuses.includes(statusId)
-      ? selectedStatuses.filter((s) => s !== statusId)
-      : [...selectedStatuses, statusId];
-    setSelectedStatuses(updatedStatuses);
+    setSelectedStatuses((prev) => {
+      let newStatuses;
+      if (prev.includes(statusId)) {
+        newStatuses = prev.filter((s) => s !== statusId);
+      } else {
+        newStatuses = [...prev, statusId];
+      }
+
+      // Update Prod checkbox state
+      const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+      const selectedProdStatuses = newStatuses.filter((s) =>
+        prodStatuses.includes(s)
+      );
+      setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
+
+      // Update All checkbox state
+      setIsAllChecked(newStatuses.length === statusOptions.length);
+
+      // Save to localStorage
+      localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+      return newStatuses;
+    });
     setCurrentPage(1);
-
-    // Update Prod checkbox state
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = updatedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
-    setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
-
-    // Update All checkbox state
-    setIsAllChecked(updatedStatuses.length === statusOptions.length);
   };
 
   // Helper function for sort indicator
@@ -209,20 +212,19 @@ function Orders() {
 
   const handleProdCheckbox = (e) => {
     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+    let newStatuses;
     if (e.target.checked) {
-      const newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-      setSelectedStatuses(newStatuses);
-      setIsProdChecked(true);
-      // Update All checkbox state
-      setIsAllChecked(newStatuses.length === statusOptions.length);
+      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
     } else {
-      const newStatuses = selectedStatuses.filter(
-        (s) => !prodStatuses.includes(s)
-      );
-      setSelectedStatuses(newStatuses);
-      setIsProdChecked(false);
-      setIsAllChecked(false);
+      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
     }
+
+    setSelectedStatuses(newStatuses);
+    setIsProdChecked(e.target.checked);
+    setIsAllChecked(newStatuses.length === statusOptions.length);
+
+    // Save to localStorage
+    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
   const isAllIndeterminate = () => {
@@ -233,14 +235,16 @@ function Orders() {
   };
 
   const handleAllCheckbox = (e) => {
+    let newStatuses = [];
     if (e.target.checked) {
-      setSelectedStatuses(statusOptions.map((s) => s.statusId));
-      setIsProdChecked(true);
-    } else {
-      setSelectedStatuses([]);
-      setIsProdChecked(false);
+      newStatuses = statusOptions.map((s) => s.statusId);
     }
+    setSelectedStatuses(newStatuses);
     setIsAllChecked(e.target.checked);
+    setIsProdChecked(e.target.checked);
+
+    // Save to localStorage
+    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
   return (
