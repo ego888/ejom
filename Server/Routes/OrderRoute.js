@@ -193,6 +193,64 @@ router.get("/order_details/:orderId", (req, res) => {
     return res.json({ Status: true, Result: result });
   });
 });
+// Get units
+router.get("/units", (req, res) => {
+  const sql = "SELECT * FROM units ORDER BY unit";
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Error fetching units:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
+
+// Get next display order number for order details
+router.get("/next_display_order/:orderId", (req, res) => {
+  const { orderId } = req.params;
+  const sql =
+    "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
+
+  console.log("Order ID:", orderId);
+  con.query(sql, [orderId], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    // If maxOrder is 0, it means no records exist yet
+    const maxOrder = result[0].maxOrder;
+    const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
+
+    console.log("Current max order:", maxOrder);
+    console.log("Next display order:", nextDisplayOrder);
+
+    return res.json({
+      Status: true,
+      Result: nextDisplayOrder,
+    });
+  });
+});
+// Get order statuses
+router.get("/order-statuses", verifyUser, (req, res) => {
+  const sql = `
+    SELECT 
+      statusId,
+      step
+    FROM orderStatus 
+    ORDER BY step ASC`;
+
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Database error fetching order statuses:", err);
+      return res.json({
+        Status: false,
+        Error: "Query Error",
+        Details: err.message,
+      });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
 
 // Add order
 router.post("/add_order", verifyUser, (req, res) => {
@@ -202,8 +260,8 @@ router.post("/add_order", verifyUser, (req, res) => {
       orderedBy, orderReference, cellNumber, specialInst, 
       deliveryInst, graphicsBy, dueDate, dueTime, 
       sample, reprint, totalAmount, amountDisc, 
-      percentDisc, grandTotal, terms, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -227,6 +285,9 @@ router.post("/add_order", verifyUser, (req, res) => {
     req.body.grandTotal || 0,
     req.body.terms || "",
     "Open",
+    req.body.totalHrs,
+    req.body.editedBy,
+    new Date().toLocaleString("sv-SE").replace(",", ""),
   ];
 
   con.query(sql, values, (err, result) => {
@@ -300,101 +361,6 @@ router.put("/update_order/:id", (req, res) => {
   });
 });
 
-// Add order detail
-router.post("/add_order_detail", (req, res) => {
-  console.log("Inserting data:", req.body);
-
-  // Create a new object without printHrs first
-  const { printHrs, ...otherData } = req.body;
-
-  // Then add printHrs explicitly as a number
-  const data = {
-    ...otherData,
-    printHrs: Number(printHrs || 0), // Explicitly convert to number
-    noPrint: 0, // Default value for new order details
-  };
-
-  console.log("Data being inserted (after transformation):", data);
-  console.log("printHrs value:", data.printHrs);
-
-  const sql = "INSERT INTO order_details SET ?";
-
-  con.query(sql, data, (err, result) => {
-    if (err) {
-      console.log("SQL Error:", err);
-      return res.json({ Status: false, Error: "Failed to add order detail" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
-// Update order detail
-router.put("/order_details/:orderId/:displayOrder", (req, res) => {
-  const { printHrs, ...otherData } = req.body;
-  const data = {
-    ...otherData,
-    printHrs: Number(printHrs || 0),
-  };
-
-  const sql =
-    "UPDATE order_details SET ? WHERE orderId = ? AND displayOrder = ?";
-
-  con.query(
-    sql,
-    [data, req.params.orderId, req.params.displayOrder],
-    (err, result) => {
-      if (err) {
-        console.log("Update Error:", err);
-        return res.json({
-          Status: false,
-          Error: "Failed to update order detail",
-        });
-      }
-      return res.json({ Status: true, Result: result });
-    }
-  );
-});
-
-// Delete order detail
-router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
-  const orderId = req.params.orderId;
-  const displayOrder = req.params.displayOrder;
-
-  const sql =
-    "DELETE FROM order_details WHERE orderId = ? AND displayOrder = ?";
-
-  con.query(sql, [orderId, displayOrder], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true });
-  });
-});
-
-// Update noPrint status
-router.put("/order_detail_noprint/:orderId/:displayOrder", (req, res) => {
-  const { orderId, displayOrder } = req.params;
-  const { noPrint } = req.body;
-
-  const sql = `
-    UPDATE order_details 
-    SET noPrint = ? 
-    WHERE orderId = ? AND displayOrder = ?
-  `;
-
-  con.query(sql, [noPrint, orderId, displayOrder], (err, result) => {
-    if (err) {
-      console.log("Update Error:", err);
-      return res.json({
-        Status: false,
-        Error: "Failed to update noPrint status",
-      });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
 // Update order's edited info and total hours
 router.put("/orders/:orderId/update_edited_info", (req, res) => {
   const sql = `
@@ -426,63 +392,97 @@ router.put("/orders/:orderId/update_edited_info", (req, res) => {
   );
 });
 
-// Get units
-router.get("/units", (req, res) => {
-  const sql = "SELECT * FROM units ORDER BY unit";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Error fetching units:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
+// Update order detail
+router.put("/order_details/:orderId/:displayOrder", (req, res) => {
+  const { printHrs, ...otherData } = req.body;
+  const data = {
+    ...otherData,
+    printHrs: Number(printHrs || 0),
+  };
 
-// Get next display order number for order details
-router.get("/next_display_order/:orderId", (req, res) => {
-  const { orderId } = req.params;
   const sql =
-    "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
+    "UPDATE order_details SET ? WHERE orderId = ? AND displayOrder = ?";
 
-  console.log("Order ID:", orderId);
-  con.query(sql, [orderId], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
+  con.query(
+    sql,
+    [data, req.params.orderId, req.params.displayOrder],
+    (err, result) => {
+      if (err) {
+        console.log("Update Error:", err);
+        return res.json({
+          Status: false,
+          Error: "Failed to update order detail",
+        });
+      }
+      return res.json({ Status: true, Result: result });
     }
-    // If maxOrder is 0, it means no records exist yet
-    const maxOrder = result[0].maxOrder;
-    const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
-
-    console.log("Current max order:", maxOrder);
-    console.log("Next display order:", nextDisplayOrder);
-
-    return res.json({
-      Status: true,
-      Result: nextDisplayOrder,
-    });
-  });
+  );
 });
-// Get order statuses
-router.get("/order-statuses", verifyUser, (req, res) => {
-  const sql = `
-    SELECT 
-      statusId,
-      step
-    FROM orderStatus 
-    ORDER BY step ASC`;
 
-  con.query(sql, (err, result) => {
+// Update noPrint status
+router.put("/order_detail_noprint/:orderId/:displayOrder", (req, res) => {
+  const { orderId, displayOrder } = req.params;
+  const { noPrint } = req.body;
+
+  const sql = `
+    UPDATE order_details 
+    SET noPrint = ? 
+    WHERE orderId = ? AND displayOrder = ?
+  `;
+
+  con.query(sql, [noPrint, orderId, displayOrder], (err, result) => {
     if (err) {
-      console.log("Database error fetching order statuses:", err);
+      console.log("Update Error:", err);
       return res.json({
         Status: false,
-        Error: "Query Error",
-        Details: err.message,
+        Error: "Failed to update noPrint status",
       });
     }
     return res.json({ Status: true, Result: result });
   });
 });
 
+// Add order detail
+router.post("/add_order_detail", (req, res) => {
+  console.log("Inserting data:", req.body);
+
+  // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
+  const { printHrs, noPrint, ...otherData } = req.body;
+
+  const data = {
+    ...otherData,
+    printHrs: Number(printHrs) || 0, // Convert to number, default to 0
+    noPrint: Number(noPrint) || 0, // Convert to number, default to 0
+  };
+
+  console.log("Data being inserted (after transformation):", data);
+  console.log("printHrs value:", data.printHrs);
+
+  const sql = "INSERT INTO order_details SET ?";
+
+  con.query(sql, data, (err, result) => {
+    if (err) {
+      console.log("SQL Error:", err);
+      return res.json({ Status: false, Error: "Failed to add order detail" });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
+
+// Delete order detail
+router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
+  const orderId = req.params.orderId;
+  const displayOrder = req.params.displayOrder;
+
+  const sql =
+    "DELETE FROM order_details WHERE orderId = ? AND displayOrder = ?";
+
+  con.query(sql, [orderId, displayOrder], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    return res.json({ Status: true });
+  });
+});
 export { router as OrderRouter };

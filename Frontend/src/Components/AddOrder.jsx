@@ -296,6 +296,10 @@ function AddOrder() {
   };
 
   const handleSubmit = (e, isPrintAction = false) => {
+    if (!canEdit()) {
+      alert("You don't have permission to edit this record");
+      return;
+    }
     e?.preventDefault();
 
     // Validate required fields
@@ -309,88 +313,61 @@ function AddOrder() {
       return;
     }
 
-    // Calculate final totals before saving
-    const subtotal = orderDetails.reduce(
-      (sum, detail) => sum + parseFloat(detail.amount || 0),
-      0
-    );
-    const discAmount = parseFloat(orderTotals.discAmount) || 0;
-    const percentDisc = parseFloat(orderTotals.percentDisc) || 0;
-    const grandTotal = subtotal - discAmount;
-
-    // Get current user's name
     const token = localStorage.getItem("token");
-    const decoded = jwtDecode(token);
-    const currentDateTime = new Date()
-      .toISOString()
-      .slice(0, 19)
-      .replace("T", " ");
 
-    // Prepare data with updated totals and handle empty dates
-    const dataToSend = {
+    // Update data object to include totalAmount from orderTotals
+    const updatedData = {
       ...data,
-      status: data.status || "Open",
-      orderDate: data.orderDate || null,
-      dueDate: data.dueDate || null,
-      orderedBy: data.orderedBy || null,
-      orderReference: data.orderReference || null,
-      cellNumber: data.cellNumber || null,
-      dueTime: data.dueTime || null,
-      specialInst: data.specialInst || null,
-      deliveryInst: data.deliveryInst || null,
-      subtotal: subtotal,
-      amountDisc: discAmount,
-      percentDisc: percentDisc,
-      grandTotal: grandTotal,
-      terms: data.terms,
-      // Add last edited info
-      lastEdited: currentDateTime,
-      editedBy: decoded.name,
+      totalAmount: orderTotals.subtotal, // Set totalAmount from subtotal
+      amountDisc: orderTotals.discAmount,
+      percentDisc: orderTotals.percentDisc,
+      grandTotal: orderTotals.grandTotal,
     };
 
-    console.log("Data being sent:", dataToSend); // Debug log
-
-    if (orderId) {
-      // Update existing order
-      axios
-        .put(`${ServerIP}/auth/orders/${orderId}`, dataToSend, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((result) => {
-          if (result.data.Status) {
-            setIsHeaderSaved(true);
-            setData((prev) => ({
-              ...prev,
-              ...dataToSend,
-            }));
-            if (isEditMode && !isPrintAction) {
-              handleFinish();
-            }
-          } else {
-            alert(result.data.Error);
-          }
-        })
-        .catch((err) => handleApiError(err, navigate));
-    } else {
+    if (!isHeaderSaved) {
       // Create new order
       axios
-        .post(`${ServerIP}/auth/orders`, dataToSend, {
+        .post(`${ServerIP}/auth/add_order`, updatedData, {
+          // Use updatedData instead of data
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((result) => {
           if (result.data.Status) {
-            setOrderId(result.data.Result);
+            const orderId = result.data.Result;
+            setOrderId(orderId);
             setIsHeaderSaved(true);
             setData((prev) => ({
               ...prev,
-              id: result.data.Result,
-              ...dataToSend,
+              orderId: orderId,
             }));
           } else {
-            alert(result.data.Error);
+            alert(result.data.Error || "Failed to save order");
           }
         })
-        .catch((err) => handleApiError(err, navigate));
+        .catch((err) => {
+          console.error("Error saving order:", err);
+          handleApiError(err, navigate);
+        });
+    } else {
+      // Update existing order
+      axios
+        .put(`${ServerIP}/auth/update_order/${orderId || id}`, updatedData, {
+          // Use updatedData instead of data
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((result) => {
+          if (result.data.Status) {
+            if (isEditMode && !isPrintAction) {
+              navigate("/dashboard/orders");
+            }
+          } else {
+            alert(result.data.Error || "Failed to update order");
+          }
+        })
+        .catch((err) => {
+          console.error("Error updating order:", err);
+          handleApiError(err, navigate);
+        });
     }
   };
 
@@ -993,6 +970,112 @@ function AddOrder() {
       handleApiError(error);
     }
   };
+  const handleReOrder = () => {
+    const token = localStorage.getItem("token");
+
+    // Create a new order with copied data
+    const newOrderData = {
+      clientId: data.clientId,
+      projectName: data.projectName + " (ReOrder)",
+      preparedBy: data.preparedBy,
+      orderDate: new Date().toISOString().split("T")[0], // Set to current date
+      orderedBy: data.orderedBy,
+      orderReference: data.orderReference,
+      cellNumber: data.cellNumber,
+      specialInst: data.specialInst,
+      deliveryInst: data.deliveryInst,
+      graphicsBy: data.graphicsBy,
+      dueDate: data.dueDate,
+      dueTime: data.dueTime,
+      sample: data.sample,
+      reprint: data.reprint,
+      totalAmount: data.totalAmount,
+      amountDisc: data.amountDisc,
+      percentDisc: data.percentDisc,
+      grandTotal: data.grandTotal,
+      terms: data.terms,
+      status: "Open",
+      totalHrs: data.totalHrs, // Add totalHrs
+      editedBy: currentUser.name, // Add current employee name
+      //      lastEdited: currentDateTime, // Add current datetime
+    };
+
+    console.log("New order data:", newOrderData);
+    // Create new order
+    axios
+      .post(`${ServerIP}/auth/add_order`, newOrderData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((result) => {
+        if (result.data.Status) {
+          const newOrderId = result.data.Result;
+
+          // Now copy all order details
+          axios
+            .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            .then((detailsResult) => {
+              if (detailsResult.data.Status) {
+                const details = detailsResult.data.Result;
+                const copyPromises = details.map((detail) => {
+                  const newDetail = {
+                    ...detail,
+                    orderId: newOrderId,
+                    quantity: detail.quantity,
+                    width: detail.width,
+                    height: detail.height,
+                    unit: detail.unit,
+                    material: detail.material,
+                    itemDescription: detail.itemDescription,
+                    unitPrice: detail.unitPrice,
+                    perSqFt: detail.perSqFt,
+                    discount: detail.discount,
+                    amount: detail.amount,
+                    squareFeet: detail.squareFeet,
+                    materialUsage: detail.materialUsage,
+                    printHrs: detail.printHrs,
+                    displayOrder: detail.displayOrder,
+                    remarks: detail.remarks,
+                    top: detail.top,
+                    bottom: detail.bottom,
+                    allowanceLeft: detail.allowanceLeft,
+                    allowanceRight: detail.allowanceRight,
+                    noPrint: detail.noPrint,
+                  };
+
+                  return axios.post(
+                    `${ServerIP}/auth/add_order_detail`,
+                    newDetail,
+                    {
+                      headers: { Authorization: `Bearer ${token}` },
+                    }
+                  );
+                });
+
+                // Wait for all details to be copied
+                Promise.all(copyPromises)
+                  .then(() => {
+                    // Navigate to the new order
+                    navigate(`/dashboard/orders/edit/${newOrderId}`);
+                  })
+                  .catch((err) => {
+                    console.error("Error copying order details:", err);
+                    alert("Error copying order details");
+                  });
+              }
+            })
+            .catch((err) => {
+              console.error("Error fetching order details:", err);
+              alert("Error fetching order details");
+            });
+        }
+      })
+      .catch((err) => {
+        console.error("Error creating new order:", err);
+        alert("Error creating new order");
+      });
+  };
 
   return (
     <div className="px-4 mt-3">
@@ -1004,9 +1087,13 @@ function AddOrder() {
             </h3>
           </div>
           <div className="d-flex gap-2">
-            <Button variant="print" onClick={handlePrintOrder}>
-              Print Order
-            </Button>
+            {isHeaderSaved && (
+              <>
+                <Button variant="save" onClick={handleReOrder}>
+                  Re-Order
+                </Button>
+              </>
+            )}
             <Button variant="save" onClick={handleSubmit}>
               {isHeaderSaved ? "Finish Edit" : "Save Order"}
             </Button>

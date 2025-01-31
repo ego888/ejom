@@ -1145,6 +1145,8 @@ function AddQuote() {
 
   const handleRequote = () => {
     const token = localStorage.getItem("token");
+
+    // First, update the current quote's status to 'Requote'
     axios
       .put(
         `${ServerIP}/auth/quote/status/${orderId || id}`,
@@ -1154,10 +1156,103 @@ function AddQuote() {
         }
       )
       .then(() => {
-        navigate("/dashboard/quotes");
+        // After setting current quote to Requote, create a new quote
+        const newQuoteData = {
+          clientId: data.clientId,
+          projectName: data.projectName + " (Requote)",
+          preparedBy: data.preparedBy,
+          quoteDate: new Date().toISOString().split("T")[0], // Set to current date
+          orderedBy: data.orderedBy,
+          refId: data.orderReference,
+          email: data.email,
+          cellNumber: data.cellNumber,
+          telNum: data.telNum,
+          statusRem: data.specialInst,
+          dueDate: data.dueDate,
+          totalAmount: data.totalAmount,
+          amountDiscount: data.amountDiscount,
+          percentDisc: data.percentDisc,
+          grandTotal: data.grandTotal,
+          totalHrs: data.totalHrs,
+          editedBy: currentUser.name,
+          status: "Open",
+          terms: data.terms,
+        };
+
+        // Create new quote
+        axios
+          .post(`${ServerIP}/auth/add_quote`, newQuoteData, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          .then((result) => {
+            if (result.data.Status) {
+              const newQuoteId = result.data.QuoteID;
+
+              // Now copy all quote details
+              axios
+                .get(`${ServerIP}/auth/quote_details/${orderId || id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                .then((detailsResult) => {
+                  if (detailsResult.data.Status) {
+                    const details = detailsResult.data.Result;
+                    const copyPromises = details.map((detail) => {
+                      const newDetail = {
+                        ...detail,
+                        quoteId: newQuoteId,
+                        // Preserve all the necessary fields
+                        quantity: detail.quantity,
+                        width: detail.width,
+                        height: detail.height,
+                        unit: detail.unit,
+                        material: detail.material,
+                        itemDescription: detail.itemDescription,
+                        unitPrice: detail.unitPrice,
+                        persqft: detail.persqft,
+                        discount: detail.discount,
+                        amount: detail.amount,
+                        squareFeet: detail.squareFeet,
+                        materialUsage: detail.materialUsage,
+                        printHours: detail.printHours,
+                        displayOrder: detail.displayOrder,
+                        remarks: detail.remarks,
+                      };
+
+                      return axios.post(
+                        `${ServerIP}/auth/add_quote_detail`,
+                        newDetail,
+                        {
+                          headers: { Authorization: `Bearer ${token}` },
+                        }
+                      );
+                    });
+
+                    // Wait for all details to be copied
+                    Promise.all(copyPromises)
+                      .then(() => {
+                        // Navigate to the new quote
+                        navigate(`/dashboard/quotes/edit/${newQuoteId}`);
+                      })
+                      .catch((err) => {
+                        console.error("Error copying quote details:", err);
+                        alert("Error copying quote details");
+                      });
+                  }
+                })
+                .catch((err) => {
+                  console.error("Error fetching quote details:", err);
+                  alert("Error fetching quote details");
+                });
+            }
+          })
+          .catch((err) => {
+            console.error("Error creating new quote:", err);
+            alert("Error creating new quote");
+          });
       })
       .catch((err) => {
         console.error("Error updating quote status:", err);
+        alert("Error updating quote status");
       });
   };
 
