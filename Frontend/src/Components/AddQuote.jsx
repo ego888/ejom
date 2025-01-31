@@ -7,6 +7,7 @@ import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { BiRectangle } from "react-icons/bi";
 import "./Quotes.css";
+import "./Quotes.css";
 import {
   validateDetail,
   calculateArea,
@@ -1411,19 +1412,25 @@ function AddQuote() {
             </div>
           </form>
 
-          <div
-            className="ms-3"
-            style={{ width: "250px", marginTop: "-0.8rem" }}
-          >
-            <div className="border rounded p-3">
-              <div className="mb-2">
-                <small className="text-muted">Edited By</small>
-                <div>{data.editedBy || "-"}</div>
+          <div className="right-panel">
+            <div className="right-panel-content">
+              <div className="info-group">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div className="info-label mb-0">Status:</div>
+                  <span className={`status-badge ${data.status || "default"}`}>
+                    {data.status || "N/A"}
+                  </span>
+                </div>
               </div>
 
-              <div className="mb-2">
-                <small className="text-muted">Last Edited</small>
-                <div>
+              <div className="info-group">
+                <div className="info-label">Edited By</div>
+                <div className="info-value">{data.editedBy || "-"}</div>
+              </div>
+
+              <div className="info-group">
+                <div className="info-label">Last Edited</div>
+                <div className="info-value">
                   {data.lastEdited
                     ? new Date(data.lastEdited)
                         .toLocaleString("en-CA", {
@@ -1439,9 +1446,11 @@ function AddQuote() {
                 </div>
               </div>
 
-              <div className="mb-2">
-                <small className="text-muted">Total Hours</small>
-                <div>{formatNumber(data.totalHrs) || "-"}</div>
+              <div className="info-group">
+                <div className="info-label">Total Hours</div>
+                <div className="info-value">
+                  {formatNumber(data.totalHrs) || "-"}
+                </div>
               </div>
             </div>
           </div>

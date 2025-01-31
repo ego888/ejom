@@ -308,20 +308,7 @@ function Quotes() {
                       : ""}
                   </td>
                   <td>
-                    <span
-                      className={`badge ${
-                        quote.status === "Closed"
-                          ? "bg-success"
-                          : quote.status === "Open" ||
-                            quote.status === "Printed"
-                          ? "bg-warning"
-                          : quote.status === "Loss"
-                          ? "bg-danger"
-                          : quote.status === "Requote"
-                          ? "bg-secondary"
-                          : "bg-primary"
-                      }`}
-                    >
+                    <span className={`status-badge ${quote.status}`}>
                       {quote.status}
                     </span>
                   </td>

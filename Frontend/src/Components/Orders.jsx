@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
+import "./Orders.css";
 
 function Orders() {
   const navigate = useNavigate();
@@ -373,17 +374,7 @@ function Orders() {
                 </td>
                 <td>{order.dueTime || ""}</td>
                 <td>
-                  <span
-                    className={`badge ${
-                      order.status === "Open"
-                        ? "bg-success"
-                        : order.status === "In Progress"
-                        ? "bg-warning"
-                        : order.status === "Completed"
-                        ? "bg-primary"
-                        : "bg-secondary"
-                    }`}
-                  >
+                  <span className={`status-badge ${order.status}`}>
                     {order.status}
                   </span>
                 </td>

@@ -113,3 +113,64 @@
 .form-label::after {
   content: none !important;
 }
+
+/* Status badge styles */
+.status-badge {
+  padding: 0.35em 0.65em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 0.25rem;
+  color: white;
+}
+
+.status-badge.Closed {
+  background-color: #198754; /* bg-success */
+}
+
+.status-badge.Open,
+.status-badge.Printed {
+  background-color: #ffc107; /* bg-warning */
+}
+
+.status-badge.Loss {
+  background-color: #dc3545; /* bg-danger */
+}
+
+.status-badge.Requote {
+  background-color: #6c757d; /* bg-secondary */
+}
+
+.status-badge.default {
+  background-color: #0d6efd; /* bg-primary */
+}
+
+/* Right panel styles */
+.right-panel {
+  width: 250px;
+  margin-left: 1rem;
+}
+
+.right-panel-content {
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  padding: 1rem;
+}
+
+.info-group {
+  margin-bottom: 0.75rem;
+}
+
+.info-label {
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.info-value {
+  font-size: 0.9rem;
+}
+
+/* When info-label is in a flex container, remove bottom margin */
+.d-flex .info-label {
+  margin-bottom: 0;
+}
