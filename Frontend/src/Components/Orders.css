@@ -7,16 +7,20 @@
   color: white;
 }
 
-.status-badge.Open {
-  background-color: #198754; /* bg-success */
+.status-badge.Open .status-badge.Printed {
+  background-color: #0d6efd; /* bg-primary */
 }
 
-.status-badge.In-Progress {
+.status-badge.Prod {
   background-color: #ffc107; /* bg-warning */
 }
 
-.status-badge.Completed {
-  background-color: #0d6efd; /* bg-primary */
+.status-badge.Finish .status-badge.Delivered {
+  background-color: #198754; /* bg-success */
+}
+
+.status-badge.Billed {
+  background-color: #dc3545; /* bg-danger */
 }
 
 .status-badge.default {

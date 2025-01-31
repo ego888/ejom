@@ -403,6 +403,10 @@ function AddQuote() {
   };
 
   const handleSubmit = (e, isPrintAction = false) => {
+    if (!canEdit()) {
+      alert("You don't have permission to edit this record");
+      return;
+    }
     e?.preventDefault();
 
     // Validate required fields
@@ -601,6 +605,10 @@ function AddQuote() {
   };
 
   const handleDeleteDetail = (uniqueId) => {
+    if (!canEdit()) {
+      alert("You don't have permission to delete details");
+      return;
+    }
     if (!window.confirm("Are you sure you want to delete this item?")) return;
 
     const token = localStorage.getItem("token");
@@ -652,6 +660,10 @@ function AddQuote() {
   };
 
   const handleEditClick = (uniqueId, detail) => {
+    if (!canEdit()) {
+      alert("You don't have permission to edit details");
+      return;
+    }
     console.log("Edit clicked for unique ID:", uniqueId);
     console.log("Detail data:", detail);
     console.log("persqft value:", detail.persqft);
@@ -844,6 +856,10 @@ function AddQuote() {
   };
 
   const handleSaveDetail = async (uniqueId) => {
+    if (!canEdit()) {
+      alert("You don't have permission to save details");
+      return;
+    }
     try {
       const [quoteId, displayOrder] = uniqueId.split("_");
       const editedDetail = editedValues[uniqueId];
@@ -1145,6 +1161,11 @@ function AddQuote() {
       });
   };
 
+  // Add this helper function
+  const canEdit = () => {
+    return data.status === "Open" || currentUser.category_id === 1;
+  };
+
   return (
     <div className="px-4 mt-3 quote-page-background">
       <div className="p-3 rounded quote-form-container">
@@ -1155,25 +1176,25 @@ function AddQuote() {
             </h3>
           </div>
           <div className="d-flex gap-2">
-            {isHeaderSaved && (
-              <>
-                <Button variant="delete" onClick={handleLoss}>
-                  Loss
-                </Button>
-                <Button variant="save" onClick={handleMakeJO}>
-                  Make JO
-                </Button>
-                <Button variant="warning" onClick={handleRequote}>
-                  Requote
-                </Button>
-                <Button variant="print" onClick={handlePrintQuote}>
-                  Print Quote
-                </Button>
-              </>
-            )}
-            <Button variant="save" onClick={handleSubmit}>
-              {isHeaderSaved ? "Finish Edit" : "Save Quote"}
+            <>
+              <Button variant="delete" onClick={handleLoss}>
+                Loss
+              </Button>
+              <Button variant="save" onClick={handleMakeJO}>
+                Make JO
+              </Button>
+              <Button variant="warning" onClick={handleRequote}>
+                Requote
+              </Button>
+            </>
+            <Button variant="print" onClick={handlePrintQuote}>
+              Print Quote
             </Button>
+            {canEdit() && (
+              <Button variant="save" onClick={handleSubmit}>
+                {isHeaderSaved ? "Finish Edit" : "Save Quote"}
+              </Button>
+            )}
             <Button variant="cancel" onClick={handleNavigation}>
               Cancel
             </Button>
@@ -1204,7 +1225,7 @@ function AddQuote() {
                   onChange={(e) =>
                     setData({ ...data, quoteDate: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1225,7 +1246,7 @@ function AddQuote() {
                     setData({ ...data, preparedBy: e.target.value })
                   }
                   options={salesEmployees}
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                   placeholder=""
                 />
               </div>
@@ -1264,7 +1285,7 @@ function AddQuote() {
                   value={data.clientId || ""}
                   onChange={(e) => handleClientChange(e.target.value)}
                   options={clients}
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                   error={error.clientId}
                   required
                   placeholder=""
@@ -1295,7 +1316,7 @@ function AddQuote() {
                   onChange={(e) =>
                     setData({ ...data, projectName: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
                 {error.projectName && (
                   <div className="invalid-feedback">
@@ -1322,7 +1343,7 @@ function AddQuote() {
                   onChange={(e) =>
                     setData({ ...data, orderedBy: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1344,7 +1365,7 @@ function AddQuote() {
                   onChange={(e) =>
                     setData({ ...data, dueDate: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1364,7 +1385,7 @@ function AddQuote() {
                   style={inputStyle}
                   value={data.email || ""}
                   onChange={(e) => setData({ ...data, email: e.target.value })}
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1386,7 +1407,7 @@ function AddQuote() {
                   onChange={(e) =>
                     setData({ ...data, cellNumber: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1406,7 +1427,7 @@ function AddQuote() {
                   style={inputStyle}
                   value={data.telNum || ""}
                   onChange={(e) => setData({ ...data, telNum: e.target.value })}
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1700,26 +1721,30 @@ function AddQuote() {
                         </td>
                         <td>
                           <div className="d-flex gap-1">
-                            <Button
-                              variant="save"
-                              iconOnly
-                              size="sm"
-                              onClick={() =>
-                                handleSaveDetail(
-                                  `${detail.quoteId}_${detail.displayOrder}`
-                                )
-                              }
-                            />
-                            <Button
-                              variant="cancel"
-                              iconOnly
-                              size="sm"
-                              onClick={() => {
-                                setEditingRowId(null);
-                                setEditedValues({});
-                                setEditErrors({});
-                              }}
-                            />
+                            {canEdit() && (
+                              <>
+                                <Button
+                                  variant="save"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() =>
+                                    handleSaveDetail(
+                                      `${detail.quoteId}_${detail.displayOrder}`
+                                    )
+                                  }
+                                />
+                                <Button
+                                  variant="cancel"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingRowId(null);
+                                    setEditedValues({});
+                                    setEditErrors({});
+                                  }}
+                                />
+                              </>
+                            )}
                           </div>
                         </td>
                       </>
@@ -1801,27 +1826,31 @@ function AddQuote() {
                         </td>
                         <td>
                           <div className="d-flex gap-1">
-                            <Button
-                              variant="edit"
-                              iconOnly
-                              size="sm"
-                              onClick={() =>
-                                handleEditClick(
-                                  `${detail.quoteId}_${detail.displayOrder}`,
-                                  detail
-                                )
-                              }
-                            />
-                            <Button
-                              variant="delete"
-                              iconOnly
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteDetail(
-                                  `${detail.quoteId}_${detail.displayOrder}`
-                                )
-                              }
-                            />
+                            {canEdit() && (
+                              <>
+                                <Button
+                                  variant="edit"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() =>
+                                    handleEditClick(
+                                      `${detail.quoteId}_${detail.displayOrder}`,
+                                      detail
+                                    )
+                                  }
+                                />
+                                <Button
+                                  variant="delete"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteDetail(
+                                      `${detail.quoteId}_${detail.displayOrder}`
+                                    )
+                                  }
+                                />
+                              </>
+                            )}
                           </div>
                         </td>
                       </>
@@ -1866,6 +1895,7 @@ function AddQuote() {
                         handleDiscountChange("amount", e.target.value)
                       }
                       style={{ width: "100px", display: "inline-block" }}
+                      disabled={!canEdit()}
                     />
                   </td>
                   <td colSpan="3"></td>
@@ -1892,6 +1922,7 @@ function AddQuote() {
                         handleDiscountChange("percent", e.target.value)
                       }
                       style={{ width: "100px", display: "inline-block" }}
+                      disabled={!canEdit()}
                     />
                   </td>
                   <td colSpan="3"></td>
@@ -1920,7 +1951,7 @@ function AddQuote() {
         )}
       </div>
 
-      {isHeaderSaved && (
+      {isHeaderSaved && canEdit() && (
         <div className="mt-4">
           <div className="quote-details-header">
             <h5 className="m-0">Add Quote Details</h5>

@@ -102,6 +102,10 @@ function AddOrder() {
   const [tooltipDetail, setTooltipDetail] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
+  const canEdit = () => {
+    return data.status === "Open" || currentUser.category_id === 1;
+  };
+
   const handleDiscountChange = (type, value) => {
     const subtotal = orderDetails.reduce(
       (sum, detail) => sum + parseFloat(detail.amount || 0),
@@ -1039,7 +1043,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, orderDate: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1060,7 +1064,7 @@ function AddOrder() {
                     setData({ ...data, preparedBy: e.target.value })
                   }
                   options={salesEmployees}
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                   placeholder=""
                 />
               </div>
@@ -1099,7 +1103,7 @@ function AddOrder() {
                   value={data.clientId || ""}
                   onChange={(e) => handleClientChange(e.target.value)}
                   options={clients}
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                   error={error.clientId}
                   required
                   placeholder=""
@@ -1130,7 +1134,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, projectName: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
                 {error.projectName && (
                   <div className="invalid-feedback">
@@ -1157,7 +1161,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, orderedBy: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1179,7 +1183,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, orderReference: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1201,7 +1205,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, cellNumber: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1223,7 +1227,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, dueDate: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1245,7 +1249,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, dueTime: e.target.value })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1266,7 +1270,7 @@ function AddOrder() {
                     setData({ ...data, graphicsBy: e.target.value })
                   }
                   options={artists}
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                   error={error.graphicsBy}
                   required
                   placeholder=""
@@ -1296,7 +1300,7 @@ function AddOrder() {
                     setData({ ...data, specialInst: e.target.value })
                   }
                   rows="3"
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1318,7 +1322,7 @@ function AddOrder() {
                     setData({ ...data, deliveryInst: e.target.value })
                   }
                   rows="3"
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
               </div>
             </div>
@@ -1332,7 +1336,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, sample: e.target.checked })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
                 <label
                   className="form-label mb-0"
@@ -1351,7 +1355,7 @@ function AddOrder() {
                   onChange={(e) =>
                     setData({ ...data, reprint: e.target.checked })
                   }
-                  disabled={!isEditMode}
+                  disabled={!isEditMode || !canEdit()}
                 />
                 <label
                   className="form-label mb-0"
@@ -1890,6 +1894,7 @@ function AddOrder() {
                                 size="sm"
                                 icon={<BiRectangle size={14} />}
                                 onClick={() => {
+                                  if (!canEdit()) return;
                                   setShowAllowanceTooltip(false);
                                   setCurrentDetailId(uniqueId);
                                   setAllowanceValues({
@@ -1916,6 +1921,7 @@ function AddOrder() {
                               />
                               <Button
                                 variant="edit"
+                                disabled={!canEdit()}
                                 iconOnly
                                 size="sm"
                                 onClick={() =>
@@ -1924,6 +1930,7 @@ function AddOrder() {
                               />
                               <Button
                                 variant="delete"
+                                disabled={!canEdit()}
                                 iconOnly
                                 size="sm"
                                 onClick={() => handleDeleteDetail(uniqueId)}
@@ -1976,6 +1983,7 @@ function AddOrder() {
                         handleDiscountChange("amount", e.target.value)
                       }
                       style={{ width: "100px", display: "inline-block" }}
+                      disabled={!canEdit()}
                     />
                   </td>
                   <td colSpan="3">
@@ -2006,6 +2014,7 @@ function AddOrder() {
                         handleDiscountChange("percent", e.target.value)
                       }
                       style={{ width: "100px", display: "inline-block" }}
+                      disabled={!canEdit()}
                     />
                   </td>
                   <td colSpan="3">
@@ -2062,7 +2071,7 @@ function AddOrder() {
         )}
       </div>
 
-      {isHeaderSaved && (
+      {isHeaderSaved && canEdit() && (
         <div className="mt-4">
           <h5>Add Order Details</h5>
           <AddOrderDetails
