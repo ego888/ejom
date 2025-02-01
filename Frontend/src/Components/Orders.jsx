@@ -1,12 +1,10 @@
 import axios from "axios";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
-import styles from "./Orders.css";
-
-<div className={styles.container}>Orders Page</div>;
+import "./Orders.css";
 
 function Orders() {
   const navigate = useNavigate();
@@ -28,9 +26,21 @@ function Orders() {
     const saved = localStorage.getItem("orderStatusFilters");
     return saved ? JSON.parse(saved) : [];
   });
+  const [salesEmployees, setSalesEmployees] = useState([]);
+  const [selectedSales, setSelectedSales] = useState([]);
+  const [showSalesMenu, setShowSalesMenu] = useState(false);
+  const [salesMenuPosition, setSalesMenuPosition] = useState({ x: 0, y: 0 });
+  const salesMenuRef = useRef(null);
   const [isProdChecked, setIsProdChecked] = useState(false);
   const [isAllChecked, setIsAllChecked] = useState(false);
   const itemsPerPage = 10; // Or whatever your current items per page value is
+  const [showClientMenu, setShowClientMenu] = useState(false);
+  const [clientMenuPosition, setClientMenuPosition] = useState({ x: 0, y: 0 });
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [clientResults, setClientResults] = useState([]);
+  const [selectedClients, setSelectedClients] = useState([]);
+  const clientMenuRef = useRef(null);
+  const clientSearchRef = useRef(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -46,6 +56,10 @@ function Orders() {
           search: searchTerm,
           statuses: selectedStatuses.length
             ? selectedStatuses.join(",")
+            : undefined,
+          sales: selectedSales.length ? selectedSales.join(",") : undefined,
+          clients: selectedClients.length
+            ? selectedClients.join(",")
             : undefined,
         },
       });
@@ -64,7 +78,15 @@ function Orders() {
   // Fetch orders when parameters change
   useEffect(() => {
     fetchOrders();
-  }, [currentPage, recordsPerPage, sortConfig, searchTerm, selectedStatuses]);
+  }, [
+    currentPage,
+    recordsPerPage,
+    sortConfig,
+    searchTerm,
+    selectedStatuses,
+    selectedSales,
+    selectedClients,
+  ]);
 
   // Fetch status options
   useEffect(() => {
@@ -120,6 +142,26 @@ function Orders() {
     fetchStatusOptions();
   }, []);
 
+  // Fetch sales employees
+  useEffect(() => {
+    const fetchSalesEmployees = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${ServerIP}/auth/sales_employees`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data.Status) {
+          setSalesEmployees(response.data.Result);
+          // Initially select all sales employees
+          setSelectedSales(response.data.Result.map((emp) => emp.id));
+        }
+      } catch (err) {
+        console.error("Error fetching sales employees:", err);
+      }
+    };
+    fetchSalesEmployees();
+  }, []);
+
   // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((term) => {
@@ -170,6 +212,54 @@ function Orders() {
     });
     setCurrentPage(1);
   };
+
+  // Handle sales cell click
+  const handleSalesClick = (e, salesName) => {
+    e.stopPropagation(); // Prevent event bubbling
+    const rect = e.target.getBoundingClientRect();
+    setSalesMenuPosition({
+      x: rect.left,
+      y: rect.bottom,
+    });
+    setShowSalesMenu(true);
+  };
+
+  // Handle sales checkbox change
+  const handleSalesCheckboxChange = (salesId) => {
+    setSelectedSales((prev) => {
+      if (prev.includes(salesId)) {
+        return prev.filter((id) => id !== salesId);
+      } else {
+        return [...prev, salesId];
+      }
+    });
+  };
+
+  // Handle check all sales
+  const handleCheckAllSales = () => {
+    if (selectedSales.length === salesEmployees.length) {
+      setSelectedSales([]);
+    } else {
+      setSelectedSales(salesEmployees.map((emp) => emp.id));
+    }
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        salesMenuRef.current &&
+        !salesMenuRef.current.contains(event.target)
+      ) {
+        setShowSalesMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Helper function for sort indicator
   const getSortIndicator = (key) => {
@@ -251,6 +341,105 @@ function Orders() {
     };
   }, [currentPage]);
 
+  // Add client search function
+  const searchClients = useCallback(
+    debounce(async (term) => {
+      try {
+        const token = localStorage.getItem("token");
+        if (term.length === 0) {
+          // When search is empty, show only selected clients
+          if (selectedClients.length > 0) {
+            setClientResults(selectedClients);
+          } else {
+            setClientResults([]);
+          }
+          return;
+        }
+
+        const response = await axios.get(`${ServerIP}/auth/clients/search`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { query: term },
+        });
+
+        if (response.data.Status) {
+          // Combine search results with selected clients
+          const searchResults = response.data.Result;
+          const combinedResults = [
+            ...new Set([...selectedClients, ...searchResults]),
+          ];
+          setClientResults(combinedResults);
+        }
+      } catch (err) {
+        console.error("Error searching clients:", err);
+      }
+    }, 300),
+    [selectedClients] // Add selectedClients to dependencies
+  );
+
+  // Handle client cell click
+  const handleClientClick = (e, clientName) => {
+    e.stopPropagation();
+    const rect = e.target.getBoundingClientRect();
+    setClientMenuPosition({
+      x: rect.left,
+      y: rect.bottom,
+    });
+    setShowClientMenu(true);
+    // Pre-populate search with first 5 characters
+    const initialSearch = clientName.slice(0, 5);
+    setClientSearchTerm(initialSearch);
+    searchClients(initialSearch);
+
+    // Focus the search input after a short delay
+    setTimeout(() => {
+      if (clientSearchRef.current) {
+        clientSearchRef.current.focus();
+      }
+    }, 100);
+  };
+
+  // Handle client checkbox change
+  const handleClientCheckboxChange = (clientName) => {
+    setSelectedClients((prev) => {
+      if (prev.includes(clientName)) {
+        return prev.filter((name) => name !== clientName);
+      } else {
+        return [...prev, clientName];
+      }
+    });
+  };
+
+  // Handle select all clients
+  const handleSelectAllClients = () => {
+    if (clientResults.length === selectedClients.length) {
+      setSelectedClients([]);
+    } else {
+      setSelectedClients([...clientResults]);
+    }
+  };
+
+  // Close client menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        clientMenuRef.current &&
+        !clientMenuRef.current.contains(event.target)
+      ) {
+        setShowClientMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Update client search results when search term changes
+  useEffect(() => {
+    searchClients(clientSearchTerm);
+  }, [clientSearchTerm, searchClients]);
+
   return (
     <div className="px-5 mt-3">
       <div className="d-flex justify-content-center">
@@ -280,6 +469,86 @@ function Orders() {
         </div>
       )}
 
+      {/* Add the sales context menu */}
+      {showSalesMenu && (
+        <div
+          ref={salesMenuRef}
+          className="sales-menu"
+          style={{
+            left: `${salesMenuPosition.x}px`,
+            top: `${salesMenuPosition.y}px`,
+          }}
+        >
+          <div className="sales-menu-header">
+            <input
+              type="checkbox"
+              className="sales-menu-checkbox form-check-input"
+              checked={selectedSales.length === salesEmployees.length}
+              onChange={handleCheckAllSales}
+            />
+            <label className="form-check-label">Select All</label>
+          </div>
+          {salesEmployees.map((employee) => (
+            <div key={employee.id} className="sales-menu-item">
+              <input
+                type="checkbox"
+                className="sales-menu-checkbox form-check-input"
+                checked={selectedSales.includes(employee.id)}
+                onChange={() => handleSalesCheckboxChange(employee.id)}
+              />
+              <label className="form-check-label">{employee.name}</label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add the client search menu */}
+      {showClientMenu && (
+        <div
+          ref={clientMenuRef}
+          className="client-menu"
+          style={{
+            left: `${clientMenuPosition.x}px`,
+            top: `${clientMenuPosition.y}px`,
+          }}
+        >
+          <div className="client-menu-search">
+            <input
+              ref={clientSearchRef}
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="Search clients..."
+              value={clientSearchTerm}
+              onChange={(e) => setClientSearchTerm(e.target.value)}
+            />
+          </div>
+          {clientResults.length > 0 && (
+            <div className="client-menu-header">
+              <input
+                type="checkbox"
+                className="client-menu-checkbox form-check-input"
+                checked={clientResults.length === selectedClients.length}
+                onChange={handleSelectAllClients}
+              />
+              <label className="form-check-label">Select All</label>
+            </div>
+          )}
+          <div className="client-menu-items">
+            {clientResults.map((clientName) => (
+              <div key={clientName} className="client-menu-item">
+                <input
+                  type="checkbox"
+                  className="client-menu-checkbox form-check-input"
+                  checked={selectedClients.includes(clientName)}
+                  onChange={() => handleClientCheckboxChange(clientName)}
+                />
+                <label className="form-check-label">{clientName}</label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-3">
         <table className="table table-striped table-hover">
           <thead>
@@ -299,7 +568,7 @@ function Orders() {
               </th>
               <th>Project Name</th>
               <th>Ordered By</th>
-              <th>Order Date</th>
+              {/* <th>Order Date</th> */}
               <th>Due Date</th>
               <th>Due Time</th>
               <th
@@ -362,14 +631,19 @@ function Orders() {
                   </div>
                 </td>
                 <td>{order.id}</td>
-                <td>{order.clientName}</td>
+                <td
+                  onClick={(e) => handleClientClick(e, order.clientName)}
+                  className="client-cell"
+                >
+                  {order.clientName}
+                </td>
                 <td>{order.projectName}</td>
                 <td>{order.orderedBy}</td>
-                <td>
+                {/* <td>
                   {order.orderDate
                     ? new Date(order.orderDate).toLocaleDateString()
                     : ""}
-                </td>
+                </td> */}
                 <td>
                   {order.dueDate
                     ? new Date(order.dueDate).toLocaleDateString()
@@ -399,7 +673,12 @@ function Orders() {
                     ? new Date(order.datePaid).toLocaleDateString()
                     : ""}
                 </td>
-                <td>{order.salesName}</td>
+                <td
+                  onClick={(e) => handleSalesClick(e, order.salesName)}
+                  className="sales-cell"
+                >
+                  {order.salesName}
+                </td>
                 <td>{order.orderReference}</td>
               </tr>
             ))}

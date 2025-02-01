@@ -13,10 +13,14 @@ router.get("/orders", async (req, res) => {
     sortDirection = "DESC",
     search = "",
     statuses = "",
+    sales = "",
+    clients = "",
   } = req.query;
 
   const offset = (page - 1) * limit;
   const statusArray = statuses ? statuses.split(",") : [];
+  const salesArray = sales ? sales.split(",") : [];
+  const clientArray = clients ? clients.split(",") : [];
 
   try {
     // Build the WHERE clause for search and status filtering
@@ -44,6 +48,20 @@ router.get("/orders", async (req, res) => {
         .map(() => "?")
         .join(",")})`;
       params = [...params, ...statusArray];
+    }
+
+    if (salesArray.length > 0) {
+      whereClause += ` AND o.preparedBy IN (${salesArray
+        .map(() => "?")
+        .join(",")})`;
+      params = [...params, ...salesArray];
+    }
+
+    if (clientArray.length > 0) {
+      whereClause += ` AND c.clientName IN (${clientArray
+        .map(() => "?")
+        .join(",")})`;
+      params = [...params, ...clientArray];
     }
 
     // Count total records query

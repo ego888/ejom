@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
-import styles from "./Quotes.css";
+import "./Quotes.css";
 
 function Quotes() {
   const navigate = useNavigate();

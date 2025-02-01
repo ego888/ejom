@@ -30,7 +30,8 @@
 .status-badge.Closed {
   background-color: #198754; /* bg-success */
 }
-.status-badge.Loss {
+.status-badge.Loss,
+.status-badge.Cancel {
   background-color: #dc3545; /* bg-danger */
 }
 .status-badge.default {
@@ -38,6 +39,64 @@
 }
 .status-badge.default {
   background-color: #0d6efd; /* bg-primary */
+}
+
+/* Sales header styles */
+.sales-header {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
+  -webkit-touch-callout: none; /* iOS Safari */
+}
+
+/* Sales cell styles */
+.sales-cell {
+  cursor: pointer;
+  position: relative;
+}
+
+.sales-cell:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Sales menu styles */
+.sales-menu {
+  position: fixed;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 0.5rem;
+  z-index: 1000;
+  border: 1px solid #dee2e6;
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.sales-menu-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 1;
+}
+
+.sales-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.sales-menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sales-menu-checkbox {
+  margin-right: 0.5rem;
 }
 
 /* Right panel styles */
@@ -69,4 +128,68 @@
 
 .info-value {
   font-size: 0.9rem;
+}
+
+/* Client cell styles */
+.client-cell {
+  cursor: pointer;
+  position: relative;
+}
+
+.client-cell:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Client menu styles */
+.client-menu {
+  position: fixed;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 0.5rem;
+  z-index: 1000;
+  border: 1px solid #dee2e6;
+  min-width: 250px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.client-menu-search {
+  margin-bottom: 0.5rem;
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 2;
+  padding: 0.25rem 0;
+}
+
+.client-menu-header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #dee2e6;
+  position: sticky;
+  top: 40px;
+  background-color: white;
+  z-index: 1;
+}
+
+.client-menu-items {
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.client-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.client-menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.client-menu-checkbox {
+  margin-right: 0.5rem;
 }

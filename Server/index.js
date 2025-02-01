@@ -4,8 +4,14 @@ import { AdminRouter } from "./Routes/AdminRoute.js";
 import { EmployeeRouter } from "./Routes/EmployeeRoute.js";
 import { QuoteRouter } from "./Routes/QuoteRoute.js";
 import { OrderRouter } from "./Routes/OrderRoute.js";
+import { ClientRouter } from "./Routes/ClientRoute.js";
 import { verifyUser } from "./middleware.js";
 import cookieParser from "cookie-parser";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(
@@ -21,6 +27,7 @@ app.use(cookieParser());
 app.use("/auth", AdminRouter);
 app.use("/auth", QuoteRouter);
 app.use("/auth", OrderRouter);
+app.use("/auth", ClientRouter);
 app.use("/employee", EmployeeRouter);
 app.use(express.static("Public"));
 
