@@ -1271,7 +1271,9 @@ function AddQuote() {
         // After setting current quote to Requote, create a new quote
         const newQuoteData = {
           clientId: data.clientId,
-          projectName: data.projectName + " (Requote)",
+          projectName: data.projectName.includes(" (Requote)")
+            ? data.projectName // Keep it unchanged if already added
+            : data.projectName + " (Requote)",
           preparedBy: data.preparedBy,
           quoteDate: new Date().toISOString().split("T")[0], // Set to current date
           orderedBy: data.orderedBy,

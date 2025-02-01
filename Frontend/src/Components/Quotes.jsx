@@ -11,7 +11,9 @@ function Quotes() {
   const [quotes, setQuotes] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    return parseInt(localStorage.getItem("quotesListPage")) || 1;
+  });
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [sortConfig, setSortConfig] = useState({
@@ -166,8 +168,18 @@ function Quotes() {
     setTotalPages(Math.ceil(totalCount / recordsPerPage));
   }, [totalCount, recordsPerPage]);
 
-  // Change page
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // Add cleanup effect to save the page when unmounting
+  useEffect(() => {
+    return () => {
+      localStorage.setItem("quotesListPage", currentPage.toString());
+    };
+  }, [currentPage]);
+
+  // Modify the page change handler
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    localStorage.setItem("quotesListPage", pageNumber.toString());
+  };
 
   // Handle records per page change
   const handleRecordsPerPageChange = (e) => {
@@ -448,7 +460,7 @@ function Quotes() {
               >
                 <button
                   className="page-link"
-                  onClick={() => setCurrentPage(1)}
+                  onClick={() => paginate(1)}
                   disabled={currentPage === 1}
                   style={{ fontSize: "0.75rem" }}
                 >
@@ -460,7 +472,7 @@ function Quotes() {
               >
                 <button
                   className="page-link"
-                  onClick={() => setCurrentPage(currentPage - 1)}
+                  onClick={() => paginate(currentPage - 1)}
                   disabled={currentPage === 1}
                   style={{ fontSize: "0.75rem" }}
                 >
@@ -476,7 +488,7 @@ function Quotes() {
                 >
                   <button
                     className="page-link"
-                    onClick={() => setCurrentPage(i + 1)}
+                    onClick={() => paginate(i + 1)}
                     style={{ fontSize: "0.75rem" }}
                   >
                     {i + 1}
@@ -490,7 +502,7 @@ function Quotes() {
               >
                 <button
                   className="page-link"
-                  onClick={() => setCurrentPage(currentPage + 1)}
+                  onClick={() => paginate(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   style={{ fontSize: "0.75rem" }}
                 >
@@ -504,7 +516,7 @@ function Quotes() {
               >
                 <button
                   className="page-link"
-                  onClick={() => setCurrentPage(totalPages)}
+                  onClick={() => paginate(totalPages)}
                   disabled={currentPage === totalPages}
                   style={{ fontSize: "0.75rem" }}
                 >
