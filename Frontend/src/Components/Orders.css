@@ -26,10 +26,10 @@
 .status-badge.Billed {
   background-color: #00924e; /* bg-success */
 }
-.status-badge.Close {
+.status-badge.Close,
+.status-badge.Closed {
   background-color: #198754; /* bg-success */
 }
-.status-badge.Cancel,
 .status-badge.Loss {
   background-color: #dc3545; /* bg-danger */
 }

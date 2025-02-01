@@ -88,23 +88,6 @@ router.get("/category", (req, res) => {
     return res.json({ Status: true, Result: result });
   });
 });
-
-// router.get("/category", (req, res) => {
-//   const sql = "SELECT * FROM category";
-//   con.query(sql, (err, result) => {
-//     if (err) return res.json({ Status: false, Error: "Query Error" });
-//     return res.json({ Status: true, Result: result });
-//   });
-// });
-
-router.post("/category/add", (req, res) => {
-  const sql = "INSERT INTO category (`name`) VALUES (?)";
-  con.query(sql, [req.body.category], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
-    return res.json({ Status: true });
-  });
-});
-
 // Route to get a specific category by ID
 router.get("/category/:id", (req, res) => {
   const id = req.params.id; // Get the ID from the URL
@@ -124,6 +107,14 @@ router.put("/category/edit/:id", (req, res) => {
   const id = req.params.id;
   const sql = "UPDATE category SET name = ? WHERE id = ?";
   con.query(sql, [req.body.name, id], (err, result) => {
+    if (err) return res.json({ Status: false, Error: "Query Error" });
+    return res.json({ Status: true });
+  });
+});
+
+router.post("/category/add", (req, res) => {
+  const sql = "INSERT INTO category (`name`) VALUES (?)";
+  con.query(sql, [req.body.category], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true });
   });

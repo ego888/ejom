@@ -7,7 +7,6 @@ import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { BiRectangle } from "react-icons/bi";
 import "./Quotes.css";
-import "./Quotes.css";
 import {
   validateDetail,
   calculateArea,
@@ -19,20 +18,16 @@ import {
   calculatePerSqFt,
   calculatePrintHrs,
 } from "../utils/orderUtils";
-import Modal from "./UI/Modal";
-import Input from "./UI/Input";
 import { ServerIP } from "../config";
 import { debounce } from "lodash";
 
 function AddQuote() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [orderCreated, setOrderCreated] = useState(false);
   const [orderId, setOrderId] = useState(null);
   const [currentUser, setCurrentUser] = useState({});
   const [clients, setClients] = useState([]);
   const [salesEmployees, setSalesEmployees] = useState([]);
-  const [artists, setArtists] = useState([]);
   const [error, setError] = useState({
     clientId: false,
     projectName: false,
@@ -1127,22 +1122,139 @@ function AddQuote() {
 
   const handleMakeJO = () => {
     const token = localStorage.getItem("token");
+    const quoteId = orderId || id;
+
+    console.log("Starting handleMakeJO...");
+    console.log("Token:", token ? "Present" : "Missing");
+    // First update the current quote's status to Closed
     axios
       .put(
-        `${ServerIP}/auth/quote/status/${orderId || id}`,
+        `${ServerIP}/auth/quote/status/${quoteId}`,
         { status: "Closed" },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       )
       .then(() => {
-        navigate("/dashboard/quotes");
+        console.log("Quote status updated to Closed successfully");
+        // Create new order from quote data
+        const orderData = {
+          clientId: data.clientId,
+          projectName: data.projectName,
+          preparedBy: data.preparedBy,
+          orderDate: new Date().toISOString().split("T")[0],
+          orderedBy: data.orderedBy,
+          refId: data.orderReference,
+          email: data.email,
+          cellNumber: data.cellNumber,
+          telNum: data.telNum,
+          statusRem: data.specialInst,
+          dueDate: data.dueDate,
+          totalAmount: data.totalAmount,
+          amountDisc: data.amountDiscount,
+          percentDisc: data.percentDisc,
+          grandTotal: data.grandTotal,
+          totalHrs: data.totalHrs,
+          editedBy: currentUser.name,
+          status: "Open",
+          terms: data.terms,
+        };
+
+        console.log("Attempting to create order with data:", orderData);
+        // Create new order
+        axios
+          .post(`${ServerIP}/auth/add_order`, orderData, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          .then((result) => {
+            console.log("Order creation response:", result);
+            if (result.data.Status) {
+              const newOrderId = result.data.Result; // Correct way to get the new Order ID
+              console.log("New order created with ID:", newOrderId);
+
+              // Now copy all quote details to order details
+              axios
+                .get(`${ServerIP}/auth/quote_details/${quoteId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                .then((detailsResult) => {
+                  console.log("Quote details fetched:", detailsResult);
+                  if (detailsResult.data.Status) {
+                    const details = detailsResult.data.Result;
+                    const copyPromises = details.map((detail) => {
+                      const { quoteId, printHours, ...filteredDetail } = detail;
+                      const newDetail = {
+                        ...filteredDetail,
+                        orderId: newOrderId,
+                        // Preserve all the necessary fields
+                        quantity: detail.quantity,
+                        width: detail.width,
+                        height: detail.height,
+                        unit: detail.unit,
+                        material: detail.material,
+                        itemDescription: detail.itemDescription,
+                        unitPrice: detail.unitPrice,
+                        persqft: detail.persqft,
+                        discount: detail.discount,
+                        amount: detail.amount,
+                        squareFeet: detail.squareFeet,
+                        materialUsage: detail.materialUsage,
+                        printHrs: detail.printHours,
+                        displayOrder: detail.displayOrder,
+                        remarks: detail.remarks,
+                      };
+
+                      console.log("Creating order detail:", newDetail);
+                      return axios.post(
+                        `${ServerIP}/auth/add_order_detail`,
+                        newDetail,
+                        {
+                          headers: { Authorization: `Bearer ${token}` },
+                        }
+                      );
+                    });
+
+                    Promise.all(copyPromises)
+                      .then(() => {
+                        console.log("All order details created successfully");
+                        // Show confirmation dialog
+                        if (
+                          window.confirm(
+                            `Quote successfully copied to Order #${newOrderId}\n\nClick OK to stay on this quote.\nClick Cancel to view the new order.`
+                          )
+                        ) {
+                          // Refresh the quote to show updated status
+                          window.location.reload();
+                        } else {
+                          // Navigate to the new order
+                          navigate(`/dashboard/orders/edit/${newOrderId}`);
+                        }
+                      })
+                      .catch((err) => {
+                        console.error("Error copying order details:", err);
+                        alert("Error copying order details");
+                      });
+                  }
+                })
+                .catch((err) => {
+                  console.error("Error fetching quote details:", err);
+                  alert("Error fetching quote details");
+                });
+            }
+          })
+          .catch((err) => {
+            console.error("Error creating new order:", err.response || err);
+            alert("Error creating new order");
+          });
       })
       .catch((err) => {
-        console.error("Error updating quote status:", err);
+        console.error("Error updating quote status:", err.response || err);
+        alert("Error updating quote status");
       });
   };
 
+  // Requote function to create a new quote from the current quote.
+  // Do not modify this function.
   const handleRequote = () => {
     const token = localStorage.getItem("token");
 

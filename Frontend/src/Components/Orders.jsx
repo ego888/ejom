@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
-import styles from "./Orders.module.css";
+import styles from "./Orders.css";
 
 <div className={styles.container}>Orders Page</div>;
 

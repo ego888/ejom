@@ -263,7 +263,7 @@ router.post("/add_order", verifyUser, (req, res) => {
       percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
-
+  console.log("Add order req.body", req.body);
   const values = [
     req.body.clientId,
     req.body.projectName,
