@@ -976,7 +976,9 @@ function AddOrder() {
     // Create a new order with copied data
     const newOrderData = {
       clientId: data.clientId,
-      projectName: data.projectName + " (ReOrder)",
+      projectName: data.projectName.includes(" (Reorder)")
+        ? data.projectName // Keep it unchanged if already added
+        : data.projectName + " (Reorder)",
       preparedBy: data.preparedBy,
       orderDate: new Date().toISOString().split("T")[0], // Set to current date
       orderedBy: data.orderedBy,
@@ -1090,7 +1092,7 @@ function AddOrder() {
             {isHeaderSaved && (
               <>
                 <Button variant="save" onClick={handleReOrder}>
-                  Re-Order
+                  Reorder
                 </Button>
               </>
             )}

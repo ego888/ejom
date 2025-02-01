@@ -4,14 +4,18 @@ import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
-import "./Orders.css";
+import styles from "./Orders.module.css";
+
+<div className={styles.container}>Orders Page</div>;
 
 function Orders() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    return parseInt(localStorage.getItem("ordersListPage")) || 1;
+  });
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [sortConfig, setSortConfig] = useState({
@@ -26,6 +30,7 @@ function Orders() {
   });
   const [isProdChecked, setIsProdChecked] = useState(false);
   const [isAllChecked, setIsAllChecked] = useState(false);
+  const itemsPerPage = 10; // Or whatever your current items per page value is
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -58,20 +63,8 @@ function Orders() {
 
   // Fetch orders when parameters change
   useEffect(() => {
-    if (selectedStatuses.length === 0 && statusOptions.length > 0) {
-      setOrders([]);
-      setTotalCount(0);
-    } else {
-      fetchOrders();
-    }
-  }, [
-    currentPage,
-    recordsPerPage,
-    sortConfig,
-    searchTerm,
-    selectedStatuses,
-    statusOptions,
-  ]);
+    fetchOrders();
+  }, [currentPage, recordsPerPage, sortConfig, searchTerm, selectedStatuses]);
 
   // Fetch status options
   useEffect(() => {
@@ -191,8 +184,11 @@ function Orders() {
     setTotalPages(Math.ceil(totalCount / recordsPerPage));
   }, [totalCount, recordsPerPage]);
 
-  // Change page
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // Modify the page change handler
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    localStorage.setItem("ordersListPage", pageNumber.toString());
+  };
 
   // Handle records per page change
   const handleRecordsPerPageChange = (e) => {
@@ -247,6 +243,13 @@ function Orders() {
     // Save to localStorage
     localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
+
+  // Add a cleanup effect to save the page when unmounting
+  useEffect(() => {
+    return () => {
+      localStorage.setItem("ordersListPage", currentPage.toString());
+    };
+  }, [currentPage]);
 
   return (
     <div className="px-5 mt-3">
