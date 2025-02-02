@@ -1,10 +1,11 @@
 import axios from "axios";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
-import ClientFilter from "./ClientFilter";
+import ClientFilter from "./Logic/ClientFilter";
+import SalesFilter from "./Logic/SalesFilter";
 import "./Quotes.css";
 
 function Quotes() {
@@ -29,36 +30,42 @@ function Quotes() {
   });
   const [isAllChecked, setIsAllChecked] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
+  const [selectedSales, setSelectedSales] = useState([]);
+  const [hasClientFilter, setHasClientFilter] = useState(false);
+  const [hasSalesFilter, setHasSalesFilter] = useState(false);
+  const [clientList, setClientList] = useState([]);
+  const [salesEmployees, setSalesEmployees] = useState([]);
+  const salesFilterRef = useRef(null);
+  const clientFilterRef = useRef(null);
 
   const fetchQuotes = async () => {
-    setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${ServerIP}/auth/quotes`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          page: currentPage,
-          limit: recordsPerPage,
-          sortBy: sortConfig.key,
-          sortDirection: sortConfig.direction,
-          search: searchTerm,
-          statuses: selectedStatuses.length
-            ? selectedStatuses.join(",")
-            : undefined,
-          clients: selectedClients.length
-            ? selectedClients.join(",")
-            : undefined,
-        },
-      });
+      let url = `${ServerIP}/auth/quotes?page=${currentPage}&limit=${recordsPerPage}&sortBy=${sortConfig.key}&sortDirection=${sortConfig.direction}`;
 
+      if (searchTerm) {
+        url += `&search=${encodeURIComponent(searchTerm)}`;
+      }
+
+      if (selectedSales.length > 0) {
+        url += `&sales=${encodeURIComponent(selectedSales.join(","))}`;
+      }
+
+      if (selectedStatuses.length > 0) {
+        url += `&statuses=${encodeURIComponent(selectedStatuses.join(","))}`;
+      }
+
+      if (selectedClients.length > 0) {
+        url += `&clients=${encodeURIComponent(selectedClients.join(","))}`;
+      }
+
+      const response = await axios.get(url);
       if (response.data.Status) {
         setQuotes(response.data.Result.quotes);
         setTotalCount(response.data.Result.total);
+        setTotalPages(response.data.Result.totalPages);
       }
-    } catch (err) {
-      console.error("Error fetching quotes:", err);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching quotes:", error);
     }
   };
 
@@ -78,7 +85,30 @@ function Quotes() {
     selectedStatuses,
     statusOptions,
     selectedClients,
+    selectedSales,
   ]);
+
+  // Fetch clients and sales employees
+  useEffect(() => {
+    // Fetch initial data
+    Promise.all([
+      axios.get(`${ServerIP}/auth/sales_employees`),
+      axios.get(`${ServerIP}/auth/clients`),
+    ])
+      .then(([salesRes, clientsRes]) => {
+        if (salesRes.data.Status) {
+          setSalesEmployees(salesRes.data.Result);
+        }
+        if (clientsRes.data.Status) {
+          setClientList(clientsRes.data.Result);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+      });
+
+    fetchQuotes();
+  }, []);
 
   // Fetch status options
   useEffect(() => {
@@ -262,8 +292,26 @@ function Quotes() {
           </div>
         )}
 
-        <div className="quote-table-container mt-3">
-          <table className="table table-hover">
+        <div className="table-responsive">
+          <SalesFilter
+            ref={salesFilterRef}
+            salesEmployees={salesEmployees}
+            selectedSales={selectedSales}
+            setSelectedSales={setSelectedSales}
+            onFilterUpdate={({ isFilterActive }) =>
+              setHasSalesFilter(isFilterActive)
+            }
+          />
+          <ClientFilter
+            ref={clientFilterRef}
+            clientList={clientList}
+            selectedClients={selectedClients}
+            setSelectedClients={setSelectedClients}
+            onFilterUpdate={({ isFilterActive }) =>
+              setHasClientFilter(isFilterActive)
+            }
+          />
+          <table className="table table-striped table-hover">
             <thead>
               <tr>
                 <th>Action</th>
@@ -275,23 +323,34 @@ function Quotes() {
                 </th>
                 <th
                   onClick={() => handleSort("clientName")}
-                  style={{ cursor: "pointer" }}
+                  style={{
+                    cursor: "pointer",
+                    color: hasClientFilter ? "#0d6efd" : "inherit",
+                  }}
                 >
                   Client {getSortIndicator("clientName")}
                 </th>
                 <th>Project Name</th>
-                <th>Prepared By</th>
-                <th>Quote Date</th>
+                <th>Ordered By</th>
                 <th>Due Date</th>
-                <th>Status</th>
-                <th>Total Amount</th>
-                <th>Amount Discount</th>
-                <th>Percent Discount</th>
+                <th>Due Time</th>
+                <th
+                  onClick={() => handleSort("status")}
+                  style={{ cursor: "pointer" }}
+                >
+                  Status {getSortIndicator("status")}
+                </th>
                 <th>Grand Total</th>
-                <th>Total Hours</th>
-                <th>Status Remarks</th>
-                <th>Reference ID</th>
-                <th>Edited By</th>
+                <th
+                  onClick={() => handleSort("salesName")}
+                  style={{
+                    cursor: "pointer",
+                    color: hasSalesFilter ? "#0d6efd" : "inherit",
+                  }}
+                >
+                  Sales {getSortIndicator("salesName")}
+                </th>
+                <th>Quote Ref</th>
               </tr>
             </thead>
             <tbody>
@@ -318,51 +377,47 @@ function Quotes() {
                     </div>
                   </td>
                   <td>{quote.id}</td>
-                  <td className="client-cell">
-                    <ClientFilter
-                      ServerIP={ServerIP}
-                      selectedClients={selectedClients}
-                      onSelectClients={handleClientSelection}
-                    />
+                  <td
+                    className="client-cell"
+                    onClick={(e) => {
+                      if (clientFilterRef.current) {
+                        clientFilterRef.current.toggleFilterMenu(e);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     {quote.clientName}
                   </td>
                   <td>{quote.projectName}</td>
-                  <td>{quote.preparedBy}</td>
-                  <td>
-                    {quote.quoteDate
-                      ? new Date(quote.quoteDate).toLocaleDateString()
-                      : ""}
-                  </td>
+                  <td>{quote.orderedBy}</td>
                   <td>
                     {quote.dueDate
                       ? new Date(quote.dueDate).toLocaleDateString()
                       : ""}
                   </td>
+                  <td>{quote.dueTime || ""}</td>
                   <td>
                     <span className={`status-badge ${quote.status}`}>
                       {quote.status}
                     </span>
                   </td>
                   <td>
-                    {quote.totalAmount
-                      ? `₱${quote.totalAmount.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td>
-                    {quote.amountDiscount
-                      ? `₱${quote.amountDiscount.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td>{quote.percentDisc || ""}</td>
-                  <td>
                     {quote.grandTotal
                       ? `₱${quote.grandTotal.toLocaleString()}`
                       : ""}
                   </td>
-                  <td>{quote.totalHrs || ""}</td>
-                  <td>{quote.statusRem || ""}</td>
-                  <td>{quote.refId || ""}</td>
-                  <td>{quote.editedBy || ""}</td>
+                  <td
+                    className="sales-cell"
+                    onClick={(e) => {
+                      if (salesFilterRef.current) {
+                        salesFilterRef.current.toggleFilterMenu(e);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {quote.salesName}
+                  </td>
+                  <td>{quote.quoteReference}</td>
                 </tr>
               ))}
             </tbody>

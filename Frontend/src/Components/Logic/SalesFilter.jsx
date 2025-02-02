@@ -1,27 +1,45 @@
 /**
  * SalesFilter Component
+ * --------------------------
+ * A dropdown filter for selecting sales employees in a table.
+ * This component allows selecting/deselecting sales employees and
+ * clicking outside to close the dropdown.
  *
- * A checkbox filter for sales employees.
- * Used in tables where sales filtering is needed.
+ * USAGE:
+ * ------
+ * 1. Import and include `SalesFilter` in the parent component.
+ * 2. Use a `useRef()` hook to control the filter from the parent.
+ * 3. Call `toggleFilterMenu(event)` to open the filter dropdown.
  *
- * Features:
- * - Select/deselect individual or all sales employees
- * - Updates parent component about filter status
- * - Positioned relative to clicked element
+ * Example:
+ * --------
+ * import { useRef, useState } from "react";
+ * import SalesFilter from "./Logic/SalesFilter";
  *
- * Usage:
- * <SalesFilter
- *   ref={salesFilterRef}                    // Required for imperative handle
- *   salesEmployees={salesEmployees}         // Array of sales employee objects with id and name
- *   selectedSales={selectedSales}           // Array of selected sales IDs
- *   setSelectedSales={setSelectedSales}     // Function to update selected sales
- *   onFilterUpdate={({ isFilterActive }) => // Callback when filter changes
- *     setHasSalesFilter(isFilterActive)
- *   }
- * />
+ * const ParentComponent = ({ salesEmployees }) => {
+ *   const salesFilterRef = useRef(null);
+ *   const [selectedSales, setSelectedSales] = useState([]);
+ *   const [hasSalesFilter, setHasSalesFilter] = useState(false);
  *
- * To trigger the filter:
- * salesFilterRef.current.toggleFilterMenu(event)  // Pass the click event for positioning
+ *   return (
+ *     <>
+ *       <SalesFilter
+ *         ref={salesFilterRef}
+ *         salesEmployees={salesEmployees}
+ *         selectedSales={selectedSales}
+ *         setSelectedSales={setSelectedSales}
+ *         onFilterUpdate={({ isFilterActive }) => setHasSalesFilter(isFilterActive)}
+ *       />
+ *
+ *       <th
+ *         onClick={(event) => salesFilterRef.current?.toggleFilterMenu(event)}
+ *         style={{ cursor: "pointer", color: hasSalesFilter ? "#0d6efd" : "inherit" }}
+ *       >
+ *         Sales
+ *       </th>
+ *     </>
+ *   );
+ * };
  */
 
 import React, {

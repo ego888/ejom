@@ -4,8 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
-import ClientFilter from "./ClientFilter";
-import SalesFilter from "./SalesFilter";
+import ClientFilter from "./Logic/ClientFilter";
+import SalesFilter from "./Logic/SalesFilter";
 import "./Orders.css";
 
 function Orders() {
@@ -167,8 +167,7 @@ function Orders() {
         });
         if (response.data.Status) {
           setSalesEmployees(response.data.Result);
-          // Initially select all sales employees
-          setSelectedSales(response.data.Result.map((emp) => emp.id));
+          // Remove initial selection of all sales employees
         }
       } catch (err) {
         console.error("Error fetching sales employees:", err);

@@ -14,7 +14,7 @@
  * Example:
  * --------
  * import { useRef, useState } from "react";
- * import ClientFilter from "./ClientFilter";
+ * import ClientFilter from "./Logic/ClientFilter";
  *
  * const ParentComponent = ({ clientList }) => {
  *   const clientFilterRef = useRef(null);

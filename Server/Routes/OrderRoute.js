@@ -143,32 +143,6 @@ router.get("/orders", async (req, res) => {
   }
 });
 
-// Get sales employees (where sales = true)
-router.get("/sales_employees", (req, res) => {
-  const sql =
-    "SELECT id, name FROM employee WHERE sales = true AND active = true ORDER BY name";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
-// Get artists (where artist = true)
-router.get("/artists", (req, res) => {
-  const sql =
-    "SELECT id, name FROM employee WHERE artist = true AND active = true ORDER BY name";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
 // Get single order
 router.get("/order/:id", (req, res) => {
   const sql = `
@@ -211,17 +185,6 @@ router.get("/order_details/:orderId", (req, res) => {
     return res.json({ Status: true, Result: result });
   });
 });
-// Get units
-router.get("/units", (req, res) => {
-  const sql = "SELECT * FROM units ORDER BY unit";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Error fetching units:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
 
 // Get next display order number for order details
 router.get("/next_display_order/:orderId", (req, res) => {
@@ -246,27 +209,6 @@ router.get("/next_display_order/:orderId", (req, res) => {
       Status: true,
       Result: nextDisplayOrder,
     });
-  });
-});
-// Get order statuses
-router.get("/order-statuses", verifyUser, (req, res) => {
-  const sql = `
-    SELECT 
-      statusId,
-      step
-    FROM orderStatus 
-    ORDER BY step ASC`;
-
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Database error fetching order statuses:", err);
-      return res.json({
-        Status: false,
-        Error: "Query Error",
-        Details: err.message,
-      });
-    }
-    return res.json({ Status: true, Result: result });
   });
 });
 

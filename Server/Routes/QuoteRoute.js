@@ -20,11 +20,13 @@ router.get("/quotes", async (req, res) => {
     search = "",
     statuses = "",
     clients = "",
+    sales = "",
   } = req.query;
 
   const offset = (page - 1) * limit;
   const statusArray = statuses ? statuses.split(",") : [];
   const clientArray = clients ? clients.split(",") : [];
+  const salesArray = sales ? sales.split(",") : [];
 
   try {
     let whereClause = "1 = 1";
@@ -33,14 +35,15 @@ router.get("/quotes", async (req, res) => {
     if (search) {
       whereClause += ` AND (
                 q.quoteId LIKE ? OR 
-                c.clientId LIKE ? OR 
+                c.clientName LIKE ? OR 
                 q.projectName LIKE ? OR 
                 q.preparedBy LIKE ? OR 
                 q.status LIKE ? OR 
-                q.refId LIKE ?
+                q.refId LIKE ? OR
+                e.name LIKE ?
             )`;
       const searchTerm = `%${search}%`;
-      params = [...params, ...Array(6).fill(searchTerm)];
+      params = [...params, ...Array(7).fill(searchTerm)];
     }
 
     if (statusArray.length > 0) {
@@ -57,10 +60,18 @@ router.get("/quotes", async (req, res) => {
       params = [...params, ...clientArray];
     }
 
+    if (salesArray.length > 0) {
+      whereClause += ` AND q.preparedBy IN (${salesArray
+        .map(() => "?")
+        .join(",")})`;
+      params = [...params, ...salesArray];
+    }
+
     const countSql = `
             SELECT COUNT(DISTINCT q.quoteId) as total
             FROM quotes q
             LEFT JOIN client c ON q.clientId = c.id
+            LEFT JOIN employee e ON q.preparedBy = e.id
             WHERE ${whereClause}
         `;
 
@@ -83,12 +94,14 @@ router.get("/quotes", async (req, res) => {
                 q.email,
                 q.cellNumber,
                 q.statusRem,
-                q.refId,
+                q.refId as quoteReference,
                 q.editedBy,
                 q.terms,
+                e.name as salesName,
                 DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited
             FROM quotes q
             LEFT JOIN client c ON q.clientId = c.id
+            LEFT JOIN employee e ON q.preparedBy = e.id
             WHERE ${whereClause}
             ORDER BY ${sortBy} ${sortDirection}
             LIMIT ? OFFSET ?
