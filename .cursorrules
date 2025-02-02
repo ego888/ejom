@@ -23,6 +23,7 @@
      ```
 
 3. Table Action Buttons:
+
    - Small size, icon only
    - Edit before Delete
    - Example:
@@ -32,6 +33,17 @@
        <Button variant="delete" iconOnly size="sm" />
      </div>
      ```
+
+4. Dropdown:
+
+   - use the Dropdown components found in Frontend/src/Components/UI/Dropdown.jsx
+
+5. Filters:
+
+   - use the Filter components found in Frontend/src/Components/Logic/
+
+6. Routes:
+   - use the Routes components found in Server/Routes/
 
 ### Variants
 
