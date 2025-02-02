@@ -1,0 +1,159 @@
+.prod-theme {
+  --prod-bg-color: #95fbd7;
+  --prod-text-color: #333333;
+  --prod-content-bg: #ffffff;
+  --prod-border-color: #45d2a1;
+  --prod-border-light: #f0f0f0;
+  --prod-border-hover: #d0d0d0;
+  --prod-table-bg: #ffffff;
+}
+
+.prod-page-background {
+  background-color: var(--prod-bg-color);
+  min-height: 100vh;
+  padding: 20px;
+  color: var(--prod-text-color);
+}
+
+.prod-page-background > .px-5 {
+  background-color: var(--prod-bg-color);
+}
+
+.prod-header {
+  background-color: var(--prod-bg-color);
+  color: var(--prod-text-color);
+}
+
+.prod-header h3 {
+  color: var(--prod-text-color);
+}
+
+.prod-form-container {
+  background-color: var(--prod-content-bg);
+  border: 2px solid var(--prod-border-color);
+  border-radius: 4px;
+}
+
+.prod-section-header {
+  background-color: var(--prod-content-bg);
+  border-bottom: 2px solid var(--prod-border-color);
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.prod-search {
+  background-color: var(--prod-content-bg);
+  border: 1px solid var(--prod-border-light);
+}
+
+.prod-search:focus {
+  background-color: var(--prod-content-bg);
+  border-color: var(--prod-border-hover);
+  box-shadow: 0 0 0 0.2rem rgba(179, 255, 229, 0.25);
+}
+
+.prod-pagination {
+  background-color: var(--prod-content-bg);
+  border: 1px solid var(--prod-border-color);
+}
+
+.prod-checkbox {
+  background-color: var(--prod-content-bg);
+}
+
+.prod-checkbox:checked {
+  background-color: var(--prod-border-hover);
+  border-color: var(--prod-border-color);
+}
+
+.prod-status-filter {
+  background-color: var(--prod-content-bg);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--prod-border-light);
+  color: var(--prod-text-color);
+}
+
+.prod-table-container {
+  background-color: var(--prod-content-bg);
+  padding: 15px;
+  border-radius: 4px;
+  border: 2px solid var(--prod-border-color);
+}
+
+.prod-table-container table thead {
+  background-color: var(--prod-content-bg);
+}
+
+.prod-table-container table thead th {
+  background-color: var(--prod-content-bg);
+  border-bottom: 2px solid var(--prod-border-color);
+  font-weight: 600;
+}
+
+.prod-records-info {
+  background-color: var(--prod-content-bg);
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--prod-border-color);
+}
+
+.quote-details-header {
+  background-color: var(--quote-bg-color);
+  border-bottom: 2px solid var(--quote-border-color);
+}
+
+.prod-details-header {
+  background-color: var(--prod-content-bg);
+  padding: 10px;
+  border-bottom: 2px solid var(--prod-border-color);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.table {
+  background-color: var(--prod-content-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: var(--prod-content-bg);
+  color: var(--prod-text-color);
+}
+
+.table thead th {
+  border-bottom: 2px solid var(--prod-border-color) !important;
+}
+
+.table tbody {
+  background-color: var(--prod-content-bg);
+}
+
+/* Style for the checkboxes background */
+.bg-white {
+  background-color: var(--prod-content-bg) !important;
+}
+
+/* Update other component backgrounds to white */
+.table,
+.table thead,
+.table tbody,
+.table thead th,
+.prod-status-filter,
+.prod-form-container,
+.prod-section-header,
+.prod-table-container,
+.prod-records-info,
+.prod-details-header {
+  background-color: var(--prod-content-bg);
+  color: var(--prod-text-color);
+}
+
+/* Keep the table container white */
+.table-responsive {
+  background-color: var(--prod-content-bg);
+  border-radius: 8px;
+  padding: 20px;
+  color: var(--prod-text-color);
+}

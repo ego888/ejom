@@ -8,31 +8,34 @@ import Pagination from "./UI/Pagination";
 import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
-import "./Quotes.css";
+import StatusBadges from "./UI/StatusBadges";
+import "./Orders.css";
+import "./ArtistLog.css";
 
-function Quotes() {
+function Prod() {
   const navigate = useNavigate();
-  const [quotes, setQuotes] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
-    return parseInt(localStorage.getItem("quotesListPage")) || 1;
+    return parseInt(localStorage.getItem("ordersListPage")) || 1;
   });
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [sortConfig, setSortConfig] = useState({
-    key: "quoteId",
+    key: "id",
     direction: "desc",
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
-    const saved = localStorage.getItem("quoteStatusFilters");
+    const saved = localStorage.getItem("orderStatusFilters");
     return saved ? JSON.parse(saved) : [];
   });
+  const [selectedSales, setSelectedSales] = useState([]);
+  const [isProdChecked, setIsProdChecked] = useState(false);
   const [isAllChecked, setIsAllChecked] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
-  const [selectedSales, setSelectedSales] = useState([]);
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
   const [clientList, setClientList] = useState([]);
@@ -40,84 +43,88 @@ function Quotes() {
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
 
-  const fetchQuotes = async () => {
+  const fetchOrders = async () => {
+    setLoading(true);
     try {
-      let url = `${ServerIP}/auth/quotes?page=${currentPage}&limit=${recordsPerPage}&sortBy=${sortConfig.key}&sortDirection=${sortConfig.direction}`;
+      const token = localStorage.getItem("token");
+      console.log("Selected statuses before fetch:", selectedStatuses);
+      console.log("Current page before fetch:", currentPage);
 
-      if (searchTerm) {
-        url += `&search=${encodeURIComponent(searchTerm)}`;
+      // Only proceed with the fetch if there are selected statuses
+      if (selectedStatuses.length === 0) {
+        setOrders([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
       }
 
-      if (selectedSales.length > 0) {
-        url += `&sales=${encodeURIComponent(selectedSales.join(","))}`;
+      // Reset to page 1 if current page is greater than total pages
+      let pageToFetch = currentPage;
+      if (totalPages > 0 && currentPage > totalPages) {
+        pageToFetch = 1;
+        setCurrentPage(1);
       }
 
-      if (selectedStatuses.length > 0) {
-        url += `&statuses=${encodeURIComponent(selectedStatuses.join(","))}`;
-      }
+      const response = await axios.get(`${ServerIP}/auth/orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          page: pageToFetch,
+          limit: recordsPerPage,
+          sortBy: sortConfig.key,
+          sortDirection: sortConfig.direction,
+          search: searchTerm,
+          statuses: selectedStatuses.join(","),
+          sales: selectedSales.length ? selectedSales.join(",") : undefined,
+          clients: selectedClients.length
+            ? selectedClients.join(",")
+            : undefined,
+        },
+      });
 
-      if (selectedClients.length > 0) {
-        url += `&clients=${encodeURIComponent(selectedClients.join(","))}`;
-      }
+      console.log("API Request params:", {
+        page: pageToFetch,
+        limit: recordsPerPage,
+        statuses: selectedStatuses.join(","),
+      });
+      console.log("API Response:", response.data);
 
-      const response = await axios.get(url);
       if (response.data.Status) {
-        setQuotes(response.data.Result.quotes);
+        if (response.data.Result.orders.length === 0 && pageToFetch > 1) {
+          // If no results and not on first page, try fetching first page
+          setCurrentPage(1);
+          return; // The useEffect will trigger another fetch
+        }
+        setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
         setTotalPages(response.data.Result.totalPages);
       }
-    } catch (error) {
-      console.error("Error fetching quotes:", error);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Fetch quotes when parameters change
+  // Fetch orders when parameters change
   useEffect(() => {
-    if (selectedStatuses.length === 0 && statusOptions.length > 0) {
-      setQuotes([]);
-      setTotalCount(0);
-    } else {
-      fetchQuotes();
-    }
+    console.log("Effect triggered with selectedStatuses:", selectedStatuses); // Debug log
+    fetchOrders();
   }, [
     currentPage,
     recordsPerPage,
     sortConfig,
     searchTerm,
     selectedStatuses,
-    statusOptions,
-    selectedClients,
     selectedSales,
+    selectedClients,
   ]);
-
-  // Fetch clients and sales employees
-  useEffect(() => {
-    // Fetch initial data
-    Promise.all([
-      axios.get(`${ServerIP}/auth/sales_employees`),
-      axios.get(`${ServerIP}/auth/clients`),
-    ])
-      .then(([salesRes, clientsRes]) => {
-        if (salesRes.data.Status) {
-          setSalesEmployees(salesRes.data.Result);
-        }
-        if (clientsRes.data.Status) {
-          setClientList(clientsRes.data.Result);
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
-
-    fetchQuotes();
-  }, []);
 
   // Fetch status options
   useEffect(() => {
     const fetchStatusOptions = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/quote-statuses`, {
+        const response = await axios.get(`${ServerIP}/auth/order-statuses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.Status) {
@@ -126,32 +133,64 @@ function Quotes() {
           );
           setStatusOptions(sortedStatuses);
 
-          // Get saved filters or default to first two statuses
-          const saved = localStorage.getItem("quoteStatusFilters");
-          if (saved) {
-            const savedStatuses = JSON.parse(saved);
-            setSelectedStatuses(savedStatuses);
-            // Update All checkbox state based on saved statuses
-            setIsAllChecked(savedStatuses.length === sortedStatuses.length);
-          } else {
-            // Define firstTwoStatuses before using it
-            const firstTwoStatuses = sortedStatuses
-              .slice(0, 2)
-              .map((s) => s.statusId);
-            setSelectedStatuses(firstTwoStatuses);
-            localStorage.setItem(
-              "quoteStatusFilters",
-              JSON.stringify(firstTwoStatuses)
-            );
-            // Update All checkbox state based on first two statuses
-            setIsAllChecked(firstTwoStatuses.length === sortedStatuses.length);
-          }
+          // Get only the Prod statuses (indices 2-5)
+          const prodStatuses = sortedStatuses
+            .slice(2, 6)
+            .map((s) => s.statusId);
+          console.log("Setting initial prod statuses:", prodStatuses); // Debug log
+
+          setSelectedStatuses(prodStatuses);
+          setIsProdChecked(true);
+          setIsAllChecked(false);
+
+          // Save to localStorage
+          localStorage.setItem(
+            "orderStatusFilters",
+            JSON.stringify(prodStatuses)
+          );
         }
       } catch (err) {
         console.error("Error fetching status options:", err);
       }
     };
     fetchStatusOptions();
+  }, []);
+
+  // Fetch clients
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${ServerIP}/auth/clients`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data.Status) {
+          setClientList(response.data.Result);
+        }
+      } catch (err) {
+        console.error("Error fetching clients:", err);
+      }
+    };
+    fetchClients();
+  }, []);
+
+  // Fetch sales employees
+  useEffect(() => {
+    const fetchSalesEmployees = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${ServerIP}/auth/sales_employees`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data.Status) {
+          setSalesEmployees(response.data.Result);
+          // Remove initial selection of all sales employees
+        }
+      } catch (err) {
+        console.error("Error fetching sales employees:", err);
+      }
+    };
+    fetchSalesEmployees();
   }, []);
 
   // Debounced search handler
@@ -187,10 +226,24 @@ function Quotes() {
       } else {
         newStatuses = [...prev, statusId];
       }
+      console.log("New statuses after toggle:", newStatuses); // Debugging log
+      // Update Prod checkbox state
+      const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+      const selectedProdStatuses = newStatuses.filter((s) =>
+        prodStatuses.includes(s)
+      );
+      console.log("Prod statuses:", prodStatuses); // Debugging log
+      console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
+      setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
+
+      // Update All checkbox state
+      setIsAllChecked(newStatuses.length === statusOptions.length);
+
       // Save to localStorage
-      localStorage.setItem("quoteStatusFilters", JSON.stringify(newStatuses));
+      localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
       return newStatuses;
     });
+    setCurrentPage(1);
   };
 
   // Helper function for sort indicator
@@ -206,17 +259,10 @@ function Quotes() {
     setTotalPages(Math.ceil(totalCount / recordsPerPage));
   }, [totalCount, recordsPerPage]);
 
-  // Add cleanup effect to save the page when unmounting
-  useEffect(() => {
-    return () => {
-      localStorage.setItem("quotesListPage", currentPage.toString());
-    };
-  }, [currentPage]);
-
   // Modify the page change handler
-  const paginate = (pageNumber) => {
+  const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
-    localStorage.setItem("quotesListPage", pageNumber.toString());
+    localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
   // Handle records per page change
@@ -236,16 +282,21 @@ function Quotes() {
     );
   };
 
-  const handleAllCheckbox = (e) => {
-    let newStatuses = [];
+  const handleProdCheckbox = (e) => {
+    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+    let newStatuses;
     if (e.target.checked) {
-      newStatuses = statusOptions.map((s) => s.statusId);
+      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
+    } else {
+      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
     }
+
     setSelectedStatuses(newStatuses);
-    setIsAllChecked(e.target.checked);
+    setIsProdChecked(e.target.checked);
+    setIsAllChecked(newStatuses.length === statusOptions.length);
 
     // Save to localStorage
-    localStorage.setItem("quoteStatusFilters", JSON.stringify(newStatuses));
+    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
   const isAllIndeterminate = () => {
@@ -255,27 +306,34 @@ function Quotes() {
     );
   };
 
-  // Handle client selection from ClientFilter
-  const handleClientSelection = (newSelectedClients) => {
-    setSelectedClients(newSelectedClients);
-    setCurrentPage(1); // Reset to first page when filter changes
+  const handleAllCheckbox = (e) => {
+    let newStatuses = [];
+    if (e.target.checked) {
+      newStatuses = statusOptions.map((s) => s.statusId);
+    }
+    setSelectedStatuses(newStatuses);
+    setIsAllChecked(e.target.checked);
+    setIsProdChecked(e.target.checked);
+
+    // Save to localStorage
+    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
-  return (
-    <div className="quote">
-      <div className="quote-page-background px-5 mt-3">
-        <div className="quote-header d-flex justify-content-center">
-          <h3>Quotes List</h3>
-        </div>
+  // Add a cleanup effect to save the page when unmounting
+  useEffect(() => {
+    return () => {
+      localStorage.setItem("ordersListPage", currentPage.toString());
+    };
+  }, [currentPage]);
 
+  return (
+    <div className="artist-theme">
+      <div className="artist-page-background px-5 mt-3">
+        <div className="artist-header d-flex justify-content-center">
+          <h3>Artist Log</h3>
+        </div>
         {/* Search and filters row */}
         <div className="d-flex justify-content-between mb-3">
-          <Button
-            variant="add"
-            onClick={() => navigate("/dashboard/quotes/add")}
-          >
-            Add Quote
-          </Button>
           <input
             type="text"
             className="form-control form-control-sm"
@@ -284,7 +342,6 @@ function Quotes() {
             style={{ width: "400px" }}
           />
         </div>
-
         {/* Loading indicator */}
         {loading && (
           <div className="text-center my-3">
@@ -313,15 +370,15 @@ function Quotes() {
               setHasClientFilter(isFilterActive)
             }
           />
-          <table className="table table-striped table-hover">
+          <table className="table">
             <thead>
               <tr>
                 <th>Action</th>
                 <th
-                  onClick={() => handleSort("quoteId")}
+                  onClick={() => handleSort("id")}
                   style={{ cursor: "pointer" }}
                 >
-                  Quote ID {getSortIndicator("quoteId")}
+                  Order ID {getSortIndicator("id")}
                 </th>
                 <th
                   onClick={() => handleSort("clientName")}
@@ -334,6 +391,7 @@ function Quotes() {
                 </th>
                 <th>Project Name</th>
                 <th>Ordered By</th>
+                {/* <th>Order Date</th> */}
                 <th>Due Date</th>
                 <th>Due Time</th>
                 <th
@@ -342,7 +400,27 @@ function Quotes() {
                 >
                   Status {getSortIndicator("status")}
                 </th>
+                <th
+                  onClick={() => handleSort("drnum")}
+                  style={{ cursor: "pointer" }}
+                >
+                  DR# {getSortIndicator("drnum")}
+                </th>
+                <th
+                  onClick={() => handleSort("invnum")}
+                  style={{ cursor: "pointer" }}
+                >
+                  INV# {getSortIndicator("invnum")}
+                </th>
                 <th>Grand Total</th>
+                <th
+                  onClick={() => handleSort("ornum")}
+                  style={{ cursor: "pointer" }}
+                >
+                  OR# {getSortIndicator("ornum")}
+                </th>
+                <th>Amount Paid</th>
+                <th>Date Paid</th>
                 <th
                   onClick={() => handleSort("salesName")}
                   style={{
@@ -352,12 +430,12 @@ function Quotes() {
                 >
                   Sales {getSortIndicator("salesName")}
                 </th>
-                <th>Quote Ref</th>
+                <th>Order Ref</th>
               </tr>
             </thead>
             <tbody>
-              {quotes.map((quote) => (
-                <tr key={quote.id}>
+              {orders.map((order) => (
+                <tr key={order.id}>
                   <td>
                     <div className="d-flex justify-content-center gap-2">
                       <Button
@@ -365,7 +443,7 @@ function Quotes() {
                         iconOnly
                         size="sm"
                         onClick={() =>
-                          navigate(`/dashboard/view_quote/${quote.id}`)
+                          navigate(`/dashboard/view_order/${order.id}`)
                         }
                       />
                       <Button
@@ -373,12 +451,12 @@ function Quotes() {
                         iconOnly
                         size="sm"
                         onClick={() =>
-                          navigate(`/dashboard/quotes/edit/${quote.id}`)
+                          navigate(`/dashboard/orders/edit/${order.id}`)
                         }
                       />
                     </div>
                   </td>
-                  <td>{quote.id}</td>
+                  <td>{order.id}</td>
                   <td
                     className="client-cell"
                     onClick={(e) => {
@@ -388,24 +466,42 @@ function Quotes() {
                     }}
                     style={{ cursor: "pointer" }}
                   >
-                    {quote.clientName}
+                    {order.clientName}
                   </td>
-                  <td>{quote.projectName}</td>
-                  <td>{quote.orderedBy}</td>
+                  <td>{order.projectName}</td>
+                  <td>{order.orderedBy}</td>
+                  {/* <td>
+                    {order.orderDate
+                      ? new Date(order.orderDate).toLocaleDateString()
+                      : ""}
+                  </td> */}
                   <td>
-                    {quote.dueDate
-                      ? new Date(quote.dueDate).toLocaleDateString()
+                    {order.dueDate
+                      ? new Date(order.dueDate).toLocaleDateString()
                       : ""}
                   </td>
-                  <td>{quote.dueTime || ""}</td>
+                  <td>{order.dueTime || ""}</td>
                   <td>
-                    <span className={`status-badge ${quote.status}`}>
-                      {quote.status}
+                    <span className={`status-badge ${order.status}`}>
+                      {order.status}
                     </span>
                   </td>
+                  <td>{order.drnum || ""}</td>
+                  <td>{order.invnum || ""}</td>
                   <td>
-                    {quote.grandTotal
-                      ? `₱${quote.grandTotal.toLocaleString()}`
+                    {order.grandTotal
+                      ? `₱${order.grandTotal.toLocaleString()}`
+                      : ""}
+                  </td>
+                  <td>{order.ornum || ""}</td>
+                  <td>
+                    {order.amountPaid
+                      ? `₱${order.amountPaid.toLocaleString()}`
+                      : ""}
+                  </td>
+                  <td>
+                    {order.datePaid
+                      ? new Date(order.datePaid).toLocaleDateString()
                       : ""}
                   </td>
                   <td
@@ -417,9 +513,9 @@ function Quotes() {
                     }}
                     style={{ cursor: "pointer" }}
                   >
-                    {quote.salesName}
+                    {order.salesName}
                   </td>
-                  <td>{quote.quoteReference}</td>
+                  <td>{order.orderReference}</td>
                 </tr>
               ))}
             </tbody>
@@ -436,76 +532,22 @@ function Quotes() {
             setCurrentPage={setCurrentPage}
           />
 
-          {/* Status filter badges */}
-          <div className="d-flex flex-column align-items-center gap-0">
-            {/* Status Badges */}
-            <div className="d-flex justify-content-center gap-1 w-100">
-              {statusOptions.map((status) => (
-                <button
-                  key={status.statusId}
-                  className={`badge ${
-                    selectedStatuses.includes(status.statusId)
-                      ? "bg-primary"
-                      : "bg-secondary"
-                  }`}
-                  onClick={() => handleStatusFilter(status.statusId)}
-                  style={{
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "0.75rem",
-                    minWidth: "60px",
-                    padding: "0.35em 0.65em",
-                  }}
-                >
-                  {status.statusId}
-                </button>
-              ))}
-            </div>
-
-            {/* All Checkbox */}
-            <div
-              className="position-relative w-100"
-              style={{ padding: "0.25rem 0" }}
-            >
-              <div
-                className="position-absolute"
-                style={{
-                  height: "1px",
-                  backgroundColor: "#ccc",
-                  width: "100%",
-                  top: "50%",
-                  zIndex: 0,
-                }}
-              ></div>
-              <div
-                className="d-flex justify-content-center"
-                style={{ position: "relative", zIndex: 1 }}
-              >
-                <div
-                  className="d-flex align-items-center bg-white px-2"
-                  style={{ backgroundColor: "transparent" }}
-                >
-                  <input
-                    type="checkbox"
-                    className="form-check-input me-1"
-                    ref={(el) => {
-                      if (el) {
-                        el.indeterminate = isAllIndeterminate();
-                      }
-                    }}
-                    checked={isAllChecked}
-                    onChange={handleAllCheckbox}
-                  />
-                  <label className="form-check-label">All</label>
-                </div>
-              </div>
-            </div>
-          </div>
+          <StatusBadges
+            statusOptions={statusOptions}
+            selectedStatuses={selectedStatuses}
+            onStatusChange={(newStatuses) => {
+              setSelectedStatuses(newStatuses);
+              localStorage.setItem(
+                "orderStatusFilters",
+                JSON.stringify(newStatuses)
+              );
+            }}
+          />
 
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={paginate}
+            onPageChange={handlePageChange}
           />
         </div>
       </div>
@@ -513,4 +555,4 @@ function Quotes() {
   );
 }
 
-export default Quotes;
+export default Prod;

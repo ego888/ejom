@@ -1,0 +1,159 @@
+.artist-theme {
+  --artist-bg-color: #faaa87;
+  --artist-text-color: #333333;
+  --artist-content-bg: #ffffff;
+  --artist-border-color: #45d2a1;
+  --artist-border-light: #f0f0f0;
+  --artist-border-hover: #d0d0d0;
+  --artist-table-bg: #ffffff;
+}
+
+.artist-page-background {
+  background-color: var(--artist-bg-color);
+  min-height: 100vh;
+  padding: 20px;
+  color: var(--artist-text-color);
+}
+
+.artist-page-background > .px-5 {
+  background-color: var(--artist-bg-color);
+}
+
+.artist-header {
+  background-color: var(--artist-bg-color);
+  color: var(--artist-text-color);
+}
+
+.artist-header h3 {
+  color: var(--artist-text-color);
+}
+
+.artist-form-container {
+  background-color: var(--artist-content-bg);
+  border: 2px solid var(--artist-border-color);
+  border-radius: 4px;
+}
+
+.artist-section-header {
+  background-color: var(--artist-content-bg);
+  border-bottom: 2px solid var(--artist-border-color);
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.artist-search {
+  background-color: var(--artist-content-bg);
+  border: 1px solid var(--artist-border-light);
+}
+
+.artist-search:focus {
+  background-color: var(--artist-content-bg);
+  border-color: var(--artist-border-hover);
+  box-shadow: 0 0 0 0.2rem rgba(179, 255, 229, 0.25);
+}
+
+.artist-pagination {
+  background-color: var(--artist-content-bg);
+  border: 1px solid var(--artist-border-color);
+}
+
+.artist-checkbox {
+  background-color: var(--artist-content-bg);
+}
+
+.artist-checkbox:checked {
+  background-color: var(--artist-border-hover);
+  border-color: var(--artist-border-color);
+}
+
+.artist-status-filter {
+  background-color: var(--artist-content-bg);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--artist-border-light);
+  color: var(--artist-text-color);
+}
+
+.artist-table-container {
+  background-color: var(--artist-content-bg);
+  padding: 15px;
+  border-radius: 4px;
+  border: 2px solid var(--artist-border-color);
+}
+
+.artist-table-container table thead {
+  background-color: var(--artist-content-bg);
+}
+
+.artist-table-container table thead th {
+  background-color: var(--artist-content-bg);
+  border-bottom: 2px solid var(--artist-border-color);
+  font-weight: 600;
+}
+
+.artist-records-info {
+  background-color: var(--artist-content-bg);
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--artist-border-color);
+}
+
+.quote-details-header {
+  background-color: var(--quote-bg-color);
+  border-bottom: 2px solid var(--quote-border-color);
+}
+
+.artist-details-header {
+  background-color: var(--artist-content-bg);
+  padding: 10px;
+  border-bottom: 2px solid var(--artist-border-color);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.table {
+  background-color: var(--artist-content-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: var(--artist-content-bg);
+  color: var(--artist-text-color);
+}
+
+.table thead th {
+  border-bottom: 2px solid var(--artist-border-color) !important;
+}
+
+.table tbody {
+  background-color: var(--artist-content-bg);
+}
+
+/* Style for the checkboxes background */
+.bg-white {
+  background-color: var(--artist-content-bg) !important;
+}
+
+/* Update other component backgrounds to white */
+.table,
+.table thead,
+.table tbody,
+.table thead th,
+.artist-status-filter,
+.artist-form-container,
+.artist-section-header,
+.artist-table-container,
+.artist-records-info,
+.artist-details-header {
+  background-color: var(--artist-content-bg);
+  color: var(--artist-text-color);
+}
+
+/* Keep the table container white */
+.table-responsive {
+  background-color: var(--artist-content-bg);
+  border-radius: 8px;
+  padding: 20px;
+  color: var(--artist-text-color);
+}

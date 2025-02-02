@@ -114,6 +114,50 @@ const Dashboard = () => {
               </li>
               <li>
                 <NavLink
+                  to="/dashboard/prod"
+                  className={({ isActive }) =>
+                    `sidebar-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  <i className="bi-gear"></i>
+                  <span className="d-none d-sm-inline">Prod</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/dashboard/artistlog"
+                  className={({ isActive }) =>
+                    `sidebar-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  <i className="bi-palette"></i>
+                  <span className="d-none d-sm-inline">Artist Log</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/dashboard/printlog"
+                  className={({ isActive }) =>
+                    `sidebar-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  <i className="bi-printer"></i>
+                  <span className="d-none d-sm-inline">Print Log</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/dashboard/payment"
+                  className={({ isActive }) =>
+                    `sidebar-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  <i className="bi-cash"></i>
+                  <span className="d-none d-sm-inline">Payments</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
                   to="/dashboard/client"
                   className={({ isActive }) =>
                     `sidebar-nav-link ${isActive ? "active" : ""}`

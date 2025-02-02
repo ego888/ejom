@@ -1,0 +1,159 @@
+.printlog {
+  --printlog-bg-color: #b0dcfe;
+  --printlog-text-color: #333333;
+  --printlog-content-bg: #ffffff;
+  --printlog-border-color: #45d2a1;
+  --printlog-border-light: #f0f0f0;
+  --printlog-border-hover: #d0d0d0;
+  --printlog-table-bg: #ffffff;
+}
+
+.printlog-page-background {
+  background-color: var(--printlog-bg-color);
+  min-height: 100vh;
+  padding: 20px;
+  color: var(--printlog-text-color);
+}
+
+.printlog-page-background > .px-5 {
+  background-color: var(--printlog-bg-color);
+}
+
+.printlog-header {
+  background-color: var(--printlog-bg-color);
+  color: var(--printlog-text-color);
+}
+
+.printlog-header h3 {
+  color: var(--printlog-text-color);
+}
+
+.printlog-form-container {
+  background-color: var(--printlog-content-bg);
+  border: 2px solid var(--printlog-border-color);
+  border-radius: 4px;
+}
+
+.printlog-section-header {
+  background-color: var(--printlog-content-bg);
+  border-bottom: 2px solid var(--printlog-border-color);
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.printlog-search {
+  background-color: var(--printlog-content-bg);
+  border: 1px solid var(--printlog-border-light);
+}
+
+.printlog-search:focus {
+  background-color: var(--printlog-content-bg);
+  border-color: var(--printlog-border-hover);
+  box-shadow: 0 0 0 0.2rem rgba(179, 255, 229, 0.25);
+}
+
+.printlog-pagination {
+  background-color: var(--printlog-content-bg);
+  border: 1px solid var(--printlog-border-color);
+}
+
+.printlog-checkbox {
+  background-color: var(--printlog-content-bg);
+}
+
+.printlog-checkbox:checked {
+  background-color: var(--printlog-border-hover);
+  border-color: var(--printlog-border-color);
+}
+
+.printlog-status-filter {
+  background-color: var(--printlog-content-bg);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--printlog-border-light);
+  color: var(--printlog-text-color);
+}
+
+.printlog-table-container {
+  background-color: var(--printlog-content-bg);
+  padding: 15px;
+  border-radius: 4px;
+  border: 2px solid var(--printlog-border-color);
+}
+
+.printlog-table-container table thead {
+  background-color: var(--printlog-content-bg);
+}
+
+.printlog-table-container table thead th {
+  background-color: var(--printlog-content-bg);
+  border-bottom: 2px solid var(--printlog-border-color);
+  font-weight: 600;
+}
+
+.printlog-records-info {
+  background-color: var(--printlog-content-bg);
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--printlog-border-color);
+}
+
+.quote-details-header {
+  background-color: var(--quote-bg-color);
+  border-bottom: 2px solid var(--quote-border-color);
+}
+
+.printlog-details-header {
+  background-color: var(--printlog-content-bg);
+  padding: 10px;
+  border-bottom: 2px solid var(--printlog-border-color);
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.table {
+  background-color: var(--printlog-content-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: var(--printlog-content-bg);
+  color: var(--printlog-text-color);
+}
+
+.table thead th {
+  border-bottom: 2px solid var(--printlog-border-color) !important;
+}
+
+.table tbody {
+  background-color: var(--printlog-content-bg);
+}
+
+/* Style for the checkboxes background */
+.bg-white {
+  background-color: var(--printlog-content-bg) !important;
+}
+
+/* Update other component backgrounds to white */
+.table,
+.table thead,
+.table tbody,
+.table thead th,
+.printlog-status-filter,
+.printlog-form-container,
+.printlog-section-header,
+.printlog-table-container,
+.printlog-records-info,
+.printlog-details-header {
+  background-color: var(--printlog-content-bg);
+  color: var(--printlog-text-color);
+}
+
+/* Keep the table container white */
+.table-responsive {
+  background-color: var(--printlog-content-bg);
+  border-radius: 8px;
+  padding: 20px;
+  color: var(--printlog-text-color);
+}

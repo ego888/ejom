@@ -9,6 +9,7 @@ import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
 import "./Orders.css";
+import StatusBadges from "./UI/StatusBadges";
 
 function Orders() {
   const navigate = useNavigate();
@@ -62,6 +63,7 @@ function Orders() {
             : undefined,
         },
       });
+      console.log("fetchOrders:", response.data.Result.orders);
 
       if (response.data.Status) {
         setOrders(response.data.Result.orders);
@@ -519,109 +521,17 @@ function Orders() {
           setCurrentPage={setCurrentPage}
         />
 
-        {/* Status filter badges */}
-        <div className="d-flex flex-column align-items-center gap-0">
-          {/* Status Badges */}
-          <div className="d-flex gap-1">
-            {statusOptions && statusOptions.length > 0 ? (
-              statusOptions.map((status) => (
-                <button
-                  key={status.statusId}
-                  className={`badge ${
-                    selectedStatuses.includes(status.statusId)
-                      ? "bg-primary"
-                      : "bg-secondary"
-                  }`}
-                  onClick={() => handleStatusFilter(status.statusId)}
-                  style={{
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "0.75rem",
-                    minWidth: "60px",
-                    padding: "0.35em 0.65em",
-                  }}
-                >
-                  {status.statusId}
-                </button>
-              ))
-            ) : (
-              <div>Loading statuses...</div>
-            )}
-          </div>
-
-          {/* Prod Section */}
-          <div
-            className="position-relative w-100"
-            style={{ padding: "0.25rem 0" }}
-          >
-            <div
-              className="position-absolute"
-              style={{
-                height: "1px",
-                backgroundColor: "#ccc",
-                width: "50%",
-                left: "25%",
-                top: "50%",
-                zIndex: 0,
-              }}
-            ></div>
-            <div
-              className="d-flex justify-content-center"
-              style={{ position: "relative", zIndex: 1 }}
-            >
-              <div className="d-flex align-items-center bg-white px-2">
-                <input
-                  type="checkbox"
-                  className="form-check-input me-1"
-                  ref={(el) => {
-                    if (el) {
-                      el.indeterminate = isProdIndeterminate();
-                    }
-                  }}
-                  checked={isProdChecked}
-                  onChange={handleProdCheckbox}
-                />
-                <label className="form-check-label">Prod</label>
-              </div>
-            </div>
-          </div>
-
-          {/* All Section */}
-          <div
-            className="position-relative w-100"
-            style={{ padding: "0rem 0" }}
-          >
-            <div
-              className="position-absolute"
-              style={{
-                height: "1px",
-                backgroundColor: "#ccc",
-                width: "100%",
-                top: "50%",
-                zIndex: 0,
-              }}
-            ></div>
-            <div
-              className="d-flex justify-content-center"
-              style={{ position: "relative", zIndex: 1 }}
-            >
-              <div className="d-flex align-items-center bg-white px-2">
-                <input
-                  type="checkbox"
-                  className="form-check-input me-1"
-                  ref={(el) => {
-                    if (el) {
-                      el.indeterminate = isAllIndeterminate();
-                    }
-                  }}
-                  checked={isAllChecked}
-                  onChange={handleAllCheckbox}
-                />
-                <label className="form-check-label">All</label>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StatusBadges
+          statusOptions={statusOptions}
+          selectedStatuses={selectedStatuses}
+          onStatusChange={(newStatuses) => {
+            setSelectedStatuses(newStatuses);
+            localStorage.setItem(
+              "orderStatusFilters",
+              JSON.stringify(newStatuses)
+            );
+          }}
+        />
 
         <Pagination
           currentPage={currentPage}

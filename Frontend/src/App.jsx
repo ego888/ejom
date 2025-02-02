@@ -24,6 +24,10 @@ import Quotes from "./Components/Quotes";
 import AddQuote from "./Components/AddQuote";
 import PrivateRoute from "./Components/PrivateRoute";
 import PrintQuote from "./Components/PrintQuote";
+import Prod from "./Components/Prod";
+import ArtistLog from "./Components/ArtistLog";
+import PrintLog from "./Components/PrintLog";
+import Payment from "./Components/Payment";
 
 function App() {
   return (
@@ -95,6 +99,10 @@ function App() {
             path="/dashboard/orders/edit/:id"
             element={<AddOrder />}
           ></Route>
+          <Route path="/dashboard/prod" element={<Prod />}></Route>
+          <Route path="/dashboard/artistlog" element={<ArtistLog />}></Route>
+          <Route path="/dashboard/printlog" element={<PrintLog />}></Route>
+          <Route path="/dashboard/payment" element={<Payment />}></Route>
         </Route>
       </Routes>
     </BrowserRouter>
