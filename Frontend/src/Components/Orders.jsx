@@ -3,6 +3,8 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
+import DisplayPage from "./UI/DisplayPage";
+import Pagination from "./UI/Pagination";
 import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
@@ -505,213 +507,127 @@ function Orders() {
             ))}
           </tbody>
         </table>
+      </div>
 
-        {/* Pagination */}
-        <div className="d-flex justify-content-between align-items-start mt-3">
-          <div className="d-flex align-items-center gap-2">
-            <select
-              className="form-select form-select-sm"
-              style={{
-                width: "auto",
-                fontSize: "0.75rem",
-                padding: "0.1rem 1.5rem 0.1rem 0.5rem",
-                height: "auto",
-              }}
-              value={recordsPerPage}
-              onChange={(e) => {
-                setRecordsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
-            </select>
-            <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-              {(currentPage - 1) * recordsPerPage + 1} to{" "}
-              {Math.min(currentPage * recordsPerPage, totalCount)} of{" "}
-              {totalCount} entries
-            </div>
-          </div>
+      {/* Pagination and Filters Section */}
+      <div className="d-flex justify-content-between align-items-start mt-3">
+        <DisplayPage
+          recordsPerPage={recordsPerPage}
+          setRecordsPerPage={setRecordsPerPage}
+          currentPage={currentPage}
+          totalCount={totalCount}
+          setCurrentPage={setCurrentPage}
+        />
 
-          {/* Status filter badges */}
-          <div className="d-flex flex-column align-items-center gap-0">
-            {/* Status Badges */}
-            <div className="d-flex gap-1">
-              {statusOptions && statusOptions.length > 0 ? (
-                statusOptions.map((status) => (
-                  <button
-                    key={status.statusId}
-                    className={`badge ${
-                      selectedStatuses.includes(status.statusId)
-                        ? "bg-primary"
-                        : "bg-secondary"
-                    }`}
-                    onClick={() => handleStatusFilter(status.statusId)}
-                    style={{
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "0.75rem",
-                      minWidth: "60px",
-                      padding: "0.35em 0.65em",
-                    }}
-                  >
-                    {status.statusId}
-                  </button>
-                ))
-              ) : (
-                <div>Loading statuses...</div>
-              )}
-            </div>
-
-            {/* Prod Section */}
-            <div
-              className="position-relative w-100"
-              style={{ padding: "0.25rem 0" }}
-            >
-              <div
-                className="position-absolute"
-                style={{
-                  height: "1px",
-                  backgroundColor: "#ccc",
-                  width: "50%",
-                  left: "25%",
-                  top: "50%",
-                  zIndex: 0,
-                }}
-              ></div>
-              <div
-                className="d-flex justify-content-center"
-                style={{ position: "relative", zIndex: 1 }}
-              >
-                <div className="d-flex align-items-center bg-white px-2">
-                  <input
-                    type="checkbox"
-                    className="form-check-input me-1"
-                    ref={(el) => {
-                      if (el) {
-                        el.indeterminate = isProdIndeterminate();
-                      }
-                    }}
-                    checked={isProdChecked}
-                    onChange={handleProdCheckbox}
-                  />
-                  <label className="form-check-label">Prod</label>
-                </div>
-              </div>
-            </div>
-
-            {/* All Section */}
-            <div
-              className="position-relative w-100"
-              style={{ padding: "0rem 0" }}
-            >
-              <div
-                className="position-absolute"
-                style={{
-                  height: "1px",
-                  backgroundColor: "#ccc",
-                  width: "100%",
-                  top: "50%",
-                  zIndex: 0,
-                }}
-              ></div>
-              <div
-                className="d-flex justify-content-center"
-                style={{ position: "relative", zIndex: 1 }}
-              >
-                <div className="d-flex align-items-center bg-white px-2">
-                  <input
-                    type="checkbox"
-                    className="form-check-input me-1"
-                    ref={(el) => {
-                      if (el) {
-                        el.indeterminate = isAllIndeterminate();
-                      }
-                    }}
-                    checked={isAllChecked}
-                    onChange={handleAllCheckbox}
-                  />
-                  <label className="form-check-label">All</label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <nav>
-            <ul className="pagination pagination-sm mb-0">
-              <li
-                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
-              >
+        {/* Status filter badges */}
+        <div className="d-flex flex-column align-items-center gap-0">
+          {/* Status Badges */}
+          <div className="d-flex gap-1">
+            {statusOptions && statusOptions.length > 0 ? (
+              statusOptions.map((status) => (
                 <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  First
-                </button>
-              </li>
-              <li
-                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  Previous
-                </button>
-              </li>
-              {[...Array(totalPages)].map((_, i) => (
-                <li
-                  key={i + 1}
-                  className={`page-item ${
-                    currentPage === i + 1 ? "active" : ""
+                  key={status.statusId}
+                  className={`badge ${
+                    selectedStatuses.includes(status.statusId)
+                      ? "bg-primary"
+                      : "bg-secondary"
                   }`}
+                  onClick={() => handleStatusFilter(status.statusId)}
+                  style={{
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    minWidth: "60px",
+                    padding: "0.35em 0.65em",
+                  }}
                 >
-                  <button
-                    className="page-link"
-                    onClick={() => setCurrentPage(i + 1)}
-                    style={{ fontSize: "0.75rem" }}
-                  >
-                    {i + 1}
-                  </button>
-                </li>
-              ))}
-              <li
-                className={`page-item ${
-                  currentPage === totalPages ? "disabled" : ""
-                }`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  Next
+                  {status.statusId}
                 </button>
-              </li>
-              <li
-                className={`page-item ${
-                  currentPage === totalPages ? "disabled" : ""
-                }`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  Last
-                </button>
-              </li>
-            </ul>
-          </nav>
+              ))
+            ) : (
+              <div>Loading statuses...</div>
+            )}
+          </div>
+
+          {/* Prod Section */}
+          <div
+            className="position-relative w-100"
+            style={{ padding: "0.25rem 0" }}
+          >
+            <div
+              className="position-absolute"
+              style={{
+                height: "1px",
+                backgroundColor: "#ccc",
+                width: "50%",
+                left: "25%",
+                top: "50%",
+                zIndex: 0,
+              }}
+            ></div>
+            <div
+              className="d-flex justify-content-center"
+              style={{ position: "relative", zIndex: 1 }}
+            >
+              <div className="d-flex align-items-center bg-white px-2">
+                <input
+                  type="checkbox"
+                  className="form-check-input me-1"
+                  ref={(el) => {
+                    if (el) {
+                      el.indeterminate = isProdIndeterminate();
+                    }
+                  }}
+                  checked={isProdChecked}
+                  onChange={handleProdCheckbox}
+                />
+                <label className="form-check-label">Prod</label>
+              </div>
+            </div>
+          </div>
+
+          {/* All Section */}
+          <div
+            className="position-relative w-100"
+            style={{ padding: "0rem 0" }}
+          >
+            <div
+              className="position-absolute"
+              style={{
+                height: "1px",
+                backgroundColor: "#ccc",
+                width: "100%",
+                top: "50%",
+                zIndex: 0,
+              }}
+            ></div>
+            <div
+              className="d-flex justify-content-center"
+              style={{ position: "relative", zIndex: 1 }}
+            >
+              <div className="d-flex align-items-center bg-white px-2">
+                <input
+                  type="checkbox"
+                  className="form-check-input me-1"
+                  ref={(el) => {
+                    if (el) {
+                      el.indeterminate = isAllIndeterminate();
+                    }
+                  }}
+                  checked={isAllChecked}
+                  onChange={handleAllCheckbox}
+                />
+                <label className="form-check-label">All</label>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
       </div>
     </div>
   );

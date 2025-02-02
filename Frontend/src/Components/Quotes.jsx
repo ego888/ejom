@@ -3,6 +3,8 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
+import DisplayPage from "./UI/DisplayPage";
+import Pagination from "./UI/Pagination";
 import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
@@ -426,42 +428,16 @@ function Quotes() {
 
         {/* Pagination and Filters Section */}
         <div className="d-flex justify-content-between align-items-start mt-3">
-          {/* Records per page selector */}
-          <div className="d-flex align-items-center gap-2">
-            <select
-              className="form-select form-select-sm quote-records-info"
-              style={{
-                width: "auto",
-                fontSize: "0.75rem",
-                padding: "0.1rem 1.5rem 0.1rem 0.5rem",
-                height: "auto",
-              }}
-              value={recordsPerPage}
-              onChange={(e) => {
-                setRecordsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
-            </select>
-            <div
-              className="quote-records-info text-muted"
-              style={{ fontSize: "0.75rem" }}
-            >
-              {(currentPage - 1) * recordsPerPage + 1} to{" "}
-              {Math.min(currentPage * recordsPerPage, totalCount)} of{" "}
-              {totalCount} entries
-            </div>
-          </div>
+          <DisplayPage
+            recordsPerPage={recordsPerPage}
+            setRecordsPerPage={setRecordsPerPage}
+            currentPage={currentPage}
+            totalCount={totalCount}
+            setCurrentPage={setCurrentPage}
+          />
 
           {/* Status filter badges */}
-          <div
-            className="d-flex flex-column align-items-center gap-0"
-            style={{ minWidth: "400px" }}
-          >
+          <div className="d-flex flex-column align-items-center gap-0">
             {/* Status Badges */}
             <div className="d-flex justify-content-center gap-1 w-100">
               {statusOptions.map((status) => (
@@ -526,79 +502,11 @@ function Quotes() {
             </div>
           </div>
 
-          {/* Pagination */}
-          <nav>
-            <ul className="pagination pagination-sm mb-0">
-              <li
-                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => paginate(1)}
-                  disabled={currentPage === 1}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  First
-                </button>
-              </li>
-              <li
-                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => paginate(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  Previous
-                </button>
-              </li>
-              {[...Array(totalPages)].map((_, i) => (
-                <li
-                  key={i + 1}
-                  className={`page-item ${
-                    currentPage === i + 1 ? "active" : ""
-                  }`}
-                >
-                  <button
-                    className="page-link"
-                    onClick={() => paginate(i + 1)}
-                    style={{ fontSize: "0.75rem" }}
-                  >
-                    {i + 1}
-                  </button>
-                </li>
-              ))}
-              <li
-                className={`page-item ${
-                  currentPage === totalPages ? "disabled" : ""
-                }`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => paginate(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  Next
-                </button>
-              </li>
-              <li
-                className={`page-item ${
-                  currentPage === totalPages ? "disabled" : ""
-                }`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => paginate(totalPages)}
-                  disabled={currentPage === totalPages}
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  Last
-                </button>
-              </li>
-            </ul>
-          </nav>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={paginate}
+          />
         </div>
       </div>
     </div>
