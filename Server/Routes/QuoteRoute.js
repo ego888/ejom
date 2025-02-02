@@ -19,10 +19,12 @@ router.get("/quotes", async (req, res) => {
     sortDirection = "DESC",
     search = "",
     statuses = "",
+    clients = "",
   } = req.query;
 
   const offset = (page - 1) * limit;
   const statusArray = statuses ? statuses.split(",") : [];
+  const clientArray = clients ? clients.split(",") : [];
 
   try {
     let whereClause = "1 = 1";
@@ -46,6 +48,13 @@ router.get("/quotes", async (req, res) => {
         .map(() => "?")
         .join(",")})`;
       params = [...params, ...statusArray];
+    }
+
+    if (clientArray.length > 0) {
+      whereClause += ` AND c.clientName IN (${clientArray
+        .map(() => "?")
+        .join(",")})`;
+      params = [...params, ...clientArray];
     }
 
     const countSql = `

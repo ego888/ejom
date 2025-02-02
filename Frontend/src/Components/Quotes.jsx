@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
+import ClientFilter from "./ClientFilter";
 import "./Quotes.css";
 
 function Quotes() {
@@ -27,6 +28,7 @@ function Quotes() {
     return saved ? JSON.parse(saved) : [];
   });
   const [isAllChecked, setIsAllChecked] = useState(false);
+  const [selectedClients, setSelectedClients] = useState([]);
 
   const fetchQuotes = async () => {
     setLoading(true);
@@ -42,6 +44,9 @@ function Quotes() {
           search: searchTerm,
           statuses: selectedStatuses.length
             ? selectedStatuses.join(",")
+            : undefined,
+          clients: selectedClients.length
+            ? selectedClients.join(",")
             : undefined,
         },
       });
@@ -72,6 +77,7 @@ function Quotes() {
     searchTerm,
     selectedStatuses,
     statusOptions,
+    selectedClients,
   ]);
 
   // Fetch status options
@@ -217,6 +223,12 @@ function Quotes() {
     );
   };
 
+  // Handle client selection from ClientFilter
+  const handleClientSelection = (newSelectedClients) => {
+    setSelectedClients(newSelectedClients);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
   return (
     <div className="quote-page-background">
       <div className="px-5 mt-3">
@@ -262,10 +274,10 @@ function Quotes() {
                   Quote ID {getSortIndicator("quoteId")}
                 </th>
                 <th
-                  onClick={() => handleSort("clientId")}
+                  onClick={() => handleSort("clientName")}
                   style={{ cursor: "pointer" }}
                 >
-                  Client ID {getSortIndicator("clientId")}
+                  Client {getSortIndicator("clientName")}
                 </th>
                 <th>Project Name</th>
                 <th>Prepared By</th>
@@ -306,7 +318,14 @@ function Quotes() {
                     </div>
                   </td>
                   <td>{quote.id}</td>
-                  <td>{quote.clientId}</td>
+                  <td className="client-cell">
+                    <ClientFilter
+                      ServerIP={ServerIP}
+                      selectedClients={selectedClients}
+                      onSelectClients={handleClientSelection}
+                    />
+                    {quote.clientName}
+                  </td>
                   <td>{quote.projectName}</td>
                   <td>{quote.preparedBy}</td>
                   <td>

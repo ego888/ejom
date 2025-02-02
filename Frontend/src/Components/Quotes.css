@@ -113,3 +113,56 @@
 .form-label::after {
   content: none !important;
 }
+
+.client-cell {
+  cursor: pointer;
+}
+
+.client-cell:hover {
+  background-color: #f8f9fa;
+}
+
+.client-menu {
+  position: fixed;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 8px;
+  z-index: 1000;
+  min-width: 200px;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.client-menu-search {
+  margin-bottom: 8px;
+}
+
+.client-menu-header {
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.client-menu-items {
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.client-menu-item {
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.client-menu-item:hover {
+  background-color: #f8f9fa;
+}
+
+.client-menu-checkbox {
+  margin: 0;
+}
