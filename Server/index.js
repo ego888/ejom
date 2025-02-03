@@ -37,6 +37,8 @@ app.use("/auth", UsersRouter);
 app.use("/auth", MaterialRouter);
 app.use("/auth", OrderStatusRouter);
 app.use("/employee", EmployeeRouter);
+app.use("/public", express.static("public"));
+
 app.use(express.static("Public"));
 
 app.get("/verify", verifyUser, (req, res) => {

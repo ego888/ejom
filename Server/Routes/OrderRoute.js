@@ -169,6 +169,78 @@ router.get("/order/:id", (req, res) => {
   });
 });
 
+router.get("/orders-details-forprod", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        o.orderID as id,
+        o.clientId,
+        o.projectName,
+        o.dueDate,
+        o.dueTime,
+        c.clientName,
+        od.quantity,
+        od.width,
+        od.height,
+        od.unit,
+        od.material,
+        od.printHrs,
+        od.squareFeet,
+        od.displayOrder
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN order_details od ON o.orderID = od.orderId
+      WHERE o.forProd = 1
+      ORDER BY o.orderID ASC, od.displayOrder ASC`;
+
+    con.query(sql, (err, result) => {
+      if (err) {
+        console.log(err);
+        return res.json({ Status: false, Error: "Query Error" });
+      }
+
+      // Restructure the data to group order details by order
+      const ordersMap = new Map();
+
+      result.forEach((row) => {
+        if (!ordersMap.has(row.id)) {
+          // Create new order entry
+          ordersMap.set(row.id, {
+            id: row.id,
+            clientId: row.clientId,
+            projectName: row.projectName,
+            dueDate: row.dueDate,
+            dueTime: row.dueTime,
+            clientName: row.clientName,
+            order_details: [],
+          });
+        }
+
+        // Add order details if they exist
+        if (row.quantity !== null) {
+          ordersMap.get(row.id).order_details.push({
+            quantity: row.quantity,
+            width: row.width,
+            height: row.height,
+            unit: row.unit,
+            material: row.material,
+            printHrs: row.printHrs,
+            squareFeet: row.squareFeet,
+            displayOrder: row.displayOrder,
+          });
+        }
+      });
+
+      // Convert map to array
+      const orders = Array.from(ordersMap.values());
+
+      return res.json({ Status: true, Result: orders });
+    });
+  } catch (error) {
+    return res.json({ Status: false, Error: "Query Error" + error });
+  }
+});
+
 // Get order details
 router.get("/order_details/:orderId", (req, res) => {
   const sql = `

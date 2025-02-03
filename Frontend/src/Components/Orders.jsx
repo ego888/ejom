@@ -427,14 +427,14 @@ function Orders() {
               <tr key={order.id}>
                 <td>
                   <div className="d-flex justify-content-center gap-2">
-                    <Button
+                    {/* <Button
                       variant="view"
                       iconOnly
                       size="sm"
                       onClick={() =>
                         navigate(`/dashboard/view_order/${order.id}`)
                       }
-                    />
+                    /> */}
                     <Button
                       variant="edit"
                       iconOnly
