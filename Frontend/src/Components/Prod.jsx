@@ -9,7 +9,7 @@ import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
-import CheckboxHeader from "./UI/CheckboxHeader";
+import CheckBoxHeader from "./UI/CheckBoxHeader";
 import "./Orders.css";
 import "./Prod.css";
 
@@ -43,6 +43,7 @@ function Prod() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
+  const [forProdSort, setForProdSort] = useState("none"); // 'none', 'asc', 'desc'
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -63,12 +64,14 @@ function Prod() {
           clients: selectedClients.length
             ? selectedClients.join(",")
             : undefined,
+          forProdSort: forProdSort !== "none" ? forProdSort : undefined,
         },
       });
 
       if (response.data.Status) {
         setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
+        setTotalPages(response.data.Result.totalPages);
       }
     } catch (err) {
       console.error("Error fetching orders:", err);
@@ -202,7 +205,8 @@ function Prod() {
       direction = "desc";
     }
     setSortConfig({ key, direction });
-    setCurrentPage(1);
+    // Reset forProd sort when sorting by other columns
+    setForProdSort("none");
   };
 
   // Status filter handlers
@@ -312,6 +316,44 @@ function Prod() {
     };
   }, [currentPage]);
 
+  // Add function to handle forProd update
+  const handleForProdChange = async (orderId, newValue) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${ServerIP}/auth/update-for-prod/${orderId}`,
+        { forProd: newValue },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.Status) {
+        // Update the local state
+        setOrders(
+          orders.map((order) =>
+            order.id === orderId ? { ...order, forProd: newValue } : order
+          )
+        );
+      } else {
+        console.error("Failed to update forProd status");
+      }
+    } catch (error) {
+      console.error("Error updating forProd status:", error);
+    }
+  };
+
+  // Add function to handle forProd header click
+  const handleForProdSort = () => {
+    const nextSort =
+      forProdSort === "none" ? "asc" : forProdSort === "asc" ? "desc" : "none";
+    setForProdSort(nextSort);
+
+    if (nextSort !== "none") {
+      setSortConfig({ key: "forProd", direction: nextSort });
+    } else {
+      setSortConfig({ key: "id", direction: "desc" }); // Default sort when forProd sort is disabled
+    }
+  };
+
   return (
     <div className="prod-theme">
       <div className="prod-page-background px-5">
@@ -360,10 +402,18 @@ function Prod() {
             <thead>
               <tr>
                 <th>Action</th>
-                <th>
-                  <label>
-                    <CheckboxHeader checked={true} />
-                  </label>
+                <th onClick={handleForProdSort} style={{ cursor: "pointer" }}>
+                  <div className="d-flex align-items-center">
+                    <CheckBoxHeader
+                      checked={forProdSort !== "none"}
+                      indeterminate={forProdSort === "desc"}
+                    />
+                    {forProdSort === "asc"
+                      ? " ↑"
+                      : forProdSort === "desc"
+                      ? " ↓"
+                      : ""}
+                  </div>
                 </th>
                 <th
                   onClick={() => handleSort("id")}
@@ -448,12 +498,12 @@ function Prod() {
                     </div>
                   </td>
                   <td>
-                    {" "}
                     <input
                       type="checkbox"
-                      onClick={() => {
-                        order.forProd = !order.forProd;
-                      }}
+                      checked={order.forProd || false}
+                      onChange={(e) =>
+                        handleForProdChange(order.id, e.target.checked)
+                      }
                     />
                   </td>
                   <td>{order.id}</td>

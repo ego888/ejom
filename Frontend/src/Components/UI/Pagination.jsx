@@ -18,6 +18,23 @@ import React, { useState } from "react";
  */
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const [inputPage, setInputPage] = useState("");
+  const maxVisiblePages = 5;
+  const halfVisible = Math.floor(maxVisiblePages / 2);
+
+  // Calculate start and end pages
+  let startPage = Math.max(1, currentPage - halfVisible);
+  let endPage = Math.min(totalPages, currentPage + halfVisible);
+
+  // Adjust start and end to always show maxVisiblePages if possible
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    if (currentPage <= halfVisible) {
+      // Near the start
+      endPage = Math.min(maxVisiblePages, totalPages);
+    } else if (currentPage > totalPages - halfVisible) {
+      // Near the end
+      startPage = Math.max(1, totalPages - maxVisiblePages + 1);
+    }
+  }
 
   const handlePageInput = (e) => {
     const value = e.target.value;
@@ -36,20 +53,10 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisiblePages = 5;
-    const halfVisible = Math.floor(maxVisiblePages / 2);
-
-    let startPage = Math.max(1, currentPage - halfVisible);
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
+    // Generate the page numbers using the already calculated startPage and endPage
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-
     return pages;
   };
 
@@ -71,14 +78,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           </button>
         </li>
 
-        {currentPage > 3 && (
+        {/* First page and ellipsis */}
+        {startPage > 1 && (
           <>
             <li className="page-item">
               <button className="page-link" onClick={() => onPageChange(1)}>
                 1
               </button>
             </li>
-            {currentPage > 4 && (
+            {startPage > 2 && (
               <li className="page-item disabled">
                 <span className="page-link">...</span>
               </li>
@@ -86,6 +94,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           </>
         )}
 
+        {/* Page numbers */}
         {getPageNumbers().map((pageNum) => (
           <li
             key={pageNum}
@@ -97,9 +106,10 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           </li>
         ))}
 
-        {currentPage < totalPages - 2 && (
+        {/* Last page and ellipsis */}
+        {endPage < totalPages && (
           <>
-            {currentPage < totalPages - 3 && (
+            {endPage < totalPages - 1 && (
               <li className="page-item disabled">
                 <span className="page-link">...</span>
               </li>

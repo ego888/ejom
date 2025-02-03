@@ -6,65 +6,65 @@ const router = express.Router();
 
 // Get all orders with pagination, sorting, filtering and search
 router.get("/orders", async (req, res) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "orderID",
-    sortDirection = "DESC",
-    search = "",
-    statuses = "",
-    sales = "",
-    clients = "",
-  } = req.query;
-
-  const offset = (page - 1) * limit;
-  const statusArray = statuses ? statuses.split(",") : [];
-  const salesArray = sales ? sales.split(",") : [];
-  const clientArray = clients ? clients.split(",") : [];
-
   try {
-    // Build the WHERE clause for search and status filtering
-    let whereClause = "1 = 1"; // Always true condition to start
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || "";
+    const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
+    const sales = req.query.sales ? req.query.sales.split(",") : [];
+    const clients = req.query.clients ? req.query.clients.split(",") : [];
+    let sortBy = req.query.sortBy || "orderID";
+    let sortDirection = req.query.sortDirection || "desc";
+    const forProdSort = req.query.forProdSort;
+
+    // Handle forProd sorting
+    if (forProdSort === "asc" || forProdSort === "desc") {
+      sortBy = "forProd";
+      sortDirection = forProdSort;
+    }
+
+    // Build where clause
+    let whereConditions = ["1=1"]; // Always true condition to start
     let params = [];
 
     if (search) {
-      whereClause += ` AND (
-                o.orderID LIKE ? OR 
-                c.clientName LIKE ? OR 
-                o.projectName LIKE ? OR 
-                o.orderedBy LIKE ? OR 
-                o.drnum LIKE ? OR 
-                o.invoiceNum LIKE ? OR 
-                o.ornum LIKE ? OR 
-                e.name LIKE ? OR 
-                o.orderReference LIKE ?
-            )`;
-      const searchTerm = `%${search}%`;
-      params = [...params, ...Array(9).fill(searchTerm)];
+      whereConditions.push(
+        "(o.orderID LIKE ? OR c.clientName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR o.ornum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
+      );
+      const searchParam = `%${search}%`;
+      params.push(
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam
+      );
     }
 
-    if (statusArray.length > 0) {
-      whereClause += ` AND o.status IN (${statusArray
-        .map(() => "?")
-        .join(",")})`;
-      params = [...params, ...statusArray];
+    if (statuses.length) {
+      whereConditions.push(`o.status IN (?)`);
+      params.push(statuses);
     }
 
-    if (salesArray.length > 0) {
-      whereClause += ` AND o.preparedBy IN (${salesArray
-        .map(() => "?")
-        .join(",")})`;
-      params = [...params, ...salesArray];
+    if (sales.length) {
+      whereConditions.push(`o.preparedBy IN (?)`);
+      params.push(sales);
     }
 
-    if (clientArray.length > 0) {
-      whereClause += ` AND c.clientName IN (${clientArray
-        .map(() => "?")
-        .join(",")})`;
-      params = [...params, ...clientArray];
+    if (clients.length) {
+      whereConditions.push(`o.clientId IN (?)`);
+      params.push(clients);
     }
 
-    // Count total records query
+    const whereClause = whereConditions.join(" AND ");
+
+    // Count query
     const countSql = `
             SELECT COUNT(DISTINCT o.orderID) as total
             FROM orders o
@@ -95,7 +95,8 @@ router.get("/orders", async (req, res) => {
                 o.amountPaid, 
                 o.datePaid,
                 e.name as salesName, 
-                o.orderReference
+                o.orderReference,
+                COALESCE(o.forProd, 0) as forProd
             FROM orders o
             LEFT JOIN client c ON o.clientId = c.id
             LEFT JOIN employee e ON o.preparedBy = e.id

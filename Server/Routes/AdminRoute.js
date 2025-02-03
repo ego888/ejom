@@ -455,4 +455,30 @@ router.use((err, req, res, next) => {
   });
 });
 
+// Add this route to update forProd status
+router.put("/update-for-prod/:id", (req, res) => {
+  const orderId = req.params.id;
+  const { forProd } = req.body;
+
+  const sql = "UPDATE Orders SET forProd = ? WHERE orderID = ?";
+  con.query(sql, [forProd, orderId], (err, result) => {
+    if (err) {
+      console.error("Error updating forProd status:", err);
+      return res.json({
+        Status: false,
+        Error: "Error updating forProd status",
+      });
+    }
+
+    if (result.affectedRows > 0) {
+      return res.json({
+        Status: true,
+        Message: "Order forProd status updated successfully",
+      });
+    } else {
+      return res.json({ Status: false, Message: "Order not found" });
+    }
+  });
+});
+
 export { router as AdminRouter };
