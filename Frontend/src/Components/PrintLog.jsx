@@ -47,17 +47,33 @@ function Prod() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      console.log("Selected statuses before fetch:", selectedStatuses);
+      console.log("Current page before fetch:", currentPage);
+
+      // Only proceed with the fetch if there are selected statuses
+      if (selectedStatuses.length === 0) {
+        setOrders([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
+      }
+
+      // Reset to page 1 if current page is greater than total pages
+      let pageToFetch = currentPage;
+      if (totalPages > 0 && currentPage > totalPages) {
+        pageToFetch = 1;
+        setCurrentPage(1);
+      }
+
       const response = await axios.get(`${ServerIP}/auth/orders`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
-          page: currentPage,
+          page: pageToFetch,
           limit: recordsPerPage,
           sortBy: sortConfig.key,
           sortDirection: sortConfig.direction,
           search: searchTerm,
-          statuses: selectedStatuses.length
-            ? selectedStatuses.join(",")
-            : undefined,
+          statuses: selectedStatuses.join(","),
           sales: selectedSales.length ? selectedSales.join(",") : undefined,
           clients: selectedClients.length
             ? selectedClients.join(",")
@@ -65,9 +81,22 @@ function Prod() {
         },
       });
 
+      console.log("API Request params:", {
+        page: pageToFetch,
+        limit: recordsPerPage,
+        statuses: selectedStatuses.join(","),
+      });
+      console.log("API Response:", response.data);
+
       if (response.data.Status) {
+        if (response.data.Result.orders.length === 0 && pageToFetch > 1) {
+          // If no results and not on first page, try fetching first page
+          setCurrentPage(1);
+          return; // The useEffect will trigger another fetch
+        }
         setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
+        setTotalPages(response.data.Result.totalPages);
       }
     } catch (err) {
       console.error("Error fetching orders:", err);
@@ -78,6 +107,7 @@ function Prod() {
 
   // Fetch orders when parameters change
   useEffect(() => {
+    console.log("Effect triggered with selectedStatuses:", selectedStatuses); // Debug log
     fetchOrders();
   }, [
     currentPage,
@@ -103,38 +133,21 @@ function Prod() {
           );
           setStatusOptions(sortedStatuses);
 
-          // Get saved filters or default to first two statuses
-          const saved = localStorage.getItem("orderStatusFilters");
-          if (saved) {
-            const savedStatuses = JSON.parse(saved);
-            setSelectedStatuses(savedStatuses);
+          // Get only the Prod statuses (indices 2-5)
+          const prodStatuses = sortedStatuses
+            .slice(2, 6)
+            .map((s) => s.statusId);
+          console.log("Setting initial prod statuses:", prodStatuses); // Debug log
 
-            // Update Prod checkbox state
-            const prodStatuses = sortedStatuses
-              .slice(2, 6)
-              .map((s) => s.statusId);
-            const selectedProdStatuses = savedStatuses.filter((s) =>
-              prodStatuses.includes(s)
-            );
-            setIsProdChecked(
-              selectedProdStatuses.length === prodStatuses.length
-            );
+          setSelectedStatuses(prodStatuses);
+          setIsProdChecked(true);
+          setIsAllChecked(false);
 
-            // Update All checkbox state
-            setIsAllChecked(savedStatuses.length === sortedStatuses.length);
-          } else {
-            // Default to first two statuses
-            const firstTwoStatuses = sortedStatuses
-              .slice(0, 2)
-              .map((s) => s.statusId);
-            setSelectedStatuses(firstTwoStatuses);
-            localStorage.setItem(
-              "orderStatusFilters",
-              JSON.stringify(firstTwoStatuses)
-            );
-            setIsProdChecked(false);
-            setIsAllChecked(false);
-          }
+          // Save to localStorage
+          localStorage.setItem(
+            "orderStatusFilters",
+            JSON.stringify(prodStatuses)
+          );
         }
       } catch (err) {
         console.error("Error fetching status options:", err);
@@ -213,12 +226,14 @@ function Prod() {
       } else {
         newStatuses = [...prev, statusId];
       }
-
+      console.log("New statuses after toggle:", newStatuses); // Debugging log
       // Update Prod checkbox state
       const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
       const selectedProdStatuses = newStatuses.filter((s) =>
         prodStatuses.includes(s)
       );
+      console.log("Prod statuses:", prodStatuses); // Debugging log
+      console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
       setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
 
       // Update All checkbox state
@@ -313,9 +328,9 @@ function Prod() {
 
   return (
     <div className="printlog">
-      <div className="printlog-page-background px-5 mt-3">
-        <div className="prod-header d-flex justify-content-center">
-          <h3>Production Print Log</h3>
+      <div className="printlog-page-background px-5">
+        <div className="printlog-header d-flex justify-content-center">
+          <h3>Print Log</h3>
         </div>
         {/* Search and filters row */}
         <div className="d-flex justify-content-between mb-3">

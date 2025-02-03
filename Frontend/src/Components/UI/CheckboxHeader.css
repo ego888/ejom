@@ -1,0 +1,31 @@
+.custom-checkbox {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #b6b6b6;
+  border-radius: 3px;
+  position: relative;
+  background-color: white;
+  cursor: not-allowed; /* Prevent clicking */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-checkbox:checked {
+  background-color: white; /* Keeps the background white */
+  border-color: black;
+}
+
+.custom-checkbox:checked::after {
+  content: "✔";
+  font-size: 8px;
+  position: absolute;
+  top: 45%; /* Moves it up slightly */
+  left: 50%; /* Moves it right slightly */
+  transform: translate(-50%, -50%); /* Centers it properly */
+}
+
+.custom-checkbox[readonly] {
+  pointer-events: none; /* Ensures it's non-clickable */
+}

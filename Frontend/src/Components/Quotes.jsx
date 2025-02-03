@@ -263,7 +263,7 @@ function Quotes() {
 
   return (
     <div className="quote">
-      <div className="quote-page-background px-5 mt-3">
+      <div className="quote-page-background px-5 ">
         <div className="quote-header d-flex justify-content-center">
           <h3>Quotes List</h3>
         </div>

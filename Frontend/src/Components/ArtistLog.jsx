@@ -328,7 +328,7 @@ function Prod() {
 
   return (
     <div className="artist-theme">
-      <div className="artist-page-background px-5 mt-3">
+      <div className="artist-page-background px-5">
         <div className="artist-header d-flex justify-content-center">
           <h3>Artist Log</h3>
         </div>

@@ -9,6 +9,7 @@ import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
+import CheckboxHeader from "./UI/CheckboxHeader";
 import "./Orders.css";
 import "./Prod.css";
 
@@ -313,7 +314,7 @@ function Prod() {
 
   return (
     <div className="prod-theme">
-      <div className="prod-page-background px-5 mt-3">
+      <div className="prod-page-background px-5">
         <div className="d-flex justify-content-center">
           <h3>Production Control</h3>
         </div>
@@ -359,6 +360,11 @@ function Prod() {
             <thead>
               <tr>
                 <th>Action</th>
+                <th>
+                  <label>
+                    <CheckboxHeader checked={true} />
+                  </label>
+                </th>
                 <th
                   onClick={() => handleSort("id")}
                   style={{ cursor: "pointer" }}
@@ -423,14 +429,14 @@ function Prod() {
                 <tr key={order.id}>
                   <td>
                     <div className="d-flex justify-content-center gap-2">
-                      <Button
+                      {/* <Button
                         variant="view"
                         iconOnly
                         size="sm"
                         onClick={() =>
                           navigate(`/dashboard/view_order/${order.id}`)
                         }
-                      />
+                      /> */}
                       <Button
                         variant="edit"
                         iconOnly
@@ -440,6 +446,15 @@ function Prod() {
                         }
                       />
                     </div>
+                  </td>
+                  <td>
+                    {" "}
+                    <input
+                      type="checkbox"
+                      onClick={() => {
+                        order.forProd = !order.forProd;
+                      }}
+                    />
                   </td>
                   <td>{order.id}</td>
                   <td
