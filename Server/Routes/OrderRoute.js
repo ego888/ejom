@@ -241,6 +241,25 @@ router.get("/orders-details-forprod", async (req, res) => {
   }
 });
 
+// Update orders to set status to 'Prod' and productionDate to NOW() where forProd is 1 and status is 'Open'
+router.put("/update_orders_to_prod", (req, res) => {
+  const sql = `
+    UPDATE orders
+    SET status = 'Prod',
+        productionDate = NOW(),
+        forProd = 0
+    WHERE forProd = 1
+      AND status = 'Open';
+  `;
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Update Error:", err);
+      return res.json({ Status: false, Error: "Failed to update orders" });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
+
 // Get order details
 router.get("/order_details/:orderId", (req, res) => {
   const sql = `

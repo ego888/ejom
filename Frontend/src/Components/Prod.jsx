@@ -13,6 +13,10 @@ import CheckBoxHeader from "./UI/CheckBoxHeader";
 import "./Orders.css";
 import "./Prod.css";
 import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
+import { QRCodeSVG } from "qrcode.react";
+import ReactDOMServer from "react-dom/server";
+import Modal from "./UI/Modal";
+import ModalAlert from "./UI/ModalAlert";
 
 function Prod() {
   const navigate = useNavigate();
@@ -46,6 +50,13 @@ function Prod() {
   const clientFilterRef = useRef(null);
   const [forProdSort, setForProdSort] = useState("none"); // 'none', 'asc', 'desc'
   const [orderIdInput, setOrderIdInput] = useState("");
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -386,6 +397,25 @@ function Prod() {
     }
   };
 
+  // Helper function to show alert
+  const showAlert = (title, message, type = "alert", onConfirm = null) => {
+    setAlert({
+      show: true,
+      title,
+      message,
+      type,
+      onConfirm,
+    });
+  };
+
+  // Helper function to hide alert
+  const hideAlert = () => {
+    setAlert((prev) => ({
+      ...prev,
+      show: false,
+    }));
+  };
+
   const handlePrintProduction = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -395,13 +425,19 @@ function Prod() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log("ORders-Details:", response.data);
+
       if (!response.data.Status) {
         throw new Error("Failed to fetch production orders");
       }
 
       const ordersWithDetails = response.data.Result;
-      console.log("GoLargeLogo:", GoLargeLogo);
+
+      // If no orders to print, don't proceed
+      if (ordersWithDetails.length === 0) {
+        showAlert("No Orders", "No orders marked for production.");
+        return;
+      }
+
       const printContent = `
       <!DOCTYPE html>
       <html>
@@ -639,66 +675,244 @@ function Prod() {
       document.body.appendChild(printWindow);
       printWindow.contentDocument.write(printContent);
       printWindow.contentDocument.close();
+
+      // Function to update orders
+      const updateOrders = async () => {
+        try {
+          const updateResponse = await axios.put(
+            `${ServerIP}/auth/update_orders_to_prod`,
+            {},
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+
+          if (updateResponse.data.Status) {
+            fetchOrders();
+          } else {
+            showAlert("Error", "Failed to update orders status");
+          }
+        } catch (error) {
+          console.error("Error updating orders status:", error);
+          showAlert(
+            "Error",
+            "Failed to update orders status: " + error.message
+          );
+        }
+      };
+
+      // Listen for afterprint event
+      printWindow.contentWindow.onafterprint = () => {
+        document.body.removeChild(printWindow);
+        showAlert(
+          "Confirm Update",
+          "Was the printing successful? Click OK to update orders to production status.",
+          "confirm",
+          updateOrders
+        );
+      };
+
+      printWindow.contentWindow.focus();
+      printWindow.contentWindow.print();
+
+      // Set a timeout to clean up if print dialog is cancelled
+      setTimeout(() => {
+        if (document.body.contains(printWindow)) {
+          document.body.removeChild(printWindow);
+        }
+      }, 500);
+    } catch (error) {
+      console.error("Error preparing production list:", error);
+      showAlert("Error", "Error preparing production list: " + error.message);
+    }
+  };
+
+  const generateQRCode = async (text) => {
+    try {
+      return await QRCode.toDataURL(text.toString());
+    } catch (err) {
+      console.error("Error generating QR code:", err);
+      return "";
+    }
+  };
+
+  const handlePrintAllDR = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${ServerIP}/auth/orders-details-forprod`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.data.Status) {
+        throw new Error("Failed to fetch production orders");
+      }
+
+      const ordersWithDetails = response.data.Result;
+
+      const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            @page { 
+              size: letter portrait;
+              margin: 0.5cm; 
+            }
+            @media print {
+              body { margin: 0; }
+              .page-break { page-break-after: always; }
+            }
+            body { 
+              font-family: "Times New Roman", Times, serif;
+              font-size: 12pt;
+              margin: 0;
+              padding: 15px;
+            }
+            .dr-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 20px;
+            }
+            .qr-section {
+              text-align: right;
+            }
+            .qr-code {
+              width: 100px;
+              height: 100px;
+            }
+            .dr-number {
+              font-size: 14pt;
+              font-weight: bold;
+            }
+            .dr-info {
+              margin-bottom: 20px;
+            }
+            .dr-info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 10px;
+            }
+            .dr-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+            }
+            .dr-table th, .dr-table td {
+              border: 1px solid black;
+              padding: 5px;
+              text-align: left;
+            }
+            .dr-table th {
+              background-color: white;
+            }
+            .signature-section {
+              margin-top: 30px;
+            }
+            .signature-line {
+              border-top: 1px solid black;
+              width: 200px;
+              margin-top: 40px;
+              margin-bottom: 5px;
+            }
+          </style>
+        </head>
+        <body>
+          ${ordersWithDetails
+            .map(
+              (order, index) => `
+            <div class="dr-page ${
+              index < ordersWithDetails.length - 1 ? "page-break" : ""
+            }">
+              <div class="dr-header">
+                <div class="dr-title">
+                  <div class="dr-number">DR No.: ${order.id}</div>
+                  <div>DR Date: ${new Date(
+                    order.dueDate
+                  ).toLocaleDateString()}</div>
+                </div>
+                <div class="qr-section">
+                  ${ReactDOMServer.renderToString(
+                    <QRCodeSVG
+                      value={order.id.toString()}
+                      size={100}
+                      level="H"
+                      includeMargin={true}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div class="dr-info">
+                <div class="dr-info-row">
+                  <div><strong>Client Name:</strong> ${order.clientName}</div>
+                  <div><strong>Project Name:</strong> ${order.projectName}</div>
+                </div>
+                <div class="dr-info-row">
+                  <div><strong>Ordered By:</strong> ${
+                    order.orderedBy || ""
+                  }</div>
+                </div>
+              </div>
+
+              <table class="dr-table">
+                <thead>
+                  <tr>
+                    <th>QTY</th>
+                    <th>MATERIAL</th>
+                    <th>DESCRIPTION</th>
+                    <th>Width X Height</th>
+                    <th>UNIT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${order.order_details
+                    .map(
+                      (detail) => `
+                    <tr>
+                      <td>${detail.quantity}</td>
+                      <td>${detail.material}</td>
+                      <td>-</td>
+                      <td>${detail.width} X ${detail.height}</td>
+                      <td>${detail.unit}</td>
+                    </tr>
+                  `
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+
+              <div class="signature-section">
+                <div>Rec'd by:_______________________</div>
+                <div style="margin-left: 60px;">Print name and sign</div>
+                <div style="margin-left: 60px;">Date:_________________</div>
+              </div>
+
+              <div style="margin-top: 20px; font-style: italic;">
+                Page 1 of 1
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </body>
+      </html>
+    `;
+
+      const printWindow = document.createElement("iframe");
+      printWindow.style.display = "none";
+      document.body.appendChild(printWindow);
+      printWindow.contentDocument.write(printContent);
+      printWindow.contentDocument.close();
       printWindow.contentWindow.focus();
       printWindow.contentWindow.print();
       document.body.removeChild(printWindow);
     } catch (error) {
-      console.error("Error preparing production list:", error);
+      console.error("Error preparing DR:", error);
     }
-  };
-
-  const handlePrintAllDR = () => {
-    const content = `
-      <style>
-        body { font-family: Arial, sans-serif; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid black; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        @media print {
-          body { margin: 0; }
-          button { display: none; }
-        }
-      </style>
-      <div id="print-content">
-        <h2>Delivery Receipt List</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>DR#</th>
-              <th>Order ID</th>
-              <th>Client</th>
-              <th>Project Name</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${orders
-              .filter((order) => order.drnum)
-              .map(
-                (order) => `
-                <tr>
-                  <td>${order.drnum}</td>
-                  <td>${order.id}</td>
-                  <td>${order.clientName}</td>
-                  <td>${order.projectName}</td>
-                  <td>${order.status}</td>
-                </tr>
-              `
-              )
-              .join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
-
-    const printWindow = document.createElement("iframe");
-    printWindow.style.display = "none";
-    document.body.appendChild(printWindow);
-    printWindow.contentDocument.write(content);
-    printWindow.contentDocument.close();
-    printWindow.contentWindow.focus();
-    printWindow.contentWindow.print();
-    document.body.removeChild(printWindow);
   };
 
   return (
@@ -965,6 +1179,18 @@ function Prod() {
           />
         </div>
       </div>
+
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={hideAlert}
+        onConfirm={() => {
+          if (alert.onConfirm) alert.onConfirm();
+          hideAlert();
+        }}
+      />
     </div>
   );
 }
