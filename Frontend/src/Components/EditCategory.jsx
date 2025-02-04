@@ -23,7 +23,12 @@ const EditCategory = () => {
         if (result.data.Status) {
           setCategory(result.data.Result[0]); // Set the category data
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log("Error fetching category:", err));
@@ -39,7 +44,12 @@ const EditCategory = () => {
         if (result.data.Status) {
           navigate("/dashboard/category"); // Redirect after successful update
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log("Error updating category:", err));

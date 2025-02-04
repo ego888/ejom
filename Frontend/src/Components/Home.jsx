@@ -20,7 +20,12 @@ const Home = () => {
       if (result.data.Status) {
         setAdmins(result.data.Result);
       } else {
-        alert(result.data.Error);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: result.data.Error,
+          type: "alert",
+        });
       }
     });
   };
@@ -43,7 +48,12 @@ const Home = () => {
       if (result.data.Status) {
         setSalaryTotal(result.data.Result[0].salaryOFEmp);
       } else {
-        alert(result.data.Error);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: result.data.Error,
+          type: "alert",
+        });
       }
     });
   };

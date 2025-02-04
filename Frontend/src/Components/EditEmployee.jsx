@@ -32,7 +32,12 @@ const EditEmployee = () => {
         if (result.data.Status) {
           setCategory(result.data.Result);
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log(err));
@@ -72,7 +77,12 @@ const EditEmployee = () => {
         if (result.data.Status) {
           navigate("/dashboard/employee"); // Navigate to the manage employees screen after saving
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log(err));

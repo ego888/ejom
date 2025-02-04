@@ -16,7 +16,12 @@ const AddCategory = () => {
         if (result.data.Status) {
           navigate("/dashboard/category");
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log(err));

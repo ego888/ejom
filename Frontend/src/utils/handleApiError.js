@@ -28,5 +28,10 @@ export const handleApiError = (err, navigate) => {
 
   // Handle other errors
   console.error("Other API Error:", err);
-  alert(err.response?.data?.Error || "An error occurred");
+  setAlert({
+    show: true,
+    title: "Error",
+    message: err.response?.data?.Error || "An error occurred",
+    type: "alert",
+  });
 };
