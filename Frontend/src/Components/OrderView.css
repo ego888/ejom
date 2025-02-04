@@ -16,6 +16,13 @@
   padding: 1rem;
   margin-left: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-width: 90px;
+  height: 90%;
+}
+
+/* Main content area */
+.order-content {
+  width: 160%;
 }
 
 /* Style for info groups in the right panel */
@@ -29,6 +36,12 @@
   border-bottom: none;
 }
 
+.info-group-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .info-label {
   color: #666;
   font-size: 0.9rem;
@@ -37,4 +50,43 @@
 
 .info-value {
   font-size: 0.9rem;
+  text-align: left;
+}
+
+/* Style for order info fields */
+.order-info-field {
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.9rem;
+  background-color: #fff;
+  min-height: 31px;
+  display: flex;
+  align-items: center;
+}
+
+/* Style for multiline fields */
+.order-info-field.multiline {
+  min-height: 70px;
+  align-items: flex-start;
+  white-space: pre-wrap;
+}
+
+/* Style for numeric cells */
+.numeric-cell {
+  text-align: right !important;
+  padding-right: 1rem;
+}
+
+/* Adjust row spacing */
+.order-info-row {
+  margin-bottom: 0.3rem !important;
+}
+
+.order-info-row .form-label {
+  margin-bottom: 0.1rem;
+}
+
+.order-header-container {
+  height: 340px !important;
 }
