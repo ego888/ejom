@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 const AddMaterial = () => {
   const [material, setMaterial] = useState({
@@ -16,17 +17,34 @@ const AddMaterial = () => {
     noIncentive: false,
   });
   const navigate = useNavigate();
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     // Frontend validation
     if (!material.material.trim()) {
-      alert("Material is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Material is required",
+        type: "alert",
+      });
       return;
     }
     if (!material.description.trim()) {
-      alert("Description is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Description is required",
+        type: "alert",
+      });
       return;
     }
 
@@ -45,10 +63,22 @@ const AddMaterial = () => {
         if (result.data.Status) {
           navigate("/dashboard/material");
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error || "Failed to add material",
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to add material",
+          type: "alert",
+        });
+      });
   };
 
   const handleNumberChange = (e) => {
@@ -172,6 +202,19 @@ const AddMaterial = () => {
             </Button>
           </div>
         </form>
+        <ModalAlert
+          show={alert.show}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+          onConfirm={() => {
+            if (alert.onConfirm) {
+              alert.onConfirm();
+            }
+            setAlert((prev) => ({ ...prev, show: false }));
+          }}
+        />
       </div>
     </div>
   );

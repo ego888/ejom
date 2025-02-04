@@ -20,6 +20,7 @@ import {
 } from "../utils/orderUtils";
 import { ServerIP } from "../config";
 import { debounce } from "lodash";
+import ModalAlert from "./UI/ModalAlert";
 
 function AddQuote() {
   const navigate = useNavigate();
@@ -249,18 +250,46 @@ function AddQuote() {
       .then((result) => {
         if (result.data.Status) {
           setClients(result.data.Result);
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to fetch clients",
+          type: "alert",
+        });
+      });
 
     axios
       .get(`${ServerIP}/auth/sales_employees`, config)
       .then((result) => {
         if (result.data.Status) {
           setSalesEmployees(result.data.Result);
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to fetch sales employees",
+          type: "alert",
+        });
+      });
 
     axios
       .get(`${ServerIP}/auth/artists`, config)
@@ -399,7 +428,12 @@ function AddQuote() {
 
   const handleSubmit = (e, isPrintAction = false) => {
     if (!canEdit()) {
-      alert("You don't have permission to edit this record");
+      setAlert({
+        show: true,
+        title: "Permission Denied",
+        message: "You don't have permission to edit this record",
+        type: "alert",
+      });
       return;
     }
     e?.preventDefault();
@@ -466,7 +500,12 @@ function AddQuote() {
               ...dataToSend,
             }));
           } else {
-            alert(result.data.Error || "Failed to save quote");
+            setAlert({
+              show: true,
+              title: "Error",
+              message: result.data.Error || "Failed to save quote",
+              type: "alert",
+            });
           }
         })
         .catch((err) => {
@@ -485,7 +524,12 @@ function AddQuote() {
               navigate("/dashboard/quotes");
             }
           } else {
-            alert(result.data.Error || "Failed to update quote");
+            setAlert({
+              show: true,
+              title: "Error",
+              message: result.data.Error || "Failed to update quote",
+              type: "alert",
+            });
           }
         })
         .catch((err) => {
@@ -501,11 +545,21 @@ function AddQuote() {
       err.response?.data?.Error?.includes("jwt expired") ||
       err.response?.data?.Error?.includes("invalid token")
     ) {
-      alert("Your session has expired. Please log out and log in again.");
+      setAlert({
+        show: true,
+        title: "Session Expired",
+        message: "Your session has expired. Please log out and log in again.",
+        type: "alert",
+      });
       localStorage.removeItem("token");
       navigate("/");
     } else {
-      alert(err.response?.data?.Error || "An error occurred");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.response?.data?.Error || "An error occurred",
+        type: "alert",
+      });
     }
   };
 
@@ -601,62 +655,87 @@ function AddQuote() {
 
   const handleDeleteDetail = (uniqueId) => {
     if (!canEdit()) {
-      alert("You don't have permission to delete details");
+      setAlert({
+        show: true,
+        title: "Permission Denied",
+        message: "You don't have permission to delete details",
+        type: "alert",
+      });
       return;
     }
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
 
-    const token = localStorage.getItem("token");
-    const [quoteId, displayOrder] = uniqueId.split("_");
+    setAlert({
+      show: true,
+      title: "Confirm Deletion",
+      message: "Are you sure you want to delete this item?",
+      type: "confirm",
+      onConfirm: () => {
+        const token = localStorage.getItem("token");
+        const [quoteId, displayOrder] = uniqueId.split("_");
 
-    const updatedDetails = quoteDetails.filter(
-      (detail) =>
-        !(
-          detail.quoteId === parseInt(quoteId) &&
-          detail.displayOrder === parseInt(displayOrder)
-        )
-    );
+        const updatedDetails = quoteDetails.filter(
+          (detail) =>
+            !(
+              detail.quoteId === parseInt(quoteId) &&
+              detail.displayOrder === parseInt(displayOrder)
+            )
+        );
 
-    const totals = calculateQuoteTotals(updatedDetails);
+        const totals = calculateQuoteTotals(updatedDetails);
 
-    Promise.all([
-      axios.delete(`${ServerIP}/auth/quote_detail/${quoteId}/${displayOrder}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ])
-      .then(([detailResult]) => {
-        if (detailResult.data.Status) {
-          setQuoteDetails(updatedDetails);
+        Promise.all([
+          axios.delete(
+            `${ServerIP}/auth/quote_detail/${quoteId}/${displayOrder}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
+        ])
+          .then(([detailResult]) => {
+            if (detailResult.data.Status) {
+              setQuoteDetails(updatedDetails);
 
-          // Update local state
-          setData((prev) => ({
-            ...prev,
-            totalAmount: totals.subtotal,
-            amountDiscount: totals.amountDiscount,
-            percentDisc: totals.percentDisc,
-            grandTotal: totals.grandTotal,
-            totalHrs: totals.totalHrs,
-          }));
+              // Update local state
+              setData((prev) => ({
+                ...prev,
+                totalAmount: totals.subtotal,
+                amountDiscount: totals.amountDiscount,
+                percentDisc: totals.percentDisc,
+                grandTotal: totals.grandTotal,
+                totalHrs: totals.totalHrs,
+              }));
 
-          // Queue update to server
-          debouncedUpdateTotals({
-            totalAmount: totals.subtotal,
-            amountDiscount: totals.amountDiscount,
-            percentDisc: totals.percentDisc,
-            grandTotal: totals.grandTotal,
-            totalHrs: totals.totalHrs,
-            editedBy: currentUser.name,
-          });
-        } else {
-          alert(detailResult.data.Error);
-        }
-      })
-      .catch((err) => handleApiError(err, navigate));
+              // Queue update to server
+              debouncedUpdateTotals({
+                totalAmount: totals.subtotal,
+                amountDiscount: totals.amountDiscount,
+                percentDisc: totals.percentDisc,
+                grandTotal: totals.grandTotal,
+                totalHrs: totals.totalHrs,
+                editedBy: currentUser.name,
+              });
+            } else {
+              setAlert({
+                show: true,
+                title: "Error",
+                message: detailResult.data.Error,
+                type: "alert",
+              });
+            }
+          })
+          .catch((err) => handleApiError(err, navigate));
+      },
+    });
   };
 
   const handleEditClick = (uniqueId, detail) => {
     if (!canEdit()) {
-      alert("You don't have permission to edit details");
+      setAlert({
+        show: true,
+        title: "Permission Denied",
+        message: "You don't have permission to edit details",
+        type: "alert",
+      });
       return;
     }
     console.log("Edit clicked for unique ID:", uniqueId);
@@ -852,7 +931,12 @@ function AddQuote() {
 
   const handleSaveDetail = async (uniqueId) => {
     if (!canEdit()) {
-      alert("You don't have permission to save details");
+      setAlert({
+        show: true,
+        title: "Permission Denied",
+        message: "You don't have permission to save details",
+        type: "alert",
+      });
       return;
     }
     try {
@@ -947,7 +1031,12 @@ function AddQuote() {
       }
     } catch (error) {
       console.error("Error updating quote detail:", error);
-      alert("Error updating quote detail: " + error.message);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Error updating quote detail: " + error.message,
+        type: "alert",
+      });
     }
   };
 
@@ -988,14 +1077,24 @@ function AddQuote() {
     // Validate that we have all required data
     if (!detail || !detail.Id) {
       console.error("Missing detail Id:", detail);
-      alert("Error: Could not identify the order detail");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Error: Could not identify the order detail",
+        type: "alert",
+      });
       return;
     }
 
     // Validate that newOrder is a positive integer
     const orderNum = parseInt(newOrder);
     if (!Number.isInteger(orderNum) || orderNum <= 0) {
-      alert("Please enter a valid positive integer");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Please enter a valid positive integer",
+        type: "alert",
+      });
       return;
     }
 
@@ -1019,7 +1118,12 @@ function AddQuote() {
       setTempDisplayOrder(null);
     } catch (err) {
       console.error("Error updating display order:", err);
-      alert("Failed to update display order");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to update display order",
+        type: "alert",
+      });
     }
   };
 
@@ -1062,9 +1166,13 @@ function AddQuote() {
 
   const handlePrintQuote = () => {
     if (quoteDetails.length === 0) {
-      window.alert(
-        "Cannot print order. No order details found. Please add order details first."
-      );
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message:
+          "Cannot print order. No order details found. Please add order details first.",
+        type: "alert",
+      });
       return;
     }
     navigate(`/dashboard/print_quote/${id}`);
@@ -1217,39 +1325,59 @@ function AddQuote() {
                     Promise.all(copyPromises)
                       .then(() => {
                         console.log("All order details created successfully");
-                        // Show confirmation dialog
-                        if (
-                          window.confirm(
-                            `Quote successfully copied to Order #${newOrderId}\n\nClick OK to stay on this quote.\nClick Cancel to view the new order.`
-                          )
-                        ) {
-                          // Refresh the quote to show updated status
-                          window.location.reload();
-                        } else {
-                          // Navigate to the new order
-                          navigate(`/dashboard/orders/edit/${newOrderId}`);
-                        }
+                        setAlert({
+                          show: true,
+                          title: "Success",
+                          message: `Quote successfully copied to Order #${newOrderId}\n\nClick Confirm to view the new order.\nClick Close to stay on this quote.`,
+                          type: "confirm",
+                          onConfirm: () => {
+                            navigate(`/dashboard/orders/edit/${newOrderId}`);
+                          },
+                          onClose: () => {
+                            window.location.reload();
+                          },
+                        });
                       })
                       .catch((err) => {
                         console.error("Error copying order details:", err);
-                        alert("Error copying order details");
+                        setAlert({
+                          show: true,
+                          title: "Error",
+                          message: "Error copying order details",
+                          type: "alert",
+                        });
                       });
                   }
                 })
                 .catch((err) => {
                   console.error("Error fetching quote details:", err);
-                  alert("Error fetching quote details");
+                  setAlert({
+                    show: true,
+                    title: "Error",
+                    message: "Error fetching quote details",
+                    type: "alert",
+                  });
                 });
             }
           })
           .catch((err) => {
             console.error("Error creating new order:", err.response || err);
-            alert("Error creating new order");
+            setAlert({
+              show: true,
+              title: "Error",
+              message: "Error creating new order",
+              type: "alert",
+            });
           });
       })
       .catch((err) => {
         console.error("Error updating quote status:", err.response || err);
-        alert("Error updating quote status");
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Error updating quote status",
+          type: "alert",
+        });
       });
   };
 
@@ -1349,24 +1477,44 @@ function AddQuote() {
                       })
                       .catch((err) => {
                         console.error("Error copying quote details:", err);
-                        alert("Error copying quote details");
+                        setAlert({
+                          show: true,
+                          title: "Error",
+                          message: "Error copying quote details",
+                          type: "alert",
+                        });
                       });
                   }
                 })
                 .catch((err) => {
                   console.error("Error fetching quote details:", err);
-                  alert("Error fetching quote details");
+                  setAlert({
+                    show: true,
+                    title: "Error",
+                    message: "Error fetching quote details",
+                    type: "alert",
+                  });
                 });
             }
           })
           .catch((err) => {
             console.error("Error creating new quote:", err);
-            alert("Error creating new quote");
+            setAlert({
+              show: true,
+              title: "Error",
+              message: "Error creating new quote",
+              type: "alert",
+            });
           });
       })
       .catch((err) => {
         console.error("Error updating quote status:", err);
-        alert("Error updating quote status");
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Error updating quote status",
+          type: "alert",
+        });
       });
   };
 
@@ -1374,6 +1522,14 @@ function AddQuote() {
   const canEdit = () => {
     return data.status === "Open" || currentUser.category_id === 1;
   };
+
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   return (
     <div className="px-4 mt-3 quote-page-background">
@@ -2171,6 +2327,20 @@ function AddQuote() {
           />
         </div>
       )}
+
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 }

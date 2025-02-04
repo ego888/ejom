@@ -10,6 +10,7 @@ import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
 import "./Orders.css";
 import StatusBadges from "./UI/StatusBadges";
+import ModalAlert from "./UI/ModalAlert";
 
 function Orders() {
   const navigate = useNavigate();
@@ -41,6 +42,13 @@ function Orders() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -68,9 +76,22 @@ function Orders() {
       if (response.data.Status) {
         setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to fetch orders",
+          type: "alert",
+        });
       }
     } catch (err) {
       console.error("Error fetching orders:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to fetch orders",
+        type: "alert",
+      });
     } finally {
       setLoading(false);
     }
@@ -539,6 +560,20 @@ function Orders() {
           onPageChange={handlePageChange}
         />
       </div>
+
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 }

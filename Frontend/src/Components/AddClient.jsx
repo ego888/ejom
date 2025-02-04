@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 const AddClient = () => {
   const [client, setClient] = useState({
@@ -25,6 +26,13 @@ const AddClient = () => {
   const [salesPeople, setSalesPeople] = useState([]);
   const [paymentTerms, setPaymentTerms] = useState([]);
   const navigate = useNavigate();
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   useEffect(() => {
     // Fetch sales employees
@@ -57,11 +65,21 @@ const AddClient = () => {
 
     // Frontend validation
     if (!client.clientName.trim()) {
-      alert("Client Name is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Client Name is required",
+        type: "alert",
+      });
       return;
     }
     if (!client.contact.trim()) {
-      alert("Contact Person is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Contact Person is required",
+        type: "alert",
+      });
       return;
     }
 
@@ -77,10 +95,22 @@ const AddClient = () => {
         if (result.data.Status) {
           navigate("/dashboard/client");
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error || "Failed to add client",
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to add client",
+          type: "alert",
+        });
+      });
   };
 
   return (
@@ -277,6 +307,19 @@ const AddClient = () => {
             </Button>
           </div>
         </form>
+        <ModalAlert
+          show={alert.show}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+          onConfirm={() => {
+            if (alert.onConfirm) {
+              alert.onConfirm();
+            }
+            setAlert((prev) => ({ ...prev, show: false }));
+          }}
+        />
       </div>
     </div>
   );

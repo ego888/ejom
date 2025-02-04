@@ -220,11 +220,21 @@ export const handleApiError = (err, navigate) => {
     err.response?.data?.Error?.includes("jwt expired") ||
     err.response?.data?.Error?.includes("invalid token")
   ) {
-    alert("Your session has expired. Please log out and log in again.");
+    setAlert({
+      show: true,
+      title: "Error",
+      message: "Your session has expired. Please log out and log in again.",
+      type: "alert",
+    });
     localStorage.removeItem("token");
     navigate("/");
   } else {
-    alert(err.response?.data?.Error || "An error occurred");
+    setAlert({
+      show: true,
+      title: "Error",
+      message: err.response?.data?.Error || "An error occurred",
+      type: "alert",
+    });
   }
 };
 

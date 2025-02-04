@@ -3,10 +3,18 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 const Employee = () => {
   const [employee, setEmployee] = useState([]);
   const navigate = useNavigate();
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   useEffect(() => {
     axios
@@ -15,22 +23,47 @@ const Employee = () => {
         if (result.data.Status) {
           setEmployee(result.data.Result);
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to fetch employees",
+          type: "alert",
+        });
+      });
   }, []);
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this employee?")) {
-      axios.delete(`${ServerIP}/auth/delete_employee/${id}`).then((result) => {
-        if (result.data.Status) {
-          window.location.reload();
-        } else {
-          alert(result.data.Error);
-        }
-      });
-    }
+    setAlert({
+      show: true,
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this employee?",
+      type: "confirm",
+      onConfirm: () => {
+        axios
+          .delete(`${ServerIP}/auth/employee/delete/${id}`)
+          .then((result) => {
+            if (result.data.Status) {
+              window.location.reload();
+            } else {
+              setAlert({
+                show: true,
+                title: "Error",
+                message: result.data.Error || "Failed to delete employee",
+                type: "alert",
+              });
+            }
+          });
+      },
+    });
   };
 
   const renderStatus = (status) => {
@@ -113,6 +146,19 @@ const Employee = () => {
           </tbody>
         </table>
       </div>
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 };

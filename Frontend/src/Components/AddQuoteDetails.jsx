@@ -184,16 +184,25 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
       !detail.discount;
 
     if (isAllEmpty) {
-      alert("Please fill at least one field");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Please fill at least one field",
+        type: "alert",
+      });
       return;
     }
 
     // Validation 2: If width or height exists, validate required fields
     if (detail.width || detail.height) {
       if (!detail.width || !detail.height || !detail.unit || !detail.material) {
-        alert(
-          "When entering dimensions, Width, Height, Unit, and Material are required"
-        );
+        setAlert({
+          show: true,
+          title: "Error",
+          message:
+            "When entering dimensions, Width, Height, Unit, and Material are required",
+          type: "alert",
+        });
         return;
       }
     }
@@ -269,11 +278,21 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
         resetForm();
       } else {
         console.error("Failed to add quote detail:", response.data.Error);
-        alert("Failed to add quote detail: " + response.data.Error);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to add quote detail: " + response.data.Error,
+          type: "alert",
+        });
       }
     } catch (error) {
       console.error("Error submitting quote detail:", error);
-      alert("Failed to add quote detail: " + error.message);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to add quote detail: " + error.message,
+        type: "alert",
+      });
     }
   };
 

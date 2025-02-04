@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 const AddEmployee = () => {
   const [employee, setEmployee] = useState({
@@ -23,6 +24,13 @@ const AddEmployee = () => {
   });
   const [category, setCategory] = useState([]);
   const navigate = useNavigate();
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   useEffect(() => {
     axios
@@ -40,6 +48,35 @@ const AddEmployee = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Frontend validation
+    if (!employee.name.trim()) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Name is required",
+        type: "alert",
+      });
+      return;
+    }
+    if (!employee.email.trim()) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Email is required",
+        type: "alert",
+      });
+      return;
+    }
+    if (!employee.password.trim()) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Password is required",
+        type: "alert",
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append("name", employee.name);
     formData.append("email", employee.email);
@@ -55,17 +92,28 @@ const AddEmployee = () => {
     formData.append("production", employee.production);
     formData.append("operator", employee.operator);
 
-    // Sending the formData via POST request
     axios
       .post(`${ServerIP}/auth/employee/add`, formData)
       .then((result) => {
         if (result.data.Status) {
-          navigate("/dashboard/employee"); // Redirect after successful employee creation
+          navigate("/dashboard/employee");
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error || "Failed to add employee",
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to add employee",
+          type: "alert",
+        });
+      });
   };
 
   const handleCancel = () => {
@@ -306,6 +354,19 @@ const AddEmployee = () => {
           </div>
         </form>
       </div>
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 };

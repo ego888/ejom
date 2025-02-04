@@ -22,6 +22,7 @@ import {
 import Modal from "./UI/Modal";
 import Input from "./UI/Input";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ function AddOrder() {
     orderedBy: "",
     orderReference: "",
     cellNumber: "",
+    status: "Open",
     specialInst: "",
     deliveryInst: "",
     graphicsBy: "",
@@ -101,6 +103,14 @@ function AddOrder() {
   const [showAllowanceTooltip, setShowAllowanceTooltip] = useState(false);
   const [tooltipDetail, setTooltipDetail] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   const canEdit = () => {
     return data.status === "Open" || currentUser.category_id === 1;
@@ -180,9 +190,23 @@ function AddOrder() {
       .then((result) => {
         if (result.data.Status) {
           setClients(result.data.Result);
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to fetch clients",
+          type: "alert",
+        });
+      });
 
     axios
       .get(`${ServerIP}/auth/sales_employees`, config)
@@ -297,7 +321,12 @@ function AddOrder() {
 
   const handleSubmit = (e, isPrintAction = false) => {
     if (!canEdit()) {
-      alert("You don't have permission to edit this record");
+      setAlert({
+        show: true,
+        title: "Permission Denied",
+        message: "You don't have permission to edit this record",
+        type: "alert",
+      });
       return;
     }
     e?.preventDefault();
@@ -341,12 +370,22 @@ function AddOrder() {
               orderId: orderId,
             }));
           } else {
-            alert(result.data.Error || "Failed to save order");
+            setAlert({
+              show: true,
+              title: "Error",
+              message: result.data.Error || "Failed to save order",
+              type: "alert",
+            });
           }
         })
         .catch((err) => {
           console.error("Error saving order:", err);
-          handleApiError(err, navigate);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: "Failed to save order",
+            type: "alert",
+          });
         });
     } else {
       // Update existing order
@@ -361,12 +400,22 @@ function AddOrder() {
               navigate("/dashboard/orders");
             }
           } else {
-            alert(result.data.Error || "Failed to update order");
+            setAlert({
+              show: true,
+              title: "Error",
+              message: result.data.Error || "Failed to update order",
+              type: "alert",
+            });
           }
         })
         .catch((err) => {
           console.error("Error updating order:", err);
-          handleApiError(err, navigate);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: "Failed to update order",
+            type: "alert",
+          });
         });
     }
   };
@@ -378,11 +427,21 @@ function AddOrder() {
       err.response?.data?.Error?.includes("jwt expired") ||
       err.response?.data?.Error?.includes("invalid token")
     ) {
-      alert("Your session has expired. Please log out and log in again.");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Your session has expired. Please log out and log in again.",
+        type: "alert",
+      });
       localStorage.removeItem("token");
       navigate("/");
     } else {
-      alert(err.response?.data?.Error || "An error occurred");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.response?.data?.Error || "An error occurred",
+        type: "alert",
+      });
     }
   };
 
@@ -425,64 +484,78 @@ function AddOrder() {
   };
 
   const handleDeleteDetail = (uniqueId) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
+    setAlert({
+      show: true,
+      title: "Confirm Deletion",
+      message: "Are you sure you want to delete this item?",
+      type: "confirm",
+      onConfirm: () => {
+        const token = localStorage.getItem("token");
+        const decoded = jwtDecode(token);
+        const currentDateTime = new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " ");
+        const [orderId, displayOrder] = uniqueId.split("_");
 
-    const token = localStorage.getItem("token");
-    const decoded = jwtDecode(token);
-    const currentDateTime = new Date()
-      .toISOString()
-      .slice(0, 19)
-      .replace("T", " ");
-    const [orderId, displayOrder] = uniqueId.split("_");
+        // Update orderDetails by removing the deleted detail first to calculate new totals
+        const updatedDetails = orderDetails.filter(
+          (detail) =>
+            !(
+              detail.orderId === parseInt(orderId) &&
+              detail.displayOrder === parseInt(displayOrder)
+            )
+        );
 
-    // Update orderDetails by removing the deleted detail first to calculate new totals
-    const updatedDetails = orderDetails.filter(
-      (detail) =>
-        !(
-          detail.orderId === parseInt(orderId) &&
-          detail.displayOrder === parseInt(displayOrder)
-        )
-    );
+        // Calculate new totals
+        const totals = calculateTotals(updatedDetails);
 
-    // Calculate new totals
-    const totals = calculateTotals(updatedDetails);
+        // Update order's last edited info and totalHrs
+        const orderUpdateData = {
+          lastEdited: currentDateTime,
+          editedBy: decoded.name,
+          totalHrs: totals.totalHrs,
+        };
 
-    // Update order's last edited info and totalHrs
-    const orderUpdateData = {
-      lastEdited: currentDateTime,
-      editedBy: decoded.name,
-      totalHrs: totals.totalHrs,
-    };
-
-    // Update order first, then delete detail
-    Promise.all([
-      // Update order with only the three fields using new endpoint
-      axios.put(
-        `${ServerIP}/auth/orders/${orderId}/update_edited_info`,
-        orderUpdateData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      ),
-      // Delete the detail
-      axios.delete(`${ServerIP}/auth/order_detail/${orderId}/${displayOrder}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ])
-      .then(([orderResult, detailResult]) => {
-        if (detailResult.data.Status) {
-          // Update local states
-          setOrderDetails(updatedDetails);
-          setTotals(totals);
-          setData((prev) => ({
-            ...prev,
-            totalHrs: totals.totalHrs,
-          }));
-        } else {
-          alert(detailResult.data.Error);
-        }
-      })
-      .catch((err) => handleApiError(err, navigate));
+        // Update order first, then delete detail
+        Promise.all([
+          // Update order with only the three fields using new endpoint
+          axios.put(
+            `${ServerIP}/auth/orders/${orderId}/update_edited_info`,
+            orderUpdateData,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
+          // Delete the detail
+          axios.delete(
+            `${ServerIP}/auth/order_detail/${orderId}/${displayOrder}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
+        ])
+          .then(([orderResult, detailResult]) => {
+            if (detailResult.data.Status) {
+              // Update local states
+              setOrderDetails(updatedDetails);
+              setTotals(totals);
+              setData((prev) => ({
+                ...prev,
+                totalHrs: totals.totalHrs,
+              }));
+            } else {
+              setAlert({
+                show: true,
+                title: "Error",
+                message: detailResult.data.Error,
+                type: "alert",
+              });
+            }
+          })
+          .catch((err) => handleApiError(err, navigate));
+      },
+    });
   };
 
   const handleEditClick = (uniqueId, detail) => {
@@ -739,7 +812,12 @@ function AddOrder() {
             totalHrs: totals.totalHrs,
           }));
         } else {
-          alert(detailResult.data.Error);
+          setAlert({
+            show: true,
+            title: "Validation Error",
+            message: detailResult.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => handleApiError(err, navigate));
@@ -847,14 +925,24 @@ function AddOrder() {
     // Validate that we have all required data
     if (!detail || !detail.Id) {
       console.error("Missing detail Id:", detail);
-      alert("Error: Could not identify the order detail");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Could not identify the order detail",
+        type: "alert",
+      });
       return;
     }
 
     // Validate that newOrder is a positive integer
     const orderNum = parseInt(newOrder);
     if (!Number.isInteger(orderNum) || orderNum <= 0) {
-      alert("Please enter a valid positive integer");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Please enter a valid positive integer",
+        type: "alert",
+      });
       return;
     }
 
@@ -878,7 +966,12 @@ function AddOrder() {
       setTempDisplayOrder(null);
     } catch (err) {
       console.error("Error updating display order:", err);
-      alert("Failed to update display order");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to update display order",
+        type: "alert",
+      });
     }
   };
 
@@ -922,10 +1015,13 @@ function AddOrder() {
 
   const handlePrintOrder = () => {
     if (orderDetails.length === 0) {
-      window.alert(
-        "Cannot print order. No order details found. Please add order details first."
-      );
-      return;
+      setAlert({
+        show: true,
+        title: "Error",
+        message:
+          "Cannot print order. No order details found. Please add order details first.",
+        type: "alert",
+      });
     }
     navigate(`/dashboard/print_order/${id}`);
   };
@@ -1063,19 +1159,34 @@ function AddOrder() {
                   })
                   .catch((err) => {
                     console.error("Error copying order details:", err);
-                    alert("Error copying order details");
+                    setAlert({
+                      show: true,
+                      title: "Error",
+                      message: "Error copying order details",
+                      type: "alert",
+                    });
                   });
               }
             })
             .catch((err) => {
               console.error("Error fetching order details:", err);
-              alert("Error fetching order details");
+              setAlert({
+                show: true,
+                title: "Error",
+                message: "Error fetching order details",
+                type: "alert",
+              });
             });
         }
       })
       .catch((err) => {
         console.error("Error creating new order:", err);
-        alert("Error creating new order");
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Error creating new order",
+          type: "alert",
+        });
       });
   };
 
@@ -2245,7 +2356,12 @@ function AddOrder() {
                   setShowAllowanceModal(false);
                 } catch (err) {
                   console.error("Error saving allowance:", err);
-                  alert("Failed to save allowance changes");
+                  setAlert({
+                    show: true,
+                    title: "Error",
+                    message: "Failed to save allowance changes",
+                    type: "alert",
+                  });
                 }
               }}
             >
@@ -2345,6 +2461,20 @@ function AddOrder() {
           Usage: {tooltipDetail?.materialUsage || 0}
         </div>
       </Modal>
+
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 }

@@ -14,8 +14,11 @@ import {
   calculatePerSqFt,
   calculatePrintHrs,
 } from "../utils/orderUtils";
+import { useNavigate, useParams } from "react-router-dom";
+import ModalAlert from "./UI/ModalAlert";
 
 function AddOrderDetails({ orderId, onDetailAdded }) {
+  const { orderId: urlOrderId } = useParams();
   const [detail, setDetail] = useState({
     quantity: 0,
     width: 0,
@@ -39,6 +42,14 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
   });
   const [units, setUnits] = useState([]);
   const [materials, setMaterials] = useState([]);
+  const navigate = useNavigate();
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   // Add useEffect to fetch units
   useEffect(() => {
@@ -222,16 +233,25 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
       !detail.remarks;
 
     if (isAllEmpty) {
-      alert("Please fill at least one field");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Please fill at least one field",
+        type: "alert",
+      });
       return;
     }
 
     // Validation 2: If width or height exists, validate required fields
     if (detail.width || detail.height) {
       if (!detail.width || !detail.height || !detail.unit || !detail.material) {
-        alert(
-          "When entering dimensions, Width, Height, Unit, and Material are required"
-        );
+        setAlert({
+          show: true,
+          title: "Validation Error",
+          message:
+            "When entering dimensions, Width, Height, Unit, and Material are required",
+          type: "alert",
+        });
         return;
       }
     }
@@ -324,12 +344,23 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
           materialUsage: 0,
           printHrs: 0,
         });
+        navigate(`/dashboard/orders/edit/${orderId}`);
       } else {
-        alert(response.data.Error);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to add order detail",
+          type: "alert",
+        });
       }
     } catch (err) {
       console.error("Error in handleSubmit:", err);
-      alert("Failed to add order detail");
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to add order detail",
+        type: "alert",
+      });
     }
   };
 
@@ -405,7 +436,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   <select
                     className="form-select form-select-sm"
                     name="material"
-                    value={detail.Material || detail.material || ""}
+                    value={detail.material || ""}
                     onChange={handleInputChange}
                   >
                     <option value="">Select Material</option>
@@ -559,6 +590,19 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
           </div>
         </div>
       )}
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 }

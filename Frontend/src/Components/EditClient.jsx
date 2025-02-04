@@ -44,7 +44,12 @@ const EditClient = () => {
         if (result.data.Status) {
           setSalesPeople(result.data.Result);
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log(err));
@@ -56,7 +61,12 @@ const EditClient = () => {
         if (result.data.Status) {
           setPaymentTerms(result.data.Result);
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log(err));
@@ -67,11 +77,21 @@ const EditClient = () => {
 
     // Frontend validation
     if (!client.clientName.trim()) {
-      alert("Client Name is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Client Name is required",
+        type: "alert",
+      });
       return;
     }
     if (!client.contact.trim()) {
-      alert("Contact Person is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Contact Person is required",
+        type: "alert",
+      });
       return;
     }
 
@@ -81,7 +101,12 @@ const EditClient = () => {
         if (result.data.Status) {
           navigate("/dashboard/client");
         } else {
-          alert(result.data.Error);
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error,
+            type: "alert",
+          });
         }
       })
       .catch((err) => console.log(err));

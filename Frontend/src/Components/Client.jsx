@@ -3,9 +3,17 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 const Client = () => {
   const [clients, setClients] = useState([]);
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
 
   useEffect(() => {
     axios.get(`${ServerIP}/auth/client`).then((result) => {
@@ -16,13 +24,26 @@ const Client = () => {
   }, []);
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this client?")) {
-      axios.delete(`${ServerIP}/auth/delete_client/${id}`).then((result) => {
-        if (result.data.Status) {
-          window.location.reload();
-        }
-      });
-    }
+    setAlert({
+      show: true,
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this client?",
+      type: "confirm",
+      onConfirm: () => {
+        axios.delete(`${ServerIP}/auth/client/delete/${id}`).then((result) => {
+          if (result.data.Status) {
+            window.location.reload();
+          } else {
+            setAlert({
+              show: true,
+              title: "Error",
+              message: result.data.Error || "Failed to delete client",
+              type: "alert",
+            });
+          }
+        });
+      },
+    });
   };
 
   return (
@@ -83,6 +104,19 @@ const Client = () => {
           </tbody>
         </table>
       </div>
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 };

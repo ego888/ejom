@@ -41,11 +41,21 @@ const EditMaterial = () => {
 
     // Frontend validation
     if (!material.material.trim()) {
-      alert("Material is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Material is required",
+        type: "alert",
+      });
       return;
     }
     if (!material.description.trim()) {
-      alert("Description is required");
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Description is required",
+        type: "alert",
+      });
       return;
     }
 
