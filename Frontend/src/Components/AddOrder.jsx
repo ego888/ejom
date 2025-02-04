@@ -2254,12 +2254,15 @@ function AddOrder() {
                       <div className="ms-2">
                         <small style={{ fontSize: "1rem" }}>
                           (
-                          {(
-                            ((orderTotals.grandTotal - (data.amountPaid || 0)) /
-                              orderTotals.grandTotal) *
-                            100
-                          ).toFixed(2)}
-                          %)
+                          {orderTotals.grandTotal > 0
+                            ? (
+                                ((orderTotals.grandTotal -
+                                  (data.amountPaid || 0)) /
+                                  orderTotals.grandTotal) *
+                                100
+                              ).toFixed(2) + "%"
+                            : "0%"}
+                          )
                         </small>
                       </div>
                     </div>

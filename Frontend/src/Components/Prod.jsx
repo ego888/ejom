@@ -331,6 +331,22 @@ function Prod() {
 
   // Add function to handle forProd update
   const handleForProdChange = async (orderId, newValue) => {
+    // Find the order to check its status
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    // Check if status is Open or Printed
+    if (order.status !== "Open" && order.status !== "Printed") {
+      setAlert({
+        show: true,
+        title: "Invalid Status",
+        message:
+          "Only orders with 'Open' or 'Printed' status can be marked for production.",
+        type: "alert",
+      });
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
@@ -347,10 +363,21 @@ function Prod() {
           )
         );
       } else {
-        console.error("Failed to update forProd status");
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to update production status",
+          type: "alert",
+        });
       }
     } catch (error) {
       console.error("Error updating forProd status:", error);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to update production status: " + error.message,
+        type: "alert",
+      });
     }
   };
 
@@ -1062,7 +1089,7 @@ function Prod() {
                         iconOnly
                         size="sm"
                         onClick={() =>
-                          navigate(`/dashboard/view_order/${order.id}`)
+                          navigate(`/dashboard/prod/view/${order.id}`)
                         }
                       />
                       {/* <Button

@@ -249,7 +249,7 @@ router.put("/update_orders_to_prod", (req, res) => {
         productionDate = NOW(),
         forProd = 0
     WHERE forProd = 1
-      AND status = 'Open';
+      AND (status = 'Open' OR status = 'Printed');
   `;
   con.query(sql, (err, result) => {
     if (err) {

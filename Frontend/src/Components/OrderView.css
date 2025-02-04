@@ -1,0 +1,40 @@
+.prod-page-background {
+  background-color: #f0f8ff; /* Light blue background */
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+/* Add hover effect for table rows */
+.order-table tbody tr:hover {
+  background-color: #e6f3ff !important;
+}
+
+/* Style for the right panel */
+.right-panel {
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-left: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for info groups in the right panel */
+.info-group {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.info-group:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.info-value {
+  font-size: 0.9rem;
+}

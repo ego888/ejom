@@ -443,17 +443,17 @@ function Prod() {
                         iconOnly
                         size="sm"
                         onClick={() =>
-                          navigate(`/dashboard/view_order/${order.id}`)
+                          navigate(`/dashboard/payment/view/${order.id}`)
                         }
                       />
-                      <Button
+                      {/* <Button
                         variant="edit"
                         iconOnly
                         size="sm"
                         onClick={() =>
                           navigate(`/dashboard/orders/edit/${order.id}`)
                         }
-                      />
+                      /> */}
                     </div>
                   </td>
                   <td>{order.id}</td>
