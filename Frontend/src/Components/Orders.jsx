@@ -333,8 +333,8 @@ function Orders() {
   }, [currentPage]);
 
   return (
-    <div className="px-5 mt-3">
-      <div className="d-flex justify-content-center">
+    <div className="px-5 orders-page-background">
+      <div className="d-flex justify-content-center pt-4">
         <h3>Orders List</h3>
       </div>
 

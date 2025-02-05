@@ -1,3 +1,8 @@
+.orders-page-background {
+  background-color: #fffb7f; /* Light blue background */
+  min-height: 100vh;
+}
+
 /* Status badge styles */
 .status-badge {
   padding: 0.35em 0.65em;
