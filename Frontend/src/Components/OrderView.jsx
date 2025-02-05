@@ -46,6 +46,21 @@ function OrderView() {
       break;
   }
 
+  // Add ESC key handler
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        navigate(-1);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscKey);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscKey);
+    };
+  }, [navigate]);
+
   useEffect(() => {
     if (id) {
       const token = localStorage.getItem("token");
