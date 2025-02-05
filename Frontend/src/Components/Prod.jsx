@@ -466,7 +466,7 @@ function Prod() {
     }
   };
 
-  // Function to update orders to production status
+  // Function to update orders to Prod status
   const updateOrders = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -519,38 +519,38 @@ function Prod() {
     // Get orders marked for production from the API response
     const token = localStorage.getItem("token");
     try {
-      const response = await axios.get(
-        `${ServerIP}/auth/orders-details-forprod`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await axios.get(`${ServerIP}/auth/orders-all-DR`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.data.Status) {
         throw new Error(response.data.Error || "Failed to fetch print data");
       }
 
-      const forProdOrders = response.data.Result;
+      const orders = response.data.Result;
 
-      if (forProdOrders.length === 0) {
+      if (orders.length === 0) {
         setAlert({
           show: true,
           title: "Error",
-          message: "Please mark orders for production before printing DR",
+          message: "No orders available for DR printing",
           type: "alert",
         });
         return;
       }
-      await handlePrintAllDR(forProdOrders, navigate);
+
+      // Store a flag in sessionStorage to indicate we're coming back from printing
+      sessionStorage.setItem("returnFromPrinting", "true");
+      navigate("/dashboard/print_dr");
     } catch (err) {
       console.error("Error printing DR orders:", err);
       setAlert({
         show: true,
         title: "Error",
-        message: err.message || "Failed to fetch production orders",
+        message: err.message || "Failed to fetch DR orders",
         type: "alert",
       });
     }

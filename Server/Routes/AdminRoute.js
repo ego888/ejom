@@ -417,18 +417,6 @@ router.get("/payment_terms", (req, res) => {
   });
 });
 
-// Get company control info
-router.get("/company-control", (req, res) => {
-  const sql = "SELECT * FROM jomControl LIMIT 1";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.error("Error fetching company control:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result[0] });
-  });
-});
-
 // Add this error handling middleware after all your routes
 router.use((err, req, res, next) => {
   console.error("Router Error:", err);
@@ -437,32 +425,6 @@ router.use((err, req, res, next) => {
     Error: "Internal server error",
     Code: "SERVER_ERROR",
     details: err.message,
-  });
-});
-
-// Add this route to update forProd checkbox
-router.put("/update-for-prod/:id", (req, res) => {
-  const orderId = req.params.id;
-  const { forProd } = req.body;
-
-  const sql = "UPDATE Orders SET forProd = ? WHERE orderID = ?";
-  con.query(sql, [forProd, orderId], (err, result) => {
-    if (err) {
-      console.error("Error updating forProd status:", err);
-      return res.json({
-        Status: false,
-        Error: "Error updating forProd status",
-      });
-    }
-
-    if (result.affectedRows > 0) {
-      return res.json({
-        Status: true,
-        Message: "Order forProd status updated successfully",
-      });
-    } else {
-      return res.json({ Status: false, Message: "Order not found" });
-    }
   });
 });
 

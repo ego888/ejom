@@ -261,29 +261,30 @@ router.get("/orders-all-DR", async (req, res) => {
         o.orderID as id,
         o.clientId,
         o.projectName,
-        o.dueDate,
-        o.dueTime,
         c.clientName,
+        o.deliveryInst,
+        o.drnum,
         od.quantity,
         od.width,
         od.height,
         od.unit,
         od.material,
-        od.printHrs,
-        od.squareFeet,
+        od.itemDescription,
         od.displayOrder
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN order_details od ON o.orderID = od.orderId
-      WHERE !o.drnum && (o.status = 'Prod' OR o.status = 'Finish' OR o.status = 'Delivered')
-      ORDER BY o.orderID ASC, od.displayOrder ASC`;
+      LEFT JOIN order_details od ON o.orderID = od.orderId AND od.noPrint = 0
+      WHERE !o.drnum 
+        AND (o.status = 'Prod' OR o.status = 'Finish' OR o.status = 'Delivered')
+      ORDER BY o.orderID ASC, od.displayOrder ASC;
+`;
 
     con.query(sql, (err, result) => {
       if (err) {
         console.log(err);
         return res.json({ Status: false, Error: "Query Error" });
       }
-
+      console.log("result", result);
       // Restructure the data to group order details by order
       const ordersMap = new Map();
 
@@ -297,23 +298,23 @@ router.get("/orders-all-DR", async (req, res) => {
             dueDate: row.dueDate,
             dueTime: row.dueTime,
             clientName: row.clientName,
+            deliveryInst: row.deliveryInst,
+            drnum: row.drnum,
             order_details: [],
           });
         }
 
         // Add order details if they exist
-        if (row.quantity !== null) {
-          ordersMap.get(row.id).order_details.push({
-            quantity: row.quantity,
-            width: row.width,
-            height: row.height,
-            unit: row.unit,
-            material: row.material,
-            printHrs: row.printHrs,
-            squareFeet: row.squareFeet,
-            displayOrder: row.displayOrder,
-          });
-        }
+
+        ordersMap.get(row.id).order_details.push({
+          quantity: row.quantity,
+          width: row.width,
+          height: row.height,
+          unit: row.unit,
+          material: row.material,
+          itemDescription: row.itemDescription,
+          displayOrder: row.displayOrder,
+        });
       });
 
       // Convert map to array
