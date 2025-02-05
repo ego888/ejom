@@ -27,15 +27,4 @@ router.get("/jomcontrol/lastDR", (req, res) => {
   });
 });
 
-router.put("/jomcontrol/lastDR/:id", (req, res) => {
-  const sql = "UPDATE jomControl SET lastDrNumber = ? WHERE id = 1";
-  con.query(sql, [req.params.id], (err, result) => {
-    if (err) {
-      console.error("Error fetching company control:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result[0] });
-  });
-});
-
 export { router as JomControlRouter };

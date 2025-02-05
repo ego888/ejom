@@ -253,6 +253,78 @@ router.put("/update_orders_to_prod", (req, res) => {
   });
 });
 
+// Update orders with DR number, update jomcontrol with lastDR number, with transaction rollback feature.
+router.put("/update_orders_drnum", (req, res) => {
+  const updates = req.body; // Expecting an array of { orderID, drnum }
+
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return res.json({ Status: false, Error: "Invalid input data" });
+  }
+
+  const lastDRNumber = updates[updates.length - 1].drnum;
+  const cases = updates
+    .map((order) => `WHEN orderID = ${order.orderID} THEN '${order.drnum}'`)
+    .join(" ");
+  const orderIDs = updates.map((order) => order.orderID).join(", ");
+
+  const sqlUpdateOrders = `
+    UPDATE orders
+    SET drnum = CASE ${cases} END
+    WHERE orderID IN (${orderIDs});
+  `;
+
+  const sqlUpdateJomControl = `
+    UPDATE jomcontrol
+    SET lastDR = ?
+    WHERE id = 1;
+  `;
+
+  // Start MySQL transaction
+  con.beginTransaction((err) => {
+    if (err) {
+      console.error("Transaction Error:", err);
+      return res.json({ Status: false, Error: "Failed to start transaction" });
+    }
+
+    // 1️⃣ Step 1: Update `orders` table
+    con.query(sqlUpdateOrders, (err, result) => {
+      if (err) {
+        console.error("Update Orders Error:", err);
+        return con.rollback(() => {
+          res.json({ Status: false, Error: "Failed to update orders" });
+        });
+      }
+
+      // 2️⃣ Step 2: Update `jomcontrol` table with last DR number
+      con.query(sqlUpdateJomControl, [lastDRNumber], (err, result) => {
+        if (err) {
+          console.error("Update JomControl Error:", err);
+          return con.rollback(() => {
+            res.json({ Status: false, Error: "Failed to update jomcontrol" });
+          });
+        }
+
+        // 3️⃣ Step 3: If both updates succeed, commit the transaction
+        con.commit((err) => {
+          if (err) {
+            console.error("Commit Error:", err);
+            return con.rollback(() => {
+              res.json({
+                Status: false,
+                Error: "Failed to commit transaction",
+              });
+            });
+          }
+          res.json({
+            Status: true,
+            Message: "Orders and JomControl updated successfully",
+          });
+        });
+      });
+    });
+  });
+});
+
 // Get all orders without DR number and status is Prod, Finish or Delivered
 router.get("/orders-all-DR", async (req, res) => {
   try {
