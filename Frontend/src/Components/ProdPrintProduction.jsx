@@ -87,8 +87,10 @@ function ProdPrintProduction() {
     <div className="p-3">
       <div className="d-flex justify-content-between align-items-center my-3">
         <div style={{ width: "150px" }}></div>
-        <div className="fw-bold fs-5 text-center">PRODUCTION ORDER LIST</div>
-        <div style={{ width: "150px", textAlign: "right" }}>
+        <div className="fw-bold text-center" style={{ fontSize: "18px" }}>
+          PRODUCTION ORDER LIST
+        </div>
+        <div style={{ width: "150px", textAlign: "right", fontSize: "12px" }}>
           {new Date().toLocaleDateString("en-US", {
             month: "2-digit",
             day: "2-digit",
@@ -104,10 +106,10 @@ function ProdPrintProduction() {
 
       <table className="prod-table">
         <thead>
-          <tr>
+          <tr className="header-row">
             <th>Order ID</th>
             <th>Client</th>
-            <th>Project Name</th>
+            <th style={{ maxWidth: "200px" }}>Project Name</th>
             <th>Due Date & Time</th>
             <th className="text-center">Quantity</th>
             <th className="text-center">Width</th>
@@ -128,7 +130,15 @@ function ProdPrintProduction() {
               >
                 <td>{!isSameOrder ? order.id || "" : ""}</td>
                 <td>{!isSameOrder ? order.clientName || "" : ""}</td>
-                <td>{!isSameOrder ? order.projectName || "" : ""}</td>
+                <td
+                  style={{
+                    maxWidth: "200px",
+                    whiteSpace: "normal",
+                    wordWrap: "break-word",
+                  }}
+                >
+                  {!isSameOrder ? order.projectName || "" : ""}
+                </td>
                 <td>
                   {!isSameOrder
                     ? `${
@@ -146,15 +156,18 @@ function ProdPrintProduction() {
               </tr>
             );
           })}
-          <tr className="total-row">
-            <td colSpan="4" className="text-end fw-bold">
-              Total:
+          {/* <tr className="total-row">
+            <td colSpan="5" className="text-center fw-bold">
+              <div>Total:</div>
+              <div>{totalQuantity}</div>
             </td>
-            <td className="text-center fw-bold">{totalQuantity}</td>
-            <td colSpan="4"></td>
-          </tr>
+          </tr> */}
         </tbody>
       </table>
+      <div className="total-row-container">
+        <div className="total-label">Total:</div>
+        <div className="total-quantity">{totalQuantity}</div>
+      </div>
 
       <style>
         {`
@@ -167,49 +180,80 @@ function ProdPrintProduction() {
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
-            .table {
+            .prod-table {
               border-collapse: collapse;
-              --bs-table-bg: transparent !important;
+              width: 100%;
+              font-size: 14px;
+              font-family: "Times New Roman", Times, serif;
             }
-            .table th,
-            .table td {
+            .prod-table th,
+            .prod-table td {
               border: none !important;
+              padding: 6px 6px;
             }
-            .table th {
-              border-bottom: 2px solid #000 !important;
+            .prod-table th {
               background-color: white !important;
               font-weight: bold;
             }
             .row-even {
-              background-color: rgb(211, 211, 211) !important;
+              background-color: rgb(230, 230, 230) !important;
             }
             .row-odd {
               background-color: white !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
             }
-            .total-row {
+            .header-row {
               border-top: 2px solid #000 !important;
+              border-bottom: 2px solid #000 !important;
               background-color: white !important;
+              font-weight: bold;
             }
           }
           /* Non-print styles */
-          .table {
+          .prod-table {
             border-collapse: collapse;
+            width: 100%;
+            font-size: 12px;
           }
-          .table th,
-          .table td {
+          .prod-table th,
+          .prod-table td {
             border: none;
+            padding: 4px 6px;
           }
-          .table th {
+          .prod-table th {
             border-bottom: 2px solid #000;
             background-color: white;
             font-weight: bold;
           }
-
+          .row-even {
+            background-color: rgb(211, 211, 211);
+          }
+          .row-odd {
+            background-color: white;
+          }
           .total-row {
             border-top: 2px solid #000;
             background-color: white;
+          }
+          .total-row td {
+            padding: 8px 6px;
+          }
+          .total-row-container {
+            display: flex;
+            justify-content: flex-end; /* Align to the right */
+            padding: 10px;
+            font-weight: bold;
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            background-color: white;
+            width: 100%;
+          }
+          .total-label {
+            margin-right: 10px;
+          }
+          .total-quantity {
+            min-width: 50px;
+            text-align: center;
+            margin-right: 240px;
           }
         `}
       </style>
