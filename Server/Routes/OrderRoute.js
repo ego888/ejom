@@ -153,10 +153,12 @@ router.get("/order/:id", (req, res) => {
       DATE_FORMAT(o.dueDate, '%Y-%m-%d') as dueDate,
       DATE_FORMAT(o.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited,
       c.clientName,
-      e.name as preparedByName
+      e.name as preparedByName,
+      e2.name as graphicsByName
     FROM orders o
     LEFT JOIN client c ON o.clientId = c.id
     LEFT JOIN employee e ON o.preparedBy = e.id
+    LEFT JOIN employee e2 ON o.graphicsBy = e2.id
     WHERE o.orderID = ?
   `;
 
