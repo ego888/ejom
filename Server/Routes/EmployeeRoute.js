@@ -5,6 +5,19 @@ import bcrypt from "bcrypt";
 
 const router = express.Router();
 
+// Get sales employees (active and sales only)
+router.get("/sales_employees", (req, res) => {
+  const sql =
+    "SELECT id, name FROM employee WHERE active = true AND sales = true ORDER BY name";
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
+
 router.post("/employee_login", (req, res) => {
   const sql = "SELECT * from employee Where email = ?";
   con.query(sql, [req.body.email], (err, result) => {
@@ -37,11 +50,6 @@ router.get("/detail/:id", (req, res) => {
     if (err) return res.json({ Status: false });
     return res.json(result);
   });
-});
-
-router.get("/logout", (req, res) => {
-  res.clearCookie("token");
-  return res.json({ Status: true });
 });
 
 export { router as EmployeeRouter };

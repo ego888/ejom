@@ -35,7 +35,7 @@ function PrintQuote() {
             axios.get(`${ServerIP}/auth/sales_employees`, {
               headers: { Authorization: `Bearer ${token}` },
             }),
-            axios.get(`${ServerIP}/auth/company-control`, {
+            axios.get(`${ServerIP}/auth/jomcontrol`, {
               headers: { Authorization: `Bearer ${token}` },
             }),
           ]);

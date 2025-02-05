@@ -318,21 +318,6 @@ router.get("/logout", (req, res) => {
   return res.json({ Status: true });
 });
 
-// Add these new routes for client management
-
-// Get sales employees (active and sales only)
-router.get("/sales_employees", (req, res) => {
-  const sql =
-    "SELECT id, name FROM employee WHERE active = true AND sales = true ORDER BY name";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
-});
-
 router.post("/login", (req, res) => {
   const sql = "SELECT * FROM employee WHERE name = ? AND active = true";
   con.query(sql, [req.body.name], (err, result) => {
@@ -455,7 +440,7 @@ router.use((err, req, res, next) => {
   });
 });
 
-// Add this route to update forProd status
+// Add this route to update forProd checkbox
 router.put("/update-for-prod/:id", (req, res) => {
   const orderId = req.params.id;
   const { forProd } = req.body;

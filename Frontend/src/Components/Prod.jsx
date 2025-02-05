@@ -350,7 +350,7 @@ function Prod() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `${ServerIP}/auth/update-for-prod/${orderId}`,
+        `${ServerIP}/auth/update-forprod/${orderId}`,
         { forProd: newValue },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -401,7 +401,7 @@ function Prod() {
         try {
           const token = localStorage.getItem("token");
           const response = await axios.put(
-            `${ServerIP}/auth/update-for-prod/${orderId}`,
+            `${ServerIP}/auth/update-forprod/${orderId}`,
             { forProd: true },
             { headers: { Authorization: `Bearer ${token}` } }
           );

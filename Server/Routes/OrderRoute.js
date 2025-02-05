@@ -208,7 +208,33 @@ router.get("/orders-details-forprod", async (req, res) => {
   }
 });
 
-// Update orders to set status to 'Prod' and productionDate to NOW() where forProd is 1 and status is 'Open'
+// Add this route to update forProd checkbox
+router.put("/update-forprod/:id", (req, res) => {
+  const orderId = req.params.id;
+  const { forProd } = req.body;
+
+  const sql = "UPDATE Orders SET forProd = ? WHERE orderID = ?";
+  con.query(sql, [forProd, orderId], (err, result) => {
+    if (err) {
+      console.error("Error updating forProd status:", err);
+      return res.json({
+        Status: false,
+        Error: "Error updating forProd status",
+      });
+    }
+
+    if (result.affectedRows > 0) {
+      return res.json({
+        Status: true,
+        Message: "Order forProd status updated successfully",
+      });
+    } else {
+      return res.json({ Status: false, Message: "Order not found" });
+    }
+  });
+});
+
+// Update orders to change status to 'Prod' and productionDate to NOW() where forProd is 1 and status is 'Open'
 router.put("/update_orders_to_prod", (req, res) => {
   const sql = `
     UPDATE orders
