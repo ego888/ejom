@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Button from "./UI/Button";
 import { BiRectangle } from "react-icons/bi";
 import "./AddOrder.css";
@@ -25,6 +25,26 @@ function OrderView() {
     message: "",
     type: "alert",
   });
+
+  const location = useLocation(); // Get the current route path
+  console.log(location);
+  console.log(location.pathname.includes("/prod/view"));
+
+  let backgroundColor = "#f0f8ff";
+  switch (true) {
+    case location.pathname.includes("/prod/view"):
+      backgroundColor = "#95fbd7"; // Light Green for Production
+      break;
+    case location.pathname.includes("/artistlog/view"):
+      backgroundColor = "#faaa87"; // Light Green for Production
+      break;
+    case location.pathname.includes("/printlog/view"):
+      backgroundColor = "#b0dcfe"; // Light Green for Production
+      break;
+    case location.pathname.includes("/payment/view"):
+      backgroundColor = "#fcd0f2"; // Light Green for Production
+      break;
+  }
 
   useEffect(() => {
     if (id) {
@@ -64,7 +84,10 @@ function OrderView() {
   }, [id, navigate]);
 
   return (
-    <div className="prod-page-background">
+    <div
+      className="prod-page-background"
+      style={{ backgroundColor: backgroundColor }}
+    >
       <div className="px-4 mt-3">
         <div className="p-3 rounded border">
           <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
