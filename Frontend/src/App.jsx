@@ -29,6 +29,7 @@ import Prod from "./Components/Prod";
 import ArtistLog from "./Components/ArtistLog";
 import PrintLog from "./Components/PrintLog";
 import Payment from "./Components/Payment";
+import ProdPrintProduction from "./Components/ProdPrintProduction";
 
 function App() {
   return (
@@ -40,6 +41,14 @@ function App() {
           element={
             <PrivateRoute>
               <PrintOrder />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard/print_production"
+          element={
+            <PrivateRoute>
+              <ProdPrintProduction />
             </PrivateRoute>
           }
         />

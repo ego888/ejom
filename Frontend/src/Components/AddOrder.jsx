@@ -1204,6 +1204,9 @@ function AddOrder() {
               <>
                 <Button variant="save" onClick={handleReOrder}>
                   Reorder
+                </Button>{" "}
+                <Button variant="print" onClick={handlePrintOrder}>
+                  Print JO
                 </Button>
               </>
             )}

@@ -133,16 +133,36 @@ function Prod() {
           );
           setStatusOptions(sortedStatuses);
 
-          // Get only the Prod statuses (indices 2-5)
-          const prodStatuses = sortedStatuses
-            .slice(2, 6)
-            .map((s) => s.statusId);
-          console.log("Setting initial prod statuses:", prodStatuses); // Debug log
+          // Get saved filters or default to first two statuses
+          const saved = localStorage.getItem("orderStatusFilters");
+          if (saved) {
+            const savedStatuses = JSON.parse(saved);
+            setSelectedStatuses(savedStatuses);
 
-          setSelectedStatuses(prodStatuses);
-          setIsProdChecked(true);
-          setIsAllChecked(false);
+            // Update Prod checkbox state
+            const prodStatuses = sortedStatuses
+              .slice(2, 6)
+              .map((s) => s.statusId);
+            const selectedProdStatuses = savedStatuses.filter((s) =>
+              prodStatuses.includes(s)
+            );
+            setIsProdChecked(
+              selectedProdStatuses.length === prodStatuses.length
+            );
 
+            // Update All checkbox state
+            setIsAllChecked(savedStatuses.length === sortedStatuses.length);
+          } else {
+            // Get only the Prod statuses (indices 2-5)
+            const prodStatuses = sortedStatuses
+              .slice(2, 6)
+              .map((s) => s.statusId);
+            console.log("Setting initial prod statuses:", prodStatuses); // Debug log
+
+            setSelectedStatuses(prodStatuses);
+            setIsProdChecked(true);
+            setIsAllChecked(false);
+          }
           // Save to localStorage
           localStorage.setItem(
             "orderStatusFilters",

@@ -43,7 +43,20 @@
    - use the Filter components found in Frontend/src/Components/Logic/
 
 6. Routes:
+
    - use the Routes components found in Server/Routes/
+
+7. ModalAlert:
+
+   - use the ModalAlert components found in Frontend/src/Components/UI/ModalAlert.jsx for messages and confirmation dialogs.
+
+8. Input:
+
+   - use the Input components found in Frontend/src/Components/UI/Input.jsx
+
+9. Modal:
+
+   - use the Modal components found in Frontend/src/Components/UI/Modal.jsx
 
 ### Variants
 

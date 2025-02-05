@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Button from "./Button";
 
 const ModalAlert = ({
@@ -11,6 +11,25 @@ const ModalAlert = ({
   cancelText = "Cancel",
   type = "confirm", // 'alert' or 'confirm'
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!show) return;
+
+      if (event.key === "Escape") {
+        onClose();
+      } else if (event.key === "Enter") {
+        if (type === "confirm") {
+          onConfirm();
+        } else {
+          onClose();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [show, onClose, onConfirm, type]);
+
   if (!show) return null;
 
   return (

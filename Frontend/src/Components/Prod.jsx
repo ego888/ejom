@@ -14,9 +14,9 @@ import "./Orders.css";
 import "./Prod.css";
 import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
 import { QRCodeSVG } from "qrcode.react";
-import ReactDOMServer from "react-dom/server";
-import Modal from "./UI/Modal";
 import ModalAlert from "./UI/ModalAlert";
+//import { handlePrintProduction } from "./ProdPrintProduction";
+import { handlePrintAllDR } from "./ProdPrintAllDR";
 
 function Prod() {
   const navigate = useNavigate();
@@ -384,7 +384,7 @@ function Prod() {
   // Add function to handle forProd header click
   const handleForProdSort = () => {
     const nextSort =
-      forProdSort === "none" ? "asc" : forProdSort === "asc" ? "desc" : "none";
+      forProdSort === "none" ? "desc" : forProdSort === "asc" ? "desc" : "none";
     setForProdSort(nextSort);
 
     if (nextSort !== "none") {
@@ -424,521 +424,135 @@ function Prod() {
     }
   };
 
-  // Helper function to show alert
-  const showAlert = (title, message, type = "alert", onConfirm = null) => {
-    setAlert({
-      show: true,
-      title,
-      message,
-      type,
-      onConfirm,
-    });
-  };
-
-  // Helper function to hide alert
-  const hideAlert = () => {
-    setAlert((prev) => ({
-      ...prev,
-      show: false,
-    }));
-  };
-
-  const handlePrintProduction = async () => {
+  const handlePrintProductionClick = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const token = localStorage.getItem("token");
       const response = await axios.get(
         `${ServerIP}/auth/orders-details-forprod`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
       if (!response.data.Status) {
-        throw new Error("Failed to fetch production orders");
+        throw new Error(response.data.Error || "Failed to fetch print data");
       }
 
-      const ordersWithDetails = response.data.Result;
-
-      // If no orders to print, don't proceed
-      if (ordersWithDetails.length === 0) {
-        showAlert("No Orders", "No orders marked for production.");
+      const forProdOrders = response.data.Result;
+      if (forProdOrders.length === 0) {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Please mark orders for production before printing",
+          type: "alert",
+        });
         return;
       }
 
-      const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            @page { margin: 0.5cm; }
-            @media print {
-              body { margin: 0; }
-              button { display: none; }
-              tr:nth-child(even) {
-                background-color: #e0e0e0 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-            }
-            body { 
-              font-family: "Times New Roman", Times, serif;
-              font-size: 10pt;
-              margin: 0;
-              padding: 15px;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 10px;
-              display: block;
-            }
-            .header img {
-              max-width: 150px;
-              margin-bottom: 10px;
-              display: block !important;
-              margin-left: auto;
-              margin-right: auto;
-            }
-            .header .contact {
-              font-weight: bold;
-              margin: 5px 0;
-              display: block;
-            }
-            .title-row {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-top: double 3px black;
-              padding: 8px 0;
-            }
-            .title {
-              text-align: center;
-              font-weight: bold;
-              flex-grow: 1;
-            }
-            .datetime {
-              font-size: 10pt;
-              white-space: nowrap;
-            }
-            table { 
-              width: 100%; 
-              border-collapse: collapse; 
-              margin-top: 10px;
-            }
-            th, td { 
-              padding: 4px; 
-              text-align: center;
-              border: none;
-            }
-            td:nth-child(1), /* OrderId */
-            td:nth-child(2), /* Client */
-            td:nth-child(3), /* Project Name */
-            td:nth-child(4)  /* Due Date & Time */ {
-              text-align: left;
-            }
-            th { 
-              background-color: #f2f2f2;
-              font-weight: bold;
-              text-align: center;
-              border-top: 1px solid black;
-              border-bottom: 1px solid black;
-            }
-            tr:nth-child(even) {
-              background-color: #e0e0e0;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .totals {
-              margin-top: 10px;
-              font-weight: bold;
-              display: grid;
-              grid-template-columns: repeat(11, 1fr);
-              border-bottom: double 3px black;
-            }
-            .totals .count {
-              grid-column: 2;  /* Under Client column */
-              text-align: left;
-            }
-            .totals .quantity {
-              grid-column: 5;  /* Under Quantity column */
-              text-align: center;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <img 
-              src="${ServerIP}/Images/Go Large logo 2009C2 small.jpg" 
-              alt="Go Large Logo" 
-              style="max-width: 150px; display: block; margin: 0 auto;" 
-              onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div style=\'text-align:center; font-weight:bold;\'>Go Large Logo</div>');"
-            />
-            <div class="contact">GO LARGE GRAPHICS, INC.</div>
-            <div class="contact">TEL. # 416-8882</div>
-          </div>
-          <div class="title-row">
-            <div style="width: 150px;"></div>
-            <div class="title">PRODUCTION ORDER LIST</div>
-            <div class="datetime">${new Date().toLocaleDateString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "2-digit",
-            })}    ${new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })}</div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>OrderId</th>
-                <th>Client</th>
-                <th>Project Name</th>
-                <th>Due Date & Time</th>
-                <th>Quantity</th>
-                <th>Width</th>
-                <th>Height</th>
-                <th>Unit</th>
-                <th>Material</th>
-                <th>Hrs.</th>
-                <th>Sq. Ft.</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${ordersWithDetails
-                .map((order) => {
-                  // Create main row with first detail or empty values if no details
-                  const firstDetail = order.order_details?.[0] || {};
-
-                  let rows = `
-                    <tr>
-                      <td>${order.id}</td>
-                      <td>${order.clientName || ""}</td>
-                      <td>${order.projectName || ""}</td>
-                      <td>${
-                        order.dueDate
-                          ? new Date(order.dueDate).toLocaleDateString()
-                          : ""
-                      } ${order.dueTime || ""}</td>
-                      <td>${
-                        firstDetail.quantity
-                          ? firstDetail.quantity.toLocaleString()
-                          : ""
-                      }</td>
-                      <td>${firstDetail.width || ""}</td>
-                      <td>${firstDetail.height || ""}</td>
-                      <td>${firstDetail.unit || ""}</td>
-                      <td>${firstDetail.material || ""}</td>
-                      <td>${firstDetail.printHrs || ""}</td>
-                      <td>${firstDetail.squareFeet || ""}</td>
-                    </tr>
-                  `;
-
-                  // Add remaining details with empty order info cells
-                  if (order.order_details && order.order_details.length > 1) {
-                    rows += order.order_details
-                      .slice(1)
-                      .map(
-                        (detail) => `
-                      <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td>${
-                          detail.quantity
-                            ? detail.quantity.toLocaleString()
-                            : ""
-                        }</td>
-                        <td>${detail.width || ""}</td>
-                        <td>${detail.height || ""}</td>
-                        <td>${detail.unit || ""}</td>
-                        <td>${detail.material || ""}</td>
-                        <td>${detail.printHrs || ""}</td>
-                        <td>${detail.squareFeet || ""}</td>
-                      </tr>
-                    `
-                      )
-                      .join("");
-                  }
-
-                  return rows;
-                })
-                .join("")}
-              <tr style="font-weight: bold; border-top: 1px solid black; border-bottom: double 1px black;">
-                <td></td>
-                <td style="text-align: left;">Count: ${
-                  ordersWithDetails.length
-                }</td>
-                <td></td>
-                <td style="text-align: right;">Total Quantity:</td>
-                <td>${ordersWithDetails
-                  .reduce(
-                    (total, order) =>
-                      total +
-                      (order.order_details?.reduce(
-                        (sum, detail) => sum + (detail.quantity || 0),
-                        0
-                      ) || 0),
-                    0
-                  )
-                  .toLocaleString()}</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-              </tr>
-
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-
-      const printWindow = document.createElement("iframe");
-      printWindow.style.display = "none";
-      document.body.appendChild(printWindow);
-      printWindow.contentDocument.write(printContent);
-      printWindow.contentDocument.close();
-
-      // Function to update orders
-      const updateOrders = async () => {
-        try {
-          const updateResponse = await axios.put(
-            `${ServerIP}/auth/update_orders_to_prod`,
-            {},
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-
-          if (updateResponse.data.Status) {
-            fetchOrders();
-          } else {
-            showAlert("Error", "Failed to update orders status");
-          }
-        } catch (error) {
-          console.error("Error updating orders status:", error);
-          showAlert(
-            "Error",
-            "Failed to update orders status: " + error.message
-          );
-        }
-      };
-
-      // Listen for afterprint event
-      printWindow.contentWindow.onafterprint = () => {
-        document.body.removeChild(printWindow);
-        showAlert(
-          "Confirm Update",
-          "Was the printing successful? Click OK to update orders to production status.",
-          "confirm",
-          updateOrders
-        );
-      };
-
-      printWindow.contentWindow.focus();
-      printWindow.contentWindow.print();
-
-      // Set a timeout to clean up if print dialog is cancelled
-      setTimeout(() => {
-        if (document.body.contains(printWindow)) {
-          document.body.removeChild(printWindow);
-        }
-      }, 500);
-    } catch (error) {
-      console.error("Error preparing production list:", error);
-      showAlert("Error", "Error preparing production list: " + error.message);
-    }
-  };
-
-  const generateQRCode = async (text) => {
-    try {
-      return await QRCode.toDataURL(text.toString());
+      // Store a flag in sessionStorage to indicate we're coming back from printing
+      sessionStorage.setItem("returnFromPrinting", "true");
+      navigate("/dashboard/print_production");
     } catch (err) {
-      console.error("Error generating QR code:", err);
-      return "";
+      console.error("Error fetching production orders:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.message || "Failed to fetch production orders",
+        type: "alert",
+      });
     }
   };
 
-  const handlePrintAllDR = async () => {
+  // Function to update orders to production status
+  const updateOrders = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${ServerIP}/auth/orders-details-forprod`,
+      const updateResponse = await axios.put(
+        `${ServerIP}/auth/update_orders_to_prod`,
+        {},
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
+      if (updateResponse.data.Status) {
+        fetchOrders();
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to update orders status",
+          type: "alert",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating orders status:", error);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to update orders status: " + error.message,
+        type: "alert",
+      });
+    }
+  };
+
+  // Check if returning from printing
+  useEffect(() => {
+    const returnFromPrinting = sessionStorage.getItem("returnFromPrinting");
+    if (returnFromPrinting) {
+      sessionStorage.removeItem("returnFromPrinting");
+      setAlert({
+        show: true,
+        title: "Confirm Update",
+        message:
+          "Was the printing successful? Click OK to update orders to production status.",
+        type: "confirm",
+        onConfirm: updateOrders,
+      });
+    }
+  }, []);
+
+  const handlePrintDRClick = async () => {
+    // Get orders marked for production from the API response
+    const token = localStorage.getItem("token");
+    try {
+      const response = await axios.get(
+        `${ServerIP}/auth/orders-details-forprod`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
       if (!response.data.Status) {
-        throw new Error("Failed to fetch production orders");
+        throw new Error(response.data.Error || "Failed to fetch print data");
       }
 
-      const ordersWithDetails = response.data.Result;
+      const forProdOrders = response.data.Result;
 
-      const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            @page { 
-              size: letter portrait;
-              margin: 0.5cm; 
-            }
-            @media print {
-              body { margin: 0; }
-              .page-break { page-break-after: always; }
-            }
-            body { 
-              font-family: "Times New Roman", Times, serif;
-              font-size: 12pt;
-              margin: 0;
-              padding: 15px;
-            }
-            .dr-header {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              margin-bottom: 20px;
-            }
-            .qr-section {
-              text-align: right;
-            }
-            .qr-code {
-              width: 100px;
-              height: 100px;
-            }
-            .dr-number {
-              font-size: 14pt;
-              font-weight: bold;
-            }
-            .dr-info {
-              margin-bottom: 20px;
-            }
-            .dr-info-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 10px;
-            }
-            .dr-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 20px 0;
-            }
-            .dr-table th, .dr-table td {
-              border: 1px solid black;
-              padding: 5px;
-              text-align: left;
-            }
-            .dr-table th {
-              background-color: white;
-            }
-            .signature-section {
-              margin-top: 30px;
-            }
-            .signature-line {
-              border-top: 1px solid black;
-              width: 200px;
-              margin-top: 40px;
-              margin-bottom: 5px;
-            }
-          </style>
-        </head>
-        <body>
-          ${ordersWithDetails
-            .map(
-              (order, index) => `
-            <div class="dr-page ${
-              index < ordersWithDetails.length - 1 ? "page-break" : ""
-            }">
-              <div class="dr-header">
-                <div class="dr-title">
-                  <div class="dr-number">DR No.: ${order.id}</div>
-                  <div>DR Date: ${new Date(
-                    order.dueDate
-                  ).toLocaleDateString()}</div>
-                </div>
-                <div class="qr-section">
-                  ${ReactDOMServer.renderToString(
-                    <QRCodeSVG
-                      value={order.id.toString()}
-                      size={100}
-                      level="H"
-                      includeMargin={true}
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div class="dr-info">
-                <div class="dr-info-row">
-                  <div><strong>Client Name:</strong> ${order.clientName}</div>
-                  <div><strong>Project Name:</strong> ${order.projectName}</div>
-                </div>
-                <div class="dr-info-row">
-                  <div><strong>Ordered By:</strong> ${
-                    order.orderedBy || ""
-                  }</div>
-                </div>
-              </div>
-
-              <table class="dr-table">
-                <thead>
-                  <tr>
-                    <th>QTY</th>
-                    <th>MATERIAL</th>
-                    <th>DESCRIPTION</th>
-                    <th>Width X Height</th>
-                    <th>UNIT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${order.order_details
-                    .map(
-                      (detail) => `
-                    <tr>
-                      <td>${detail.quantity}</td>
-                      <td>${detail.material}</td>
-                      <td>-</td>
-                      <td>${detail.width} X ${detail.height}</td>
-                      <td>${detail.unit}</td>
-                    </tr>
-                  `
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-
-              <div class="signature-section">
-                <div>Rec'd by:_______________________</div>
-                <div style="margin-left: 60px;">Print name and sign</div>
-                <div style="margin-left: 60px;">Date:_________________</div>
-              </div>
-
-              <div style="margin-top: 20px; font-style: italic;">
-                Page 1 of 1
-              </div>
-            </div>
-          `
-            )
-            .join("")}
-        </body>
-      </html>
-    `;
-
-      const printWindow = document.createElement("iframe");
-      printWindow.style.display = "none";
-      document.body.appendChild(printWindow);
-      printWindow.contentDocument.write(printContent);
-      printWindow.contentDocument.close();
-      printWindow.contentWindow.focus();
-      printWindow.contentWindow.print();
-      document.body.removeChild(printWindow);
-    } catch (error) {
-      console.error("Error preparing DR:", error);
+      if (forProdOrders.length === 0) {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Please mark orders for production before printing DR",
+          type: "alert",
+        });
+        return;
+      }
+      await handlePrintAllDR(forProdOrders, navigate);
+    } catch (err) {
+      console.error("Error printing DR orders:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.message || "Failed to fetch production orders",
+        type: "alert",
+      });
     }
   };
 
@@ -960,11 +574,11 @@ function Prod() {
               onKeyPress={handleOrderIdSubmit}
               style={{ width: "150px" }}
             />
-            <Button variant="save" onClick={handlePrintProduction}>
-              Production
+            <Button variant="save" onClick={handlePrintProductionClick}>
+              Print Production
             </Button>
-            <Button variant="view" onClick={handlePrintAllDR}>
-              All DR
+            <Button variant="view" onClick={handlePrintDRClick}>
+              Print DR
             </Button>
           </div>
           <input
@@ -1013,9 +627,9 @@ function Prod() {
                       checked={forProdSort !== "none"}
                       indeterminate={forProdSort === "desc"}
                     />
-                    {forProdSort === "asc"
+                    {forProdSort === "desc"
                       ? " ↑"
-                      : forProdSort === "desc"
+                      : forProdSort === "asc"
                       ? " ↓"
                       : ""}
                   </div>
@@ -1092,14 +706,6 @@ function Prod() {
                           navigate(`/dashboard/prod/view/${order.id}`)
                         }
                       />
-                      {/* <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/orders/edit/${order.id}`)
-                        }
-                      /> */}
                     </div>
                   </td>
                   <td>
@@ -1212,10 +818,12 @@ function Prod() {
         title={alert.title}
         message={alert.message}
         type={alert.type}
-        onClose={hideAlert}
+        onClose={() => setAlert({ ...alert, show: false })}
         onConfirm={() => {
-          if (alert.onConfirm) alert.onConfirm();
-          hideAlert();
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert({ ...alert, show: false });
         }}
       />
     </div>

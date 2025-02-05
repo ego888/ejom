@@ -169,6 +169,7 @@ router.get("/order/:id", (req, res) => {
   });
 });
 
+// Get orders marked for production
 router.get("/orders-details-forprod", async (req, res) => {
   try {
     const sql = `
@@ -191,6 +192,62 @@ router.get("/orders-details-forprod", async (req, res) => {
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN order_details od ON o.orderID = od.orderId
       WHERE o.forProd = 1
+      ORDER BY o.orderID ASC, od.displayOrder ASC`;
+
+    con.query(sql, (err, result) => {
+      if (err) {
+        console.log(err);
+        return res.json({ Status: false, Error: "Query Error" });
+      }
+      return res.json({ Status: true, Result: result });
+    });
+  } catch (error) {
+    return res.json({ Status: false, Error: "Query Error" + error });
+  }
+});
+
+// Update orders to set status to 'Prod' and productionDate to NOW() where forProd is 1 and status is 'Open'
+router.put("/update_orders_to_prod", (req, res) => {
+  const sql = `
+    UPDATE orders
+    SET status = 'Prod',
+        productionDate = NOW(),
+        forProd = 0
+    WHERE forProd = 1
+      AND (status = 'Open' OR status = 'Printed');
+  `;
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Update Error:", err);
+      return res.json({ Status: false, Error: "Failed to update orders" });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
+
+// Get all orders without DR number and status is Prod, Finish or Delivered
+router.get("/orders-all-DR", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        o.orderID as id,
+        o.clientId,
+        o.projectName,
+        o.dueDate,
+        o.dueTime,
+        c.clientName,
+        od.quantity,
+        od.width,
+        od.height,
+        od.unit,
+        od.material,
+        od.printHrs,
+        od.squareFeet,
+        od.displayOrder
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN order_details od ON o.orderID = od.orderId
+      WHERE !o.drnum && (o.status = 'Prod' OR o.status = 'Finish' OR o.status = 'Delivered')
       ORDER BY o.orderID ASC, od.displayOrder ASC`;
 
     con.query(sql, (err, result) => {
@@ -239,25 +296,6 @@ router.get("/orders-details-forprod", async (req, res) => {
   } catch (error) {
     return res.json({ Status: false, Error: "Query Error" + error });
   }
-});
-
-// Update orders to set status to 'Prod' and productionDate to NOW() where forProd is 1 and status is 'Open'
-router.put("/update_orders_to_prod", (req, res) => {
-  const sql = `
-    UPDATE orders
-    SET status = 'Prod',
-        productionDate = NOW(),
-        forProd = 0
-    WHERE forProd = 1
-      AND (status = 'Open' OR status = 'Printed');
-  `;
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Update Error:", err);
-      return res.json({ Status: false, Error: "Failed to update orders" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
 });
 
 // Get order details
