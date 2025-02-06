@@ -46,6 +46,8 @@ function OrderView() {
       break;
   }
 
+  const isProdView = location.pathname.includes("/prod/view");
+
   // Add ESC key handler
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -98,6 +100,28 @@ function OrderView() {
     }
   }, [id, navigate]);
 
+  // Add function to handle DR printing
+  const handlePrintDR = () => {
+    const orderInfo = {
+      orderId: data.orderId,
+      clientName: data.clientName,
+      projectName: data.projectName,
+      order_details: orderDetails
+        .filter((detail) => !detail.noPrint) // Filter out noPrint records
+        .map((detail) => ({
+          quantity: detail.quantity,
+          width: detail.width,
+          height: detail.height,
+          unit: detail.unit,
+          material: detail.material,
+          itemDescription: detail.itemDescription,
+        })),
+      deliveryInst: data.deliveryInst,
+    };
+
+    navigate("/dashboard/print_one_dr", { state: { orderInfo } });
+  };
+
   return (
     <div
       className="prod-page-background"
@@ -110,6 +134,11 @@ function OrderView() {
               <h3 className="m-0">Order #{data.orderId}</h3>
             </div>
             <div className="d-flex gap-2">
+              {isProdView && (
+                <Button variant="print" onClick={handlePrintDR}>
+                  Print DR
+                </Button>
+              )}
               <Button variant="cancel" onClick={() => navigate(-1)}>
                 Back
               </Button>

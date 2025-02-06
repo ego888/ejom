@@ -424,42 +424,8 @@ function Prod() {
     }
   };
 
-  const handlePrintDRClick = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${ServerIP}/auth/orders-all-DR`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.data.Status) {
-        throw new Error(response.data.Error || "Failed to fetch print data");
-      }
-
-      const orders = response.data.Result;
-
-      if (orders.length === 0) {
-        setAlert({
-          show: true,
-          title: "Error",
-          message: "No orders available for DR printing",
-          type: "alert",
-        });
-        return;
-      }
-
-      navigate("/dashboard/print_dr");
-    } catch (err) {
-      console.error("Error printing DR orders:", err);
-      setAlert({
-        show: true,
-        title: "Error",
-        message: err.message || "Failed to fetch DR orders",
-        type: "alert",
-      });
-    }
+  const handlePrintDRClick = () => {
+    navigate("/dashboard/print_dr");
   };
 
   const handlePrintProductionClick = async () => {

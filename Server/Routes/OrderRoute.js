@@ -266,7 +266,8 @@ router.put("/update_orders_drnum", (req, res) => {
     .map((order) => `WHEN orderID = ${order.orderID} THEN '${order.drnum}'`)
     .join(" ");
   const orderIDs = updates.map((order) => order.orderID).join(", ");
-
+  console.log("lastDRNumber", lastDRNumber);
+  console.log("orderIDs", orderIDs);
   const sqlUpdateOrders = `
     UPDATE orders
     SET drnum = CASE ${cases} END
@@ -275,8 +276,8 @@ router.put("/update_orders_drnum", (req, res) => {
 
   const sqlUpdateJomControl = `
     UPDATE jomcontrol
-    SET lastDR = ?
-    WHERE id = 1;
+    SET lastDRNumber = ${lastDRNumber}
+    WHERE controlId = 1;
   `;
 
   // Start MySQL transaction

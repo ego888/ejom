@@ -31,6 +31,7 @@ import PrintLog from "./Components/PrintLog";
 import Payment from "./Components/Payment";
 import ProdPrintProduction from "./Components/ProdPrintProduction";
 import ProdPrintDR from "./Components/ProdPrintDR";
+import ProdPrintOneDR from "./Components/ProdPrintOneDR";
 
 function App() {
   return (
@@ -58,6 +59,14 @@ function App() {
           element={
             <PrivateRoute>
               <ProdPrintDR />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard/print_one_dr"
+          element={
+            <PrivateRoute>
+              <ProdPrintOneDR />
             </PrivateRoute>
           }
         />

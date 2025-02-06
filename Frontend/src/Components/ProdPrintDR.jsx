@@ -2,41 +2,58 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ServerIP } from "../config";
-import { handleApiError } from "../utils/handleApiError";
-import { QRCodeSVG } from "qrcode.react";
+import PrintDR from "./PrintDR";
 import ModalAlert from "./UI/ModalAlert";
 
 function ProdPrintDR() {
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [ordersWithDR, setOrdersWithDR] = useState([]);
-  const [alert, setAlert] = useState({ show: false, message: "", title: "" });
+  const [orderData, setOrderData] = useState(null);
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+  });
 
-  // Fetch orders and assign DR numbers
   useEffect(() => {
-    const fetchOrdersAndAssignDR = async () => {
+    const fetchData = async () => {
       try {
-        console.log("Starting to fetch DR data...");
         const token = localStorage.getItem("token");
         if (!token) {
           throw new Error("No authentication token found");
         }
 
-        // 1. Get last DR number
-        console.log("Fetching last DR number...");
+        // Get orders without DR numbers
+        const ordersResponse = await axios.get(
+          `${ServerIP}/auth/orders-all-DR`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!ordersResponse.data.Status) {
+          throw new Error(
+            ordersResponse.data.Error || "Failed to fetch orders"
+          );
+        }
+
+        const orders = ordersResponse.data.Result;
+        if (!orders || orders.length === 0) {
+          throw new Error("No orders available for DR printing");
+        }
+
+        // Get the last DR number
         const lastDrResponse = await axios.get(
           `${ServerIP}/auth/jomcontrol/lastDR`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
             },
           }
         );
 
-        console.log("Last DR Response:", lastDrResponse.data);
         if (!lastDrResponse.data.Status) {
           throw new Error(
             lastDrResponse.data.Error || "Failed to fetch last DR number"
@@ -44,107 +61,60 @@ function ProdPrintDR() {
         }
 
         let currentDrNumber = parseInt(lastDrResponse.data.Result.lastDrNumber);
-        console.log("Current DR Number:", currentDrNumber);
 
-        // 2. Get orders without DR
-        console.log("Fetching orders...");
-        const ordersResponse = await axios.get(
-          `${ServerIP}/auth/orders-all-DR`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
+        // Prepare orders with DR numbers
+        const preparedOrders = orders.map((order) => ({
+          orderId: order.id,
+          clientName: order.clientName,
+          projectName: order.projectName,
+          drNum: ++currentDrNumber,
+          order_details: order.order_details || [
+            {
+              quantity: order.quantity || 0,
+              width: order.width || "",
+              height: order.height || "",
+              unit: order.unit || "",
+              material: order.material || "",
+              itemDescription: order.description || "",
             },
-          }
-        );
-
-        console.log("Orders Response:", ordersResponse.data);
-        if (!ordersResponse.data.Status) {
-          throw new Error(
-            ordersResponse.data.Error || "Failed to fetch DR data"
-          );
-        }
-
-        const orders = ordersResponse.data.Result;
-        console.log("Orders fetched:", orders?.length || 0);
-
-        if (!orders || orders.length === 0) {
-          console.log("No orders found");
-          navigate("/dashboard/prod");
-          return;
-        }
-
-        // 3. Assign DR numbers to orders
-        console.log("Assigning DR numbers...");
-        const ordersWithAssignedDR = orders.map((order) => {
-          currentDrNumber++;
-          return {
-            ...order,
-            drnum: currentDrNumber,
-          };
-        });
-
-        console.log("Orders with DR numbers:", ordersWithAssignedDR);
-
-        // Store orders with DR numbers for later update
-        const drUpdateData = ordersWithAssignedDR.map((order) => ({
-          orderID: order.id,
-          drnum: order.drnum,
+          ],
+          deliveryInst: order.deliveryInst || "",
         }));
-        console.log("DR Update Data:", drUpdateData);
 
-        setOrdersWithDR(drUpdateData);
-        setData(ordersWithAssignedDR);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error in fetchOrdersAndAssignDR:", err);
-        handleApiError(err, navigate);
+        setOrderData({
+          orderData: preparedOrders,
+        });
+      } catch (error) {
+        console.error("Error preparing DR print:", error);
         setAlert({
           show: true,
           title: "Error",
-          message: err.message || "Failed to fetch DR data",
+          message: error.message || "Failed to prepare orders for printing",
           type: "alert",
         });
-        navigate("/dashboard/prod");
+        // Navigate back if there's an error
+        if (error.message === "No orders available for DR printing") {
+          setTimeout(() => navigate(-1), 2000);
+        }
       }
     };
 
-    fetchOrdersAndAssignDR();
+    fetchData();
   }, [navigate]);
-
-  // Handle printing when everything is loaded
-  useEffect(() => {
-    let printTimer;
-
-    if (!loading && data) {
-      const handleAfterPrint = () => {
-        window.removeEventListener("afterprint", handleAfterPrint);
-        setShowConfirmation(true);
-      };
-
-      if (printTimer) clearTimeout(printTimer);
-      window.removeEventListener("afterprint", handleAfterPrint);
-      window.addEventListener("afterprint", handleAfterPrint);
-
-      printTimer = setTimeout(() => {
-        window.print();
-      }, 100);
-    }
-
-    return () => {
-      if (printTimer) clearTimeout(printTimer);
-      window.removeEventListener("afterprint", () => {});
-    };
-  }, [loading, data]);
 
   const handleConfirmPrint = async () => {
     try {
+      if (!orderData) return;
+
       const token = localStorage.getItem("token");
       const response = await axios.put(
         `${ServerIP}/auth/update_orders_drnum`,
-        ordersWithDR,
+        { orders: orderData.drUpdateData.orders },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
@@ -158,325 +128,32 @@ function ProdPrintDR() {
         message: "DR numbers have been successfully updated",
         type: "alert",
       });
-    } catch (err) {
+
+      // Navigate back after showing success message
+      setTimeout(() => navigate(-1), 1500);
+    } catch (error) {
       setAlert({
         show: true,
         title: "Error",
-        message: err.message || "Failed to update DR numbers",
+        message: error.message || "Failed to update DR numbers",
         type: "alert",
       });
     }
   };
 
-  const calculatePages = (details, rowsPerPage) => {
-    const totalRows = details.length;
-    // If we have 9-11 records, we need an extra page for the bottom section
-    if (totalRows >= 9 && totalRows <= 11) {
-      return 2; // Force 2 pages for 9-11 records
-    }
-    return Math.ceil(totalRows / rowsPerPage);
-  };
-
-  if (loading) {
-    return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "100vh" }}
-      >
-        <div className="text-center">
-          <div className="spinner-border text-primary mb-2" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <div>Loading DR data...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ height: "100vh" }}
-      >
-        <div className="text-center">No orders to print</div>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="dr-pages">
-        {data.map((order, orderIndex) => {
-          const rowsPerPage = 11;
-          const totalPages = calculatePages(order.order_details, rowsPerPage);
-          const needsExtraPage =
-            order.order_details.length >= 9 && order.order_details.length <= 11;
-
-          return Array.from({ length: totalPages }).map((_, pageIndex) => (
-            <div
-              key={`${order.id}-${pageIndex}`}
-              className={`dr-page ${
-                orderIndex < data.length - 1 || pageIndex < totalPages - 1
-                  ? "page-break"
-                  : ""
-              }`}
-            >
-              {pageIndex === 0 && (
-                <>
-                  <div className="title">DELIVERY RECEIPT</div>
-                  <div className="qr-code">
-                    <QRCodeSVG value={order.id.toString()} size={100} />
-                  </div>
-                  <div className="info-section">
-                    <div className="info-row">
-                      <div className="info-label text-center">DR No.:</div>
-                      <div className="info-value">{order.drnum}</div>
-                    </div>
-                    <div className="info-row">
-                      <div className="info-label text-center">Date:</div>
-                      <div className="info-value">
-                        {new Date().toLocaleDateString("en-US")}
-                      </div>
-                    </div>
-                    <div className="info-row">
-                      <div className="info-label text-center">Client:</div>
-                      <div className="info-value">{order.clientName}</div>
-                    </div>
-                    <div className="info-row">
-                      <div className="info-label text-center">
-                        Project Name:
-                      </div>
-                      <div className="info-value">{order.projectName}</div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {(!needsExtraPage || pageIndex < totalPages - 1) && (
-                <table className="dr-table">
-                  {pageIndex === 0 && (
-                    <thead>
-                      <tr>
-                        <th className="text-center">Qty</th>
-                        <th className="text-center">Size</th>
-                        <th className="text-center">Material - Description</th>
-                      </tr>
-                    </thead>
-                  )}
-                  <tbody>
-                    {order.order_details
-                      .slice(
-                        pageIndex * rowsPerPage,
-                        (pageIndex + 1) * rowsPerPage
-                      )
-                      .map((detail, idx) => (
-                        <tr key={idx}>
-                          <td className="text-center">
-                            {detail.quantity && detail.quantity !== 0
-                              ? detail.quantity
-                              : ""}
-                          </td>
-                          <td className="text-center">
-                            {detail.width || detail.height
-                              ? `${detail.width || ""} ${
-                                  detail.height ? "x " + detail.height : ""
-                                } ${detail.unit || ""}`
-                              : ""}
-                          </td>
-                          <td>{`${detail.material}${
-                            detail.itemDescription
-                              ? " - " + detail.itemDescription
-                              : ""
-                          }`}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              )}
-
-              {((needsExtraPage && pageIndex === totalPages - 1) ||
-                (!needsExtraPage && pageIndex === totalPages - 1)) && (
-                <div className="bottom-section">
-                  <div className="delivery-instructions">
-                    <div className="delivery-label">Delivery Instructions:</div>
-                    <div className="info-value">{order.deliveryInst || ""}</div>
-                  </div>
-                  <div className="signature-section">
-                    <div className="signature-block">
-                      <div className="signature-line">Received by / Date</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="page-footer">
-                <div className="jo-number">JO: {order.id}</div>
-                <div className="page-number">
-                  Page {pageIndex + 1} of {totalPages}
-                </div>
-              </div>
-            </div>
-          ));
-        })}
-      </div>
-
-      <style>
-        {`
-          @media print {
-            @page {
-              size: A5 landscape;
-              margin: 0.25in;
-            }
-            body {
-              margin: 0;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .page-break {
-              page-break-after: always;
-            }
-          }
-
-          .dr-page {
-            width: 8.3in;
-            height: 5.6in;
-            padding: 0.5in;
-            position: relative;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            page-break-after: always;
-          }
-
-          .dr-page:last-child {
-            page-break-after: auto;
-          }
-
-          .title {
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
-          }
-
-          .qr-code {
-            position: absolute;
-            top: 0.5in;
-            right: 0.5in;
-          }
-
-          .info-section {
-          }
-
-          .info-row {
-            display: flex;
-            margin-bottom: 2px;
-            font-size: 12px;
-          }
-
-          .info-label {
-            width: 120px;
-            font-weight: bold;
-            font-size: 12px;
-            padding-right: 2px;
-          }
-
-          .info-value {
-            flex: 1;
-            font-size: 12px;
-          }
-
-          .delivery-label {
-            font-weight: bold;
-            font-size: 12px;
-          }
-
-          .delivery-instructions {
-            flex: 0 0 65%;
-            padding: 5px;
-            border: 1px solid rgb(29, 29, 29);
-            border-radius: 8px;
-            min-height: 60px;
-            font-size: 12px;
-          }
-
-          .dr-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: ${(props) => (props.isFirstPage ? "0" : "20px")};
-          }
-
-          .dr-table th,
-          .dr-table td {
-            border: 1px solid black;
-            padding: 4px;
-          }
-
-          .dr-table th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-          }
-
-          .text-center {
-            text-align: center;
-          }
-
-          .bottom-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-top: 5px;
-            gap: 20px;
-            position: relative;
-          }
-
-          .signature-section {
-            flex: 0 0 30%;
-            margin-top: 10px;
-          }
-
-          .signature-block {
-            width: 100%;
-          }
-
-          .signature-line {
-            border-top: 1px solid black;
-            padding-top: 5px;
-            text-align: center;
-          }
-
-          .page-footer {
-            position: absolute;
-            bottom: 0.25in;
-            left: 0.5in;
-            right: 0.5in;
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-          }
-
-          .jo-number {
-            font-weight: bold;
-          }
-        `}
-      </style>
-
-      <ModalAlert
-        show={showConfirmation}
-        title="Print Confirmation"
-        message="Was the DR printing successful? Click OK to update DR numbers into Order records."
-        type="confirm"
-        onConfirm={handleConfirmPrint}
-        onClose={() => navigate("/dashboard/prod")}
-      />
-
+      {orderData && <PrintDR data={orderData.orderData} />}
       <ModalAlert
         show={alert.show}
         title={alert.title}
         message={alert.message}
-        type="alert"
+        type={alert.type}
         onClose={() => {
-          setAlert({ show: false });
-          navigate("/dashboard/prod");
+          setAlert((prev) => ({ ...prev, show: false }));
+          if (alert.title === "Success") {
+            navigate(-1);
+          }
         }}
       />
     </>
