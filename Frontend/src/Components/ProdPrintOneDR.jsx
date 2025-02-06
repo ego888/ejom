@@ -28,30 +28,36 @@ function ProdPrintOneDR() {
           throw new Error("No authentication token found");
         }
 
-        // Get the last DR number
-        const lastDrResponse = await axios.get(
-          `${ServerIP}/auth/jomcontrol/lastDR`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const orderInfo = location.state.orderInfo;
+        let drNumber = orderInfo.drNum;
+        console.log("DRNUMBER", drNumber);
+        // Only get new DR number if one wasn't passed
+        if (!orderInfo.drNum) {
+          // Get the last DR number
+          const lastDrResponse = await axios.get(
+            `${ServerIP}/auth/jomcontrol/lastDR`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
 
-        if (!lastDrResponse.data.Status) {
-          throw new Error("Failed to fetch last DR number");
+          if (!lastDrResponse.data.Status) {
+            throw new Error("Failed to fetch last DR number");
+          }
+
+          drNumber = parseInt(lastDrResponse.data.Result.lastDrNumber) + 1;
+        } else {
+          drNumber = orderInfo.drNum;
         }
 
-        const newDrNumber =
-          parseInt(lastDrResponse.data.Result.lastDrNumber) + 1;
-        const orderInfo = location.state.orderInfo;
-
-        // Prepare order with new DR number
+        // Prepare order with DR number
         const preparedOrder = {
           orderId: orderInfo.orderId,
           clientName: orderInfo.clientName,
           projectName: orderInfo.projectName,
-          drNum: newDrNumber,
+          drNum: drNumber,
           order_details: orderInfo.order_details,
           deliveryInst: orderInfo.deliveryInst,
         };
@@ -61,7 +67,7 @@ function ProdPrintOneDR() {
           drUpdateData: [
             {
               orderID: orderInfo.orderId,
-              drnum: newDrNumber,
+              drnum: drNumber,
             },
           ],
         });

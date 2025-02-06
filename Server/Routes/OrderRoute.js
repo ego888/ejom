@@ -268,6 +268,12 @@ router.put("/update_orders_drnum", (req, res) => {
   const orderIDs = updates.map((order) => order.orderID).join(", ");
   console.log("lastDRNumber", lastDRNumber);
   console.log("orderIDs", orderIDs);
+  const sqlSelectLastDRNumber = `
+    SELECT lastDRNumber FROM jomcontrol WHERE controlId = 1;
+  `;
+  if (lastDRNumber < sqlSelectLastDRNumber) {
+    lastDRNumber = sqlSelectLastDRNumber;
+  }
   const sqlUpdateOrders = `
     UPDATE orders
     SET drnum = CASE ${cases} END

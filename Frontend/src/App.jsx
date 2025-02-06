@@ -63,7 +63,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/print_one_dr"
+          path="/dashboard/prod_print_one_dr"
           element={
             <PrivateRoute>
               <ProdPrintOneDR />

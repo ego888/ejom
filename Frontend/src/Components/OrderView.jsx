@@ -106,6 +106,7 @@ function OrderView() {
       orderId: data.orderId,
       clientName: data.clientName,
       projectName: data.projectName,
+      drNum: data.drNum,
       order_details: orderDetails
         .filter((detail) => !detail.noPrint) // Filter out noPrint records
         .map((detail) => ({
@@ -119,7 +120,7 @@ function OrderView() {
       deliveryInst: data.deliveryInst,
     };
 
-    navigate("/dashboard/print_one_dr", { state: { orderInfo } });
+    navigate("/dashboard/prod_print_one_dr", { state: { orderInfo } });
   };
 
   return (
