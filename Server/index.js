@@ -9,6 +9,7 @@ import { UnitsRouter } from "./Routes/UnitsRoute.js";
 import { UsersRouter } from "./Routes/UsersRoute.js";
 import { MaterialRouter } from "./Routes/Material.Route.js";
 import { OrderStatusRouter } from "./Routes/OrderStatusRoute.js";
+import { JomControlRouter } from "./Routes/JomControlRoute.js";
 import { verifyUser } from "./middleware.js";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
@@ -36,6 +37,7 @@ app.use("/auth", UnitsRouter);
 app.use("/auth", UsersRouter);
 app.use("/auth", MaterialRouter);
 app.use("/auth", OrderStatusRouter);
+app.use("/auth", JomControlRouter);
 app.use("/employee", EmployeeRouter);
 app.use("/public", express.static("public"));
 

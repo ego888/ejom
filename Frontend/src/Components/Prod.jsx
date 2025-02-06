@@ -424,9 +424,47 @@ function Prod() {
     }
   };
 
-  const handlePrintProductionClick = async () => {
-    const token = localStorage.getItem("token");
+  const handlePrintDRClick = async () => {
     try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${ServerIP}/auth/orders-all-DR`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.data.Status) {
+        throw new Error(response.data.Error || "Failed to fetch print data");
+      }
+
+      const orders = response.data.Result;
+
+      if (orders.length === 0) {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "No orders available for DR printing",
+          type: "alert",
+        });
+        return;
+      }
+
+      navigate("/dashboard/print_dr");
+    } catch (err) {
+      console.error("Error printing DR orders:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.message || "Failed to fetch DR orders",
+        type: "alert",
+      });
+    }
+  };
+
+  const handlePrintProductionClick = async () => {
+    try {
+      const token = localStorage.getItem("token");
       const response = await axios.get(
         `${ServerIP}/auth/orders-details-forprod`,
         {
@@ -438,11 +476,14 @@ function Prod() {
       );
 
       if (!response.data.Status) {
-        throw new Error(response.data.Error || "Failed to fetch print data");
+        throw new Error(
+          response.data.Error || "Failed to fetch production data"
+        );
       }
 
-      const forProdOrders = response.data.Result;
-      if (forProdOrders.length === 0) {
+      const orders = response.data.Result;
+
+      if (orders.length === 0) {
         setAlert({
           show: true,
           title: "Error",
@@ -452,11 +493,12 @@ function Prod() {
         return;
       }
 
-      // Store a flag in sessionStorage to indicate we're coming back from printing
+      // Store flags in sessionStorage to indicate we're coming back from printing production
       sessionStorage.setItem("returnFromPrinting", "true");
+      sessionStorage.setItem("printType", "production");
       navigate("/dashboard/print_production");
     } catch (err) {
-      console.error("Error fetching production orders:", err);
+      console.error("Error printing production orders:", err);
       setAlert({
         show: true,
         title: "Error",
@@ -504,57 +546,21 @@ function Prod() {
     const returnFromPrinting = sessionStorage.getItem("returnFromPrinting");
     if (returnFromPrinting) {
       sessionStorage.removeItem("returnFromPrinting");
-      setAlert({
-        show: true,
-        title: "Confirm Update",
-        message:
-          "Was the printing successful? Click OK to update orders to production status.",
-        type: "confirm",
-        onConfirm: updateOrders,
-      });
-    }
-  }, []);
+      const printType = sessionStorage.getItem("printType");
+      sessionStorage.removeItem("printType");
 
-  const handlePrintDRClick = async () => {
-    // Get orders marked for production from the API response
-    const token = localStorage.getItem("token");
-    try {
-      const response = await axios.get(`${ServerIP}/auth/orders-all-DR`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.data.Status) {
-        throw new Error(response.data.Error || "Failed to fetch print data");
-      }
-
-      const orders = response.data.Result;
-
-      if (orders.length === 0) {
+      if (printType === "production") {
         setAlert({
           show: true,
-          title: "Error",
-          message: "No orders available for DR printing",
-          type: "alert",
+          title: "Confirm Update",
+          message:
+            "Was the printing successful? Click OK to update orders to production status.",
+          type: "confirm",
+          onConfirm: updateOrders,
         });
-        return;
       }
-
-      // Store a flag in sessionStorage to indicate we're coming back from printing
-      sessionStorage.setItem("returnFromPrinting", "true");
-      navigate("/dashboard/print_dr");
-    } catch (err) {
-      console.error("Error printing DR orders:", err);
-      setAlert({
-        show: true,
-        title: "Error",
-        message: err.message || "Failed to fetch DR orders",
-        type: "alert",
-      });
     }
-  };
+  }, []);
 
   return (
     <div className="prod-theme">

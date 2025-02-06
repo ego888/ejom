@@ -4,55 +4,122 @@ import axios from "axios";
 import { ServerIP } from "../config";
 import { handleApiError } from "../utils/handleApiError";
 import { QRCodeSVG } from "qrcode.react";
+import ModalAlert from "./UI/ModalAlert";
 
 function ProdPrintDR() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [ordersWithDR, setOrdersWithDR] = useState([]);
+  const [alert, setAlert] = useState({ show: false, message: "", title: "" });
 
-  // Fetch orders without DR
+  // Fetch orders and assign DR numbers
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    axios
-      .get(`${ServerIP}/auth/orders-all-DR`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
-      .then((response) => {
-        if (!response.data.Status) {
-          throw new Error(response.data.Error || "Failed to fetch DR data");
+    const fetchOrdersAndAssignDR = async () => {
+      try {
+        console.log("Starting to fetch DR data...");
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No authentication token found");
         }
 
-        const orders = response.data.Result;
-        if (orders.length === 0) {
+        // 1. Get last DR number
+        console.log("Fetching last DR number...");
+        const lastDrResponse = await axios.get(
+          `${ServerIP}/auth/jomcontrol/lastDR`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("Last DR Response:", lastDrResponse.data);
+        if (!lastDrResponse.data.Status) {
+          throw new Error(
+            lastDrResponse.data.Error || "Failed to fetch last DR number"
+          );
+        }
+
+        let currentDrNumber = parseInt(lastDrResponse.data.Result.lastDrNumber);
+        console.log("Current DR Number:", currentDrNumber);
+
+        // 2. Get orders without DR
+        console.log("Fetching orders...");
+        const ordersResponse = await axios.get(
+          `${ServerIP}/auth/orders-all-DR`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("Orders Response:", ordersResponse.data);
+        if (!ordersResponse.data.Status) {
+          throw new Error(
+            ordersResponse.data.Error || "Failed to fetch DR data"
+          );
+        }
+
+        const orders = ordersResponse.data.Result;
+        console.log("Orders fetched:", orders?.length || 0);
+
+        if (!orders || orders.length === 0) {
+          console.log("No orders found");
           navigate("/dashboard/prod");
           return;
         }
 
-        setData(orders);
+        // 3. Assign DR numbers to orders
+        console.log("Assigning DR numbers...");
+        const ordersWithAssignedDR = orders.map((order) => {
+          currentDrNumber++;
+          return {
+            ...order,
+            drnum: currentDrNumber,
+          };
+        });
+
+        console.log("Orders with DR numbers:", ordersWithAssignedDR);
+
+        // Store orders with DR numbers for later update
+        const drUpdateData = ordersWithAssignedDR.map((order) => ({
+          orderID: order.id,
+          drnum: order.drnum,
+        }));
+        console.log("DR Update Data:", drUpdateData);
+
+        setOrdersWithDR(drUpdateData);
+        setData(ordersWithAssignedDR);
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
+        console.error("Error in fetchOrdersAndAssignDR:", err);
         handleApiError(err, navigate);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: err.message || "Failed to fetch DR data",
+          type: "alert",
+        });
         navigate("/dashboard/prod");
-      });
+      }
+    };
+
+    fetchOrdersAndAssignDR();
   }, [navigate]);
 
   // Handle printing when everything is loaded
   useEffect(() => {
     let printTimer;
-    let navigationTimer;
 
     if (!loading && data) {
       const handleAfterPrint = () => {
         window.removeEventListener("afterprint", handleAfterPrint);
-        if (navigationTimer) clearTimeout(navigationTimer);
-        navigationTimer = setTimeout(() => {
-          navigate("/dashboard/prod");
-        }, 100);
+        setShowConfirmation(true);
       };
 
       if (printTimer) clearTimeout(printTimer);
@@ -66,10 +133,40 @@ function ProdPrintDR() {
 
     return () => {
       if (printTimer) clearTimeout(printTimer);
-      if (navigationTimer) clearTimeout(navigationTimer);
       window.removeEventListener("afterprint", () => {});
     };
-  }, [loading, data, navigate]);
+  }, [loading, data]);
+
+  const handleConfirmPrint = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${ServerIP}/auth/update_orders_drnum`,
+        ordersWithDR,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.data.Status) {
+        throw new Error(response.data.Error || "Failed to update DR numbers");
+      }
+
+      setAlert({
+        show: true,
+        title: "Success",
+        message: "DR numbers have been successfully updated",
+        type: "alert",
+      });
+    } catch (err) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.message || "Failed to update DR numbers",
+        type: "alert",
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -99,84 +196,91 @@ function ProdPrintDR() {
   }
 
   return (
-    <div className="dr-pages">
-      {data.map((order, index) => (
-        <div
-          key={order.id}
-          className={`dr-page ${index < data.length - 1 ? "page-break" : ""}`}
-        >
-          <div className="title">DELIVERY RECEIPT</div>
-          <div className="qr-code">
-            <QRCodeSVG value={order.id.toString()} size={100} />
-          </div>
-          <div className="info-section">
-            <div className="info-row">
-              <div className="info-label text-center">DR No.:</div>
-              <div className="info-value">{order.id}</div>
+    <>
+      <div className="dr-pages">
+        {data.map((order, index) => (
+          <div
+            key={order.id}
+            className={`dr-page ${index < data.length - 1 ? "page-break" : ""}`}
+          >
+            <div className="title">DELIVERY RECEIPT</div>
+            <div className="qr-code">
+              <QRCodeSVG value={order.id.toString()} size={100} />
             </div>
-            <div className="info-row">
-              <div className="info-label text-center">Date:</div>
-              <div className="info-value">
-                {new Date().toLocaleDateString("en-US")}
+            <div className="info-section">
+              <div className="info-row">
+                <div className="info-label text-center">DR No.:</div>
+                <div className="info-value">{order.drnum}</div>
+              </div>
+              <div className="info-row">
+                <div className="info-label text-center">Date:</div>
+                <div className="info-value">
+                  {new Date().toLocaleDateString("en-US")}
+                </div>
+              </div>
+              <div className="info-row">
+                <div className="info-label text-center">Client:</div>
+                <div className="info-value">{order.clientName}</div>
+              </div>
+              <div className="info-row">
+                <div className="info-label text-center">Project Name:</div>
+                <div className="info-value">{order.projectName}</div>
               </div>
             </div>
-            <div className="info-row">
-              <div className="info-label text-center">Client:</div>
-              <div className="info-value">{order.clientName}</div>
-            </div>
-            <div className="info-row">
-              <div className="info-label text-center">Project Name:</div>
-              <div className="info-value">{order.projectName}</div>
-            </div>
-          </div>
-          <table className="dr-table">
-            <thead>
-              <tr>
-                <th className="text-center">Qty</th>
-                <th className="text-center">Size</th>
-                <th className="text-center">Material - Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.order_details.map((detail, idx) => (
-                <tr key={idx}>
-                  <td className="text-center">
-                    {detail.quantity && detail.quantity !== 0
-                      ? detail.quantity
-                      : ""}
-                  </td>
-                  <td className="text-center">
-                    {detail.width || detail.height
-                      ? `${detail.width || ""} ${
-                          detail.height ? "x " + detail.height : ""
-                        } ${detail.unit || ""}`
-                      : ""}
-                  </td>
-                  <td>{`${detail.material}${
-                    detail.itemDescription ? " - " + detail.itemDescription : ""
-                  }`}</td>
+            <table className="dr-table">
+              <thead>
+                <tr>
+                  <th className="text-center">Qty</th>
+                  <th className="text-center">Size</th>
+                  <th className="text-center">Material - Description</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {order.order_details.map((detail, idx) => (
+                  <tr key={idx}>
+                    <td className="text-center">
+                      {detail.quantity && detail.quantity !== 0
+                        ? detail.quantity
+                        : ""}
+                    </td>
+                    <td className="text-center">
+                      {detail.width || detail.height
+                        ? `${detail.width || ""} ${
+                            detail.height ? "x " + detail.height : ""
+                          } ${detail.unit || ""}`
+                        : ""}
+                    </td>
+                    <td>{`${detail.material}${
+                      detail.itemDescription
+                        ? " - " + detail.itemDescription
+                        : ""
+                    }`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          <div className="bottom-section">
-            <div className="delivery-instructions">
-              <div className="delivery-label">Delivery Instructions:</div>
-              <div className="info-value">{order.deliveryInst || ""}</div>
+            <div className="bottom-section">
+              <div className="delivery-instructions">
+                <div className="delivery-label">Delivery Instructions:</div>
+                <div className="info-value">{order.deliveryInst || ""}</div>
+              </div>
+              <div className="signature-section">
+                <div className="signature-block">
+                  <div className="signature-line">Received by / Date</div>
+                </div>
+              </div>
             </div>
-            <div className="signature-section">
-              <div className="signature-block">
-                <div className="signature-line">Received by / Date</div>
+
+            <div className="page-footer">
+              <div className="jo-number">JO: {order.id}</div>
+              <div className="page-number">
+                Page {index + 1} of {data.length}
               </div>
             </div>
           </div>
-
-          <div className="page-number">
-            Page {index + 1} of {data.length}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       <style>
         {`
@@ -226,18 +330,34 @@ function ProdPrintDR() {
 
           .info-row {
             display: flex;
+            margin-bottom: 2px;
+            font-size: 12px;
           }
 
           .info-label {
             width: 120px;
             font-weight: bold;
+            font-size: 12px;
+            padding-right: 2px;
+          }
+
+          .info-value {
+            flex: 1;
+            font-size: 12px;
           }
 
           .delivery-label {
             font-weight: bold;
+            font-size: 12px;
           }
-          .info-value {
-            flex: 1;
+
+          .delivery-instructions {
+            flex: 0 0 65%;
+            padding: 5px;
+            border: 1px solid rgb(29, 29, 29);
+            border-radius: 8px;
+            min-height: 60px;
+            font-size: 12px;
           }
 
           .dr-table {
@@ -269,18 +389,6 @@ function ProdPrintDR() {
             position: relative;
           }
 
-          .delivery-instructions {
-            flex: 0 0 65%;
-            padding: 5px;
-            border: 1px solid rgb(29, 29, 29);
-            border-radius: 8px;
-            min-height: 60px;
-          }
-
-          .delivery-instructions .info-label {
-            margin-bottom: 5px;
-          }
-
           .signature-section {
             flex: 0 0 30%;
             margin-top: 10px;
@@ -296,15 +404,42 @@ function ProdPrintDR() {
             text-align: center;
           }
 
-          .page-number {
+          .page-footer {
             position: absolute;
             bottom: 0.25in;
+            left: 0.5in;
             right: 0.5in;
+            display: flex;
+            justify-content: space-between;
             font-size: 10px;
+          }
+
+          .jo-number {
+            font-weight: bold;
           }
         `}
       </style>
-    </div>
+
+      <ModalAlert
+        show={showConfirmation}
+        title="Print Confirmation"
+        message="Was the DR printing successful? Click OK to update DR numbers into Order records."
+        type="confirm"
+        onConfirm={handleConfirmPrint}
+        onClose={() => navigate("/dashboard/prod")}
+      />
+
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type="alert"
+        onClose={() => {
+          setAlert({ show: false });
+          navigate("/dashboard/prod");
+        }}
+      />
+    </>
   );
 }
 
