@@ -168,6 +168,15 @@ function ProdPrintDR() {
     }
   };
 
+  const calculatePages = (details, rowsPerPage) => {
+    const totalRows = details.length;
+    // If we have 9-11 records, we need an extra page for the bottom section
+    if (totalRows >= 9 && totalRows <= 11) {
+      return 2; // Force 2 pages for 9-11 records
+    }
+    return Math.ceil(totalRows / rowsPerPage);
+  };
+
   if (loading) {
     return (
       <div
@@ -198,88 +207,118 @@ function ProdPrintDR() {
   return (
     <>
       <div className="dr-pages">
-        {data.map((order, index) => (
-          <div
-            key={order.id}
-            className={`dr-page ${index < data.length - 1 ? "page-break" : ""}`}
-          >
-            <div className="title">DELIVERY RECEIPT</div>
-            <div className="qr-code">
-              <QRCodeSVG value={order.id.toString()} size={100} />
-            </div>
-            <div className="info-section">
-              <div className="info-row">
-                <div className="info-label text-center">DR No.:</div>
-                <div className="info-value">{order.drnum}</div>
-              </div>
-              <div className="info-row">
-                <div className="info-label text-center">Date:</div>
-                <div className="info-value">
-                  {new Date().toLocaleDateString("en-US")}
+        {data.map((order, orderIndex) => {
+          const rowsPerPage = 11;
+          const totalPages = calculatePages(order.order_details, rowsPerPage);
+          const needsExtraPage =
+            order.order_details.length >= 9 && order.order_details.length <= 11;
+
+          return Array.from({ length: totalPages }).map((_, pageIndex) => (
+            <div
+              key={`${order.id}-${pageIndex}`}
+              className={`dr-page ${
+                orderIndex < data.length - 1 || pageIndex < totalPages - 1
+                  ? "page-break"
+                  : ""
+              }`}
+            >
+              {pageIndex === 0 && (
+                <>
+                  <div className="title">DELIVERY RECEIPT</div>
+                  <div className="qr-code">
+                    <QRCodeSVG value={order.id.toString()} size={100} />
+                  </div>
+                  <div className="info-section">
+                    <div className="info-row">
+                      <div className="info-label text-center">DR No.:</div>
+                      <div className="info-value">{order.drnum}</div>
+                    </div>
+                    <div className="info-row">
+                      <div className="info-label text-center">Date:</div>
+                      <div className="info-value">
+                        {new Date().toLocaleDateString("en-US")}
+                      </div>
+                    </div>
+                    <div className="info-row">
+                      <div className="info-label text-center">Client:</div>
+                      <div className="info-value">{order.clientName}</div>
+                    </div>
+                    <div className="info-row">
+                      <div className="info-label text-center">
+                        Project Name:
+                      </div>
+                      <div className="info-value">{order.projectName}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {(!needsExtraPage || pageIndex < totalPages - 1) && (
+                <table className="dr-table">
+                  {pageIndex === 0 && (
+                    <thead>
+                      <tr>
+                        <th className="text-center">Qty</th>
+                        <th className="text-center">Size</th>
+                        <th className="text-center">Material - Description</th>
+                      </tr>
+                    </thead>
+                  )}
+                  <tbody>
+                    {order.order_details
+                      .slice(
+                        pageIndex * rowsPerPage,
+                        (pageIndex + 1) * rowsPerPage
+                      )
+                      .map((detail, idx) => (
+                        <tr key={idx}>
+                          <td className="text-center">
+                            {detail.quantity && detail.quantity !== 0
+                              ? detail.quantity
+                              : ""}
+                          </td>
+                          <td className="text-center">
+                            {detail.width || detail.height
+                              ? `${detail.width || ""} ${
+                                  detail.height ? "x " + detail.height : ""
+                                } ${detail.unit || ""}`
+                              : ""}
+                          </td>
+                          <td>{`${detail.material}${
+                            detail.itemDescription
+                              ? " - " + detail.itemDescription
+                              : ""
+                          }`}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              )}
+
+              {((needsExtraPage && pageIndex === totalPages - 1) ||
+                (!needsExtraPage && pageIndex === totalPages - 1)) && (
+                <div className="bottom-section">
+                  <div className="delivery-instructions">
+                    <div className="delivery-label">Delivery Instructions:</div>
+                    <div className="info-value">{order.deliveryInst || ""}</div>
+                  </div>
+                  <div className="signature-section">
+                    <div className="signature-block">
+                      <div className="signature-line">Received by / Date</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="page-footer">
+                <div className="jo-number">JO: {order.id}</div>
+                <div className="page-number">
+                  Page {pageIndex + 1} of {totalPages}
                 </div>
               </div>
-              <div className="info-row">
-                <div className="info-label text-center">Client:</div>
-                <div className="info-value">{order.clientName}</div>
-              </div>
-              <div className="info-row">
-                <div className="info-label text-center">Project Name:</div>
-                <div className="info-value">{order.projectName}</div>
-              </div>
             </div>
-            <table className="dr-table">
-              <thead>
-                <tr>
-                  <th className="text-center">Qty</th>
-                  <th className="text-center">Size</th>
-                  <th className="text-center">Material - Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.order_details.map((detail, idx) => (
-                  <tr key={idx}>
-                    <td className="text-center">
-                      {detail.quantity && detail.quantity !== 0
-                        ? detail.quantity
-                        : ""}
-                    </td>
-                    <td className="text-center">
-                      {detail.width || detail.height
-                        ? `${detail.width || ""} ${
-                            detail.height ? "x " + detail.height : ""
-                          } ${detail.unit || ""}`
-                        : ""}
-                    </td>
-                    <td>{`${detail.material}${
-                      detail.itemDescription
-                        ? " - " + detail.itemDescription
-                        : ""
-                    }`}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="bottom-section">
-              <div className="delivery-instructions">
-                <div className="delivery-label">Delivery Instructions:</div>
-                <div className="info-value">{order.deliveryInst || ""}</div>
-              </div>
-              <div className="signature-section">
-                <div className="signature-block">
-                  <div className="signature-line">Received by / Date</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="page-footer">
-              <div className="jo-number">JO: {order.id}</div>
-              <div className="page-number">
-                Page {index + 1} of {data.length}
-              </div>
-            </div>
-          </div>
-        ))}
+          ));
+        })}
       </div>
 
       <style>
@@ -363,6 +402,7 @@ function ProdPrintDR() {
           .dr-table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: ${(props) => (props.isFirstPage ? "0" : "20px")};
           }
 
           .dr-table th,
