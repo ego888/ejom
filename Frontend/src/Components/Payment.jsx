@@ -398,9 +398,16 @@ function Prod() {
                 </th>
                 <th>Project Name</th>
                 <th>Ordered By</th>
-                {/* <th>Order Date</th> */}
-                <th>Due Date</th>
-                <th>Due Time</th>
+                <th>Order Ref</th>
+                <th
+                  onClick={() => handleSort("salesName")}
+                  style={{
+                    cursor: "pointer",
+                    color: hasSalesFilter ? "#0d6efd" : "inherit",
+                  }}
+                >
+                  Sales {getSortIndicator("salesName")}
+                </th>
                 <th
                   onClick={() => handleSort("status")}
                   style={{ cursor: "pointer" }}
@@ -420,24 +427,17 @@ function Prod() {
                   INV# {getSortIndicator("invnum")}
                 </th>
                 <th>Grand Total</th>
+                <th>Amount Paid</th>
+                <th>Payment</th>
+                <th>WTax</th>
+                <th>Balance</th>
                 <th
                   onClick={() => handleSort("ornum")}
                   style={{ cursor: "pointer" }}
                 >
                   OR# {getSortIndicator("ornum")}
                 </th>
-                <th>Amount Paid</th>
                 <th>Date Paid</th>
-                <th
-                  onClick={() => handleSort("salesName")}
-                  style={{
-                    cursor: "pointer",
-                    color: hasSalesFilter ? "#0d6efd" : "inherit",
-                  }}
-                >
-                  Sales {getSortIndicator("salesName")}
-                </th>
-                <th>Order Ref</th>
               </tr>
             </thead>
             <tbody>
@@ -453,14 +453,6 @@ function Prod() {
                           navigate(`/dashboard/payment/view/${order.id}`)
                         }
                       />
-                      {/* <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/orders/edit/${order.id}`)
-                        }
-                      /> */}
                     </div>
                   </td>
                   <td>{order.id}</td>
@@ -477,17 +469,18 @@ function Prod() {
                   </td>
                   <td>{order.projectName}</td>
                   <td>{order.orderedBy}</td>
-                  {/* <td>
-                    {order.orderDate
-                      ? new Date(order.orderDate).toLocaleDateString()
-                      : ""}
-                  </td> */}
-                  <td>
-                    {order.dueDate
-                      ? new Date(order.dueDate).toLocaleDateString()
-                      : ""}
+                  <td>{order.orderReference}</td>
+                  <td
+                    className="sales-cell"
+                    onClick={(e) => {
+                      if (salesFilterRef.current) {
+                        salesFilterRef.current.toggleFilterMenu(e);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {order.salesName}
                   </td>
-                  <td>{order.dueTime || ""}</td>
                   <td>
                     <span className={`status-badge ${order.status}`}>
                       {order.status}
@@ -500,29 +493,28 @@ function Prod() {
                       ? `₱${order.grandTotal.toLocaleString()}`
                       : ""}
                   </td>
-                  <td>{order.ornum || ""}</td>
                   <td>
                     {order.amountPaid
                       ? `₱${order.amountPaid.toLocaleString()}`
                       : ""}
                   </td>
                   <td>
+                    {order.payment ? `₱${order.payment.toLocaleString()}` : ""}
+                  </td>
+                  <td>{order.wtax ? `₱${order.wtax.toLocaleString()}` : ""}</td>
+                  <td>
+                    {order.grandTotal && order.amountPaid
+                      ? `₱${(
+                          order.grandTotal - order.amountPaid
+                        ).toLocaleString()}`
+                      : ""}
+                  </td>
+                  <td>{order.ornum || ""}</td>
+                  <td>
                     {order.datePaid
                       ? new Date(order.datePaid).toLocaleDateString()
                       : ""}
                   </td>
-                  <td
-                    className="sales-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.salesName}
-                  </td>
-                  <td>{order.orderReference}</td>
                 </tr>
               ))}
             </tbody>
