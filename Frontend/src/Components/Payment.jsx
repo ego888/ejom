@@ -488,7 +488,7 @@ function Prod() {
                   </td>
                   <td>{order.drnum || ""}</td>
                   <td>{order.invnum || ""}</td>
-                  <td>
+                  <td className="number_right">
                     {order.grandTotal
                       ? `₱${order.grandTotal.toLocaleString()}`
                       : ""}
@@ -502,7 +502,7 @@ function Prod() {
                     {order.payment ? `₱${order.payment.toLocaleString()}` : ""}
                   </td>
                   <td>{order.wtax ? `₱${order.wtax.toLocaleString()}` : ""}</td>
-                  <td>
+                  <td className="number_right">
                     {order.grandTotal && order.amountPaid
                       ? `₱${(
                           order.grandTotal - order.amountPaid

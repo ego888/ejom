@@ -37,3 +37,7 @@ ul li :hover {
   height: 300px;
   border-radius: 50%;
 }
+
+.number_right {
+  text-align: right;
+}

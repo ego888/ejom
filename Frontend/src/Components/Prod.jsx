@@ -736,7 +736,7 @@ function Prod() {
                   </td>
                   <td>{order.drnum || ""}</td>
                   <td>{order.invnum || ""}</td>
-                  <td>
+                  <td className="number_right">
                     {order.grandTotal
                       ? `₱${order.grandTotal.toLocaleString()}`
                       : ""}

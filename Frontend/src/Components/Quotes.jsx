@@ -410,7 +410,7 @@ function Quotes() {
                       {quote.status}
                     </span>
                   </td>
-                  <td>
+                  <td className="number_right">
                     {quote.grandTotal
                       ? `₱${quote.grandTotal.toLocaleString()}`
                       : ""}
