@@ -31,6 +31,7 @@ function ProdPrintOneDR() {
         const orderInfo = location.state.orderInfo;
         let drNumber = orderInfo.drNum;
         console.log("DRNUMBER", drNumber);
+        console.log("orderInfo", orderInfo);
         // Only get new DR number if one wasn't passed
         if (!orderInfo.drNum) {
           // Get the last DR number
@@ -52,15 +53,25 @@ function ProdPrintOneDR() {
           drNumber = orderInfo.drNum;
         }
 
+        // Check if drDate is empty and assign today's date if it is
+        if (!orderInfo.drDate) {
+          orderInfo.drDate = new Date().toISOString().split("T")[0];
+        }
+
+        console.log("orderInfo DR Date", orderInfo);
+
         // Prepare order with DR number
         const preparedOrder = {
           orderId: orderInfo.orderId,
           clientName: orderInfo.clientName,
           projectName: orderInfo.projectName,
+          drDate: orderInfo.drDate,
           drNum: drNumber,
-          order_details: orderInfo.order_details,
           deliveryInst: orderInfo.deliveryInst,
+          order_details: orderInfo.order_details,
         };
+
+        console.log("preparedOrder", preparedOrder);
 
         setOrderData({
           orderData: [preparedOrder],
@@ -68,6 +79,7 @@ function ProdPrintOneDR() {
             {
               orderID: orderInfo.orderId,
               drnum: drNumber,
+              drDate: orderInfo.drDate,
             },
           ],
         });
@@ -114,9 +126,11 @@ function ProdPrintOneDR() {
 
   return (
     <>
-      {orderData && (
-        <PrintDR data={orderData.orderData} onAfterPrint={handleAfterPrint} />
-      )}
+      {orderData &&
+        (console.log("orderData", orderData),
+        (
+          <PrintDR data={orderData.orderData} onAfterPrint={handleAfterPrint} />
+        ))}
       <ModalAlert
         show={alert.show}
         title={alert.title}

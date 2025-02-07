@@ -152,6 +152,12 @@ router.get("/order/:id", (req, res) => {
       DATE_FORMAT(o.orderDate, '%Y-%m-%d') as orderDate,
       DATE_FORMAT(o.dueDate, '%Y-%m-%d') as dueDate,
       DATE_FORMAT(o.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited,
+      DATE_FORMAT(o.drDate, '%Y-%m-%d') as drDate,
+      DATE_FORMAT(o.productionDate, '%Y-%m-%d %H:%i:%s') as productionDate,
+      DATE_FORMAT(o.deliveryDate, '%Y-%m-%d %H:%i:%s') as deliveryDate,
+      DATE_FORMAT(o.datePaid, '%Y-%m-%d %H:%i:%s') as datePaid,
+      DATE_FORMAT(o.billDate, '%Y-%m-%d %H:%i:%s') as billDate,
+      DATE_FORMAT(o.readyDate, '%Y-%m-%d %H:%i:%s') as readyDate,
       c.clientName,
       e.name as preparedByName,
       e2.name as graphicsByName
@@ -255,7 +261,7 @@ router.put("/update_orders_to_prod", (req, res) => {
 
 // Update orders with DR number, update jomcontrol with lastDR number, with transaction rollback feature.
 router.put("/update_orders_drnum", (req, res) => {
-  const updates = req.body; // Expecting an array of { orderID, drnum }
+  const updates = req.body; // Expecting an array of { orderID, drnum, drDate }
 
   if (!Array.isArray(updates) || updates.length === 0) {
     return res.json({ Status: false, Error: "Invalid input data" });
@@ -265,66 +271,84 @@ router.put("/update_orders_drnum", (req, res) => {
   const cases = updates
     .map((order) => `WHEN orderID = ${order.orderID} THEN '${order.drnum}'`)
     .join(" ");
+  const dateCases = updates
+    .map((order) => `WHEN orderID = ${order.orderID} THEN '${order.drDate}'`)
+    .join(" ");
   const orderIDs = updates.map((order) => order.orderID).join(", ");
   console.log("lastDRNumber", lastDRNumber);
   console.log("orderIDs", orderIDs);
+
+  // First get the current lastDRNumber from jomcontrol
   const sqlSelectLastDRNumber = `
     SELECT lastDRNumber FROM jomcontrol WHERE controlId = 1;
   `;
-  if (lastDRNumber < sqlSelectLastDRNumber) {
-    lastDRNumber = sqlSelectLastDRNumber;
-  }
-  const sqlUpdateOrders = `
-    UPDATE orders
-    SET drnum = CASE ${cases} END
-    WHERE orderID IN (${orderIDs});
-  `;
 
-  const sqlUpdateJomControl = `
-    UPDATE jomcontrol
-    SET lastDRNumber = ${lastDRNumber}
-    WHERE controlId = 1;
-  `;
-
-  // Start MySQL transaction
-  con.beginTransaction((err) => {
+  con.query(sqlSelectLastDRNumber, (err, result) => {
     if (err) {
-      console.error("Transaction Error:", err);
-      return res.json({ Status: false, Error: "Failed to start transaction" });
+      console.error("Error getting lastDRNumber:", err);
+      return res.json({ Status: false, Error: "Failed to get lastDRNumber" });
     }
 
-    // 1️⃣ Step 1: Update `orders` table
-    con.query(sqlUpdateOrders, (err, result) => {
+    let currentLastDRNumber = result[0].lastDRNumber;
+    let finalDRNumber = Math.max(lastDRNumber, currentLastDRNumber);
+
+    console.log("dateCases", dateCases);
+    const sqlUpdateOrders = `
+      UPDATE orders
+      SET drnum = CASE ${cases} END,
+          drDate = CASE ${dateCases} END
+      WHERE orderID IN (${orderIDs});
+    `;
+
+    const sqlUpdateJomControl = `
+      UPDATE jomcontrol
+      SET lastDRNumber = ${finalDRNumber}
+      WHERE controlId = 1;
+    `;
+
+    // Start MySQL transaction
+    con.beginTransaction((err) => {
       if (err) {
-        console.error("Update Orders Error:", err);
-        return con.rollback(() => {
-          res.json({ Status: false, Error: "Failed to update orders" });
+        console.error("Transaction Error:", err);
+        return res.json({
+          Status: false,
+          Error: "Failed to start transaction",
         });
       }
 
-      // 2️⃣ Step 2: Update `jomcontrol` table with last DR number
-      con.query(sqlUpdateJomControl, [lastDRNumber], (err, result) => {
+      // 1️⃣ Step 1: Update `orders` table
+      con.query(sqlUpdateOrders, (err, result) => {
         if (err) {
-          console.error("Update JomControl Error:", err);
+          console.error("Update Orders Error:", err);
           return con.rollback(() => {
-            res.json({ Status: false, Error: "Failed to update jomcontrol" });
+            res.json({ Status: false, Error: "Failed to update orders" });
           });
         }
 
-        // 3️⃣ Step 3: If both updates succeed, commit the transaction
-        con.commit((err) => {
+        // 2️⃣ Step 2: Update `jomcontrol` table with last DR number
+        con.query(sqlUpdateJomControl, [finalDRNumber], (err, result) => {
           if (err) {
-            console.error("Commit Error:", err);
+            console.error("Update JomControl Error:", err);
             return con.rollback(() => {
-              res.json({
-                Status: false,
-                Error: "Failed to commit transaction",
-              });
+              res.json({ Status: false, Error: "Failed to update jomcontrol" });
             });
           }
-          res.json({
-            Status: true,
-            Message: "Orders and JomControl updated successfully",
+
+          // 3️⃣ Step 3: If both updates succeed, commit the transaction
+          con.commit((err) => {
+            if (err) {
+              console.error("Commit Error:", err);
+              return con.rollback(() => {
+                res.json({
+                  Status: false,
+                  Error: "Failed to commit transaction",
+                });
+              });
+            }
+            res.json({
+              Status: true,
+              Message: "Orders and JomControl updated successfully",
+            });
           });
         });
       });
@@ -343,6 +367,7 @@ router.get("/orders-all-DR", async (req, res) => {
         c.clientName,
         o.deliveryInst,
         o.drnum,
+        o.drDate,
         od.quantity,
         od.width,
         od.height,
@@ -379,6 +404,7 @@ router.get("/orders-all-DR", async (req, res) => {
             clientName: row.clientName,
             deliveryInst: row.deliveryInst,
             drnum: row.drnum,
+            drDate: row.drDate,
             order_details: [],
           });
         }

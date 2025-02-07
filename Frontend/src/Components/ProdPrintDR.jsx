@@ -61,26 +61,35 @@ function ProdPrintDR() {
         }
 
         let currentDrNumber = parseInt(lastDrResponse.data.Result.lastDrNumber);
+        // Check if drDate is empty and assign today's date if it is
 
+        console.log("orders", orders);
         // Prepare orders with DR numbers
-        const preparedOrders = orders.map((order) => ({
-          orderId: order.id,
-          clientName: order.clientName,
-          projectName: order.projectName,
-          drNum: ++currentDrNumber,
-          order_details: order.order_details || [
-            {
-              quantity: order.quantity || 0,
-              width: order.width || "",
-              height: order.height || "",
-              unit: order.unit || "",
-              material: order.material || "",
-              itemDescription: order.description || "",
-            },
-          ],
-          deliveryInst: order.deliveryInst || "",
-        }));
+        const preparedOrders = orders.map((order) => {
+          // Check if drDate is empty for each individual order
+          const drDate = order.drDate || new Date().toISOString().split("T")[0];
 
+          return {
+            orderId: order.id,
+            clientName: order.clientName,
+            projectName: order.projectName,
+            drDate: drDate,
+            drNum: ++currentDrNumber,
+            order_details: order.order_details || [
+              {
+                quantity: order.quantity || 0,
+                width: order.width || "",
+                height: order.height || "",
+                unit: order.unit || "",
+                material: order.material || "",
+                itemDescription: order.description || "",
+              },
+            ],
+            deliveryInst: order.deliveryInst || "",
+          };
+        });
+
+        console.log("preparedOrders", preparedOrders);
         setOrderData({
           orderData: preparedOrders,
         });

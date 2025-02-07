@@ -16,7 +16,7 @@ import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
 import { QRCodeSVG } from "qrcode.react";
 import ModalAlert from "./UI/ModalAlert";
 //import { handlePrintProduction } from "./ProdPrintProduction";
-import { handlePrintAllDR } from "./ProdPrintAllDR";
+//import { handlePrintAllDR } from "./ProdPrintAllDR";
 
 function Prod() {
   const navigate = useNavigate();
@@ -425,7 +425,7 @@ function Prod() {
   };
 
   const handlePrintDRClick = () => {
-    navigate("/dashboard/print_dr");
+    navigate("/dashboard/prod_print_dr");
   };
 
   const handlePrintProductionClick = async () => {

@@ -107,6 +107,7 @@ function OrderView() {
       clientName: data.clientName,
       projectName: data.projectName,
       drNum: data.drNum,
+      drDate: data.drDate,
       order_details: orderDetails
         .filter((detail) => !detail.noPrint) // Filter out noPrint records
         .map((detail) => ({
@@ -168,7 +169,7 @@ function OrderView() {
                   <div className="order-info-field">{data.terms || ""}</div>
                 </div>
               </div>
-              <div className="col-6 order-info-row">
+              <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Client</label>
                   <div className="order-info-field">
@@ -176,12 +177,18 @@ function OrderView() {
                   </div>
                 </div>
               </div>
-              <div className="col-6 order-info-row">
+              <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Project Name</label>
                   <div className="order-info-field">
                     {data.projectName || ""}
                   </div>
+                </div>
+              </div>{" "}
+              <div className="col-4 order-info-row">
+                <div className="d-flex flex-column">
+                  <label className="form-label">DR Date</label>
+                  <div className="order-info-field">{data.drDate || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">

@@ -55,7 +55,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/print_dr"
+          path="/dashboard/prod_print_dr"
           element={
             <PrivateRoute>
               <ProdPrintDR />

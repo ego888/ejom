@@ -5,7 +5,7 @@ import { ServerIP } from "../config";
 import { handleApiError } from "../utils/handleApiError";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-
+NOT USED ANYMORE
 export const handlePrintAllDR = async (selectedOrders, navigate) => {
   try {
     const token = localStorage.getItem("token");

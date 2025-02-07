@@ -27,6 +27,7 @@ function PrintDR({ data }) {
       const updateData = data.map((order) => ({
         orderID: order.orderId || order.id,
         drnum: order.drNum.toString(),
+        drDate: order.drDate,
       }));
 
       console.log("Data being sent:", updateData); // Debug log
@@ -115,9 +116,7 @@ function PrintDR({ data }) {
                     </div>
                     <div className="info-row">
                       <div className="info-label text-center">Date:</div>
-                      <div className="info-value">
-                        {new Date().toLocaleDateString("en-US")}
-                      </div>
+                      <div className="info-value">{order.drDate || ""}</div>
                     </div>
                     <div className="info-row">
                       <div className="info-label text-center">Client:</div>
