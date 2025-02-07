@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
@@ -9,6 +8,7 @@ import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
 import "./Quotes.css";
+import axios from "../utils/axiosConfig"; // Import configured axios
 
 function Quotes() {
   const navigate = useNavigate();

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
@@ -167,12 +167,13 @@ function Prod() {
             setSelectedStatuses(prodStatuses);
             setIsProdChecked(true);
             setIsAllChecked(false);
+
+            // Save to localStorage
+            localStorage.setItem(
+              "orderStatusFilters",
+              JSON.stringify(prodStatuses)
+            );
           }
-          // Save to localStorage
-          localStorage.setItem(
-            "orderStatusFilters",
-            JSON.stringify(prodStatuses)
-          );
         }
       } catch (err) {
         console.error("Error fetching status options:", err);

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "../utils/axiosConfig"; // Import configured axios
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Button from "./UI/Button";

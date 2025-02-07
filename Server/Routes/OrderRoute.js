@@ -30,7 +30,7 @@ router.get("/orders", async (req, res) => {
 
     if (search) {
       whereConditions.push(
-        "(o.orderID LIKE ? OR c.clientName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR o.ornum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
+        "(o.orderID LIKE ? OR c.clientName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
       );
       const searchParam = `%${search}%`;
       params.push(
@@ -91,9 +91,6 @@ router.get("/orders", async (req, res) => {
                 o.amountDisc,
                 o.percentDisc,
                 o.grandTotal,
-                o.ornum, 
-                o.amountPaid, 
-                o.datePaid,
                 e.name as salesName, 
                 o.orderReference,
                 COALESCE(o.forProd, 0) as forProd
@@ -155,7 +152,6 @@ router.get("/order/:id", (req, res) => {
       DATE_FORMAT(o.drDate, '%Y-%m-%d') as drDate,
       DATE_FORMAT(o.productionDate, '%Y-%m-%d %H:%i:%s') as productionDate,
       DATE_FORMAT(o.deliveryDate, '%Y-%m-%d %H:%i:%s') as deliveryDate,
-      DATE_FORMAT(o.datePaid, '%Y-%m-%d %H:%i:%s') as datePaid,
       DATE_FORMAT(o.billDate, '%Y-%m-%d %H:%i:%s') as billDate,
       DATE_FORMAT(o.readyDate, '%Y-%m-%d %H:%i:%s') as readyDate,
       c.clientName,

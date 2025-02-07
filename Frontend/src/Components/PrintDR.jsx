@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import ModalAlert from "./UI/ModalAlert";
-import axios from "axios";
+import axios from "../utils/axiosConfig"; // Import configured axios
 import { ServerIP } from "../config";
 import { useNavigate } from "react-router-dom";
 

@@ -8,7 +8,7 @@ import {
   NavLink,
 } from "react-router-dom";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import axios from "axios";
+import axios from "../utils/axiosConfig"; // Import configured axios
 import { jwtDecode } from "jwt-decode";
 import AddOrder from "./AddOrder";
 import "./Dashboard.css";

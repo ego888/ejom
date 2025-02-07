@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
 import {

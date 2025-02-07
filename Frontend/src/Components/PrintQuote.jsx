@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
 import "./PrintQuote.css";

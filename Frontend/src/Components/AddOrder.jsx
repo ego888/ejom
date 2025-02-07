@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -23,6 +22,7 @@ import Modal from "./UI/Modal";
 import Input from "./UI/Input";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
+import axios from "../utils/axiosConfig"; // Import configured axios
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -174,6 +174,31 @@ function AddOrder() {
         }
       })
       .catch((err) => console.log(err));
+  };
+
+  const fetchClients = async () => {
+    try {
+      const response = await axios.get(`${ServerIP}/auth/client`);
+      if (response.data.Status) {
+        const result = response.data.Result || [];
+        setClients(result);
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to fetch clients",
+          type: "alert",
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching clients:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to fetch clients. Please try again.",
+        type: "alert",
+      });
+    }
   };
 
   useEffect(() => {

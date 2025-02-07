@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import PrintDR from "./PrintDR";
 import ModalAlert from "./UI/ModalAlert";

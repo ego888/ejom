@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
@@ -11,6 +10,7 @@ import SalesFilter from "./Logic/SalesFilter";
 import "./Orders.css";
 import StatusBadges from "./UI/StatusBadges";
 import ModalAlert from "./UI/ModalAlert";
+import axios from "../utils/axiosConfig"; // Import configured axios
 
 function Orders() {
   const navigate = useNavigate();

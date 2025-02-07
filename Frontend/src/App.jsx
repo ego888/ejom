@@ -32,12 +32,18 @@ import Payment from "./Components/Payment";
 import ProdPrintProduction from "./Components/ProdPrintProduction";
 import ProdPrintDR from "./Components/ProdPrintDR";
 import ProdPrintOneDR from "./Components/ProdPrintOneDR";
+import EmployeeLogin from "./Components/EmployeeLogin";
+import axios from "./utils/axiosConfig"; // Import configured axios
+
+// Replace the global axios with our configured instance
+window.axios = axios;
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/employeelogin" element={<EmployeeLogin />} />
         <Route
           path="/dashboard/print_order/:id"
           element={

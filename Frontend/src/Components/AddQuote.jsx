@@ -21,6 +21,7 @@ import {
 import { ServerIP } from "../config";
 import { debounce } from "lodash";
 import ModalAlert from "./UI/ModalAlert";
+import axiosConfig from "../utils/axiosConfig"; // Import configured axios
 
 function AddQuote() {
   const navigate = useNavigate();
@@ -235,6 +236,31 @@ function AddQuote() {
         }
       })
       .catch((err) => console.log(err));
+  };
+
+  const fetchClients = async () => {
+    try {
+      const response = await axiosConfig.get(`${ServerIP}/auth/client`);
+      if (response.data.Status) {
+        const result = response.data.Result || [];
+        setClients(result);
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to fetch clients",
+          type: "alert",
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching clients:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to fetch clients. Please try again.",
+        type: "alert",
+      });
+    }
   };
 
   useEffect(() => {

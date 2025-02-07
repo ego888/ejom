@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
@@ -15,6 +14,7 @@ import "./Prod.css";
 import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
 import { QRCodeSVG } from "qrcode.react";
 import ModalAlert from "./UI/ModalAlert";
+import axios from "../utils/axiosConfig"; // Import configured axios
 //import { handlePrintProduction } from "./ProdPrintProduction";
 //import { handlePrintAllDR } from "./ProdPrintAllDR";
 
