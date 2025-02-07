@@ -28,9 +28,14 @@ function Prod() {
   });
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
-  const [sortConfig, setSortConfig] = useState({
-    key: "id",
-    direction: "desc",
+  const [sortConfig, setSortConfig] = useState(() => {
+    const saved = localStorage.getItem("prodSortConfig");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          key: "id",
+          direction: "desc",
+        };
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
@@ -48,7 +53,9 @@ function Prod() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
-  const [forProdSort, setForProdSort] = useState("none"); // 'none', 'asc', 'desc'
+  const [forProdSort, setForProdSort] = useState(() => {
+    return localStorage.getItem("prodForProdSort") || "none";
+  });
   const [orderIdInput, setOrderIdInput] = useState("");
   const [alert, setAlert] = useState({
     show: false,
@@ -217,9 +224,12 @@ function Prod() {
     if (sortConfig.key === key && sortConfig.direction === "asc") {
       direction = "desc";
     }
-    setSortConfig({ key, direction });
+    const newSortConfig = { key, direction };
+    setSortConfig(newSortConfig);
     // Reset forProd sort when sorting by other columns
     setForProdSort("none");
+    localStorage.setItem("prodSortConfig", JSON.stringify(newSortConfig));
+    localStorage.setItem("prodForProdSort", "none");
   };
 
   // Status filter handlers
@@ -386,11 +396,16 @@ function Prod() {
     const nextSort =
       forProdSort === "none" ? "desc" : forProdSort === "asc" ? "desc" : "none";
     setForProdSort(nextSort);
+    localStorage.setItem("prodForProdSort", nextSort);
 
     if (nextSort !== "none") {
-      setSortConfig({ key: "forProd", direction: nextSort });
+      const newSortConfig = { key: "forProd", direction: nextSort };
+      setSortConfig(newSortConfig);
+      localStorage.setItem("prodSortConfig", JSON.stringify(newSortConfig));
     } else {
-      setSortConfig({ key: "id", direction: "desc" }); // Default sort when forProd sort is disabled
+      const defaultSort = { key: "id", direction: "desc" };
+      setSortConfig(defaultSort);
+      localStorage.setItem("prodSortConfig", JSON.stringify(defaultSort));
     }
   };
 

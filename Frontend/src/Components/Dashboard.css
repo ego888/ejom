@@ -39,7 +39,7 @@
   text-decoration: none;
   display: flex;
   align-items: center;
-  padding: 0.5rem 0;
+  padding: 0.2rem 0;
   width: 140px;
 }
 
@@ -61,12 +61,14 @@
 /* Active route styles */
 .sidebar-nav-link.active {
   color: #e65100; /* Dark Orange */
-  background: transparent;
+  color: #5d2100; /* Dark Orange */
+  background: #ffa000;
 }
 
-.sidebar-nav-link.active:hover {
+/*.sidebar-nav-link.active:hover {
   color: #e65100;
-}
+  color: #ffffff;
+}*/
 
 .sidebar-nav-link i,
 .sidebar-nav-link span {

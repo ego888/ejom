@@ -20,9 +20,14 @@ function Quotes() {
   });
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
-  const [sortConfig, setSortConfig] = useState({
-    key: "quoteId",
-    direction: "desc",
+  const [sortConfig, setSortConfig] = useState(() => {
+    const saved = localStorage.getItem("quotesSortConfig");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          key: "id",
+          direction: "desc",
+        };
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
@@ -174,8 +179,10 @@ function Quotes() {
     if (sortConfig.key === key && sortConfig.direction === "asc") {
       direction = "desc";
     }
-    setSortConfig({ key, direction });
+    const newSortConfig = { key, direction };
+    setSortConfig(newSortConfig);
     setCurrentPage(1);
+    localStorage.setItem("quotesSortConfig", JSON.stringify(newSortConfig));
   };
 
   // Status filter handlers
