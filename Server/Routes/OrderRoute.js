@@ -214,6 +214,43 @@ router.get("/orders-details-forprod", async (req, res) => {
   }
 });
 
+// Get orders marked for artist incentive
+router.get("/orders-details-artistIncentive", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        o.orderID as id,
+        o.clientId,
+        o.projectName,
+        o.dueDate,
+        o.dueTime,
+        c.clientName,
+        od.quantity,
+        od.width,
+        od.height,
+        od.unit,
+        od.material,
+        od.printHrs,
+        od.squareFeet,
+        od.displayOrder
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN order_details od ON o.orderID = od.orderId
+      WHERE o.forProd = 1
+      ORDER BY o.orderID ASC, od.displayOrder ASC`;
+
+    con.query(sql, (err, result) => {
+      if (err) {
+        console.log(err);
+        return res.json({ Status: false, Error: "Query Error" });
+      }
+      return res.json({ Status: true, Result: result });
+    });
+  } catch (error) {
+    return res.json({ Status: false, Error: "Query Error" + error });
+  }
+});
+
 // Add this route to update forProd checkbox
 router.put("/update-forprod/:id", (req, res) => {
   const orderId = req.params.id;
