@@ -92,9 +92,9 @@ function ProdPrintDR() {
           message: error.message || "Failed to prepare orders for printing",
           type: "alert",
         });
-        // Navigate back if there's an error
+        // Navigate back to production dashboard if there's an error
         if (error.message === "No orders available for DR printing") {
-          setTimeout(() => navigate(-1), 2000);
+          setTimeout(() => navigate("/dashboard/prod"), 2000);
         }
       }
     };
