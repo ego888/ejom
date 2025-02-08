@@ -417,6 +417,32 @@ router.get("/payment_terms", (req, res) => {
   });
 });
 
+// Get payment types
+router.get("/payment-types", async (req, res) => {
+  try {
+    const sql = "SELECT payType FROM paymentType ORDER BY payType";
+
+    const result = await new Promise((resolve, reject) => {
+      con.query(sql, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+
+    return res.json({
+      Status: true,
+      Result: result,
+    });
+  } catch (err) {
+    console.error("Error fetching payment types:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to fetch payment types",
+      Details: err.message,
+    });
+  }
+});
+
 // Add this error handling middleware after all your routes
 router.use((err, req, res, next) => {
   console.error("Router Error:", err);

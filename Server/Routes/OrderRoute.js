@@ -742,4 +742,95 @@ router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
     return res.json({ Status: true });
   });
 });
+
+// Search orders by client name
+router.get("/search-orders-by-client", async (req, res) => {
+  try {
+    const clientName = req.query.clientName;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 10;
+    const offset = (page - 1) * limit;
+
+    // Then, get orders for the client
+    const ordersSql = `
+      SELECT 
+        o.orderID as id, 
+        o.clientId, 
+        c.clientName, 
+        o.projectName, 
+        o.orderedBy, 
+        o.orderDate, 
+        o.dueDate, 
+        o.dueTime,
+        o.status, 
+        o.drnum, 
+        o.invoiceNum as invnum, 
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        o.amountPaid,
+        o.payment,
+        o.wtax,
+        o.ornum,
+        o.datePaid,
+        e.name as salesName, 
+        o.orderReference
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE c.clientName LIKE ?
+      ORDER BY o.orderID DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    // Count total orders for pagination
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      WHERE c.clientName LIKE ?
+    `;
+
+    const searchPattern = `%${clientName}%`;
+
+    // Execute orders query
+    const orders = await new Promise((resolve, reject) => {
+      con.query(
+        ordersSql,
+        [searchPattern, Number(limit), Number(offset)],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    // Execute count query
+    const [countResult] = await new Promise((resolve, reject) => {
+      con.query(countSql, [searchPattern], (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+
+    return res.json({
+      Status: true,
+      Result: {
+        orders,
+        total: countResult.total,
+        page: Number(page),
+        totalPages: Math.ceil(countResult.total / limit),
+      },
+    });
+  } catch (err) {
+    console.error("Error in search-orders-by-client route:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to search orders",
+      Details: err.message,
+    });
+  }
+});
+
 export { router as OrderRouter };

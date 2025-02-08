@@ -212,7 +212,7 @@ function ProdPrintProduction() {
           .prod-table {
             border-collapse: collapse;
             width: 100%;
-            font-size: 12px;
+            font-size: 14px;
           }
           .prod-table th,
           .prod-table td {

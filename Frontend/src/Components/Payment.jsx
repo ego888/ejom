@@ -47,6 +47,15 @@ function Prod() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
+  const [searchClientName, setSearchClientName] = useState("");
+  const [paymentTypes, setPaymentTypes] = useState([]);
+  const [paymentInfo, setPaymentInfo] = useState({
+    clientName: "",
+    payDate: new Date().toISOString().split("T")[0],
+    payType: "CASH",
+    amount: "",
+    payReference: "",
+  });
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -198,6 +207,21 @@ function Prod() {
     fetchSalesEmployees();
   }, []);
 
+  // Add useEffect to fetch payment types
+  useEffect(() => {
+    const fetchPaymentTypes = async () => {
+      try {
+        const response = await axios.get(`${ServerIP}/auth/payment-types`);
+        if (response.data.Status) {
+          setPaymentTypes(response.data.Result);
+        }
+      } catch (err) {
+        console.error("Error fetching payment types:", err);
+      }
+    };
+    fetchPaymentTypes();
+  }, []);
+
   // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((term) => {
@@ -333,12 +357,178 @@ function Prod() {
     };
   }, [currentPage]);
 
+  const handleClientSearch = async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Only prevent default for Enter
+      const nextInput = e.target.form.elements[e.target.tabIndex + 1];
+      if (nextInput) nextInput.focus();
+
+      if (!searchClientName.trim()) return;
+
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${ServerIP}/auth/search-orders-by-client`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { clientName: searchClientName },
+          }
+        );
+
+        if (response.data.Status) {
+          setOrders(response.data.Result.orders || []);
+          setTotalCount(response.data.Result.total || 0);
+          setTotalPages(response.data.Result.totalPages || 0);
+          setPaymentInfo((prev) => ({
+            ...prev,
+            clientName: searchClientName,
+          }));
+        }
+      } catch (error) {
+        console.error("Error searching orders by client:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Add useEffect to focus on client name input when component mounts
+  useEffect(() => {
+    const clientNameInput = document.querySelector('input[name="clientName"]');
+    if (clientNameInput) {
+      clientNameInput.focus();
+    }
+  }, []);
+
+  const handleClientBlur = async () => {
+    if (!searchClientName.trim()) return; // Don't search if empty
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${ServerIP}/auth/search-orders-by-client`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { clientName: searchClientName },
+        }
+      );
+
+      if (response.data.Status) {
+        setOrders(response.data.Result.orders || []);
+        setTotalCount(response.data.Result.total || 0);
+        setTotalPages(response.data.Result.totalPages || 0);
+        setPaymentInfo((prev) => ({
+          ...prev,
+          clientName: searchClientName,
+        }));
+      }
+    } catch (error) {
+      console.error("Error searching orders by client:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaymentInfoChange = (field, value) => {
+    setPaymentInfo((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   return (
     <div className="payment-theme">
       <div className="payment-page-background px-5">
         <div className="payment-header d-flex justify-content-center">
           <h3>Payment Processing</h3>
         </div>
+
+        {/* Payment Info Header */}
+        <div className="payment-info-header mb-4">
+          <div className="row align-items-center">
+            <div className="col-md-2">
+              <div className="form-group">
+                <label>Payment Date</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={paymentInfo.payDate}
+                  onChange={(e) =>
+                    handlePaymentInfoChange("payDate", e.target.value)
+                  }
+                  tabIndex="1"
+                />
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="form-group">
+                <label>Payment Type</label>
+                <select
+                  className="form-control"
+                  value={paymentInfo.payType}
+                  onChange={(e) =>
+                    handlePaymentInfoChange("payType", e.target.value)
+                  }
+                  tabIndex="2"
+                >
+                  {paymentTypes.map((type) => (
+                    <option key={type.payType} value={type.payType}>
+                      {type.payType}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="form-group">
+                <label>Client Name</label>
+                <input
+                  type="text"
+                  name="clientName"
+                  className="form-control"
+                  value={searchClientName}
+                  onChange={(e) => setSearchClientName(e.target.value)}
+                  onKeyDown={handleClientSearch}
+                  placeholder="Type client name and press Enter"
+                  tabIndex="3"
+                />
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="form-group">
+                <label>Amount</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={paymentInfo.amount}
+                  onChange={(e) =>
+                    handlePaymentInfoChange("amount", e.target.value)
+                  }
+                  placeholder="Enter amount"
+                  tabIndex="4"
+                />
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="form-group">
+                <label>Reference</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={paymentInfo.payReference}
+                  onChange={(e) =>
+                    handlePaymentInfoChange("payReference", e.target.value)
+                  }
+                  placeholder="Enter reference"
+                  tabIndex="5"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Search and filters row */}
         <div className="d-flex justify-content-between mb-3">
           <input
