@@ -88,10 +88,7 @@ function Prod() {
           sortDirection: sortConfig.direction,
           search: searchTerm,
           statuses: selectedStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined,
-          clients: selectedClients.length
-            ? selectedClients.join(",")
-            : undefined,
+          sales: selectedSales.length ? selectedSales.join(",") : undefined
         },
       });
 
@@ -119,9 +116,47 @@ function Prod() {
     }
   };
 
-  // Fetch orders when parameters change
+  // Keep the debounced search handler
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      setSearchTerm(term);
+      setCurrentPage(1);
+    }, 500),
+    []
+  );
+
+  // Update handleSearch to properly clear client search and trigger fetch
+  const handleSearch = (e) => {
+    const term = e.target.value.toLowerCase();
+    
+    // Clear client name search when using the search bar
+    setSearchClientName('');
+    setPaymentInfo(prev => ({
+      ...prev,
+      clientName: ''
+    }));
+
+    // Set search term immediately for the first character
+    setSearchTerm(term);
+    setCurrentPage(1);
+
+    // Then use debounced search for subsequent changes
+    if (term.length > 1) {
+      debouncedSearch(term);
+    } else {
+      // For first character or empty search, trigger fetch immediately
+      fetchOrders();
+    }
+  };
+
+  // Update useEffect to handle both search types
   useEffect(() => {
-    console.log("Effect triggered with selectedStatuses:", selectedStatuses); // Debug log
+    if (searchClientName.trim()) {
+      // Don't fetch if we're doing a client search
+      return;
+    }
+    
+    console.log("Effect triggered with selectedStatuses:", selectedStatuses);
     fetchOrders();
   }, [
     currentPage,
@@ -221,20 +256,6 @@ function Prod() {
     };
     fetchPaymentTypes();
   }, []);
-
-  // Debounced search handler
-  const debouncedSearch = useCallback(
-    debounce((term) => {
-      setSearchTerm(term);
-      setCurrentPage(1);
-    }, 500),
-    []
-  );
-
-  const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    debouncedSearch(term);
-  };
 
   // Sort handler
   const handleSort = (key) => {
@@ -358,38 +379,85 @@ function Prod() {
   }, [currentPage]);
 
   const handleClientSearch = async (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault(); // Only prevent default for Enter
-      const nextInput = e.target.form.elements[e.target.tabIndex + 1];
-      if (nextInput) nextInput.focus();
-
-      if (!searchClientName.trim()) return;
-
-      setLoading(true);
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
-          `${ServerIP}/auth/search-orders-by-client`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            params: { clientName: searchClientName },
-          }
-        );
-
-        if (response.data.Status) {
-          setOrders(response.data.Result.orders || []);
-          setTotalCount(response.data.Result.total || 0);
-          setTotalPages(response.data.Result.totalPages || 0);
-          setPaymentInfo((prev) => ({
-            ...prev,
-            clientName: searchClientName,
-          }));
-        }
-      } catch (error) {
-        console.error("Error searching orders by client:", error);
-      } finally {
-        setLoading(false);
+    // For Tab key, let the default behavior happen and perform search
+    if (e.type === 'keydown' && e.key === 'Tab') {
+      // Don't prevent default - let tab navigation work naturally
+      const searchBar = document.querySelector('input[type="text"][placeholder*="Search by ID"]');
+      if (searchBar) {
+        searchBar.value = '';
       }
+      performClientSearch();
+      return;
+    }
+
+    // For Enter key, prevent default and manually move focus
+    if (e.type === 'keydown' && e.key === 'Enter') {
+      e.preventDefault();
+      const amountInput = document.querySelector('input[type="number"][placeholder="Enter amount"]');
+      if (amountInput) {
+        amountInput.focus();
+      }
+      performClientSearch();
+      return;
+    }
+
+    // For blur event
+    if (e.type === 'blur') {
+      performClientSearch();
+    }
+  };
+
+  // Separate the search logic into its own function
+  const performClientSearch = async () => {
+    if (!searchClientName.trim()) {
+      fetchOrders();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      
+      if (selectedStatuses.length === 0) {
+        setOrders([]);
+        setTotalCount(0);
+        setTotalPages(0);
+        setLoading(false);
+        return;
+      }
+
+      console.log("Fetching orders by client:", searchClientName);
+      const response = await axios.get(`${ServerIP}/auth/search-orders-by-client`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          clientName: searchClientName,
+          page: 1,
+          limit: recordsPerPage,
+          sortBy: sortConfig.key,
+          sortDirection: sortConfig.direction,
+          statuses: selectedStatuses.join(","),
+          sales: selectedSales.length ? selectedSales.join(",") : undefined
+        }
+      });
+
+      console.log("RESULT", response);
+      if (response.data.Status) {
+        setOrders(response.data.Result.orders || []);
+        setTotalCount(response.data.Result.total || 0);
+        setTotalPages(response.data.Result.totalPages || 0);
+        setPaymentInfo(prev => ({
+          ...prev,
+          clientName: searchClientName
+        }));
+      }
+      console.log("RESULT 2:", response);
+    } catch (error) {
+      console.error("Error searching orders by client:", error);
+      setOrders([]);
+      setTotalCount(0);
+      setTotalPages(0);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -400,36 +468,6 @@ function Prod() {
       clientNameInput.focus();
     }
   }, []);
-
-  const handleClientBlur = async () => {
-    if (!searchClientName.trim()) return; // Don't search if empty
-
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${ServerIP}/auth/search-orders-by-client`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { clientName: searchClientName },
-        }
-      );
-
-      if (response.data.Status) {
-        setOrders(response.data.Result.orders || []);
-        setTotalCount(response.data.Result.total || 0);
-        setTotalPages(response.data.Result.totalPages || 0);
-        setPaymentInfo((prev) => ({
-          ...prev,
-          clientName: searchClientName,
-        }));
-      }
-    } catch (error) {
-      console.error("Error searching orders by client:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePaymentInfoChange = (field, value) => {
     setPaymentInfo((prev) => ({
@@ -491,7 +529,8 @@ function Prod() {
                   value={searchClientName}
                   onChange={(e) => setSearchClientName(e.target.value)}
                   onKeyDown={handleClientSearch}
-                  placeholder="Type client name and press Enter"
+                  onBlur={handleClientSearch}
+                  placeholder="Enter client name"
                   tabIndex="3"
                 />
               </div>

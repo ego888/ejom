@@ -14,7 +14,7 @@ const Login = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    console.log("Attempting login...");
+    console.log("Attempting login...", ServerIP);
     axios
       .post(`${ServerIP}/auth/login`, values)
       .then((result) => {

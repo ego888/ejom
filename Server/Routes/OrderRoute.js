@@ -7,8 +7,8 @@ const router = express.Router();
 // Get all orders with pagination, sorting, filtering and search
 router.get("/orders", async (req, res) => {
   try {
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 10;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const search = req.query.search || "";
     const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
@@ -34,16 +34,8 @@ router.get("/orders", async (req, res) => {
       );
       const searchParam = `%${search}%`;
       params.push(
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam
+        searchParam, searchParam, searchParam, searchParam, searchParam,
+        searchParam, searchParam, searchParam, searchParam
       );
     }
 
@@ -64,43 +56,54 @@ router.get("/orders", async (req, res) => {
 
     const whereClause = whereConditions.join(" AND ");
 
-    // Count query
-    const countSql = `
-            SELECT COUNT(DISTINCT o.orderID) as total
-            FROM orders o
-            LEFT JOIN client c ON o.clientId = c.id
-            LEFT JOIN employee e ON o.preparedBy = e.id
-            WHERE ${whereClause}
-        `;
-
     // Main data query
     const dataSql = `
-            SELECT 
-                o.orderID as id, 
-                o.clientId, 
-                c.clientName, 
-                o.projectName, 
-                o.orderedBy, 
-                o.orderDate, 
-                o.dueDate, 
-                o.dueTime,
-                o.status, 
-                o.drnum, 
-                o.invoiceNum as invnum, 
-                o.totalAmount,
-                o.amountDisc,
-                o.percentDisc,
-                o.grandTotal,
-                e.name as salesName, 
-                o.orderReference,
-                COALESCE(o.forProd, 0) as forProd
-            FROM orders o
-            LEFT JOIN client c ON o.clientId = c.id
-            LEFT JOIN employee e ON o.preparedBy = e.id
-            WHERE ${whereClause}
-            ORDER BY ${sortBy} ${sortDirection}
-            LIMIT ? OFFSET ?
-        `;
+      SELECT 
+        o.orderID as id, 
+        o.clientId, 
+        c.clientName, 
+        o.projectName, 
+        o.orderedBy, 
+        o.orderDate, 
+        o.dueDate, 
+        o.dueTime,
+        o.status, 
+        o.drnum, 
+        o.invoiceNum as invnum, 
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        e.name as salesName, 
+        o.orderReference
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
+    `;
+
+    // Execute data query with proper parameter order
+    const orders = await new Promise((resolve, reject) => {
+      con.query(
+        dataSql,
+        [...params, limit, offset],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    // Count query
+    const countSql = `
+      SELECT COUNT(DISTINCT o.orderID) as total
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
 
     // Execute count query
     const [countResult] = await new Promise((resolve, reject) => {
@@ -108,18 +111,6 @@ router.get("/orders", async (req, res) => {
         if (err) reject(err);
         resolve(result);
       });
-    });
-
-    // Execute data query
-    const orders = await new Promise((resolve, reject) => {
-      con.query(
-        dataSql,
-        [...params, Number(limit), Number(offset)],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
     });
 
     return res.json({
@@ -750,8 +741,37 @@ router.get("/search-orders-by-client", async (req, res) => {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
     const offset = (page - 1) * limit;
+    const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
+//    const sales = req.query.sales ? req.query.sales.split(",") : [];
+    let sortBy = req.query.sortBy || "orderID";
+    let sortDirection = req.query.sortDirection || "desc";
 
-    // Then, get orders for the client
+    // Build where clause
+    let whereConditions = ["c.clientName LIKE ?"]; // Start with client name search
+    let params = [`%${clientName}%`];
+
+    if (statuses.length) {
+      whereConditions.push(`o.status IN (?)`);
+      params.push(statuses);
+    }
+
+    // if (sales.length) {
+    //   whereConditions.push(`o.preparedBy IN (?)`);
+    //   params.push(sales);
+    // }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Count query
+    const countSql = `
+      SELECT COUNT(DISTINCT o.orderID) as total
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
+
+    // Main data query - using same fields as regular order search
     const ordersSql = `
       SELECT 
         o.orderID as id, 
@@ -769,51 +789,38 @@ router.get("/search-orders-by-client", async (req, res) => {
         o.amountDisc,
         o.percentDisc,
         o.grandTotal,
-        o.amountPaid,
-        o.payment,
-        o.wtax,
-        o.ornum,
-        o.datePaid,
         e.name as salesName, 
         o.orderReference
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
-      WHERE c.clientName LIKE ?
-      ORDER BY o.orderID DESC
+      WHERE ${whereClause}
+      ORDER BY ${sortBy} ${sortDirection}
       LIMIT ? OFFSET ?
     `;
 
-    // Count total orders for pagination
-    const countSql = `
-      SELECT COUNT(*) as total
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
-      WHERE c.clientName LIKE ?
-    `;
+    console.log("ordersSql", ordersSql);
 
-    const searchPattern = `%${clientName}%`;
+    // Execute count query
+    const [countResult] = await new Promise((resolve, reject) => {
+      con.query(countSql, params, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
 
     // Execute orders query
     const orders = await new Promise((resolve, reject) => {
       con.query(
         ordersSql,
-        [searchPattern, Number(limit), Number(offset)],
+        [...params, Number(limit), Number(offset)],
         (err, result) => {
           if (err) reject(err);
           resolve(result);
         }
       );
     });
-
-    // Execute count query
-    const [countResult] = await new Promise((resolve, reject) => {
-      con.query(countSql, [searchPattern], (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
-
+    console.log("orders", orders);
     return res.json({
       Status: true,
       Result: {
