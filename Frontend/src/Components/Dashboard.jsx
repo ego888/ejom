@@ -23,7 +23,6 @@ const Dashboard = () => {
   useEffect(() => {
     console.log("Dashboard mounting...");
     const valid = localStorage.getItem("valid");
-    console.log("Valid status:", valid);
 
     if (!valid) {
       console.log("No valid login found, redirecting...");
@@ -33,7 +32,6 @@ const Dashboard = () => {
 
     try {
       const token = localStorage.getItem("token");
-      console.log("Token found:", !!token);
 
       if (!token) {
         console.log("No token found, redirecting...");
@@ -43,7 +41,6 @@ const Dashboard = () => {
       }
 
       const decoded = jwtDecode(token);
-      console.log("Token decoded, admin status:", decoded.isAdmin);
       setIsAdmin(decoded.isAdmin);
       setEmployeeName(decoded.name);
     } catch (error) {

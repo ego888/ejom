@@ -76,6 +76,7 @@ function Prod() {
   });
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -388,7 +389,7 @@ function Prod() {
     setIsProdChecked(e.target.checked);
 
     // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+    localStorage.setItem("paymentStatusFilters", JSON.stringify(newStatuses));
   };
 
   // Add a cleanup effect to save the page when unmounting
@@ -837,6 +838,64 @@ function Prod() {
     }
   };
 
+  // Consolidate fetch effects
+  useEffect(() => {
+    const initializeData = async () => {
+      if (!initialLoad) return;
+
+      try {
+        // Fetch wtax types
+        const wtaxResponse = await axios.get(`${ServerIP}/auth/wtax-types`);
+        if (wtaxResponse.data.Status) {
+          setWtaxTypes(wtaxResponse.data.Result);
+        }
+
+        // Fetch payment types
+        const paymentTypesResponse = await axios.get(
+          `${ServerIP}/auth/payment-types`
+        );
+        if (paymentTypesResponse.data.Status) {
+          setPaymentTypes(paymentTypesResponse.data.Result);
+        }
+
+        setInitialLoad(false);
+      } catch (error) {
+        console.error("Error initializing data:", error);
+      }
+    };
+
+    initializeData();
+  }, [initialLoad]);
+
+  // Separate orders fetch with proper dependencies
+  useEffect(() => {
+    if (selectedStatuses.length === 0) {
+      setOrders([]);
+      setTotalCount(0);
+      return;
+    }
+
+    const fetchOrders = async () => {
+      try {
+        const params = {
+          page: currentPage,
+          limit: recordsPerPage,
+          statuses: selectedStatuses.join(","),
+        };
+
+        const response = await axios.get(`${ServerIP}/auth/orders`, { params });
+        if (response.data.Status) {
+          setOrders(response.data.Result.orders);
+          setTotalCount(response.data.Result.total);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      }
+    };
+
+    fetchOrders();
+  }, [selectedStatuses, currentPage, recordsPerPage]);
+
   return (
     <div className="payment-theme">
       <div className="payment-page-background px-5">
@@ -846,7 +905,7 @@ function Prod() {
 
         {/* Payment Info Header */}
         <div className="payment-info-header mb-4">
-          <div className="row align-items-center">
+          <div className="row">
             <div className="col-md-2">
               <div className="form-group">
                 <label>Payment Date</label>
@@ -861,9 +920,9 @@ function Prod() {
                 />
               </div>
             </div>
-            <div className="col-md-2">
+            <div className="col-md-1">
               <div className="form-group">
-                <label>Payment Type</label>
+                <label>Type</label>
                 <select
                   className="form-control"
                   value={paymentInfo.payType}
@@ -882,7 +941,7 @@ function Prod() {
             </div>
             <div className="col-md-3">
               <div className="form-group">
-                <label>Client Name</label>
+                <label>Client</label>
                 <input
                   type="text"
                   name="clientName"
@@ -933,7 +992,7 @@ function Prod() {
                 />
               </div>
             </div>
-            <div className="col-md-3">
+            <div className="col-md-2">
               <div className="form-group">
                 <label>Reference</label>
                 <input
@@ -1086,12 +1145,6 @@ function Prod() {
                 <th className="text-right">Payment</th>
                 <th className="text-right">WTax</th>
                 <th className="text-right">Balance</th>
-                <th
-                  onClick={() => handleSort("ornum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  OR# {getSortIndicator("ornum")}
-                </th>
                 <th>Date Paid</th>
               </tr>
             </thead>
@@ -1254,7 +1307,6 @@ function Prod() {
                         (orderPayments[order.id]?.payment || 0)
                     )}
                   </td>
-                  <td>{order.ornum || ""}</td>
                   <td>
                     {order.datePaid
                       ? new Date(order.datePaid).toLocaleDateString()

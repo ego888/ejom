@@ -10,11 +10,11 @@ import { UsersRouter } from "./Routes/UsersRoute.js";
 import { MaterialRouter } from "./Routes/Material.Route.js";
 import { OrderStatusRouter } from "./Routes/OrderStatusRoute.js";
 import { JomControlRouter } from "./Routes/JomControlRoute.js";
+import { PaymentRouter } from "./Routes/PaymentRoute.js";
 import { verifyUser } from "./middleware.js";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { PaymentRouter } from "./Routes/PaymentRoute.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

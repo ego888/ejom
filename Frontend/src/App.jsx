@@ -20,6 +20,7 @@ import EditClient from "./Components/EditClient";
 import Orders from "./Components/Orders";
 import AddOrder from "./Components/AddOrder";
 import OrderView from "./Components/OrderView";
+import PaymentView from "./Components/PaymentView";
 import PrintOrder from "./Components/PrintOrder";
 import Quotes from "./Components/Quotes";
 import AddQuote from "./Components/AddQuote";
@@ -134,15 +135,15 @@ function App() {
             element={<OrderView />}
           ></Route>
           <Route
+            path="/dashboard/payment/view/:id"
+            element={<PaymentView />}
+          ></Route>
+          <Route
             path="/dashboard/artistlog/view/:id"
             element={<OrderView />}
           ></Route>
           <Route
             path="/dashboard/printlog/view/:id"
-            element={<OrderView />}
-          ></Route>
-          <Route
-            path="/dashboard/payment/view/:id"
             element={<OrderView />}
           ></Route>
           <Route

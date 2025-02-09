@@ -8,24 +8,24 @@ const router = express.Router();
 router.post("/post-payment", verifyUser, async (req, res) => {
   try {
     const { payment, allocations } = req.body;
-    console.log('Received payment:', payment);
-    console.log('Received allocations:', allocations);
+    console.log("Received payment:", payment);
+    console.log("Received allocations:", allocations);
 
     // Start transaction
-    await con.query('START TRANSACTION');
-    console.log('Transaction started');
+    await con.query("START TRANSACTION");
+    console.log("Transaction started");
 
     // Insert payment header using Promise
     const paymentResult = await new Promise((resolve, reject) => {
       con.query(
         "INSERT INTO payments (amount, payType, payReference, payDate, ornum, postedDate, transactedBy) VALUES (?, ?, ?, ?, ?, NOW(), ?)",
         [
-          payment.amount, 
-          payment.payType, 
-          payment.payReference, 
+          payment.amount,
+          payment.payType,
+          payment.payReference,
           payment.payDate,
           payment.ornum,
-          payment.transactedBy
+          payment.transactedBy,
         ],
         (err, result) => {
           if (err) reject(err);
@@ -35,7 +35,7 @@ router.post("/post-payment", verifyUser, async (req, res) => {
     });
 
     const payId = paymentResult.insertId;
-    console.log('Payment inserted with ID:', payId);
+    console.log("Payment inserted with ID:", payId);
 
     // Insert payment allocations
     for (const allocation of allocations) {
@@ -63,15 +63,14 @@ router.post("/post-payment", verifyUser, async (req, res) => {
       });
     }
 
-    await con.query('COMMIT');
+    await con.query("COMMIT");
     return res.json({ Status: true, Message: "Payment posted successfully" });
-
   } catch (error) {
     console.error("Error in post-payment:", error);
-    await con.query('ROLLBACK');
-    return res.json({ 
-      Status: false, 
-      Error: "Failed to post payment. " + error.message 
+    await con.query("ROLLBACK");
+    return res.json({
+      Status: false,
+      Error: "Failed to post payment. " + error.message,
     });
   }
 });
@@ -93,13 +92,54 @@ router.get("/check-ornum", verifyUser, async (req, res) => {
 
     return res.json({
       Status: true,
-      exists: !!existingOR
+      exists: !!existingOR,
     });
   } catch (error) {
     console.error("Error checking OR#:", error);
-    return res.json({ 
-      Status: false, 
-      Error: "Failed to check OR#" 
+    return res.json({
+      Status: false,
+      Error: "Failed to check OR#",
+    });
+  }
+});
+
+// Get order payment details
+router.get("/order-payment-history", verifyUser, async (req, res) => {
+  try {
+    const { orderId } = req.query;
+
+    if (!orderId) {
+      return res.status(400).json({ Status: false, Error: "Missing orderId" });
+    }
+
+    // Use callback style query
+    con.query(
+      `SELECT p.payId, p.payDate, p.payType, p.payReference, p.ornum,
+              p.amount AS totalPayment, pa.amountApplied, p.transactedBy, p.postedDate, p.remittedBy, p.remittedDate
+       FROM paymentJoAllocation pa 
+       JOIN payments p ON pa.payId = p.payId 
+       WHERE pa.orderId = ?`,
+      [orderId],
+      (err, paymentDetails) => {
+        if (err) {
+          console.error("Database error:", err);
+          return res.status(500).json({
+            Status: false,
+            Error: "Failed to get order payment details",
+          });
+        }
+
+        return res.json({
+          Status: true,
+          paymentDetails,
+        });
+      }
+    );
+  } catch (error) {
+    console.error("Error getting order payment details:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to get order payment details",
     });
   }
 });
@@ -108,9 +148,9 @@ router.get("/check-ornum", verifyUser, async (req, res) => {
 router.post("/recalculate-paid-amount", verifyUser, async (req, res) => {
   try {
     const { orderId } = req.body;
-    
+
     // Start transaction
-    await con.query('START TRANSACTION');
+    await con.query("START TRANSACTION");
 
     // Get total from paymentJoAllocation
     const [result] = await new Promise((resolve, reject) => {
@@ -140,22 +180,21 @@ router.post("/recalculate-paid-amount", verifyUser, async (req, res) => {
       );
     });
 
-    await con.query('COMMIT');
-    
-    return res.json({ 
-      Status: true, 
-      Message: "Amount recalculated successfully",
-      Result: { amountPaid: totalPaid }
-    });
+    await con.query("COMMIT");
 
+    return res.json({
+      Status: true,
+      Message: "Amount recalculated successfully",
+      Result: { amountPaid: totalPaid },
+    });
   } catch (error) {
     console.error("Error in recalculate-paid-amount:", error);
-    await con.query('ROLLBACK');
-    return res.json({ 
-      Status: false, 
-      Error: "Failed to recalculate amount" 
+    await con.query("ROLLBACK");
+    return res.json({
+      Status: false,
+      Error: "Failed to recalculate amount",
     });
   }
 });
 
-export { router as PaymentRouter }; 
+export { router as PaymentRouter };
