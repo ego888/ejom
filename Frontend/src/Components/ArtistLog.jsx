@@ -523,9 +523,6 @@ function Prod() {
                   </td>
                   <td>{order.ornum || ""}</td>
                   <td>
-                    {order.amountPaid
-                      ? `₱${order.amountPaid.toLocaleString()}`
-                      : ""}
                   </td>
                   <td>
                     {order.datePaid

@@ -27,4 +27,14 @@ router.get("/jomcontrol/lastDR", (req, res) => {
   });
 });
 
+router.get("/jomcontrol/VAT", (req, res) => {
+  const sql = "SELECT VAT FROM jomControl LIMIT 1";
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.error("Error fetching company control:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    return res.json({ Status: true, Result: result[0] });
+  });
+});
 export { router as JomControlRouter };

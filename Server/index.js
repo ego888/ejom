@@ -14,6 +14,7 @@ import { verifyUser } from "./middleware.js";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { PaymentRouter } from "./Routes/PaymentRoute.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,6 +39,7 @@ app.use("/auth", UsersRouter);
 app.use("/auth", MaterialRouter);
 app.use("/auth", OrderStatusRouter);
 app.use("/auth", JomControlRouter);
+app.use("/auth", PaymentRouter);
 app.use("/employee", EmployeeRouter);
 app.use("/public", express.static("public"));
 

@@ -799,8 +799,6 @@ router.get("/search-orders-by-client", async (req, res) => {
       LIMIT ? OFFSET ?
     `;
 
-    console.log("ordersSql", ordersSql);
-
     // Execute count query
     const [countResult] = await new Promise((resolve, reject) => {
       con.query(countSql, params, (err, result) => {
@@ -836,6 +834,30 @@ router.get("/search-orders-by-client", async (req, res) => {
       Status: false,
       Error: "Failed to search orders",
       Details: err.message,
+    });
+  }
+});
+
+// Add route to get WTax types
+router.get("/wtax-types", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM WTax";
+    const wtaxTypes = await new Promise((resolve, reject) => {
+      con.query(sql, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+
+    return res.json({
+      Status: true,
+      Result: wtaxTypes
+    });
+  } catch (err) {
+    console.error("Error fetching WTax types:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to fetch WTax types"
     });
   }
 });
