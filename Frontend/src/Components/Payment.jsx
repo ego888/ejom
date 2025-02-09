@@ -11,7 +11,8 @@ import StatusBadges from "./UI/StatusBadges";
 import "./Orders.css";
 import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
-import ModalAlert from '../Components/UI/ModalAlert';
+import ModalAlert from "../Components/UI/ModalAlert";
+import Modal from "./UI/Modal";
 
 function Prod() {
   const navigate = useNavigate();
@@ -56,6 +57,7 @@ function Prod() {
     payType: "CASH",
     amount: "",
     payReference: "",
+    ornum: "",
   });
   const [remainingAmount, setRemainingAmount] = useState(0);
   const [checkPay, setCheckPay] = useState(new Set());
@@ -67,11 +69,13 @@ function Prod() {
   const [modalConfig, setModalConfig] = useState({});
   const [alert, setAlert] = useState({
     show: false,
-    title: '',
-    message: '',
-    type: '',
-    onConfirm: null
+    title: "",
+    message: "",
+    type: "",
+    onConfirm: null,
   });
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -104,7 +108,7 @@ function Prod() {
           sortDirection: sortConfig.direction,
           search: searchTerm,
           statuses: selectedStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined
+          sales: selectedSales.length ? selectedSales.join(",") : undefined,
         },
       });
 
@@ -144,12 +148,12 @@ function Prod() {
   // Update handleSearch to properly clear client search and trigger fetch
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
-    
+
     // Clear client name search when using the search bar
-    setSearchClientName('');
-    setPaymentInfo(prev => ({
+    setSearchClientName("");
+    setPaymentInfo((prev) => ({
       ...prev,
-      clientName: ''
+      clientName: "",
     }));
 
     // Set search term immediately for the first character
@@ -171,7 +175,7 @@ function Prod() {
       // Don't fetch if we're doing a client search
       return;
     }
-    
+
     console.log("Effect triggered with selectedStatuses:", selectedStatuses);
     fetchOrders();
   }, [
@@ -396,29 +400,32 @@ function Prod() {
 
   const handleClientSearch = async (e) => {
     // For Tab key, let the default behavior happen and perform search
-    if (e.type === 'keydown' && e.key === 'Tab') {
-      // Don't prevent default - let tab navigation work naturally
-      const searchBar = document.querySelector('input[type="text"][placeholder*="Search by ID"]');
+    if (e.type === "keydown" && e.key === "Tab") {
+      const searchBar = document.querySelector(
+        'input[type="text"][placeholder*="Search by ID"]'
+      );
       if (searchBar) {
-        searchBar.value = '';
+        searchBar.value = "";
       }
       performClientSearch();
       return;
     }
 
     // For Enter key, prevent default and manually move focus
-    if (e.type === 'keydown' && e.key === 'Enter') {
+    if (e.type === "keydown" && e.key === "Enter") {
       e.preventDefault();
-      const amountInput = document.querySelector('input[type="number"][placeholder="Enter amount"]');
-      if (amountInput) {
-        amountInput.focus();
+      const ornumInput = document.querySelector(
+        'input[placeholder="Enter OR#"]'
+      );
+      if (ornumInput) {
+        ornumInput.focus();
       }
       performClientSearch();
       return;
     }
 
     // For blur event
-    if (e.type === 'blur') {
+    if (e.type === "blur") {
       performClientSearch();
     }
   };
@@ -433,7 +440,7 @@ function Prod() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      
+
       if (selectedStatuses.length === 0) {
         setOrders([]);
         setTotalCount(0);
@@ -443,27 +450,30 @@ function Prod() {
       }
 
       console.log("Fetching orders by client:", searchClientName);
-      const response = await axios.get(`${ServerIP}/auth/search-orders-by-client`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          clientName: searchClientName,
-          page: 1,
-          limit: recordsPerPage,
-          sortBy: sortConfig.key,
-          sortDirection: sortConfig.direction,
-          statuses: selectedStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined
+      const response = await axios.get(
+        `${ServerIP}/auth/search-orders-by-client`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            clientName: searchClientName,
+            page: 1,
+            limit: recordsPerPage,
+            sortBy: sortConfig.key,
+            sortDirection: sortConfig.direction,
+            statuses: selectedStatuses.join(","),
+            sales: selectedSales.length ? selectedSales.join(",") : undefined,
+          },
         }
-      });
+      );
 
       console.log("RESULT", response);
       if (response.data.Status) {
         setOrders(response.data.Result.orders || []);
         setTotalCount(response.data.Result.total || 0);
         setTotalPages(response.data.Result.totalPages || 0);
-        setPaymentInfo(prev => ({
+        setPaymentInfo((prev) => ({
           ...prev,
-          clientName: searchClientName
+          clientName: searchClientName,
         }));
       }
       console.log("RESULT 2:", response);
@@ -486,13 +496,13 @@ function Prod() {
   }, []);
 
   const handlePaymentInfoChange = (field, value) => {
-    setPaymentInfo(prev => ({
+    setPaymentInfo((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
 
     // Update remaining amount when total amount changes
-    if (field === 'amount') {
+    if (field === "amount") {
       setRemainingAmount(Number(value));
       // Don't reset payments anymore
     }
@@ -500,10 +510,12 @@ function Prod() {
 
   // Add function to check if payment inputs should be enabled
   const canEditPayments = () => {
-    return paymentInfo.payDate && 
-           paymentInfo.payType && 
-           searchClientName.trim() && 
-           paymentInfo.amount > 0;
+    return (
+      paymentInfo.payDate &&
+      paymentInfo.payType &&
+      searchClientName.trim() &&
+      paymentInfo.amount > 0
+    );
   };
 
   // Add useEffect to fetch WTax types and VAT rate
@@ -512,12 +524,19 @@ function Prod() {
       try {
         const [wtaxResponse, vatResponse] = await Promise.all([
           axios.get(`${ServerIP}/auth/wtax-types`),
-          axios.get(`${ServerIP}/auth/jomcontrol/VAT`)
+          axios.get(`${ServerIP}/auth/jomcontrol/VAT`),
         ]);
 
         console.log("WTax Response:", wtaxResponse.data);
         if (wtaxResponse.data.Status) {
           setWtaxTypes(wtaxResponse.data.Result);
+          // Set N2 as default WTax type
+          const defaultWTax = wtaxResponse.data.Result.find(
+            (wt) => wt.WTax === "V2"
+          );
+          if (defaultWTax) {
+            setSelectedWtax(defaultWTax);
+          }
         }
         if (vatResponse.data.Status) {
           setVatRate(vatResponse.data.Result.VAT);
@@ -537,31 +556,44 @@ function Prod() {
     const newOrderPayments = { ...orderPayments };
 
     // Calculate current total payments
-    const currentTotal = Object.values(newOrderPayments).reduce((sum, p) => 
-      sum + (p.payment || 0), 0);
-    
+    const currentTotal = Object.values(newOrderPayments).reduce(
+      (sum, p) => sum + (p.payment || 0),
+      0
+    );
+
     if (newCheckPay.has(orderId)) {
       // Uncheck: Remove payment and add amount back to remaining
       newCheckPay.delete(orderId);
       const removedPayment = newOrderPayments[orderId]?.payment || 0;
-      setRemainingAmount(prev => prev + removedPayment);
+      setRemainingAmount((prev) => prev + removedPayment);
       delete newOrderPayments[orderId];
     } else {
       // Check: Calculate and apply new payment
       const availableAmount = Math.min(remainingAmount, orderAmount);
-      
+      console.log("Available Amount 1:", availableAmount);
+      console.log("Order Amount 1:", orderAmount);
+      console.log("Remaining Amount 1:", remainingAmount);
       if (availableAmount > 0) {
         let wtaxAmount = 0;
         let paymentAmount = availableAmount;
 
         // Calculate WTax if we have the full amount for the order
-        if (selectedWtax && availableAmount >= orderAmount) {
-          const baseAmount = selectedWtax.withVAT === 1
-            ? orderAmount / (1 + (vatRate/100))
-            : orderAmount;
-          wtaxAmount = Math.round(baseAmount * (selectedWtax.taxRate/100) * 100) / 100;
+        //        if (selectedWtax && availableAmount >= orderAmount) {
+        console.log("Selected WTax:", selectedWtax);
+        if (selectedWtax.withVAT === 1) {
+          const baseAmount = orderAmount / (1 + vatRate / 100);
+          wtaxAmount =
+            Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
           // Adjust payment amount by subtracting WTax
-          paymentAmount = orderAmount - wtaxAmount;
+          console.log("WTax Amount:", wtaxAmount);
+          if (availableAmount >= orderAmount) {
+            paymentAmount = orderAmount - wtaxAmount;
+          } else {
+            paymentAmount = availableAmount;
+          }
+          console.log("Available Amount:", availableAmount);
+          console.log("Order Amount:", orderAmount);
+          console.log("Payment Amount:", paymentAmount);
         }
 
         // Ensure we don't exceed the input amount
@@ -569,10 +601,10 @@ function Prod() {
           newCheckPay.add(orderId);
           newOrderPayments[orderId] = {
             payment: paymentAmount,
-            wtax: wtaxAmount
+            wtax: wtaxAmount,
           };
           // Update remaining amount based on payment only
-          setRemainingAmount(prev => prev - paymentAmount);
+          setRemainingAmount((prev) => prev - paymentAmount);
         }
       }
     }
@@ -586,10 +618,10 @@ function Prod() {
     if (selectedWtax && checkPay.size > 0) {
       const newOrderPayments = { ...orderPayments };
       let totalRemainingAmount = paymentInfo.amount;
-      
+
       // Recalculate all payments
-      checkPay.forEach(orderId => {
-        const order = orders.find(o => o.id === orderId);
+      checkPay.forEach((orderId) => {
+        const order = orders.find((o) => o.id === orderId);
         if (!order) return;
 
         const orderAmount = order.grandTotal - (order.amountPaid || 0);
@@ -598,10 +630,12 @@ function Prod() {
 
         // Calculate WTax and adjust payment
         if (orderAmount <= totalRemainingAmount) {
-          const baseAmount = selectedWtax.withVAT === 1
-            ? orderAmount / (1 + (vatRate/100))
-            : orderAmount;
-          wtaxAmount = Math.round(baseAmount * (selectedWtax.taxRate/100) * 100) / 100;
+          const baseAmount =
+            selectedWtax.withVAT === 1
+              ? orderAmount / (1 + vatRate / 100)
+              : orderAmount;
+          wtaxAmount =
+            Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
           paymentAmount = orderAmount - wtaxAmount;
         } else {
           paymentAmount = totalRemainingAmount;
@@ -609,7 +643,7 @@ function Prod() {
 
         newOrderPayments[orderId] = {
           payment: paymentAmount,
-          wtax: wtaxAmount
+          wtax: wtaxAmount,
         };
         totalRemainingAmount -= paymentAmount;
       });
@@ -625,20 +659,20 @@ function Prod() {
     const newOrderPayments = { ...orderPayments };
     const oldPayment = newOrderPayments[orderId]?.payment || 0;
 
-    if (field === 'payment') {
+    if (field === "payment") {
       // Calculate max allowed payment
       const maxPayment = remainingAmount + oldPayment;
       const payment = Math.min(numValue, maxPayment);
-      
+
       newOrderPayments[orderId] = {
         ...newOrderPayments[orderId],
-        payment
+        payment,
       };
       setRemainingAmount(maxPayment - payment);
-    } else if (field === 'wtax') {
+    } else if (field === "wtax") {
       newOrderPayments[orderId] = {
         ...newOrderPayments[orderId],
-        wtax: numValue
+        wtax: numValue,
       };
     }
 
@@ -647,110 +681,117 @@ function Prod() {
 
   // Add this helper function for currency formatting
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP'
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
     }).format(amount);
   };
 
-  // Add function to check if we can post
+  // Update canPost to check for OR#
   const canPost = () => {
-    return canEditPayments() && 
-           checkPay.size > 0
+    return (
+      canEditPayments() && checkPay.size > 0 && paymentInfo.ornum.trim() !== ""
+    ); // Add OR# validation
   };
 
-  // Update the handlePostPayment function to include validation
+  // Add function to get tooltip message
+  const getTooltipMessage = () => {
+    if (!searchClientName.trim()) return "Please select a client";
+    if (!paymentInfo.ornum.trim()) return "Please enter OR#";
+    if (!paymentInfo.amount) return "Please enter payment amount";
+    if (checkPay.size === 0) return "Please select at least one order to pay";
+    return "Please fill in all required fields";
+  };
+
+  // Update handlePostPayment to validate OR# first
   const handlePostPayment = async () => {
-    if (!canPost()) {
+    // Validate OR#
+    if (!paymentInfo.ornum.trim()) {
       setModalConfig({
-        title: 'Validation Error',
-        message: 'Please ensure all required fields are filled and at least one payment is selected.',
-        type: 'error',
+        title: "Validation Error",
+        message: "Please enter OR#",
+        type: "error",
         showCancelButton: false,
-        onConfirm: () => setShowModal(false)
+        onConfirm: () => setShowModal(false),
       });
       setShowModal(true);
       return;
     }
-
-    const totalApplied = Object.values(orderPayments).reduce((sum, p) => 
-      sum + (p.payment || 0), 0);
-
     // Check if total applied matches header amount
-    if (totalApplied !== Number(paymentInfo.amount)) {
+    const totalApplied = Object.values(orderPayments).reduce(
+      (sum, p) => sum + (p.payment || 0),
+      0
+    );
+    if (Number(totalApplied) !== Number(paymentInfo.amount)) {
       setModalConfig({
-        title: 'Payment Amount Mismatch',
-        message: `The total applied amount (${formatCurrency(totalApplied)}) does not match the payment amount (${formatCurrency(paymentInfo.amount)}). Do you want to proceed?`,
-        type: 'warning',
+        title: "Payment Amount Mismatch",
+        message: `The total applied amount (${formatCurrency(
+          totalApplied
+        )}) does not match the payment amount (${formatCurrency(
+          paymentInfo.amount
+        )}). Do you want to proceed?`,
+        type: "warning",
         showCancelButton: true,
         onConfirm: () => postPaymentToServer(),
-        onCancel: () => setShowModal(false)
+        onCancel: () => setShowModal(false),
       });
       setShowModal(true);
       return;
     }
-
     await postPaymentToServer();
   };
 
   // Function to post payment to server
   const postPaymentToServer = async () => {
     try {
-      const token = localStorage.getItem("token");
       const payload = {
         payment: {
           amount: Number(paymentInfo.amount),
           payType: paymentInfo.payType,
           payReference: paymentInfo.payReference,
-          payDate: paymentInfo.payDate
+          payDate: paymentInfo.payDate,
+          ornum: paymentInfo.ornum,
+          transactedBy: localStorage.getItem("userName"),
         },
-        allocations: Object.entries(orderPayments).map(([orderId, details]) => ({
-          orderId: Number(orderId),
-          amountApplied: details.payment
-        }))
+        allocations: Object.entries(orderPayments).map(
+          ([orderId, details]) => ({
+            orderId: Number(orderId),
+            amountApplied: details.payment,
+          })
+        ),
       };
-      
-      console.log("Posting payment with payload:", payload);
-      
+
       const response = await axios.post(
         `${ServerIP}/auth/post-payment`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        payload
       );
 
-      console.log("Payment response:", response.data);
       if (response.data.Status) {
         setAlert({
           show: true,
-          title: 'Success',
-          message: 'Payment posted successfully',
-          type: 'success',
+          title: "Success",
+          message: "Payment posted successfully",
+          type: "alert",
           showOkButton: true,
-          onConfirm: () => {
-            // Reset form and refresh data
-            setPaymentInfo({
-              clientName: "",
-              payDate: new Date().toISOString().split("T")[0],
-              payType: "CASH",
-              amount: "",
-              payReference: ""
-            });
-            setOrderPayments({});
-            setCheckPay(new Set());
-            setRemainingAmount(0);
-            setSelectedWtax(null);
-            fetchOrders();
-          }
         });
+
+        // Reset payment-related states
+        setOrderPayments({});
+        setRemainingAmount(0);
+        // Reset header amount to 0
+        setPaymentInfo((prev) => ({
+          ...prev,
+          amount: "", // Empty string for input field
+        }));
+        fetchOrders();
       }
     } catch (error) {
-      console.error('Payment error:', error);
-      let errorMessage = 'Failed to post payment';
-      
-      if (error.code === 'ERR_CONNECTION_REFUSED') {
-        errorMessage = 'Unable to connect to server. Please check if the server is running.';
+      console.error("Payment error:", error);
+      let errorMessage = "Failed to post payment";
+
+      if (error.code === "ERR_CONNECTION_REFUSED") {
+        errorMessage =
+          "Unable to connect to server. Please check if the server is running.";
       } else if (error.response?.data?.Error) {
         errorMessage = error.response.data.Error;
       } else if (error.message) {
@@ -759,11 +800,40 @@ function Prod() {
 
       setAlert({
         show: true,
-        title: 'Error',
+        title: "Error",
         message: errorMessage,
-        type: 'error',
+        type: "error",
         showOkButton: true,
       });
+    }
+  };
+
+  // Add function to check OR#
+  const checkORNumber = async (ornum) => {
+    if (!ornum.trim()) return;
+
+    try {
+      const response = await axios.get(`${ServerIP}/auth/check-ornum`, {
+        params: { ornum },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+
+      if (response.data.exists) {
+        setAlert({
+          show: true,
+          title: "Warning",
+          message: `OR# ${ornum} already exists`,
+          type: "alert",
+          showOkButton: true,
+        });
+        // Optionally clear the OR# input
+        // setPaymentInfo(prev => ({
+        //   ...prev,
+        //   ornum: ''
+        // }));
+      }
+    } catch (error) {
+      console.error("Error checking OR#:", error);
     }
   };
 
@@ -828,6 +898,28 @@ function Prod() {
             </div>
             <div className="col-md-2">
               <div className="form-group">
+                <label>OR#</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={paymentInfo.ornum}
+                  onChange={(e) =>
+                    handlePaymentInfoChange("ornum", e.target.value)
+                  }
+                  onBlur={(e) => checkORNumber(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      checkORNumber(e.target.value);
+                    }
+                  }}
+                  placeholder="Enter OR#"
+                  tabIndex="4"
+                />
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="form-group">
                 <label>Amount</label>
                 <input
                   type="number"
@@ -837,7 +929,7 @@ function Prod() {
                     handlePaymentInfoChange("amount", e.target.value)
                   }
                   placeholder="Enter amount"
-                  tabIndex="4"
+                  tabIndex="5"
                 />
               </div>
             </div>
@@ -852,7 +944,7 @@ function Prod() {
                     handlePaymentInfoChange("payReference", e.target.value)
                   }
                   placeholder="Enter reference"
-                  tabIndex="5"
+                  tabIndex="6"
                 />
               </div>
             </div>
@@ -867,31 +959,36 @@ function Prod() {
             placeholder="Search by ID, client..."
             onChange={handleSearch}
             style={{ width: "400px" }}
+            tabIndex="7"
           />
           <select
             className="form-control form-control-sm"
             style={{ width: "250px" }}
-            value={selectedWtax?.WTax || ''}
+            value={selectedWtax?.WTax}
+            tabIndex="6"
             onChange={(e) => {
               console.log("Selected value:", e.target.value);
               console.log("WTax types:", wtaxTypes);
-              const selected = wtaxTypes.find(w => w.WTax === e.target.value);
+              const selected = wtaxTypes.find((w) => w.WTax === e.target.value);
               console.log("Found WTax:", selected);
               setSelectedWtax(selected);
-              
+
               // Recalculate WTax for all checked orders when WTax type changes
               if (selected) {
                 const newOrderPayments = { ...orderPayments };
-                checkPay.forEach(orderId => {
+                checkPay.forEach((orderId) => {
                   const payment = newOrderPayments[orderId]?.payment || 0;
-                  const baseAmount = selected.withVAT === 1
-                    ? payment / (1 + (vatRate/100))
-                    : payment;
-                  const wtaxAmount = Math.round(baseAmount * (selected.taxRate/100) * 100) / 100;
-                  
+                  const baseAmount =
+                    selected.withVAT === 1
+                      ? payment / (1 + vatRate / 100)
+                      : payment;
+                  const wtaxAmount =
+                    Math.round(baseAmount * (selected.taxRate / 100) * 100) /
+                    100;
+
                   newOrderPayments[orderId] = {
                     ...newOrderPayments[orderId],
-                    wtax: wtaxAmount
+                    wtax: wtaxAmount,
                   };
                 });
                 setOrderPayments(newOrderPayments);
@@ -899,7 +996,7 @@ function Prod() {
             }}
           >
             <option value="">Select WTax Type</option>
-            {wtaxTypes.map(wt => (
+            {wtaxTypes.map((wt) => (
               <option key={wt.WTax} value={wt.WTax}>
                 {`${wt.WTax} - ${wt.Description}`}
               </option>
@@ -1051,7 +1148,49 @@ function Prod() {
                       ? `₱${order.grandTotal.toLocaleString()}`
                       : ""}
                   </td>
-                  <td>
+                  <td
+                    className="number_right"
+                    style={{ cursor: "pointer" }}
+                    onDoubleClick={async () => {
+                      try {
+                        const response = await axios.post(
+                          `${ServerIP}/auth/recalculate-paid-amount`,
+                          { orderId: order.id }
+                        );
+
+                        if (response.data.Status) {
+                          // Update the order in state
+                          setOrders(
+                            orders.map((o) =>
+                              o.id === order.id
+                                ? {
+                                    ...o,
+                                    amountPaid: response.data.Result.amountPaid,
+                                  }
+                                : o
+                            )
+                          );
+
+                          setAlert({
+                            show: true,
+                            title: "Success",
+                            message: "Amount recalculated successfully",
+                            type: "alert",
+                            showOkButton: true,
+                          });
+                        }
+                      } catch (error) {
+                        console.error("Error recalculating amount:", error);
+                        setAlert({
+                          show: true,
+                          title: "Error",
+                          message: "Failed to recalculate amount",
+                          type: "error",
+                          showOkButton: true,
+                        });
+                      }
+                    }}
+                  >
                     {order.amountPaid
                       ? `₱${order.amountPaid.toLocaleString()}`
                       : ""}
@@ -1060,8 +1199,17 @@ function Prod() {
                     <input
                       type="checkbox"
                       checked={checkPay.has(order.id)}
-                      onChange={() => handlePayCheck(order.id, order.grandTotal - (order.amountPaid || 0))}
-                      disabled={!canEditPayments() || (remainingAmount <= 0 && !checkPay.has(order.id))}
+                      onChange={() =>
+                        handlePayCheck(
+                          order.id,
+                          order.grandTotal - (order.amountPaid || 0)
+                        )
+                      }
+                      disabled={
+                        !canEditPayments() ||
+                        (remainingAmount <= 0 && !checkPay.has(order.id)) ||
+                        order.amountPaid >= order.grandTotal
+                      }
                     />
                   </td>
                   <td className="text-right">
@@ -1070,7 +1218,13 @@ function Prod() {
                         type="number"
                         className="form-control form-control-sm text-right"
                         value={orderPayments[order.id]?.payment || 0}
-                        onChange={(e) => handlePaymentChange(order.id, 'payment', e.target.value)}
+                        onChange={(e) =>
+                          handlePaymentChange(
+                            order.id,
+                            "payment",
+                            e.target.value
+                          )
+                        }
                         min="0"
                         max={order.grandTotal - (order.amountPaid || 0)}
                       />
@@ -1084,7 +1238,9 @@ function Prod() {
                         type="number"
                         className="form-control form-control-sm text-right"
                         value={orderPayments[order.id]?.wtax || 0}
-                        onChange={(e) => handlePaymentChange(order.id, 'wtax', e.target.value)}
+                        onChange={(e) =>
+                          handlePaymentChange(order.id, "wtax", e.target.value)
+                        }
                         min="0"
                       />
                     ) : (
@@ -1092,7 +1248,11 @@ function Prod() {
                     )}
                   </td>
                   <td className="text-right">
-                    {formatCurrency(order.grandTotal - (orderPayments[order.id]?.payment || 0))}
+                    {formatCurrency(
+                      order.grandTotal -
+                        (order.amountPaid || 0) -
+                        (orderPayments[order.id]?.payment || 0)
+                    )}
                   </td>
                   <td>{order.ornum || ""}</td>
                   <td>
@@ -1106,21 +1266,59 @@ function Prod() {
               <tr className="table-info">
                 <td colSpan="11"></td>
                 <td className="text-right">
-                  <Button
-                    variant="save"
-                    size="sm"
-                    onClick={handlePostPayment}
-                    disabled={!canPost()}
+                  <div
+                    className="position-relative"
+                    onMouseOver={(e) => {
+                      if (!canPost()) {
+                        console.log("Showing tooltip");
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const message = getTooltipMessage();
+                        // Estimate pixel width based on message length (roughly 8px per character)
+                        const messageWidth = message.length * 10;
+                        // Adjust x position based on message width
+                        const xOffset = messageWidth / 2;
+
+                        setTooltipPosition({
+                          x: rect.left - xOffset,
+                          y: rect.top + window.scrollY + 5,
+                        });
+                        setShowTooltip(true);
+                      }
+                    }}
+                    onMouseLeave={() => setShowTooltip(false)}
                   >
-                    Post Payment
-                  </Button>
+                    <Button
+                      variant="save"
+                      size="sm"
+                      onClick={handlePostPayment}
+                      disabled={!canPost()}
+                    >
+                      Post Payment
+                    </Button>
+                  </div>
                 </td>
-                <td className="text-right"><strong>Totals:</strong></td>
                 <td className="text-right">
-                  <strong>{formatCurrency(Object.values(orderPayments).reduce((sum, p) => sum + (p.payment || 0), 0))}</strong>
+                  <strong>Totals:</strong>
                 </td>
                 <td className="text-right">
-                  <strong>{formatCurrency(Object.values(orderPayments).reduce((sum, p) => sum + (p.wtax || 0), 0))}</strong>
+                  <strong>
+                    {formatCurrency(
+                      Object.values(orderPayments).reduce(
+                        (sum, p) => sum + (p.payment || 0),
+                        0
+                      )
+                    )}
+                  </strong>
+                </td>
+                <td className="text-right">
+                  <strong>
+                    {formatCurrency(
+                      Object.values(orderPayments).reduce(
+                        (sum, p) => sum + (p.wtax || 0),
+                        0
+                      )
+                    )}
+                  </strong>
                 </td>
                 <td className="text-right">
                   <strong>{formatCurrency(remainingAmount)}</strong>
@@ -1165,14 +1363,21 @@ function Prod() {
         title={alert.title}
         message={alert.message}
         type={alert.type}
-        onClose={() => setAlert(prev => ({ ...prev, show: false }))}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
         onConfirm={() => {
           if (alert.onConfirm) {
             alert.onConfirm();
           }
-          setAlert(prev => ({ ...prev, show: false }));
+          setAlert((prev) => ({ ...prev, show: false }));
         }}
       />
+      <Modal
+        variant="tooltip"
+        show={showTooltip && !canPost()}
+        position={tooltipPosition}
+      >
+        <div className="text-center">{getTooltipMessage()}</div>
+      </Modal>
     </div>
   );
 }

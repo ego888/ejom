@@ -138,7 +138,6 @@
 /* Client cell styles */
 .client-cell {
   cursor: pointer;
-  position: relative;
 }
 
 .client-cell:hover {

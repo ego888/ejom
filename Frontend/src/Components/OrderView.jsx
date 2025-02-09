@@ -289,7 +289,7 @@ function OrderView() {
 
               <div className="info-group">
                 <div className="info-label">Edited By</div>
-                <div className="info-value">{data.editedBy || ""}</div>
+                <div className="info-value">{localStorage.getItem("userName") || ""}</div>
               </div>
 
               <div className="info-group">

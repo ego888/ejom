@@ -4,6 +4,134 @@ import { verifyUser } from "../middleware.js";
 
 const router = express.Router();
 
+// Get all orders w/o payment info with pagination, sorting, filtering and search
+router.get("/orders-min", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || "";
+    const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
+    const sales = req.query.sales ? req.query.sales.split(",") : [];
+    const clients = req.query.clients ? req.query.clients.split(",") : [];
+    let sortBy = req.query.sortBy || "orderID";
+    let sortDirection = req.query.sortDirection || "desc";
+    const forProdSort = req.query.forProdSort;
+
+    // Handle forProd sorting
+    if (forProdSort === "asc" || forProdSort === "desc") {
+      sortBy = "forProd";
+      sortDirection = forProdSort;
+    }
+
+    // Build where clause
+    let whereConditions = ["1=1"]; // Always true condition to start
+    let params = [];
+
+    if (search) {
+      whereConditions.push(
+        "(o.orderID LIKE ? OR c.clientName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
+      );
+      const searchParam = `%${search}%`;
+      params.push(
+        searchParam, searchParam, searchParam, searchParam, searchParam,
+        searchParam, searchParam, searchParam, searchParam
+      );
+    }
+
+    if (statuses.length) {
+      whereConditions.push(`o.status IN (?)`);
+      params.push(statuses);
+    }
+
+    if (sales.length) {
+      whereConditions.push(`o.preparedBy IN (?)`);
+      params.push(sales);
+    }
+
+    if (clients.length) {
+      whereConditions.push(`o.clientId IN (?)`);
+      params.push(clients);
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Main data query
+    const dataSql = `
+      SELECT 
+        o.orderID as id, 
+        o.clientId, 
+        c.clientName, 
+        o.projectName, 
+        o.orderedBy, 
+        o.orderDate, 
+        o.dueDate, 
+        o.dueTime,
+        o.status, 
+        o.drnum, 
+        o.invoiceNum as invnum, 
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        e.name as salesName, 
+        o.orderReference
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
+    `;
+
+    // Execute data query with proper parameter order
+    const orders = await new Promise((resolve, reject) => {
+      con.query(
+        dataSql,
+        [...params, limit, offset],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    // Count query
+    const countSql = `
+      SELECT COUNT(DISTINCT o.orderID) as total
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
+
+    // Execute count query
+    const [countResult] = await new Promise((resolve, reject) => {
+      con.query(countSql, params, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+
+    return res.json({
+      Status: true,
+      Result: {
+        orders,
+        total: countResult.total,
+        page: Number(page),
+        totalPages: Math.ceil(countResult.total / limit),
+      },
+    });
+  } catch (err) {
+    console.error("Error in orders route:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to fetch orders",
+      Details: err.message,
+    });
+  }
+});
+
 // Get all orders with pagination, sorting, filtering and search
 router.get("/orders", async (req, res) => {
   try {
@@ -74,6 +202,8 @@ router.get("/orders", async (req, res) => {
         o.amountDisc,
         o.percentDisc,
         o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
         e.name as salesName, 
         o.orderReference
       FROM orders o
@@ -789,6 +919,8 @@ router.get("/search-orders-by-client", async (req, res) => {
         o.amountDisc,
         o.percentDisc,
         o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
         e.name as salesName, 
         o.orderReference
       FROM orders o

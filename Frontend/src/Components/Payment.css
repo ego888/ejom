@@ -157,3 +157,18 @@
   padding: 20px;
   color: var(--payment-text-color);
 }
+
+.tooltip-modal {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1000;
+  min-width: 200px;
+  text-align: center;
+  margin-top: 4px;
+}

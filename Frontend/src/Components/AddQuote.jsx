@@ -187,7 +187,7 @@ function AddQuote() {
       percentDisc: newPercentDisc,
       grandTotal: Number(newGrandTotal).toFixed(2),
       totalHrs: data.totalHrs,
-      editedBy: currentUser.name,
+      editedBy: localStorage.getItem("userName"),
     };
 
     if (haveTotalsChanged(newTotals, lastSavedTotals)) {
@@ -503,7 +503,7 @@ function AddQuote() {
       percentDisc: totals.percentDisc,
       grandTotal: totals.grandTotal,
       totalHrs: totals.totalHrs,
-      editedBy: decoded.name,
+      editedBy: localStorage.getItem("userName"),
       lastEdited: currentDateTime,
       status: data.status,
       terms: data.terms || null,
@@ -659,7 +659,7 @@ function AddQuote() {
           percentDisc: newPercentDisc,
           grandTotal: totals.grandTotal,
           totalHrs: totals.totalHrs,
-          editedBy: currentUser.name,
+          editedBy: localStorage.getItem("userName"),
         };
 
         // Only update if values have changed
@@ -738,7 +738,7 @@ function AddQuote() {
                 percentDisc: totals.percentDisc,
                 grandTotal: totals.grandTotal,
                 totalHrs: totals.totalHrs,
-                editedBy: currentUser.name,
+                editedBy: localStorage.getItem("userName"),
               });
             } else {
               setAlert({
@@ -803,7 +803,7 @@ function AddQuote() {
       percentDisc: data.percentDisc,
       grandTotal: data.grandTotal,
       totalHrs: data.totalHrs,
-      editedBy: currentUser.name,
+      editedBy: localStorage.getItem("userName"),
     }).then(() => {
       navigate("/dashboard/quotes");
     });
@@ -819,7 +819,7 @@ function AddQuote() {
       percentDisc: data.percentDisc,
       grandTotal: data.grandTotal,
       totalHrs: data.totalHrs,
-      editedBy: currentUser.name,
+      editedBy: localStorage.getItem("userName"),
     }).then(() => {
       navigate("/dashboard/quotes");
     });
@@ -1028,7 +1028,7 @@ function AddQuote() {
               percentDisc: totals.percentDisc,
               grandTotal: totals.grandTotal,
               totalHrs: totals.totalHrs,
-              editedBy: currentUser.name,
+              editedBy: localStorage.getItem("userName"),
               lastEdited: new Date()
                 .toISOString()
                 .slice(0, 19)
@@ -1289,7 +1289,7 @@ function AddQuote() {
           percentDisc: data.percentDisc,
           grandTotal: data.grandTotal,
           totalHrs: data.totalHrs,
-          editedBy: currentUser.name,
+          editedBy: localStorage.getItem("userName"),
           status: "Open",
           terms: data.terms,
         };
@@ -1442,7 +1442,7 @@ function AddQuote() {
           percentDisc: data.percentDisc,
           grandTotal: data.grandTotal,
           totalHrs: data.totalHrs,
-          editedBy: currentUser.name,
+          editedBy: localStorage.getItem("userName"),
           status: "Open",
           terms: data.terms,
         };

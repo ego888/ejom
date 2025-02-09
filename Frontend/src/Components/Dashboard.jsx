@@ -57,6 +57,7 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem("valid");
     localStorage.removeItem("token");
+    localStorage.removeItem("userName"); // ✅ Remove stored name
     navigate("/");
   };
   return (

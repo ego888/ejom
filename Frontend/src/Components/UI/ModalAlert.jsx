@@ -1,6 +1,48 @@
 import React, { useEffect } from "react";
 import Button from "./Button";
 
+/**
+ * ModalAlert Component
+ *
+ * A reusable modal component that displays either an alert or a confirm dialog.
+ * It can be used to show messages, warnings, or confirmation prompts.
+ *
+ * ## Props:
+ * @param {boolean} show - Controls the visibility of the modal.
+ * @param {function} onClose - Function called when the modal is closed (e.g., clicking the cancel button or pressing "Escape").
+ * @param {function} onConfirm - Function called when the confirm button is clicked (only applicable for confirm dialogs).
+ * @param {string} title - The title of the modal (e.g., "Error", "Warning", "Confirmation").
+ * @param {string} message - The main message/content of the modal.
+ * @param {string} confirmText - Text for the confirm button (default: "OK").
+ * @param {string} cancelText - Text for the cancel button (default: "Cancel").
+ * @param {string} type - Defines the modal type. Can be:
+ *     - "alert"  → Displays a single "OK" button.
+ *     - "confirm" → Displays both "OK" and "Cancel" buttons.
+ *
+ * ## Example Usage:
+ * 
+ * // Alert Modal
+ * <ModalAlert
+ *   show={showAlert}
+ *   onClose={() => setShowAlert(false)}
+ *   title="Error"
+ *   message="Something went wrong!"
+ *   type="alert"
+ * />
+ *
+ * // Confirm Modal
+ * <ModalAlert
+ *   show={showConfirm}
+ *   onClose={() => setShowConfirm(false)}
+ *   onConfirm={handleConfirm}
+ *   title="Delete Item"
+ *   message="Are you sure you want to delete this item?"
+ *   confirmText="Yes, Delete"
+ *   cancelText="Cancel"
+ *   type="confirm"
+ * />
+ */
+
 const ModalAlert = ({
   show,
   onClose,

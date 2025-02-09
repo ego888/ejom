@@ -492,7 +492,7 @@ function AddOrder() {
           // Update order with new totalHrs
           const orderUpdateData = {
             lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
-            editedBy: jwtDecode(token).name,
+            editedBy: localStorage.getItem("userName"),
             totalHrs: totals.totalHrs,
           };
 
@@ -538,7 +538,7 @@ function AddOrder() {
         // Update order's last edited info and totalHrs
         const orderUpdateData = {
           lastEdited: currentDateTime,
-          editedBy: decoded.name,
+          editedBy: localStorage.getItem("userName"),
           totalHrs: totals.totalHrs,
         };
 
@@ -802,7 +802,7 @@ function AddOrder() {
     // Update order's last edited info and totalHrs only
     const orderUpdateData = {
       lastEdited: currentDateTime,
-      editedBy: decoded.name,
+      editedBy: localStorage.getItem("userName"),
       totalHrs: totals.totalHrs,
     };
 
@@ -1119,7 +1119,7 @@ function AddOrder() {
       terms: data.terms,
       status: "Open",
       totalHrs: data.totalHrs, // Add totalHrs
-      editedBy: currentUser.name, // Add current employee name
+      editedBy: localStorage.getItem("userName"), // Add current employee name
       //      lastEdited: currentDateTime, // Add current datetime
     };
 
