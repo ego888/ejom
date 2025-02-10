@@ -1595,6 +1595,8 @@ function AddQuote() {
         <div className="d-flex">
           <form
             className="row g-1 flex-grow-1"
+            role="form"
+            aria-label="Add New Quote"
             onSubmit={handleSubmit}
             style={{ marginTop: "-0.8rem" }}
           >
@@ -1681,9 +1683,20 @@ function AddQuote() {
                   required
                   placeholder=""
                   labelKey="clientName"
+                  aria-required="true"
+                  aria-invalid={error.clientId ? "true" : "false"}
+                  aria-describedby={
+                    error.clientId ? "clientId-error" : undefined
+                  }
                 />
                 {error.clientId && (
-                  <div className="invalid-feedback">Client is required</div>
+                  <div
+                    id="clientId-error"
+                    className="invalid-feedback"
+                    role="alert"
+                  >
+                    Client is required
+                  </div>
                 )}
               </div>
             </div>

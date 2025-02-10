@@ -22,7 +22,12 @@ const DisplayPage = ({
 }) => {
   return (
     <div className="d-flex align-items-center gap-2">
+      <label htmlFor="recordsPerPage" className="visually-hidden">
+        Records per page
+      </label>
       <select
+        id="recordsPerPage"
+        name="recordsPerPage"
         className="form-select form-select-sm"
         style={{
           width: "auto",
@@ -35,14 +40,20 @@ const DisplayPage = ({
           setRecordsPerPage(Number(e.target.value));
           setCurrentPage(1);
         }}
+        aria-label="Number of records to display per page"
       >
         <option value={10}>10 per page</option>
         <option value={25}>25 per page</option>
         <option value={50}>50 per page</option>
         <option value={100}>100 per page</option>
       </select>
-      <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-        {(currentPage - 1) * recordsPerPage + 1} to{" "}
+      <div
+        className="text-muted"
+        style={{ fontSize: "0.75rem" }}
+        aria-live="polite"
+        role="status"
+      >
+        Showing {(currentPage - 1) * recordsPerPage + 1} to{" "}
         {Math.min(currentPage * recordsPerPage, totalCount)} of {totalCount}{" "}
         entries
       </div>

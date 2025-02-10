@@ -130,51 +130,59 @@ const AddEmployee = () => {
         <h3 className="text-center">Add Employee</h3>
         <form className="row g-1" onSubmit={handleSubmit}>
           <div className="col-12">
-            <label htmlFor="name" className="form-label">
+            <label htmlFor="employee-name" className="form-label">
               Name
             </label>
             <input
+              id="employee-name"
               type="text"
               name="name"
               className="form-control rounded-0"
               placeholder="Enter Name"
+              autoComplete="off"
               onChange={(e) =>
                 setEmployee({ ...employee, name: e.target.value })
               }
             />
           </div>
           <div className="col-12">
-            <label htmlFor="email" className="form-label">
+            <label htmlFor="employee-email" className="form-label">
               Email
             </label>
             <input
+              id="employee-email"
               type="email"
               name="email"
               className="form-control rounded-0"
               placeholder="Enter Email"
-              autoComplete="off"
+              autoComplete="email"
               onChange={(e) =>
                 setEmployee({ ...employee, email: e.target.value })
               }
             />
           </div>
           <div className="col-12">
-            <label htmlFor="password" className="form-label">
+            <label htmlFor="employee-password" className="form-label">
               Password
             </label>
             <input
+              id="employee-password"
               type="password"
               name="password"
               className="form-control rounded-0"
               placeholder="Enter Password"
+              autoComplete="new-password"
               onChange={(e) =>
                 setEmployee({ ...employee, password: e.target.value })
               }
             />
-            <label htmlFor="salary" className="form-label">
+          </div>
+          <div className="col-12">
+            <label htmlFor="employee-salary" className="form-label">
               Salary
             </label>
             <input
+              id="employee-salary"
               type="text"
               name="salary"
               className="form-control rounded-0"
@@ -186,27 +194,28 @@ const AddEmployee = () => {
             />
           </div>
           <div className="col-12">
-            <label htmlFor="address" className="form-label">
+            <label htmlFor="employee-address" className="form-label">
               Address
             </label>
             <input
+              id="employee-address"
               type="text"
               name="address"
               className="form-control rounded-0"
               placeholder="1234 Main St"
-              autoComplete="off"
+              autoComplete="street-address"
               onChange={(e) =>
                 setEmployee({ ...employee, address: e.target.value })
               }
             />
           </div>
           <div className="col-12">
-            <label htmlFor="category" className="form-label">
+            <label htmlFor="employee-category" className="form-label">
               Category
             </label>
             <Dropdown
               variant="form"
-              id="category"
+              id="employee-category"
               name="category"
               value={employee.category_id || ""}
               onChange={(e) =>
@@ -338,6 +347,7 @@ const AddEmployee = () => {
               Select Image
             </label>
             <input
+              id="image"
               type="file"
               name="image"
               className="form-control rounded-0"

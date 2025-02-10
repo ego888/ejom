@@ -32,10 +32,11 @@ const AddCategory = () => {
         <h2>Add Category</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label htmlFor="category">
+            <label htmlFor="category-input">
               <strong>Category:</strong>
             </label>
             <input
+              id="category-input"
               type="text"
               name="category"
               placeholder="Enter Category"

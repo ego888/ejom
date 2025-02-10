@@ -553,6 +553,7 @@ function Prod() {
         <div className="d-flex justify-content-between mb-3">
           <div className="d-flex gap-2 align-items-center">
             <input
+              id="order-id-input"
               type="text"
               className="form-control form-control-sm"
               placeholder="Enter Order ID"
@@ -561,14 +562,23 @@ function Prod() {
               onKeyPress={handleOrderIdSubmit}
               style={{ width: "150px" }}
             />
-            <Button variant="save" onClick={handlePrintProductionClick}>
+            <Button
+              variant="save"
+              onClick={handlePrintProductionClick}
+              aria-label="Print Production"
+            >
               Print Production
             </Button>
-            <Button variant="view" onClick={handlePrintDRClick}>
+            <Button
+              variant="view"
+              onClick={handlePrintDRClick}
+              aria-label="Print DR"
+            >
               Print DR
             </Button>
           </div>
           <input
+            id="prod-search-input"
             type="text"
             className="form-control form-control-sm"
             placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
@@ -624,6 +634,9 @@ function Prod() {
                 <th
                   onClick={() => handleSort("id")}
                   style={{ cursor: "pointer" }}
+                  aria-sort={
+                    sortConfig.key === "id" ? sortConfig.direction : "none"
+                  }
                 >
                   Order ID {getSortIndicator("id")}
                 </th>
@@ -696,13 +709,22 @@ function Prod() {
                     </div>
                   </td>
                   <td>
-                    <input
-                      type="checkbox"
-                      checked={order.forProd || false}
-                      onChange={(e) =>
-                        handleForProdChange(order.id, e.target.checked)
-                      }
-                    />
+                    <div className="checkbox-container">
+                      <label
+                        htmlFor={`prod-check-${order.id}`}
+                        className="visually-hidden"
+                      >
+                        Mark order {order.id} for production
+                      </label>
+                      <input
+                        id={`prod-check-${order.id}`}
+                        type="checkbox"
+                        checked={order.forProd || false}
+                        onChange={(e) =>
+                          handleForProdChange(order.id, e.target.checked)
+                        }
+                      />
+                    </div>
                   </td>
                   <td>{order.id}</td>
                   <td

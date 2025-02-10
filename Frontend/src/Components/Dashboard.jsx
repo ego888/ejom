@@ -51,6 +51,33 @@ const Dashboard = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    const handleKeyNavigation = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault(); // Prevent form submission on Enter
+
+        // Get all focusable form elements (input, select, textarea, button)
+        const focusableElements = Array.from(
+          document.querySelectorAll("input, select, textarea, button")
+        );
+
+        // Get the currently focused element
+        const currentIndex = focusableElements.indexOf(document.activeElement);
+
+        // Move focus to the next element
+        if (
+          currentIndex !== -1 &&
+          currentIndex < focusableElements.length - 1
+        ) {
+          focusableElements[currentIndex + 1].focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyNavigation);
+    return () => document.removeEventListener("keydown", handleKeyNavigation);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("valid");
     localStorage.removeItem("token");

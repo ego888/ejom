@@ -46,26 +46,26 @@ function Quotes() {
   const clientFilterRef = useRef(null);
 
   const fetchQuotes = async () => {
+    if (selectedStatuses.length === 0) {
+      setQuotes([]);
+      setTotalCount(0);
+      return;
+    }
+    console.log("FETCHING QUOTES");
+    setLoading(true);
     try {
-      let url = `${ServerIP}/auth/quotes?page=${currentPage}&limit=${recordsPerPage}&sortBy=${sortConfig.key}&sortDirection=${sortConfig.direction}`;
+      const params = {
+        page: currentPage,
+        limit: recordsPerPage,
+        sortBy: sortConfig.key,
+        sortDirection: sortConfig.direction,
+        search: searchTerm,
+        statuses: selectedStatuses.join(","),
+        sales: selectedSales.length ? selectedSales.join(",") : undefined,
+        clients: selectedClients.length ? selectedClients.join(",") : undefined,
+      };
 
-      if (searchTerm) {
-        url += `&search=${encodeURIComponent(searchTerm)}`;
-      }
-
-      if (selectedSales.length > 0) {
-        url += `&sales=${encodeURIComponent(selectedSales.join(","))}`;
-      }
-
-      if (selectedStatuses.length > 0) {
-        url += `&statuses=${encodeURIComponent(selectedStatuses.join(","))}`;
-      }
-
-      if (selectedClients.length > 0) {
-        url += `&clients=${encodeURIComponent(selectedClients.join(","))}`;
-      }
-
-      const response = await axios.get(url);
+      const response = await axios.get(`${ServerIP}/auth/quotes`, { params });
       if (response.data.Status) {
         setQuotes(response.data.Result.quotes);
         setTotalCount(response.data.Result.total);
@@ -73,60 +73,28 @@ function Quotes() {
       }
     } catch (error) {
       console.error("Error fetching quotes:", error);
+      setQuotes([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Fetch quotes when parameters change
+  // Single initialization effect
   useEffect(() => {
-    if (selectedStatuses.length === 0 && statusOptions.length > 0) {
-      setQuotes([]);
-      setTotalCount(0);
-    } else {
-      fetchQuotes();
-    }
-  }, [
-    currentPage,
-    recordsPerPage,
-    sortConfig,
-    searchTerm,
-    selectedStatuses,
-    statusOptions,
-    selectedClients,
-    selectedSales,
-  ]);
-
-  // Fetch clients and sales employees
-  useEffect(() => {
-    // Fetch initial data
-    Promise.all([
-      axios.get(`${ServerIP}/auth/sales_employees`),
-      axios.get(`${ServerIP}/auth/clients`),
-    ])
-      .then(([salesRes, clientsRes]) => {
-        if (salesRes.data.Status) {
-          setSalesEmployees(salesRes.data.Result);
-        }
-        if (clientsRes.data.Status) {
-          setClientList(clientsRes.data.Result);
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
-
-    fetchQuotes();
-  }, []);
-
-  // Fetch status options
-  useEffect(() => {
-    const fetchStatusOptions = async () => {
+    const initializeComponent = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/quote-statuses`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.Status) {
-          const sortedStatuses = response.data.Result.sort(
+        // Fetch all initial data in parallel
+        const [statusResponse, salesResponse, clientsResponse] =
+          await Promise.all([
+            axios.get(`${ServerIP}/auth/quote-statuses`),
+            axios.get(`${ServerIP}/auth/sales_employees`),
+            axios.get(`${ServerIP}/auth/clients`),
+          ]);
+
+        // Handle status options
+        if (statusResponse.data.Status) {
+          const sortedStatuses = statusResponse.data.Result.sort(
             (a, b) => a.step - b.step
           );
           setStatusOptions(sortedStatuses);
@@ -136,10 +104,8 @@ function Quotes() {
           if (saved) {
             const savedStatuses = JSON.parse(saved);
             setSelectedStatuses(savedStatuses);
-            // Update All checkbox state based on saved statuses
             setIsAllChecked(savedStatuses.length === sortedStatuses.length);
           } else {
-            // Define firstTwoStatuses before using it
             const firstTwoStatuses = sortedStatuses
               .slice(0, 2)
               .map((s) => s.statusId);
@@ -148,16 +114,36 @@ function Quotes() {
               "quoteStatusFilters",
               JSON.stringify(firstTwoStatuses)
             );
-            // Update All checkbox state based on first two statuses
             setIsAllChecked(firstTwoStatuses.length === sortedStatuses.length);
           }
         }
-      } catch (err) {
-        console.error("Error fetching status options:", err);
+
+        // Handle other responses
+        if (salesResponse.data.Status)
+          setSalesEmployees(salesResponse.data.Result);
+        if (clientsResponse.data.Status)
+          setClientList(clientsResponse.data.Result);
+      } catch (error) {
+        console.error("Error in initialization:", error);
       }
     };
-    fetchStatusOptions();
-  }, []);
+
+    initializeComponent();
+  }, []); // Run once on mount
+
+  // Single effect for data fetching with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(fetchQuotes, searchTerm ? 500 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [
+    selectedStatuses,
+    currentPage,
+    recordsPerPage,
+    sortConfig,
+    searchTerm,
+    selectedSales,
+    selectedClients,
+  ]);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -207,11 +193,6 @@ function Quotes() {
     }
     return "";
   };
-
-  // Calculate pagination values
-  useEffect(() => {
-    setTotalPages(Math.ceil(totalCount / recordsPerPage));
-  }, [totalCount, recordsPerPage]);
 
   // Add cleanup effect to save the page when unmounting
   useEffect(() => {
@@ -283,13 +264,21 @@ function Quotes() {
           >
             Add Quote
           </Button>
-          <input
-            type="text"
-            className="form-control form-control-sm"
-            placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-            onChange={handleSearch}
-            style={{ width: "400px" }}
-          />
+          <div className="search-container">
+            <label htmlFor="quoteSearch" className="visually-hidden">
+              Search quotes
+            </label>
+            <input
+              id="quoteSearch"
+              name="quoteSearch"
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="Search by ID, client..."
+              onChange={handleSearch}
+              style={{ width: "400px" }}
+              aria-label="Search quotes"
+            />
+          </div>
         </div>
 
         {/* Loading indicator */}
@@ -441,21 +430,28 @@ function Quotes() {
             currentPage={currentPage}
             totalCount={totalCount}
             setCurrentPage={setCurrentPage}
+            selectProps={{
+              id: "quotesPerPage",
+              name: "quotesPerPage",
+              "aria-label": "Number of quotes per page",
+            }}
           />
 
           {/* Status filter badges */}
           <div className="d-flex flex-column align-items-center gap-0">
-            {/* Status Badges */}
             <div className="d-flex justify-content-center gap-1 w-100">
               {statusOptions.map((status) => (
                 <button
                   key={status.statusId}
+                  id={`status-${status.statusId}`}
+                  name={`status-${status.statusId}`}
                   className={`badge ${
                     selectedStatuses.includes(status.statusId)
                       ? "bg-primary"
                       : "bg-secondary"
                   }`}
                   onClick={() => handleStatusFilter(status.statusId)}
+                  aria-label={`Filter by status ${status.statusId}`}
                   style={{
                     border: "none",
                     cursor: "pointer",
@@ -474,25 +470,11 @@ function Quotes() {
               className="position-relative w-100"
               style={{ padding: "0.25rem 0" }}
             >
-              <div
-                className="position-absolute"
-                style={{
-                  height: "1px",
-                  backgroundColor: "#ccc",
-                  width: "100%",
-                  top: "50%",
-                  zIndex: 0,
-                }}
-              ></div>
-              <div
-                className="d-flex justify-content-center"
-                style={{ position: "relative", zIndex: 1 }}
-              >
-                <div
-                  className="d-flex align-items-center bg-white px-2"
-                  style={{ backgroundColor: "transparent" }}
-                >
+              <div className="d-flex justify-content-center">
+                <div className="d-flex align-items-center bg-white px-2">
                   <input
+                    id="selectAllStatuses"
+                    name="selectAllStatuses"
                     type="checkbox"
                     className="form-check-input me-1"
                     ref={(el) => {
@@ -502,8 +484,14 @@ function Quotes() {
                     }}
                     checked={isAllChecked}
                     onChange={handleAllCheckbox}
+                    aria-label="Select all statuses"
                   />
-                  <label className="form-check-label">All</label>
+                  <label
+                    htmlFor="selectAllStatuses"
+                    className="form-check-label"
+                  >
+                    All
+                  </label>
                 </div>
               </div>
             </div>

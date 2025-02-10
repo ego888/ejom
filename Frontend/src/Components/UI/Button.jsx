@@ -27,19 +27,19 @@ const Button = ({
 
     switch (variant) {
       case "add":
-        return <FaPlus />;
+        return <FaPlus aria-hidden="true" />;
       case "edit":
-        return <FaEdit />;
+        return <FaEdit aria-hidden="true" />;
       case "delete":
-        return <FaTrash />;
+        return <FaTrash aria-hidden="true" />;
       case "save":
-        return <FaSave />;
+        return <FaSave aria-hidden="true" />;
       case "print":
-        return <FaPrint />;
+        return <FaPrint aria-hidden="true" />;
       case "view":
-        return <FaEye />;
+        return <FaEye aria-hidden="true" />;
       case "cancel":
-        return <FaTimes />;
+        return <FaTimes aria-hidden="true" />;
       default:
         return null;
     }
@@ -71,15 +71,39 @@ const Button = ({
     return `${baseClass} ${variantClass} ${sizeClass} ${iconOnlyClass} ${className}`.trim();
   };
 
+  // Get appropriate aria-label based on variant if iconOnly
+  const getAriaLabel = () => {
+    if (!iconOnly) return props["aria-label"];
+
+    const labelMap = {
+      add: "Add new item",
+      edit: "Edit item",
+      delete: "Delete item",
+      save: "Save changes",
+      print: "Print",
+      view: "View details",
+      cancel: "Cancel",
+    };
+
+    return labelMap[variant] || props["aria-label"];
+  };
+
   return (
     <button
       type={type}
       className={getButtonClass()}
       onClick={onClick}
       disabled={disabled}
+      aria-label={getAriaLabel()}
       {...props}
     >
-      {iconOnly ? getIcon() : <>{children}</>}
+      {iconOnly ? (
+        <span className="icon-wrapper" aria-hidden="true">
+          {getIcon()}
+        </span>
+      ) : (
+        <>{children}</>
+      )}
     </button>
   );
 };

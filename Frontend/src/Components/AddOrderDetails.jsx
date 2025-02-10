@@ -16,6 +16,7 @@ import {
 } from "../utils/orderUtils";
 import { useNavigate, useParams } from "react-router-dom";
 import ModalAlert from "./UI/ModalAlert";
+import Modal from "./UI/Modal";
 
 function AddOrderDetails({ orderId, onDetailAdded }) {
   const { orderId: urlOrderId } = useParams();
@@ -366,63 +367,83 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
 
   return (
     <div className="add-order-details">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} role="form" aria-label="Add Order Details">
         <div className="table-responsive">
-          <table className="order-table">
+          <table className="order-table" role="grid">
             <thead>
               <tr>
-                <th>Qty</th>
-                <th>W</th>
-                <th>H</th>
-                <th>Unit</th>
-                <th>Material</th>
-                <th>Description</th>
-                <th>Per SqFt</th>
-                <th>Unit Price</th>
-                <th>Disc</th>
-                <th>Amount</th>
-                <th>Remarks</th>
-                <th>Action</th>
+                <th scope="col">Qty</th>
+                <th scope="col">W</th>
+                <th scope="col">H</th>
+                <th scope="col">Unit</th>
+                <th scope="col">Material</th>
+                <th scope="col">Description</th>
+                <th scope="col">Per SqFt</th>
+                <th scope="col">Unit Price</th>
+                <th scope="col">Disc</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Remarks</th>
+                <th scope="col">Action</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>
+                  <label htmlFor="quantity" className="visually-hidden">
+                    Quantity
+                  </label>
                   <input
+                    id="quantity"
                     type="number"
                     step="1.0"
                     className="form-control form-control-sm"
                     name="quantity"
                     value={detail.quantity}
                     onChange={handleInputChange}
+                    aria-label="Quantity"
                   />
                 </td>
                 <td>
+                  <label htmlFor="width" className="visually-hidden">
+                    Width
+                  </label>
                   <input
+                    id="width"
                     type="number"
                     step="1.0"
                     className="form-control form-control-sm"
                     name="width"
                     value={detail.width}
                     onChange={handleInputChange}
+                    aria-label="Width"
                   />
                 </td>
                 <td>
+                  <label htmlFor="height" className="visually-hidden">
+                    Height
+                  </label>
                   <input
+                    id="height"
                     type="number"
                     step="1.0"
                     className="form-control form-control-sm"
                     name="height"
                     value={detail.height}
                     onChange={handleInputChange}
+                    aria-label="Height"
                   />
                 </td>
                 <td>
+                  <label htmlFor="unit" className="visually-hidden">
+                    Unit
+                  </label>
                   <select
+                    id="unit"
                     className="form-select form-select-sm"
                     name="unit"
                     value={detail.unit || ""}
                     onChange={handleInputChange}
+                    aria-label="Unit"
                   >
                     <option value="">Select</option>
                     {units.map((unit) => (
@@ -433,11 +454,16 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   </select>
                 </td>
                 <td>
+                  <label htmlFor="material" className="visually-hidden">
+                    Material
+                  </label>
                   <select
+                    id="material"
                     className="form-select form-select-sm"
                     name="material"
                     value={detail.material || ""}
                     onChange={handleInputChange}
+                    aria-label="Material"
                   >
                     <option value="">Select Material</option>
                     {materials.map((material) => (
@@ -448,61 +474,91 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   </select>
                 </td>
                 <td>
+                  <label htmlFor="itemDescription" className="visually-hidden">
+                    Description
+                  </label>
                   <input
+                    id="itemDescription"
                     type="text"
                     className="form-control"
                     name="itemDescription"
                     value={detail.itemDescription}
                     onChange={handleInputChange}
+                    aria-label="Description"
                   />
                 </td>
                 <td>
+                  <label htmlFor="perSqFt" className="visually-hidden">
+                    Per SqFt
+                  </label>
                   <input
+                    id="perSqFt"
                     type="number"
                     step="1.0"
                     className="form-control"
                     name="perSqFt"
                     value={detail.perSqFt}
                     onChange={handlePerSqFtChange}
+                    aria-label="Per SqFt"
                   />
                 </td>
                 <td>
+                  <label htmlFor="unitPrice" className="visually-hidden">
+                    Unit Price
+                  </label>
                   <input
+                    id="unitPrice"
                     type="number"
                     step="1.0"
                     className="form-control"
                     name="unitPrice"
                     value={detail.unitPrice}
                     onChange={handleInputChange}
+                    aria-label="Unit Price"
                   />
                 </td>
                 <td>
+                  <label htmlFor="discount" className="visually-hidden">
+                    Discount
+                  </label>
                   <input
+                    id="discount"
                     type="number"
                     step="1.0"
                     className="form-control"
                     name="discount"
                     value={detail.discount}
                     onChange={handleInputChange}
+                    aria-label="Discount"
                   />
                 </td>
                 <td>
+                  <label htmlFor="amount" className="visually-hidden">
+                    Amount
+                  </label>
                   <input
+                    id="amount"
                     type="number"
                     step="0.01"
                     className="form-control"
                     name="amount"
                     value={detail.amount}
                     readOnly
+                    aria-label="Amount"
                   />
                 </td>
                 <td>
+                  <label htmlFor="remarks" className="visually-hidden">
+                    Remarks
+                  </label>
                   <input
+                    id="remarks"
                     type="text"
                     className="form-control"
                     name="remarks"
                     value={detail.remarks}
                     onChange={handleInputChange}
+                    aria-label="Remarks"
                   />
                 </td>
                 <td>
@@ -518,77 +574,71 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
 
       {/* Custom Modal */}
       {showAllowanceModal && (
-        <div
-          className="modal d-block"
-          tabIndex="-1"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        <Modal
+          show={showAllowanceModal}
+          onClose={() => setShowAllowanceModal(false)}
+          title="Set Allowances"
+          id="allowance-modal"
         >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Set Allowances</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowAllowanceModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <div className="row g-3">
-                  <div className="col-6">
-                    <label className="form-label">Top</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      name="top"
-                      value={detail.top}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label">Bottom</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      name="bottom"
-                      value={detail.bottom}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label">Left</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      name="allowanceLeft"
-                      value={detail.allowanceLeft}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label">Right</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      name="allowanceRight"
-                      value={detail.allowanceRight}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAllowanceModal(false)}
-                >
-                  Close
-                </button>
-              </div>
+          <div className="row g-3">
+            <div className="col-6">
+              <label htmlFor="top-allowance" className="form-label">
+                Top
+              </label>
+              <input
+                id="top-allowance"
+                type="number"
+                className="form-control"
+                name="top"
+                value={detail.top}
+                onChange={handleInputChange}
+                aria-label="Top allowance"
+              />
+            </div>
+            <div className="col-6">
+              <label htmlFor="bottom-allowance" className="form-label">
+                Bottom
+              </label>
+              <input
+                id="bottom-allowance"
+                type="number"
+                className="form-control"
+                name="bottom"
+                value={detail.bottom}
+                onChange={handleInputChange}
+                aria-label="Bottom allowance"
+              />
+            </div>
+            <div className="col-6">
+              <label htmlFor="left-allowance" className="form-label">
+                Left
+              </label>
+              <input
+                id="left-allowance"
+                type="number"
+                className="form-control"
+                name="allowanceLeft"
+                value={detail.allowanceLeft}
+                onChange={handleInputChange}
+                aria-label="Left allowance"
+              />
+            </div>
+            <div className="col-6">
+              <label htmlFor="right-allowance" className="form-label">
+                Right
+              </label>
+              <input
+                id="right-allowance"
+                type="number"
+                className="form-control"
+                name="allowanceRight"
+                value={detail.allowanceRight}
+                onChange={handleInputChange}
+                aria-label="Right allowance"
+              />
             </div>
           </div>
-        </div>
+        </Modal>
       )}
       <ModalAlert
         show={alert.show}

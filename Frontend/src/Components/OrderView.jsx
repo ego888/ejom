@@ -151,128 +151,184 @@ function OrderView() {
             <div className="row g-0 flex-grow-1 order-content">
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Order Date</label>
-                  <div className="order-info-field">{data.orderDate || ""}</div>
+                  <label htmlFor="view-order-date" className="form-label">
+                    Order Date
+                  </label>
+                  <div id="view-order-date" className="order-info-field">
+                    {data.orderDate || ""}
+                  </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Prepared By</label>
-                  <div className="order-info-field">
+                  <label htmlFor="view-prepared-by" className="form-label">
+                    Prepared By
+                  </label>
+                  <div id="view-prepared-by" className="order-info-field">
                     {data.preparedByName || ""}
                   </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Terms</label>
-                  <div className="order-info-field">{data.terms || ""}</div>
+                  <label htmlFor="view-terms" className="form-label">
+                    Terms
+                  </label>
+                  <div id="view-terms" className="order-info-field">
+                    {data.terms || ""}
+                  </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Client</label>
-                  <div className="order-info-field">
+                  <label htmlFor="view-client" className="form-label">
+                    Client
+                  </label>
+                  <div id="view-client" className="order-info-field">
                     {data.clientName || ""}
                   </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Project Name</label>
-                  <div className="order-info-field">
+                  <label htmlFor="view-project" className="form-label">
+                    Project Name
+                  </label>
+                  <div id="view-project" className="order-info-field">
                     {data.projectName || ""}
                   </div>
                 </div>
               </div>{" "}
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">DR Date</label>
-                  <div className="order-info-field">{data.drDate || ""}</div>
+                  <label htmlFor="view-dr-date" className="form-label">
+                    DR Date
+                  </label>
+                  <div id="view-dr-date" className="order-info-field">
+                    {data.drDate || ""}
+                  </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Ordered By</label>
-                  <div className="order-info-field">{data.orderedBy || ""}</div>
+                  <label htmlFor="view-ordered-by" className="form-label">
+                    Ordered By
+                  </label>
+                  <div id="view-ordered-by" className="order-info-field">
+                    {data.orderedBy || ""}
+                  </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Order Reference</label>
-                  <div className="order-info-field">
+                  <label htmlFor="view-order-ref" className="form-label">
+                    Order Reference
+                  </label>
+                  <div id="view-order-ref" className="order-info-field">
                     {data.orderReference || ""}
                   </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Cell Number</label>
-                  <div className="order-info-field">
+                  <label htmlFor="view-cell-number" className="form-label">
+                    Cell Number
+                  </label>
+                  <div id="view-cell-number" className="order-info-field">
                     {data.cellNumber || ""}
                   </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Due Date</label>
-                  <div className="order-info-field">{data.dueDate || ""}</div>
+                  <label htmlFor="view-due-date" className="form-label">
+                    Due Date
+                  </label>
+                  <div id="view-due-date" className="order-info-field">
+                    {data.dueDate || ""}
+                  </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Due Time</label>
-                  <div className="order-info-field">{data.dueTime || ""}</div>
+                  <label htmlFor="view-due-time" className="form-label">
+                    Due Time
+                  </label>
+                  <div id="view-due-time" className="order-info-field">
+                    {data.dueTime || ""}
+                  </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Graphics By</label>
-                  <div className="order-info-field">
+                  <label htmlFor="view-graphics-by" className="form-label">
+                    Graphics By
+                  </label>
+                  <div id="view-graphics-by" className="order-info-field">
                     {data.graphicsByName || ""}
                   </div>
                 </div>
               </div>
               <div className="col-6 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Special Instructions</label>
-                  <div className="order-info-field multiline">
+                  <label htmlFor="view-special-inst" className="form-label">
+                    Special Instructions
+                  </label>
+                  <div
+                    id="view-special-inst"
+                    className="order-info-field multiline"
+                  >
                     {data.specialInst || ""}
                   </div>
                 </div>
               </div>
               <div className="col-6 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Delivery Instructions</label>
-                  <div className="order-info-field multiline">
+                  <label htmlFor="view-delivery-inst" className="form-label">
+                    Delivery Instructions
+                  </label>
+                  <div
+                    id="view-delivery-inst"
+                    className="order-info-field multiline"
+                  >
                     {data.deliveryInst || ""}
                   </div>
                 </div>
               </div>
               <div className="col-12 mt-2 d-flex">
                 <div className="me-3">
-                  <span>
-                    <label className="form-label me-2">
-                      Sample:
-                      {data.sample ? (
-                        <i className="bi bi-check-circle text-success ms-1"></i>
-                      ) : (
-                        ""
-                      )}
-                    </label>
-                  </span>
+                  <label htmlFor="view-sample" className="form-label me-2">
+                    Sample:
+                    {data.sample ? (
+                      <i className="bi bi-check-circle text-success ms-1"></i>
+                    ) : (
+                      ""
+                    )}
+                  </label>
+                  <input
+                    type="checkbox"
+                    id="view-sample"
+                    checked={data.sample || false}
+                    disabled
+                    className="d-none"
+                  />
                 </div>
                 <div>
-                  <span>
-                    <label className="form-label me-2">
-                      Reprint:
-                      {data.reprint ? (
-                        <i className="bi bi-check-circle text-success ms-1"></i>
-                      ) : (
-                        ""
-                      )}
-                    </label>
-                  </span>
+                  <label htmlFor="view-reprint" className="form-label me-2">
+                    Reprint:
+                    {data.reprint ? (
+                      <i className="bi bi-check-circle text-success ms-1"></i>
+                    ) : (
+                      ""
+                    )}
+                  </label>
+                  <input
+                    type="checkbox"
+                    id="view-reprint"
+                    checked={data.reprint || false}
+                    disabled
+                    className="d-none"
+                  />
                 </div>
               </div>
             </div>
@@ -289,7 +345,9 @@ function OrderView() {
 
               <div className="info-group">
                 <div className="info-label">Edited By</div>
-                <div className="info-value">{localStorage.getItem("userName") || ""}</div>
+                <div className="info-value">
+                  {localStorage.getItem("userName") || ""}
+                </div>
               </div>
 
               <div className="info-group">
@@ -338,8 +396,10 @@ function OrderView() {
               </div>
 
               <div className="info-group">
-                <div className="info-label">Ready Date</div>
-                <div className="info-value">
+                <label htmlFor="view-ready-date" className="info-label">
+                  Ready Date
+                </label>
+                <div id="view-ready-date" className="info-value">
                   {data.readyDate
                     ? new Date(data.readyDate)
                         .toLocaleString("en-CA", {
@@ -374,8 +434,10 @@ function OrderView() {
               </div>
 
               <div className="info-group">
-                <div className="info-label">Bill Date</div>
-                <div className="info-value">
+                <label htmlFor="view-bill-date" className="info-label">
+                  Bill Date
+                </label>
+                <div id="view-bill-date" className="info-value">
                   {data.billDate
                     ? new Date(data.billDate)
                         .toLocaleString("en-CA", {
@@ -398,18 +460,34 @@ function OrderView() {
             <table className="order-table table table-striped">
               <thead>
                 <tr>
-                  <th className="text-center">Qty</th>
-                  <th className="text-center">Width</th>
-                  <th className="text-center">Height</th>
-                  <th>Unit</th>
-                  <th>Material</th>
-                  <th className="text-end">Per Sq Ft</th>
-                  <th className="text-end">Price</th>
-                  <th className="text-end">Disc%</th>
-                  <th className="text-end">Amount</th>
-                  <th>Description</th>
-                  <th>JO Remarks</th>
-                  <th className="text-center">Action</th>
+                  <th className="text-center" id="qty-header">
+                    Qty
+                  </th>
+                  <th className="text-center" id="width-header">
+                    Width
+                  </th>
+                  <th className="text-center" id="height-header">
+                    Height
+                  </th>
+                  <th id="unit-header">Unit</th>
+                  <th id="material-header">Material</th>
+                  <th className="text-end" id="sqft-header">
+                    Per Sq Ft
+                  </th>
+                  <th className="text-end" id="price-header">
+                    Price
+                  </th>
+                  <th className="text-end" id="disc-header">
+                    Disc%
+                  </th>
+                  <th className="text-end" id="amount-header">
+                    Amount
+                  </th>
+                  <th id="desc-header">Description</th>
+                  <th id="remarks-header">JO Remarks</th>
+                  <th className="text-center" id="action-header">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>

@@ -95,8 +95,9 @@ const AddMaterial = () => {
         <h3 className="text-center">Add Material</h3>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label htmlFor="material">Material:</label>
+            <label htmlFor="material-name">Material:</label>
             <input
+              id="material-name"
               type="text"
               name="material"
               placeholder="Enter Material"
@@ -108,8 +109,9 @@ const AddMaterial = () => {
             />
           </div>
           <div className="mb-3">
-            <label htmlFor="description">Description:</label>
+            <label htmlFor="material-desc">Description:</label>
             <input
+              id="material-desc"
               type="text"
               name="description"
               placeholder="Enter Description"
@@ -120,8 +122,9 @@ const AddMaterial = () => {
             />
           </div>
           <div className="mb-3">
-            <label htmlFor="sqFtPerHour">SqFt Per Hour:</label>
+            <label htmlFor="sqft-per-hour">SqFt Per Hour:</label>
             <input
+              id="sqft-per-hour"
               type="number"
               name="sqFtPerHour"
               placeholder="Enter SqFt Per Hour"
@@ -131,8 +134,9 @@ const AddMaterial = () => {
             />
           </div>
           <div className="mb-3">
-            <label htmlFor="minimumPrice">Minimum Price:</label>
+            <label htmlFor="minimum-price">Minimum Price:</label>
             <input
+              id="minimum-price"
               type="number"
               step="0.01"
               name="minimumPrice"
@@ -143,8 +147,9 @@ const AddMaterial = () => {
             />
           </div>
           <div className="mb-3">
-            <label htmlFor="fixWidth">Fix Width:</label>
+            <label htmlFor="fix-width">Fix Width:</label>
             <input
+              id="fix-width"
               type="number"
               step="0.01"
               name="fixWidth"
@@ -155,8 +160,9 @@ const AddMaterial = () => {
             />
           </div>
           <div className="mb-3">
-            <label htmlFor="fixHeight">Fix Height:</label>
+            <label htmlFor="fix-height">Fix Height:</label>
             <input
+              id="fix-height"
               type="number"
               step="0.01"
               name="fixHeight"
@@ -169,6 +175,7 @@ const AddMaterial = () => {
           <div className="mb-3">
             <label htmlFor="cost">Cost:</label>
             <input
+              id="cost"
               type="number"
               step="0.01"
               name="cost"
@@ -179,10 +186,11 @@ const AddMaterial = () => {
             />
           </div>
           <div className="mb-3">
-            <label htmlFor="noIncentive" className="me-2">
+            <label htmlFor="no-incentive" className="me-2">
               No Incentive:
             </label>
             <input
+              id="no-incentive"
               type="checkbox"
               name="noIncentive"
               onChange={(e) =>

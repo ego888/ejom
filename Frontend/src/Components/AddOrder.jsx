@@ -1255,18 +1255,13 @@ function AddOrder() {
           >
             <div className="col-4">
               <div className="d-flex flex-column">
-                <label
-                  htmlFor="orderDate"
-                  className="form-label"
-                  style={labelStyle}
-                >
+                <label htmlFor="order-date" className="form-label">
                   Order Date
                 </label>
                 <input
+                  id="order-date"
                   type="date"
                   className="form-control rounded-0"
-                  id="orderDate"
-                  style={dateTimeStyle}
                   value={data.orderDate || ""}
                   onChange={(e) =>
                     setData({ ...data, orderDate: e.target.value })
@@ -1277,16 +1272,12 @@ function AddOrder() {
             </div>
             <div className="col-4">
               <div className="d-flex flex-column">
-                <label
-                  htmlFor="preparedBy"
-                  className="form-label"
-                  style={labelStyle}
-                >
+                <label htmlFor="prepared-by" className="form-label">
                   Prepared By
                 </label>
                 <Dropdown
+                  id="prepared-by"
                   variant="form"
-                  id="preparedBy"
                   value={data.preparedBy}
                   onChange={(e) =>
                     setData({ ...data, preparedBy: e.target.value })

@@ -320,10 +320,18 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
 
   return (
     <div className="quote-details-form">
-      <form onSubmit={handleSubmit} className="row g-2">
+      <form
+        onSubmit={handleSubmit}
+        className="row g-2"
+        role="form"
+        aria-label="Add Quote Details"
+      >
         <div className="col-1">
-          <label className="form-label">Qty</label>
+          <label htmlFor="quote-quantity" className="form-label">
+            Qty
+          </label>
           <input
+            id="quote-quantity"
             type="number"
             step="0.01"
             className={`form-control form-control-sm ${
@@ -331,14 +339,21 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
             }`}
             value={detail.quantity}
             onChange={(e) => handleInputChange("quantity", e.target.value)}
+            aria-invalid={error.quantity ? "true" : "false"}
+            aria-describedby={error.quantity ? "quantity-error" : undefined}
           />
           {error.quantity && (
-            <div className="invalid-feedback">Quantity is required</div>
+            <div id="quantity-error" className="invalid-feedback" role="alert">
+              Quantity is required
+            </div>
           )}
         </div>
         <div className="col-1">
-          <label className="form-label">Width</label>
+          <label htmlFor="quote-width" className="form-label">
+            Width
+          </label>
           <input
+            id="quote-width"
             type="number"
             step="0.01"
             className={`form-control form-control-sm ${
@@ -346,9 +361,13 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
             }`}
             value={detail.width}
             onChange={(e) => handleInputChange("width", e.target.value)}
+            aria-invalid={error.width ? "true" : "false"}
+            aria-describedby={error.width ? "width-error" : undefined}
           />
           {error.width && (
-            <div className="invalid-feedback">Width is required</div>
+            <div id="width-error" className="invalid-feedback" role="alert">
+              Width is required
+            </div>
           )}
         </div>
         <div className="col-1">

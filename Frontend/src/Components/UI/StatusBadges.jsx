@@ -95,6 +95,7 @@ function StatusBadges({
           statusOptions.map((status) => (
             <button
               key={status.statusId}
+              id={`status-${status.statusId}`}
               className={`badge ${
                 selectedStatuses.includes(status.statusId)
                   ? "bg-primary"
@@ -108,12 +109,17 @@ function StatusBadges({
                 minWidth: "60px",
                 padding: "0.35em 0.65em",
               }}
+              aria-label={`Filter by status ${status.statusId}`}
+              aria-pressed={selectedStatuses.includes(status.statusId)}
+              role="button"
             >
               {status.statusId}
             </button>
           ))
         ) : (
-          <div>Loading statuses...</div>
+          <div role="status" aria-live="polite">
+            Loading statuses...
+          </div>
         )}
       </div>
 
@@ -128,6 +134,8 @@ function StatusBadges({
             <div className="checkbox-container">
               <div className="checkbox-wrapper transparent">
                 <input
+                  id="prodStatusFilter"
+                  name="prodStatusFilter"
                   type="checkbox"
                   className="form-check-input me-1"
                   ref={(el) => {
@@ -137,8 +145,11 @@ function StatusBadges({
                   }}
                   checked={isProdChecked}
                   onChange={handleProdCheckbox}
+                  aria-label="Filter production statuses"
                 />
-                <label className="form-check-label">Prod</label>
+                <label htmlFor="prodStatusFilter" className="form-check-label">
+                  Prod
+                </label>
               </div>
             </div>
           </div>
@@ -152,6 +163,8 @@ function StatusBadges({
             <div className="checkbox-container">
               <div className="checkbox-wrapper transparent">
                 <input
+                  id="allStatusFilter"
+                  name="allStatusFilter"
                   type="checkbox"
                   className="form-check-input me-1"
                   ref={(el) => {
@@ -161,8 +174,11 @@ function StatusBadges({
                   }}
                   checked={isAllChecked}
                   onChange={handleAllCheckbox}
+                  aria-label="Select all statuses"
                 />
-                <label className="form-check-label">All</label>
+                <label htmlFor="allStatusFilter" className="form-check-label">
+                  All
+                </label>
               </div>
             </div>
           </div>

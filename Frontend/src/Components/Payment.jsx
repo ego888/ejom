@@ -78,64 +78,127 @@ function Prod() {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [initialLoad, setInitialLoad] = useState(true);
 
-  const fetchOrders = async () => {
+  // 1. Move fetchOrderData outside useEffect
+  const fetchOrderData = async () => {
+    if (selectedStatuses.length === 0) {
+      setOrders([]);
+      setTotalCount(0);
+      return;
+    }
+
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      console.log("Selected statuses before fetch:", selectedStatuses);
-      console.log("Current page before fetch:", currentPage);
+      // Use the search endpoint if searching by client name
+      const endpoint = searchClientName.trim()
+        ? `${ServerIP}/auth/search-orders-by-client`
+        : `${ServerIP}/auth/orders`;
 
-      // Only proceed with the fetch if there are selected statuses
-      if (selectedStatuses.length === 0) {
-        setOrders([]);
-        setTotalCount(0);
-        setLoading(false);
-        return;
-      }
-
-      // Reset to page 1 if current page is greater than total pages
-      let pageToFetch = currentPage;
-      if (totalPages > 0 && currentPage > totalPages) {
-        pageToFetch = 1;
-        setCurrentPage(1);
-      }
-
-      const response = await axios.get(`${ServerIP}/auth/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          page: pageToFetch,
-          limit: recordsPerPage,
-          sortBy: sortConfig.key,
-          sortDirection: sortConfig.direction,
-          search: searchTerm,
-          statuses: selectedStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined,
-        },
-      });
-
-      console.log("API Request params:", {
-        page: pageToFetch,
+      const params = {
+        page: currentPage,
         limit: recordsPerPage,
+        sortBy: sortConfig.key,
+        sortDirection: sortConfig.direction,
         statuses: selectedStatuses.join(","),
-      });
-      console.log("API Response:", response.data);
+        sales: selectedSales.length ? selectedSales.join(",") : undefined,
+        ...(searchClientName.trim() && { clientName: searchClientName }),
+        ...(searchTerm && { search: searchTerm }),
+      };
+
+      const response = await axios.get(endpoint, { params });
 
       if (response.data.Status) {
-        if (response.data.Result.orders.length === 0 && pageToFetch > 1) {
-          // If no results and not on first page, try fetching first page
-          setCurrentPage(1);
-          return; // The useEffect will trigger another fetch
-        }
         setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
         setTotalPages(response.data.Result.totalPages);
       }
-    } catch (err) {
-      console.error("Error fetching orders:", err);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setOrders([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
+
+  // 2. Update the initialization effect
+  useEffect(() => {
+    const initializeComponent = async () => {
+      try {
+        const [
+          statusResponse,
+          wtaxResponse,
+          paymentTypesResponse,
+          clientResponse,
+          salesResponse,
+          vatResponse,
+        ] = await Promise.all([
+          axios.get(`${ServerIP}/auth/order-statuses`),
+          axios.get(`${ServerIP}/auth/wtax-types`),
+          axios.get(`${ServerIP}/auth/payment-types`),
+          axios.get(`${ServerIP}/auth/clients`),
+          axios.get(`${ServerIP}/auth/sales_employees`),
+          axios.get(`${ServerIP}/auth/jomcontrol/VAT`),
+        ]);
+
+        // Handle all responses
+        if (statusResponse.data.Status) {
+          const sortedStatuses = statusResponse.data.Result.sort(
+            (a, b) => a.step - b.step
+          );
+          setStatusOptions(sortedStatuses);
+
+          // Set initial prod statuses
+          const prodStatuses = sortedStatuses
+            .slice(2, 6)
+            .map((s) => s.statusId);
+          setSelectedStatuses(prodStatuses);
+          setIsProdChecked(true);
+          localStorage.setItem(
+            "orderStatusFilters",
+            JSON.stringify(prodStatuses)
+          );
+        }
+
+        if (wtaxResponse.data.Status) {
+          setWtaxTypes(wtaxResponse.data.Result);
+          // Set V2 as default WTax type
+          const defaultWTax = wtaxResponse.data.Result.find(
+            (wt) => wt.WTax === "V2"
+          );
+          if (defaultWTax) {
+            setSelectedWtax(defaultWTax);
+          }
+        }
+        if (vatResponse.data.Status) {
+          setVatRate(vatResponse.data.Result.VAT);
+        }
+        if (paymentTypesResponse.data.Status)
+          setPaymentTypes(paymentTypesResponse.data.Result);
+        if (clientResponse.data.Status)
+          setClientList(clientResponse.data.Result);
+        if (salesResponse.data.Status)
+          setSalesEmployees(salesResponse.data.Result);
+      } catch (error) {
+        console.error("Error in initialization:", error);
+      }
+    };
+
+    initializeComponent();
+  }, []); // Run once on mount
+
+  // 3. Update the data fetching effect to use the function
+  useEffect(() => {
+    const timeoutId = setTimeout(fetchOrderData, searchTerm ? 500 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [
+    selectedStatuses,
+    currentPage,
+    recordsPerPage,
+    sortConfig,
+    searchTerm,
+    searchClientName,
+    selectedSales,
+  ]);
 
   // Keep the debounced search handler
   const debouncedSearch = useCallback(
@@ -166,117 +229,9 @@ function Prod() {
       debouncedSearch(term);
     } else {
       // For first character or empty search, trigger fetch immediately
-      fetchOrders();
+      fetchOrderData();
     }
   };
-
-  // Update useEffect to handle both search types
-  useEffect(() => {
-    if (searchClientName.trim()) {
-      // Don't fetch if we're doing a client search
-      return;
-    }
-
-    console.log("Effect triggered with selectedStatuses:", selectedStatuses);
-    fetchOrders();
-  }, [
-    currentPage,
-    recordsPerPage,
-    sortConfig,
-    searchTerm,
-    selectedStatuses,
-    selectedSales,
-    selectedClients,
-  ]);
-
-  // Fetch status options
-  useEffect(() => {
-    const fetchStatusOptions = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/order-statuses`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.Status) {
-          const sortedStatuses = response.data.Result.sort(
-            (a, b) => a.step - b.step
-          );
-          setStatusOptions(sortedStatuses);
-
-          // Get only the Prod statuses (indices 2-5)
-          const prodStatuses = sortedStatuses
-            .slice(2, 6)
-            .map((s) => s.statusId);
-          console.log("Setting initial prod statuses:", prodStatuses); // Debug log
-
-          setSelectedStatuses(prodStatuses);
-          setIsProdChecked(true);
-          setIsAllChecked(false);
-
-          // Save to localStorage
-          localStorage.setItem(
-            "orderStatusFilters",
-            JSON.stringify(prodStatuses)
-          );
-        }
-      } catch (err) {
-        console.error("Error fetching status options:", err);
-      }
-    };
-    fetchStatusOptions();
-  }, []);
-
-  // Fetch clients
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/clients`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.Status) {
-          setClientList(response.data.Result);
-        }
-      } catch (err) {
-        console.error("Error fetching clients:", err);
-      }
-    };
-    fetchClients();
-  }, []);
-
-  // Fetch sales employees
-  useEffect(() => {
-    const fetchSalesEmployees = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/sales_employees`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.Status) {
-          setSalesEmployees(response.data.Result);
-          // Remove initial selection of all sales employees
-        }
-      } catch (err) {
-        console.error("Error fetching sales employees:", err);
-      }
-    };
-    fetchSalesEmployees();
-  }, []);
-
-  // Add useEffect to fetch payment types
-  useEffect(() => {
-    const fetchPaymentTypes = async () => {
-      try {
-        const response = await axios.get(`${ServerIP}/auth/payment-types`);
-        if (response.data.Status) {
-          setPaymentTypes(response.data.Result);
-        }
-      } catch (err) {
-        console.error("Error fetching payment types:", err);
-      }
-    };
-    fetchPaymentTypes();
-  }, []);
 
   // Sort handler
   const handleSort = (key) => {
@@ -399,30 +354,10 @@ function Prod() {
     };
   }, [currentPage]);
 
-  const handleClientSearch = async (e) => {
-    if (e.key === "Enter" || e.key === "Tab") {
-      performClientSearch(); // Perform the search
-
-      if (e.key === "Enter") {
-        e.preventDefault(); // Prevent default Enter behavior
-
-        // Find the next input using tabIndex
-        const currentTabIndex = e.target.tabIndex;
-        const nextInput = document.querySelector(
-          `[tabIndex="${currentTabIndex + 1}"]`
-        );
-
-        if (nextInput) {
-          nextInput.focus(); // Move focus to the next field
-        }
-      }
-    }
-  };
-
   // Separate the search logic into its own function
-  const performClientSearch = async () => {
+  const handleClientSearch = async () => {
     if (!searchClientName.trim()) {
-      fetchOrders();
+      fetchOrderData();
       return;
     }
 
@@ -507,36 +442,6 @@ function Prod() {
     );
   };
 
-  // Add useEffect to fetch WTax types and VAT rate
-  useEffect(() => {
-    const fetchWtaxAndVat = async () => {
-      try {
-        const [wtaxResponse, vatResponse] = await Promise.all([
-          axios.get(`${ServerIP}/auth/wtax-types`),
-          axios.get(`${ServerIP}/auth/jomcontrol/VAT`),
-        ]);
-
-        console.log("WTax Response:", wtaxResponse.data);
-        if (wtaxResponse.data.Status) {
-          setWtaxTypes(wtaxResponse.data.Result);
-          // Set N2 as default WTax type
-          const defaultWTax = wtaxResponse.data.Result.find(
-            (wt) => wt.WTax === "V2"
-          );
-          if (defaultWTax) {
-            setSelectedWtax(defaultWTax);
-          }
-        }
-        if (vatResponse.data.Status) {
-          setVatRate(vatResponse.data.Result.VAT);
-        }
-      } catch (err) {
-        console.error("Error fetching WTax types and VAT:", err);
-      }
-    };
-    fetchWtaxAndVat();
-  }, []);
-
   // Update handlePayCheck to include WTax calculation
   const handlePayCheck = (orderId, orderAmount) => {
     if (!canEditPayments()) return;
@@ -583,6 +488,9 @@ function Prod() {
           console.log("Available Amount:", availableAmount);
           console.log("Order Amount:", orderAmount);
           console.log("Payment Amount:", paymentAmount);
+        } else {
+          wtaxAmount =
+            Math.round(orderAmount * (selectedWtax.taxRate / 100) * 100) / 100;
         }
 
         // Ensure we don't exceed the input amount
@@ -772,7 +680,7 @@ function Prod() {
           ...prev,
           amount: "", // Empty string for input field
         }));
-        fetchOrders();
+        fetchOrderData();
       }
     } catch (error) {
       console.error("Payment error:", error);
@@ -815,74 +723,13 @@ function Prod() {
           type: "alert",
           showOkButton: true,
         });
-        // Optionally clear the OR# input
-        // setPaymentInfo(prev => ({
-        //   ...prev,
-        //   ornum: ''
-        // }));
+
+        document.querySelector('input[placeholder="Enter amount"]').focus();
       }
     } catch (error) {
       console.error("Error checking OR#:", error);
     }
   };
-
-  // Consolidate fetch effects
-  useEffect(() => {
-    const initializeData = async () => {
-      if (!initialLoad) return;
-
-      try {
-        // Fetch wtax types
-        const wtaxResponse = await axios.get(`${ServerIP}/auth/wtax-types`);
-        if (wtaxResponse.data.Status) {
-          setWtaxTypes(wtaxResponse.data.Result);
-        }
-
-        // Fetch payment types
-        const paymentTypesResponse = await axios.get(
-          `${ServerIP}/auth/payment-types`
-        );
-        if (paymentTypesResponse.data.Status) {
-          setPaymentTypes(paymentTypesResponse.data.Result);
-        }
-
-        setInitialLoad(false);
-      } catch (error) {
-        console.error("Error initializing data:", error);
-      }
-    };
-
-    initializeData();
-  }, [initialLoad]);
-
-  // Separate orders fetch with proper dependencies
-  useEffect(() => {
-    if (selectedStatuses.length === 0) {
-      setOrders([]);
-      setTotalCount(0);
-      return;
-    }
-
-    const fetchOrders = async () => {
-      try {
-        const params = {
-          page: currentPage,
-          limit: recordsPerPage,
-          statuses: selectedStatuses.join(","),
-        };
-
-        const response = await axios.get(`${ServerIP}/auth/orders`, { params });
-        if (response.data.Status) {
-          setOrders(response.data.Result.orders);
-          setTotalCount(response.data.Result.total);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      }
-    };
-
-    fetchOrders();
-  }, [selectedStatuses, currentPage, recordsPerPage]);
 
   return (
     <div className="payment-theme">
@@ -896,28 +743,28 @@ function Prod() {
           <div className="row">
             <div className="col-md-2">
               <div className="form-group">
-                <label>Payment Date</label>
+                <label htmlFor="payment-date">Payment Date</label>
                 <input
+                  id="payment-date"
                   type="date"
                   className="form-control"
                   value={paymentInfo.payDate}
                   onChange={(e) =>
                     handlePaymentInfoChange("payDate", e.target.value)
                   }
-                  tabIndex="1"
                 />
               </div>
             </div>
             <div className="col-md-1">
               <div className="form-group">
-                <label>Type</label>
+                <label htmlFor="type">Type</label>
                 <select
+                  id="type"
                   className="form-control"
                   value={paymentInfo.payType}
                   onChange={(e) =>
                     handlePaymentInfoChange("payType", e.target.value)
                   }
-                  tabIndex="2"
                 >
                   {paymentTypes.map((type) => (
                     <option key={type.payType} value={type.payType}>
@@ -929,8 +776,9 @@ function Prod() {
             </div>
             <div className="col-md-3">
               <div className="form-group">
-                <label>Client</label>
+                <label htmlFor="client">Client</label>
                 <input
+                  id="client"
                   type="text"
                   name="clientName"
                   className="form-control"
@@ -939,14 +787,14 @@ function Prod() {
                   onKeyDown={handleClientSearch}
                   onBlur={handleClientSearch}
                   placeholder="Enter client name"
-                  tabIndex="3"
                 />
               </div>
             </div>
             <div className="col-md-2">
               <div className="form-group">
-                <label>OR#</label>
+                <label htmlFor="ornum">OR#</label>
                 <input
+                  id="ornum"
                   type="text"
                   className="form-control"
                   value={paymentInfo.ornum}
@@ -954,21 +802,15 @@ function Prod() {
                     handlePaymentInfoChange("ornum", e.target.value)
                   }
                   onBlur={(e) => checkORNumber(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      checkORNumber(e.target.value);
-                    }
-                  }}
                   placeholder="Enter OR#"
-                  tabIndex="4"
                 />
               </div>
             </div>
             <div className="col-md-2">
               <div className="form-group">
-                <label>Amount</label>
+                <label htmlFor="amount">Amount</label>
                 <input
+                  id="amount"
                   type="number"
                   className="form-control"
                   value={paymentInfo.amount}
@@ -976,14 +818,14 @@ function Prod() {
                     handlePaymentInfoChange("amount", e.target.value)
                   }
                   placeholder="Enter amount"
-                  tabIndex="5"
                 />
               </div>
             </div>
             <div className="col-md-2">
               <div className="form-group">
-                <label>Reference</label>
+                <label htmlFor="reference">Reference</label>
                 <input
+                  id="reference"
                   type="text"
                   className="form-control"
                   value={paymentInfo.payReference}
@@ -991,7 +833,6 @@ function Prod() {
                     handlePaymentInfoChange("payReference", e.target.value)
                   }
                   placeholder="Enter reference"
-                  tabIndex="6"
                 />
               </div>
             </div>
@@ -1001,18 +842,18 @@ function Prod() {
         {/* Add WTax dropdown next to search bar */}
         <div className="d-flex justify-content-between mb-3">
           <input
+            id="search-vat"
             type="text"
             className="form-control form-control-sm me-3"
             placeholder="Search by ID, client..."
             onChange={handleSearch}
             style={{ width: "400px" }}
-            tabIndex="7"
           />
           <select
+            id="vat-select"
             className="form-control form-control-sm"
             style={{ width: "250px" }}
             value={selectedWtax?.WTax}
-            tabIndex="6"
             onChange={(e) => {
               console.log("Selected value:", e.target.value);
               console.log("WTax types:", wtaxTypes);
@@ -1237,21 +1078,30 @@ function Prod() {
                       : ""}
                   </td>
                   <td className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={checkPay.has(order.id)}
-                      onChange={() =>
-                        handlePayCheck(
-                          order.id,
-                          order.grandTotal - (order.amountPaid || 0)
-                        )
-                      }
-                      disabled={
-                        !canEditPayments() ||
-                        (remainingAmount <= 0 && !checkPay.has(order.id)) ||
-                        order.amountPaid >= order.grandTotal
-                      }
-                    />
+                    <div className="checkbox-container">
+                      <label
+                        htmlFor={`pay-check-${order.id}`}
+                        className="visually-hidden"
+                      >
+                        Select order {order.id} for payment
+                      </label>
+                      <input
+                        id={`pay-check-${order.id}`}
+                        type="checkbox"
+                        checked={checkPay.has(order.id)}
+                        onChange={() =>
+                          handlePayCheck(
+                            order.id,
+                            order.grandTotal - (order.amountPaid || 0)
+                          )
+                        }
+                        disabled={
+                          !canEditPayments() ||
+                          (remainingAmount <= 0 && !checkPay.has(order.id)) ||
+                          order.amountPaid >= order.grandTotal
+                        }
+                      />
+                    </div>
                   </td>
                   <td className="text-right">
                     {canEditPayments() && checkPay.has(order.id) ? (

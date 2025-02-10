@@ -49,154 +49,95 @@ function Prod() {
   const clientFilterRef = useRef(null);
 
   const fetchOrders = async () => {
+    if (selectedStatuses.length === 0) {
+      setOrders([]);
+      setTotalCount(0);
+      return;
+    }
+    console.log("FETCHING");
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      console.log("Selected statuses before fetch:", selectedStatuses);
-      console.log("Current page before fetch:", currentPage);
-
-      // Only proceed with the fetch if there are selected statuses
-      if (selectedStatuses.length === 0) {
-        setOrders([]);
-        setTotalCount(0);
-        setLoading(false);
-        return;
-      }
-
-      // Reset to page 1 if current page is greater than total pages
-      let pageToFetch = currentPage;
-      if (totalPages > 0 && currentPage > totalPages) {
-        pageToFetch = 1;
-        setCurrentPage(1);
-      }
-
-      const response = await axios.get(`${ServerIP}/auth/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          page: pageToFetch,
-          limit: recordsPerPage,
-          sortBy: sortConfig.key,
-          sortDirection: sortConfig.direction,
-          search: searchTerm,
-          statuses: selectedStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined,
-          clients: selectedClients.length
-            ? selectedClients.join(",")
-            : undefined,
-        },
-      });
-
-      console.log("API Request params:", {
-        page: pageToFetch,
+      const params = {
+        page: currentPage,
         limit: recordsPerPage,
+        sortBy: sortConfig.key,
+        sortDirection: sortConfig.direction,
+        search: searchTerm,
         statuses: selectedStatuses.join(","),
-      });
-      console.log("API Response:", response.data);
+        sales: selectedSales.length ? selectedSales.join(",") : undefined,
+        clients: selectedClients.length ? selectedClients.join(",") : undefined,
+      };
 
+      const response = await axios.get(`${ServerIP}/auth/orders`, { params });
       if (response.data.Status) {
-        if (response.data.Result.orders.length === 0 && pageToFetch > 1) {
-          // If no results and not on first page, try fetching first page
-          setCurrentPage(1);
-          return; // The useEffect will trigger another fetch
-        }
         setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
-        setTotalPages(response.data.Result.totalPages);
+        setTotalPages(Math.ceil(response.data.Result.total / recordsPerPage));
       }
-    } catch (err) {
-      console.error("Error fetching orders:", err);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setOrders([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch orders when parameters change
   useEffect(() => {
-    console.log("Effect triggered with selectedStatuses:", selectedStatuses); // Debug log
-    fetchOrders();
-  }, [
-    currentPage,
-    recordsPerPage,
-    sortConfig,
-    searchTerm,
-    selectedStatuses,
-    selectedSales,
-    selectedClients,
-  ]);
-
-  // Fetch status options
-  useEffect(() => {
-    const fetchStatusOptions = async () => {
+    const initializeComponent = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/order-statuses`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.Status) {
-          const sortedStatuses = response.data.Result.sort(
+        // Fetch all initial data in parallel
+        const [statusResponse, clientResponse, salesResponse] =
+          await Promise.all([
+            axios.get(`${ServerIP}/auth/order-statuses`),
+            axios.get(`${ServerIP}/auth/clients`),
+            axios.get(`${ServerIP}/auth/sales_employees`),
+          ]);
+
+        // Handle status options and initial filters
+        if (statusResponse.data.Status) {
+          const sortedStatuses = statusResponse.data.Result.sort(
             (a, b) => a.step - b.step
           );
           setStatusOptions(sortedStatuses);
 
-          // Get only the Prod statuses (indices 2-5)
+          // Set initial prod statuses
           const prodStatuses = sortedStatuses
             .slice(2, 6)
             .map((s) => s.statusId);
-          console.log("Setting initial prod statuses:", prodStatuses); // Debug log
-
           setSelectedStatuses(prodStatuses);
           setIsProdChecked(true);
-          setIsAllChecked(false);
-
-          // Save to localStorage
           localStorage.setItem(
             "orderStatusFilters",
             JSON.stringify(prodStatuses)
           );
         }
-      } catch (err) {
-        console.error("Error fetching status options:", err);
+
+        // Handle other responses
+        if (clientResponse.data.Status)
+          setClientList(clientResponse.data.Result);
+        if (salesResponse.data.Status)
+          setSalesEmployees(salesResponse.data.Result);
+      } catch (error) {
+        console.error("Error in initialization:", error);
       }
     };
-    fetchStatusOptions();
+
+    initializeComponent();
   }, []);
 
-  // Fetch clients
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/clients`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.Status) {
-          setClientList(response.data.Result);
-        }
-      } catch (err) {
-        console.error("Error fetching clients:", err);
-      }
-    };
-    fetchClients();
-  }, []);
-
-  // Fetch sales employees
-  useEffect(() => {
-    const fetchSalesEmployees = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${ServerIP}/auth/sales_employees`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data.Status) {
-          setSalesEmployees(response.data.Result);
-          // Remove initial selection of all sales employees
-        }
-      } catch (err) {
-        console.error("Error fetching sales employees:", err);
-      }
-    };
-    fetchSalesEmployees();
-  }, []);
+    const timeoutId = setTimeout(fetchOrders, searchTerm ? 500 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [
+    selectedStatuses,
+    currentPage,
+    recordsPerPage,
+    sortConfig,
+    searchTerm,
+    selectedSales,
+    selectedClients,
+  ]);
 
   // Debounced search handler
   const debouncedSearch = useCallback(

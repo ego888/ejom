@@ -130,8 +130,9 @@ const AddClient = () => {
         <form onSubmit={handleSubmit}>
           <div className="row">
             <div className="col-md-6 mb-3">
-              <label htmlFor="clientName">Client Name:</label>
+              <label htmlFor="client-name">Client Name:</label>
               <input
+                id="client-name"
                 type="text"
                 name="clientName"
                 className="form-control rounded-0"
@@ -141,8 +142,9 @@ const AddClient = () => {
               />
             </div>
             <div className="col-md-6 mb-3">
-              <label htmlFor="contact">Contact Person:</label>
+              <label htmlFor="contact-person">Contact Person:</label>
               <input
+                id="contact-person"
                 type="text"
                 name="contact"
                 className="form-control rounded-0"
@@ -155,8 +157,9 @@ const AddClient = () => {
 
           <div className="row">
             <div className="col-md-4 mb-3">
-              <label htmlFor="telNo">Telephone No:</label>
+              <label htmlFor="tel-number">Telephone No:</label>
               <input
+                id="tel-number"
                 type="text"
                 name="telNo"
                 className="form-control rounded-0"
@@ -166,8 +169,9 @@ const AddClient = () => {
               />
             </div>
             <div className="col-md-4 mb-3">
-              <label htmlFor="faxNo">Fax No:</label>
+              <label htmlFor="fax-number">Fax No:</label>
               <input
+                id="fax-number"
                 type="text"
                 name="faxNo"
                 className="form-control rounded-0"
@@ -177,8 +181,9 @@ const AddClient = () => {
               />
             </div>
             <div className="col-md-4 mb-3">
-              <label htmlFor="celNo">Cell No:</label>
+              <label htmlFor="cell-number">Cell No:</label>
               <input
+                id="cell-number"
                 type="text"
                 name="celNo"
                 className="form-control rounded-0"
@@ -189,56 +194,11 @@ const AddClient = () => {
             </div>
           </div>
 
-          <div className="mb-3">
-            <label htmlFor="email">Email:</label>
-            <input
-              type="email"
-              name="email"
-              className="form-control rounded-0"
-              onChange={(e) => setClient({ ...client, email: e.target.value })}
-            />
-          </div>
-
-          <div className="row">
-            <div className="col-md-4 mb-3">
-              <label htmlFor="arContact">AR Contact:</label>
-              <input
-                type="text"
-                name="arContact"
-                className="form-control rounded-0"
-                onChange={(e) =>
-                  setClient({ ...client, arContact: e.target.value })
-                }
-              />
-            </div>
-            <div className="col-md-4 mb-3">
-              <label htmlFor="arTelNo">AR Tel No:</label>
-              <input
-                type="text"
-                name="arTelNo"
-                className="form-control rounded-0"
-                onChange={(e) =>
-                  setClient({ ...client, arTelNo: e.target.value })
-                }
-              />
-            </div>
-            <div className="col-md-4 mb-3">
-              <label htmlFor="arFaxNo">AR Fax No:</label>
-              <input
-                type="text"
-                name="arFaxNo"
-                className="form-control rounded-0"
-                onChange={(e) =>
-                  setClient({ ...client, arFaxNo: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
           <div className="row">
             <div className="col-md-6 mb-3">
-              <label htmlFor="tinNumber">TIN Number:</label>
+              <label htmlFor="tin-number">TIN Number:</label>
               <input
+                id="tin-number"
                 type="text"
                 name="tinNumber"
                 className="form-control rounded-0"
@@ -248,10 +208,10 @@ const AddClient = () => {
               />
             </div>
             <div className="col-md-6 mb-3">
-              <label htmlFor="terms">Terms:</label>
+              <label htmlFor="payment-terms">Terms:</label>
               <Dropdown
                 variant="form"
-                id="terms"
+                id="payment-terms"
                 name="terms"
                 value={client.terms}
                 onChange={(e) =>
@@ -261,6 +221,57 @@ const AddClient = () => {
                 placeholder="Select Terms"
                 labelKey="terms"
                 valueKey="terms"
+              />
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="email">Email:</label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              className="form-control rounded-0"
+              onChange={(e) => setClient({ ...client, email: e.target.value })}
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="row">
+            <div className="col-md-4 mb-3">
+              <label htmlFor="ar-contact">AR Contact:</label>
+              <input
+                id="ar-contact"
+                type="text"
+                name="arContact"
+                className="form-control rounded-0"
+                onChange={(e) =>
+                  setClient({ ...client, arContact: e.target.value })
+                }
+              />
+            </div>
+            <div className="col-md-4 mb-3">
+              <label htmlFor="ar-tel">AR Tel No:</label>
+              <input
+                id="ar-tel"
+                type="text"
+                name="arTelNo"
+                className="form-control rounded-0"
+                onChange={(e) =>
+                  setClient({ ...client, arTelNo: e.target.value })
+                }
+              />
+            </div>
+            <div className="col-md-4 mb-3">
+              <label htmlFor="ar-fax">AR Fax No:</label>
+              <input
+                id="ar-fax"
+                type="text"
+                name="arFaxNo"
+                className="form-control rounded-0"
+                onChange={(e) =>
+                  setClient({ ...client, arFaxNo: e.target.value })
+                }
               />
             </div>
           </div>
@@ -283,8 +294,9 @@ const AddClient = () => {
               />
             </div>
             <div className="col-md-6 mb-3">
-              <label htmlFor="creditLimit">Credit Limit:</label>
+              <label htmlFor="credit-limit">Credit Limit:</label>
               <input
+                id="credit-limit"
                 type="number"
                 name="creditLimit"
                 className="form-control rounded-0"
@@ -298,6 +310,7 @@ const AddClient = () => {
           <div className="mb-3">
             <label htmlFor="notes">Notes:</label>
             <textarea
+              id="notes"
               name="notes"
               className="form-control rounded-0"
               rows="3"

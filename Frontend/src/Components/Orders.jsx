@@ -57,6 +57,16 @@ function Orders() {
 
   const fetchOrders = async () => {
     setLoading(true);
+    console.log(
+      "FETCH",
+      currentPage,
+      recordsPerPage,
+      sortConfig,
+      searchTerm,
+      selectedStatuses,
+      selectedSales,
+      selectedClients
+    );
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(`${ServerIP}/auth/orders`, {
@@ -350,13 +360,21 @@ function Orders() {
         <Button variant="add" onClick={() => navigate("/dashboard/orders/add")}>
           Add Order
         </Button>
-        <input
-          type="text"
-          className="form-control form-control-sm"
-          placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-          onChange={handleSearch}
-          style={{ width: "400px" }}
-        />
+        <div className="search-container">
+          <label htmlFor="orderSearch" className="visually-hidden">
+            Search orders
+          </label>
+          <input
+            id="orderSearch"
+            name="orderSearch"
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+            onChange={handleSearch}
+            style={{ width: "400px" }}
+            aria-label="Search orders"
+          />
+        </div>
       </div>
 
       {/* Loading indicator */}
@@ -394,6 +412,10 @@ function Orders() {
               <th
                 onClick={() => handleSort("id")}
                 style={{ cursor: "pointer" }}
+                role="columnheader"
+                aria-sort={
+                  sortConfig.key === "id" ? sortConfig.direction : "none"
+                }
               >
                 Order ID {getSortIndicator("id")}
               </th>
@@ -547,18 +569,22 @@ function Orders() {
           currentPage={currentPage}
           totalCount={totalCount}
           setCurrentPage={setCurrentPage}
+          selectProps={{
+            id: "ordersPerPage",
+            name: "ordersPerPage",
+            "aria-label": "Number of orders per page",
+          }}
         />
 
         <StatusBadges
           statusOptions={statusOptions}
           selectedStatuses={selectedStatuses}
-          onStatusChange={(newStatuses) => {
-            setSelectedStatuses(newStatuses);
-            localStorage.setItem(
-              "orderStatusFilters",
-              JSON.stringify(newStatuses)
-            );
-          }}
+          onStatusChange={handleStatusFilter}
+          badgeProps={(status) => ({
+            id: `status-${status.statusId}`,
+            "aria-label": `Filter by status ${status.statusId}`,
+            role: "button",
+          })}
         />
 
         <Pagination

@@ -144,6 +144,51 @@ router.get("/order-payment-history", verifyUser, async (req, res) => {
   }
 });
 
+// Get payment allocation
+router.get("/payment-allocation", verifyUser, async (req, res) => {
+  try {
+    const { payId } = req.query;
+
+    if (!payId) {
+      return res.status(400).json({ Status: false, Error: "Missing payId" });
+    }
+
+    // Correct SQL Query with proper JOIN
+    const query = `
+      SELECT 
+        p.payId, p.payDate, p.amount AS totalPayment, 
+        p.payType, p.payReference, p.ornum, 
+        p.transactedBy, p.postedDate, p.remittedBy, p.remittedDate,
+        COALESCE(pa.amountApplied, 0) AS amountApplied
+      FROM payments p
+      LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
+      WHERE p.payId = ?;
+    `;
+
+    // ✅ Use Promises for cleaner async execution
+    const [paymentAllocation] = await new Promise((resolve, reject) => {
+      con.query(query, [payId], (err, result) => {
+        if (err) {
+          console.error("Database error:", err);
+          return reject(err);
+        }
+        resolve(result);
+      });
+    });
+
+    return res.json({
+      Status: true,
+      paymentAllocation,
+    });
+  } catch (error) {
+    console.error("Error getting payment allocation:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to get payment allocation",
+    });
+  }
+});
+
 // Add route to recalculate paid amount
 router.post("/recalculate-paid-amount", verifyUser, async (req, res) => {
   try {

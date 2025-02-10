@@ -20,7 +20,7 @@ import Button from "./Button";
  *     - "confirm" → Displays both "OK" and "Cancel" buttons.
  *
  * ## Example Usage:
- * 
+ *
  * // Alert Modal
  * <ModalAlert
  *   show={showAlert}
@@ -79,16 +79,20 @@ const ModalAlert = ({
       <div
         className="modal fade show"
         style={{ display: "block" }}
-        tabIndex="-1"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="alert-title"
+        aria-describedby="alert-message"
       >
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title">
+              <h5 className="modal-title" id="alert-title">
                 {title === "Error" && (
                   <i
                     className="bi bi-exclamation-octagon-fill text-danger"
                     style={{ marginRight: "8px" }}
+                    aria-hidden="true"
                   />
                 )}
                 {title}
@@ -98,26 +102,38 @@ const ModalAlert = ({
                   type="button"
                   className="btn-close"
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label="Close alert"
                 />
               )}
             </div>
             <div className="modal-body">
-              <p>{message}</p>
+              <p id="alert-message">{message}</p>
             </div>
             <div className="modal-footer">
               {type === "confirm" && (
                 <>
-                  <Button variant="save" onClick={onConfirm}>
+                  <Button
+                    variant="save"
+                    onClick={onConfirm}
+                    aria-label={confirmText}
+                  >
                     {confirmText}
                   </Button>
-                  <Button variant="cancel" onClick={onClose}>
+                  <Button
+                    variant="cancel"
+                    onClick={onClose}
+                    aria-label={cancelText}
+                  >
                     {cancelText}
                   </Button>
                 </>
               )}
               {type === "alert" && (
-                <Button variant="save" onClick={onClose}>
+                <Button
+                  variant="save"
+                  onClick={onClose}
+                  aria-label={confirmText}
+                >
                   {confirmText}
                 </Button>
               )}

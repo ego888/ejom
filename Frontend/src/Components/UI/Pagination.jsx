@@ -73,6 +73,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             className="page-link"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
+            aria-label="Previous page"
           >
             Previous
           </button>
@@ -88,7 +89,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             </li>
             {startPage > 2 && (
               <li className="page-item disabled">
-                <span className="page-link">...</span>
+                <span className="page-link" aria-hidden="true">
+                  ...
+                </span>
               </li>
             )}
           </>
@@ -100,7 +103,12 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             key={pageNum}
             className={`page-item ${pageNum === currentPage ? "active" : ""}`}
           >
-            <button className="page-link" onClick={() => onPageChange(pageNum)}>
+            <button
+              className="page-link"
+              onClick={() => onPageChange(pageNum)}
+              aria-label={`Go to page ${pageNum}`}
+              aria-current={pageNum === currentPage ? "page" : undefined}
+            >
               {pageNum}
             </button>
           </li>
@@ -111,7 +119,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           <>
             {endPage < totalPages - 1 && (
               <li className="page-item disabled">
-                <span className="page-link">...</span>
+                <span className="page-link" aria-hidden="true">
+                  ...
+                </span>
               </li>
             )}
             <li className="page-item">
@@ -134,25 +144,42 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             className="page-link"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
+            aria-label="Next page"
           >
             Next
           </button>
         </li>
       </ul>
 
-      <input
-        type="text"
-        className="form-control form-control-sm"
-        style={{ width: "50px", fontSize: "0.75rem", padding: "0.1rem 0.5rem" }}
-        placeholder="Page"
-        value={inputPage}
-        onChange={handlePageInput}
-        onKeyDown={handlePageSubmit}
-        title="Press Enter to go to page"
-      />
-      <span className="text-muted" style={{ fontSize: "0.75rem" }}>
-        of {totalPages}
-      </span>
+      <div className="d-flex align-items-center gap-2">
+        <label htmlFor="pageInput" className="visually-hidden">
+          Go to page
+        </label>
+        <input
+          id="pageInput"
+          name="pageInput"
+          type="text"
+          className="form-control form-control-sm"
+          style={{
+            width: "50px",
+            fontSize: "0.75rem",
+            padding: "0.1rem 0.5rem",
+          }}
+          placeholder="Page"
+          value={inputPage}
+          onChange={handlePageInput}
+          onKeyDown={handlePageSubmit}
+          aria-label="Go to page number"
+          aria-describedby="pageInputHelp"
+        />
+        <span
+          id="pageInputHelp"
+          className="text-muted"
+          style={{ fontSize: "0.75rem" }}
+        >
+          of {totalPages}
+        </span>
+      </div>
     </nav>
   );
 };

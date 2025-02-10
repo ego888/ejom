@@ -1,5 +1,5 @@
 import axios from "../utils/axiosConfig";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Button from "./UI/Button";
 import { BiRectangle } from "react-icons/bi";
@@ -12,6 +12,7 @@ import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import PaymentHistory from "./PaymentHistory";
+import { formatDateTime } from "../utils/orderUtils";
 
 function OrderView() {
   const navigate = useNavigate();
@@ -27,15 +28,16 @@ function OrderView() {
     message: "",
     type: "alert",
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusOptions, setStatusOptions] = useState([]);
 
   const location = useLocation(); // Get the current route path
-  console.log(location);
-  console.log(location.pathname.includes("/prod/view"));
 
   let backgroundColor = "#fcd8f3";
 
   // Add ESC key handler
   useEffect(() => {
+    console.log("useEffect handleEscKey");
     const handleEscKey = (event) => {
       if (event.key === "Escape") {
         navigate(-1);
@@ -47,42 +49,101 @@ function OrderView() {
     };
   }, [navigate]);
 
-  useEffect(() => {
-    if (id) {
-      const token = localStorage.getItem("token");
-      axios
-        .get(`${ServerIP}/auth/order/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .then((result) => {
-          if (result.data.Status) {
-            const orderData = result.data.Result;
-            setData(orderData);
-          }
-        })
-        .catch((err) => handleApiError(err, navigate));
+  // Cache static data in localStorage
+  const getCachedData = (key, fetchFn) => {
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        // Cache for 1 hour
+        if (Date.now() - timestamp < 3600000) {
+          return data;
+        }
+      } catch (e) {
+        localStorage.removeItem(key);
+      }
     }
-  }, [id, navigate]);
+    return null;
+  };
+
+  // Use cached data where appropriate
+  useEffect(() => {
+    console.log("useEffect loadStaticData");
+    const loadStaticData = async () => {
+      const cachedStatuses = getCachedData("orderStatuses");
+      if (cachedStatuses) {
+        setStatusOptions(cachedStatuses);
+      } else {
+        // Fetch and cache
+        const response = await axios.get(`${ServerIP}/auth/order-statuses`);
+        if (response.data.Status) {
+          const statuses = response.data.Result;
+          localStorage.setItem(
+            "orderStatuses",
+            JSON.stringify({
+              data: statuses,
+              timestamp: Date.now(),
+            })
+          );
+          setStatusOptions(statuses);
+        }
+      }
+    };
+
+    loadStaticData();
+  }, []);
 
   useEffect(() => {
-    if (id) {
+    console.log("useEffect fetchOrderData");
+    const fetchOrderData = async () => {
+      if (!id) return;
+
+      setIsLoading(true);
       const token = localStorage.getItem("token");
-      axios
-        .get(`${ServerIP}/auth/order_details/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .then((result) => {
-          if (result.data.Status) {
-            setOrderDetails(result.data.Result);
-          }
-        })
-        .catch((err) => handleApiError(err, navigate));
-    }
+      try {
+        const [orderResponse, detailsResponse] = await Promise.all([
+          axios.get(`${ServerIP}/auth/order/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`${ServerIP}/auth/order_details/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        if (orderResponse.data.Status) {
+          setData(orderResponse.data.Result);
+        }
+        if (detailsResponse.data.Status) {
+          setOrderDetails(detailsResponse.data.Result);
+        }
+      } catch (err) {
+        handleApiError(err, navigate);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to load payment details",
+          type: "error",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrderData();
   }, [id, navigate]);
+
+  // Memoize formatted dates
+  const formattedDates = useMemo(
+    () => ({
+      readyDate: data.readyDate ? formatDateTime(data.readyDate) : "",
+      billDate: data.billDate ? formatDateTime(data.billDate) : "",
+      productionDate: data.productionDate
+        ? formatDateTime(data.productionDate)
+        : "",
+      deliveryDate: data.deliveryDate ? formatDateTime(data.deliveryDate) : "",
+    }),
+    [data.readyDate, data.billDate, data.productionDate, data.deliveryDate]
+  );
 
   return (
     <div
@@ -143,7 +204,9 @@ function OrderView() {
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">DR Date</label>
-                  <div className="order-info-field">{data.drDate || ""}</div>
+                  <div className="order-info-field">
+                    {new Date(data.drDate).toLocaleDateString() || ""}
+                  </div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
@@ -279,73 +342,23 @@ function OrderView() {
               <div className="info-group">
                 <div className="info-label">Production Date</div>
                 <div className="info-value">
-                  {data.productionDate
-                    ? new Date(data.productionDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
+                  {formattedDates.productionDate}
                 </div>
               </div>
 
               <div className="info-group">
                 <div className="info-label">Ready Date</div>
-                <div className="info-value">
-                  {data.readyDate
-                    ? new Date(data.readyDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
+                <div className="info-value">{formattedDates.readyDate}</div>
               </div>
 
               <div className="info-group">
                 <div className="info-label">Delivery Date</div>
-                <div className="info-value">
-                  {data.deliveryDate
-                    ? new Date(data.deliveryDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
+                <div className="info-value">{formattedDates.deliveryDate}</div>
               </div>
 
               <div className="info-group">
                 <div className="info-label">Bill Date</div>
-                <div className="info-value">
-                  {data.billDate
-                    ? new Date(data.billDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
+                <div className="info-value">{formattedDates.billDate}</div>
               </div>
             </div>
           </div>
@@ -377,7 +390,7 @@ function OrderView() {
                   aria-controls="other-info"
                   aria-selected="false"
                 >
-                  Other Info
+                  Payment Info
                 </button>
               </li>
               <li className="nav-item" role="presentation">
@@ -425,18 +438,18 @@ function OrderView() {
                 <table className="order-table table table-striped">
                   <thead>
                     <tr>
-                      <th className="text-center">Qty</th>
-                      <th className="text-center">Width</th>
-                      <th className="text-center">Height</th>
-                      <th>Unit</th>
-                      <th>Material</th>
-                      <th className="text-end">Per Sq Ft</th>
-                      <th className="text-end">Price</th>
-                      <th className="text-end">Disc%</th>
-                      <th className="text-end">Amount</th>
-                      <th>Description</th>
-                      <th>JO Remarks</th>
-                      <th className="text-center">Action</th>
+                      <th id="qty">Qty</th>
+                      <th id="width">Width</th>
+                      <th id="height">Height</th>
+                      <th id="unit">Unit</th>
+                      <th id="material">Material</th>
+                      <th id="perSqFt">Per Sq Ft</th>
+                      <th id="price">Price</th>
+                      <th id="discount">Disc</th>
+                      <th id="total">Total</th>
+                      <th id="description">Description</th>
+                      <th id="joRemarks">JO Remarks</th>
+                      <th id="others">Others</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -501,7 +514,11 @@ function OrderView() {
                               Date Paid:
                             </small>
                           </div>
-                          <div>{data.datePaid || ""}</div>
+                          <div
+                            style={{ paddingLeft: "33px", textAlign: "right" }}
+                          >
+                            {new Date(data.datePaid).toLocaleDateString() || ""}
+                          </div>
                         </div>
                       </td>
                     </tr>

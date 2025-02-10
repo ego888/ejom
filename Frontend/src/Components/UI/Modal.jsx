@@ -13,7 +13,7 @@ import Button from "./Button";
  * @param {string} variant - Modal type:
  *     - `"form"` (default) → A centered pop-up modal.
  *     - `"tooltip"` → A floating tooltip positioned via `position.x` & `position.y`.
- * @param {boolean} show - Controls the modal’s visibility.
+ * @param {boolean} show - Controls the modal's visibility.
  * @param {function} [onClose] - Function called when the modal closes (not used in tooltips).
  * @param {string} [title] - Title for form modals (not applicable to tooltips).
  * @param {ReactNode} children - Content inside the modal (can be text, elements, or JSX).
@@ -63,6 +63,7 @@ const Modal = ({
   footer,
   position = { x: 0, y: 0 },
   className = "",
+  id,
 }) => {
   if (!show) return null;
 
@@ -81,12 +82,25 @@ const Modal = ({
   }
 
   return (
-    <div className="modal-backdrop">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={`modal-title-${id}`}
+    >
       <div className="modal-container">
         <div className={`modal-content ${className}`}>
           <div className="modal-header">
-            <h5 className="modal-title">{title}</h5>
-            <Button variant="cancel" iconOnly size="sm" onClick={onClose} />
+            <h5 className="modal-title" id={`modal-title-${id}`}>
+              {title}
+            </h5>
+            <Button
+              variant="cancel"
+              iconOnly
+              size="sm"
+              onClick={onClose}
+              aria-label="Close modal"
+            />
           </div>
           <div className="modal-body">{children}</div>
           {footer && <div className="modal-footer">{footer}</div>}

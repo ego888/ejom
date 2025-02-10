@@ -1,7 +1,7 @@
 import "./Components/style.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Login from "./Components/Login";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./Components/Dashboard";
 import Home from "./Components/Home";
 import Employee from "./Components/Employee";
@@ -34,14 +34,22 @@ import ProdPrintProduction from "./Components/ProdPrintProduction";
 import ProdPrintDR from "./Components/ProdPrintDR";
 import ProdPrintOneDR from "./Components/ProdPrintOneDR";
 import EmployeeLogin from "./Components/EmployeeLogin";
-import axios from "./utils/axiosConfig"; // Import configured axios
+import axios from "./utils/axiosConfig";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
 
+// Add future flags configuration
+const routerOptions = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  },
+};
+
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter {...routerOptions}>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/employeelogin" element={<EmployeeLogin />} />
