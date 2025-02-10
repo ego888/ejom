@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import { formatNumber } from "../utils/orderUtils";
+import PropTypes from "prop-types";
 
-function PaymentHistory({ orderId }) {
+function PaymentHistory({ orderId, onPaymentSelect }) {
   const [paymentHistory, setPaymentHistory] = useState([]);
 
   useEffect(() => {
@@ -41,8 +42,8 @@ function PaymentHistory({ orderId }) {
         <tr>
           <th>Pay ID</th>
           <th>Date</th>
-          <th>Type</th>
-          <th>OR#</th>
+          <th className="text-center">Type</th>
+          <th className="text-center">OR#</th>
           <th>Amount</th>
           <th>Reference</th>
           <th>Posted By</th>
@@ -54,22 +55,40 @@ function PaymentHistory({ orderId }) {
       <tbody>
         {paymentHistory.map((payment, index) => (
           <tr key={index}>
-            <td>{payment.payId}</td>
-            <td>{new Date(payment.payDate).toLocaleDateString()}</td>
-            <td>{payment.payType}</td>
-            <td>{payment.ornum}</td>
-            <td className="text-right">
+            <td id="payId" className="text-center">
+              <button
+                className="btn btn-link p-0"
+                onClick={() => onPaymentSelect(payment.payId)}
+                style={{
+                  textDecoration: "none",
+                  color: "#0d6efd",
+                  cursor: "pointer",
+                }}
+              >
+                {payment.payId}
+              </button>
+            </td>
+            <td id="paydate">
+              {new Date(payment.payDate).toLocaleDateString()}
+            </td>
+            <td id="paytype" className="text-center">
+              {payment.payType}
+            </td>
+            <td id="ornum" className="text-center">
+              {payment.ornum}
+            </td>
+            <td id="amount" className="text-center">
               {formatNumber(payment.amountApplied)}
             </td>
-            <td>{payment.payReference}</td>
-            <td>{payment.transactedBy}</td>
-            <td>
+            <td id="payreference">{payment.payReference}</td>
+            <td id="transactedby">{payment.transactedBy}</td>
+            <td id="posteddate">
               {payment.postedDate
                 ? new Date(payment.postedDate).toLocaleDateString()
                 : ""}
             </td>
-            <td>{payment.remittedBy}</td>
-            <td>
+            <td id="remittedby">{payment.remittedBy}</td>
+            <td id="remitteddate">
               {payment.remittedDate
                 ? new Date(payment.remittedDate).toLocaleDateString()
                 : ""}
@@ -89,5 +108,10 @@ function PaymentHistory({ orderId }) {
     </table>
   );
 }
+
+PaymentHistory.propTypes = {
+  orderId: PropTypes.string.isRequired,
+  onPaymentSelect: PropTypes.func.isRequired,
+};
 
 export default PaymentHistory;

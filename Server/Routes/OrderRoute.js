@@ -34,8 +34,15 @@ router.get("/orders-min", async (req, res) => {
       );
       const searchParam = `%${search}%`;
       params.push(
-        searchParam, searchParam, searchParam, searchParam, searchParam,
-        searchParam, searchParam, searchParam, searchParam
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam
       );
     }
 
@@ -86,14 +93,10 @@ router.get("/orders-min", async (req, res) => {
 
     // Execute data query with proper parameter order
     const orders = await new Promise((resolve, reject) => {
-      con.query(
-        dataSql,
-        [...params, limit, offset],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
+      con.query(dataSql, [...params, limit, offset], (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
     });
 
     // Count query
@@ -162,8 +165,15 @@ router.get("/orders", async (req, res) => {
       );
       const searchParam = `%${search}%`;
       params.push(
-        searchParam, searchParam, searchParam, searchParam, searchParam,
-        searchParam, searchParam, searchParam, searchParam
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam
       );
     }
 
@@ -216,14 +226,10 @@ router.get("/orders", async (req, res) => {
 
     // Execute data query with proper parameter order
     const orders = await new Promise((resolve, reject) => {
-      con.query(
-        dataSql,
-        [...params, limit, offset],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
+      con.query(dataSql, [...params, limit, offset], (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
     });
 
     // Count query
@@ -872,7 +878,7 @@ router.get("/search-orders-by-client", async (req, res) => {
     const limit = req.query.limit || 10;
     const offset = (page - 1) * limit;
     const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
-//    const sales = req.query.sales ? req.query.sales.split(",") : [];
+    //    const sales = req.query.sales ? req.query.sales.split(",") : [];
     let sortBy = req.query.sortBy || "orderID";
     let sortDirection = req.query.sortDirection || "desc";
 
@@ -983,13 +989,13 @@ router.get("/wtax-types", async (req, res) => {
 
     return res.json({
       Status: true,
-      Result: wtaxTypes
+      Result: wtaxTypes,
     });
   } catch (err) {
     console.error("Error fetching WTax types:", err);
     return res.json({
       Status: false,
-      Error: "Failed to fetch WTax types"
+      Error: "Failed to fetch WTax types",
     });
   }
 });

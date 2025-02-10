@@ -153,20 +153,20 @@ router.get("/payment-allocation", verifyUser, async (req, res) => {
       return res.status(400).json({ Status: false, Error: "Missing payId" });
     }
 
-    // Correct SQL Query with proper JOIN
+    // Modified query to get payment header and all allocations
     const query = `
       SELECT 
         p.payId, p.payDate, p.amount AS totalPayment, 
         p.payType, p.payReference, p.ornum, 
         p.transactedBy, p.postedDate, p.remittedBy, p.remittedDate,
-        COALESCE(pa.amountApplied, 0) AS amountApplied
+        pa.orderId, pa.amountApplied
       FROM payments p
       LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
       WHERE p.payId = ?;
     `;
 
-    // ✅ Use Promises for cleaner async execution
-    const [paymentAllocation] = await new Promise((resolve, reject) => {
+    // Use Promise for cleaner async execution
+    const results = await new Promise((resolve, reject) => {
       con.query(query, [payId], (err, result) => {
         if (err) {
           console.error("Database error:", err);
@@ -176,9 +176,38 @@ router.get("/payment-allocation", verifyUser, async (req, res) => {
       });
     });
 
+    if (!results.length) {
+      return res.json({
+        Status: false,
+        Error: "Payment not found",
+      });
+    }
+
+    // Structure the response with payment header and allocations
+    const paymentHeader = {
+      payId: results[0].payId,
+      payDate: results[0].payDate,
+      totalPayment: results[0].totalPayment,
+      payType: results[0].payType,
+      payReference: results[0].payReference,
+      ornum: results[0].ornum,
+      transactedBy: results[0].transactedBy,
+      postedDate: results[0].postedDate,
+      remittedBy: results[0].remittedBy,
+      remittedDate: results[0].remittedDate,
+    };
+
+    const allocations = results.map((row) => ({
+      orderId: row.orderId,
+      amountApplied: row.amountApplied,
+    }));
+
     return res.json({
       Status: true,
-      paymentAllocation,
+      paymentAllocation: {
+        ...paymentHeader,
+        allocations,
+      },
     });
   } catch (error) {
     console.error("Error getting payment allocation:", error);

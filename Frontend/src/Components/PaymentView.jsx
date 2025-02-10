@@ -13,6 +13,7 @@ import ModalAlert from "./UI/ModalAlert";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import PaymentHistory from "./PaymentHistory";
 import { formatDateTime } from "../utils/orderUtils";
+import PaymentAllocation from "./PaymentAllocation";
 
 function OrderView() {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ function OrderView() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [statusOptions, setStatusOptions] = useState([]);
+  const [selectedPayId, setSelectedPayId] = useState(null);
 
   const location = useLocation(); // Get the current route path
 
@@ -144,6 +146,13 @@ function OrderView() {
     }),
     [data.readyDate, data.billDate, data.productionDate, data.deliveryDate]
   );
+
+  // Add handler for payment selection
+  const handlePaymentSelect = (payId) => {
+    setSelectedPayId(payId);
+    // Switch to Payment Info tab
+    document.getElementById("other-info-tab").click();
+  };
 
   return (
     <div
@@ -416,7 +425,10 @@ function OrderView() {
                 role="tabpanel"
                 aria-labelledby="payment-history-tab"
               >
-                <PaymentHistory orderId={id} />
+                <PaymentHistory
+                  orderId={id}
+                  onPaymentSelect={handlePaymentSelect}
+                />
               </div>
 
               <div
@@ -425,8 +437,7 @@ function OrderView() {
                 role="tabpanel"
                 aria-labelledby="other-info-tab"
               >
-                <h5>Additional Information</h5>
-                {/* Add other information content here */}
+                <PaymentAllocation payId={selectedPayId} />
               </div>
 
               <div
