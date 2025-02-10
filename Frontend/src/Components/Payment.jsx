@@ -400,34 +400,22 @@ function Prod() {
   }, [currentPage]);
 
   const handleClientSearch = async (e) => {
-    // For Tab key, let the default behavior happen and perform search
-    if (e.type === "keydown" && e.key === "Tab") {
-      const searchBar = document.querySelector(
-        'input[type="text"][placeholder*="Search by ID"]'
-      );
-      if (searchBar) {
-        searchBar.value = "";
-      }
-      performClientSearch();
-      return;
-    }
+    if (e.key === "Enter" || e.key === "Tab") {
+      performClientSearch(); // Perform the search
 
-    // For Enter key, prevent default and manually move focus
-    if (e.type === "keydown" && e.key === "Enter") {
-      e.preventDefault();
-      const ornumInput = document.querySelector(
-        'input[placeholder="Enter OR#"]'
-      );
-      if (ornumInput) {
-        ornumInput.focus();
-      }
-      performClientSearch();
-      return;
-    }
+      if (e.key === "Enter") {
+        e.preventDefault(); // Prevent default Enter behavior
 
-    // For blur event
-    if (e.type === "blur") {
-      performClientSearch();
+        // Find the next input using tabIndex
+        const currentTabIndex = e.target.tabIndex;
+        const nextInput = document.querySelector(
+          `[tabIndex="${currentTabIndex + 1}"]`
+        );
+
+        if (nextInput) {
+          nextInput.focus(); // Move focus to the next field
+        }
+      }
     }
   };
 
