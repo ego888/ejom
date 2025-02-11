@@ -16,7 +16,15 @@ import { ServerIP } from "../config";
 import logo from "../assets/Go Large logo 2009C2 small.jpg";
 
 const Dashboard = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [permissions, setPermissions] = useState({
+    isAdmin: false,
+    isSales: false,
+    isAccounting: false,
+    isArtist: false,
+    isOperator: false,
+    isActive: false,
+    categoryId: null,
+  });
   const [employeeName, setEmployeeName] = useState("");
   const navigate = useNavigate();
 
@@ -41,8 +49,26 @@ const Dashboard = () => {
       }
 
       const decoded = jwtDecode(token);
-      setIsAdmin(decoded.isAdmin);
+      console.log("Decoded token:", decoded); // Debug decoded token
+
+      const newPermissions = {
+        isAdmin: decoded.categoryId === 1,
+        isSales: decoded.sales === 1, // Add === 1 comparison
+        isAccounting: decoded.accounting === 1, // Add === 1 comparison
+        isArtist: decoded.artist === 1, // Add === 1 comparison
+        isOperator: decoded.operator === 1, // Add === 1 comparison
+        isActive: decoded.active === 1, // Add === 1 comparison
+        categoryId: decoded.categoryId,
+      };
+
+      console.log("Set permissions:", newPermissions); // Debug permissions
+      setPermissions(newPermissions);
       setEmployeeName(decoded.name);
+
+      // Redirect to appropriate initial route if we're at /dashboard exactly
+      if (window.location.pathname === "/dashboard") {
+        navigate(getInitialRoute(newPermissions));
+      }
     } catch (error) {
       console.error("Token error:", error);
       localStorage.removeItem("valid");
@@ -84,6 +110,86 @@ const Dashboard = () => {
     localStorage.removeItem("userName"); // ✅ Remove stored name
     navigate("/");
   };
+
+  // Helper function to check route access
+  const canAccessRoute = (route) => {
+    console.log(`Checking access for route: ${route}`);
+    console.log("Current permissions:", permissions);
+
+    if (permissions.categoryId === 1) {
+      console.log("Admin access granted");
+      return true;
+    }
+
+    if (!permissions.isActive) {
+      console.log("User not active, access denied");
+      return false;
+    }
+
+    let hasAccess = false;
+    switch (route) {
+      case "quotes":
+      case "orders":
+        hasAccess = permissions.isSales;
+        console.log("Sales route access:", hasAccess);
+        break;
+      case "prod":
+      case "payment":
+        hasAccess = permissions.isAccounting;
+        console.log("Accounting route access:", hasAccess);
+        break;
+      case "artistlog":
+        hasAccess = permissions.isArtist;
+        console.log("Artist route access:", hasAccess);
+        break;
+      case "printlog":
+        hasAccess = permissions.isOperator;
+        console.log("Operator route access:", hasAccess);
+        break;
+      case "dashboard":
+      case "profile":
+        hasAccess = true;
+        console.log("Common route access granted");
+        break;
+      default:
+        hasAccess = false;
+        console.log("Unknown route, access denied");
+    }
+
+    return hasAccess;
+  };
+
+  // Navigation items configuration
+  const navItems = [
+    { path: "", icon: "bi-speedometer2", text: "Dashboard", adminOnly: true },
+    { path: "quotes", icon: "bi-file-earmark-text", text: "Quotes" },
+    { path: "orders", icon: "bi-cart", text: "Orders" },
+    { path: "prod", icon: "bi-gear", text: "Prod" },
+    { path: "artistlog", icon: "bi-palette", text: "Artist Log" },
+    { path: "printlog", icon: "bi-printer", text: "Print Log" },
+    { path: "payment", icon: "bi-cash", text: "Payments" },
+    { path: "client", icon: "bi-building", text: "Clients", adminOnly: true },
+    {
+      path: "material",
+      icon: "bi-box-seam",
+      text: "Materials",
+      adminOnly: true,
+    },
+    { path: "employee", icon: "bi-people", text: "Employee", adminOnly: true },
+    { path: "category", icon: "bi-list", text: "Category", adminOnly: true },
+    { path: "profile", icon: "bi-person", text: "Profile", adminOnly: true },
+  ];
+
+  // Add function to determine initial route
+  const getInitialRoute = (permissions) => {
+    if (permissions.categoryId === 1) return "/dashboard";
+    if (permissions.isSales) return "/dashboard/quotes";
+    if (permissions.isAccounting) return "/dashboard/prod";
+    if (permissions.isArtist) return "/dashboard/artistlog";
+    if (permissions.isOperator) return "/dashboard/printlog";
+    return "/dashboard/orders"; // fallback
+  };
+
   return (
     <div className="container-fluid">
       <div className="row flex-nowrap">
@@ -100,142 +206,36 @@ const Dashboard = () => {
               </Link>
             </div>
             <ul
-              className="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start"
+              className="nav nav-pills flex-column mb-sm-auto mb-0 mt-4 align-items-center align-items-sm-start"
               id="menu"
             >
-              <li>
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                  end
-                >
-                  <i className="bi-speedometer2"></i>
-                  <span className="d-none d-sm-inline">Dashboard</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/quotes"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-file-earmark-text"></i>
-                  <span className="d-none d-sm-inline">Quotes</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/orders"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-cart"></i>
-                  <span className="d-none d-sm-inline">Orders</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/prod"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-gear"></i>
-                  <span className="d-none d-sm-inline">Prod</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/artistlog"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-palette"></i>
-                  <span className="d-none d-sm-inline">Artist Log</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/printlog"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-printer"></i>
-                  <span className="d-none d-sm-inline">Print Log</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/payment"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-cash"></i>
-                  <span className="d-none d-sm-inline">Payments</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/client"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-building"></i>
-                  <span className="d-none d-sm-inline">Clients</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/material"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-box-seam"></i>
-                  <span className="d-none d-sm-inline">Materials</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/employee"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-people"></i>
-                  <span className="d-none d-sm-inline">Employee</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/category"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-list"></i>
-                  <span className="d-none d-sm-inline">Category</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard/profile"
-                  className={({ isActive }) =>
-                    `sidebar-nav-link ${isActive ? "active" : ""}`
-                  }
-                >
-                  <i className="bi-person"></i>
-                  <span className="d-none d-sm-inline">Profile</span>
-                </NavLink>
-              </li>
+              {navItems.map((item) => {
+                // Debug each nav item
+                console.log(`Checking nav item: ${item.path}`);
+                const hasAccess =
+                  (item.adminOnly && permissions.categoryId === 1) ||
+                  (!item.adminOnly && canAccessRoute(item.path));
+                console.log(`Access granted: ${hasAccess}`);
+
+                if (!hasAccess) {
+                  return null;
+                }
+
+                return (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path ? `/dashboard/${item.path}` : "/dashboard"}
+                      className={({ isActive }) =>
+                        `sidebar-nav-link ${isActive ? "active" : ""}`
+                      }
+                      end={item.path === ""}
+                    >
+                      <i className={`bi ${item.icon}`}></i>
+                      <span className="d-none d-sm-inline">{item.text}</span>
+                    </NavLink>
+                  </li>
+                );
+              })}
               <li>
                 <a href="#" className="sidebar-nav-link" onClick={handleLogout}>
                   <i className="bi-power"></i>

@@ -325,21 +325,33 @@ router.post("/login", (req, res) => {
       console.log("Query Error:", err);
       return res.json({ loginStatus: false, Error: "Query Error" });
     }
+    console.log("Result 2:", result);
     if (result.length > 0) {
       bcrypt.compare(req.body.password, result[0].password, (err, response) => {
         if (response) {
+          const employee = result[0];
+          console.log("Employee data for token:", employee); // Debug log
+
           const token = jwt.sign(
             {
-              name: result[0].name,
-              id: result[0].id,
-              isAdmin: result[0].admin,
+              name: employee.name,
+              id: employee.id,
+              categoryId: employee.category_id,
+              active: employee.active,
+              sales: employee.sales,
+              accounting: employee.accounting,
+              artist: employee.artist,
+              operator: employee.operator,
             },
             "jwt_secret_key",
             { expiresIn: "1d" }
           );
+
+          console.log("Generated token payload:", jwt.decode(token)); // Debug log
+
           return res.json({
             loginStatus: true,
-            isAdmin: result[0].admin,
+            isAdmin: employee.category_id === 1,
             token: token,
           });
         }

@@ -101,7 +101,14 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route path="" element={<Home />}></Route>
+          <Route
+            path=""
+            element={
+              <PrivateRoute>
+                <Home />
+              </PrivateRoute>
+            }
+          />
           <Route path="/dashboard/employee" element={<Employee />}></Route>
           <Route path="/dashboard/category" element={<Category />}></Route>
           <Route path="/dashboard/profile" element={<Profile />}></Route>
@@ -130,13 +137,27 @@ function App() {
           <Route path="/dashboard/client" element={<Client />} />
           <Route path="/dashboard/client/add" element={<AddClient />} />
           <Route path="/dashboard/client/edit/:id" element={<EditClient />} />
-          <Route path="/dashboard/quotes" element={<Quotes />}></Route>
+          <Route
+            path="quotes"
+            element={
+              <PrivateRoute>
+                <Quotes />
+              </PrivateRoute>
+            }
+          />
           <Route path="/dashboard/quotes/add" element={<AddQuote />}></Route>
           <Route
             path="/dashboard/quotes/edit/:id"
             element={<AddQuote />}
           ></Route>
-          <Route path="/dashboard/orders" element={<Orders />}></Route>
+          <Route
+            path="orders"
+            element={
+              <PrivateRoute>
+                <Orders />
+              </PrivateRoute>
+            }
+          />
           <Route path="/dashboard/orders/add" element={<AddOrder />}></Route>
           <Route
             path="/dashboard/prod/view/:id"

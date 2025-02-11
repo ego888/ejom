@@ -20,7 +20,7 @@ const Login = () => {
       .then((result) => {
         console.log("Login response:", result.data);
         if (result.data.loginStatus) {
-          console.log("VALUES:",values);
+          console.log("VALUES:", values);
           localStorage.setItem("valid", "true");
           localStorage.setItem("token", result.data.token);
           localStorage.setItem("userName", values.name); // ✅ Store name here
@@ -35,7 +35,7 @@ const Login = () => {
         console.error("Login error:", err);
         setError("An error occurred during login");
       });
-      console.log(localStorage.getItem("userName"));
+    console.log(localStorage.getItem("userName"));
   };
 
   return (
