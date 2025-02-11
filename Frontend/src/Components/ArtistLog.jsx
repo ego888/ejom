@@ -46,7 +46,7 @@ function ArtistLog() {
           });
         }
       }
-
+      console.log("order Response:", ordersResponse.data);
       if (artistsResponse.data.Status) {
         setArtists(artistsResponse.data.Result);
       }
@@ -88,91 +88,48 @@ function ArtistLog() {
 
   // Modify handleFieldChange to use order_details id
   const handleFieldChange = (detailId, field, value) => {
-    // detailId here is od.id (order_details.id)
     const orderDetail = orders.find((detail) => detail.Id === detailId);
     if (!orderDetail) return;
 
     const newValue = field === "artistIncentive" ? value : Number(value);
 
-    // Validation rules
-    const errors = {};
-
-    // Get current or edited values for validation
-    const major =
-      field === "major"
-        ? newValue
-        : editedFields[detailId]?.major || orderDetail.major || 0;
-    const minor =
-      field === "minor"
-        ? newValue
-        : editedFields[detailId]?.minor || orderDetail.minor || 0;
-    const quantity = orderDetail.quantity;
-
-    // Validation checks
-    if (field === "major" && newValue < 0) {
-      errors.major = "Major must be positive";
-    }
-    if (field === "minor" && newValue < 0) {
-      errors.minor = "Minor must be positive";
-    }
-    if (major + minor > quantity) {
-      errors.total = "Major + Minor cannot exceed Quantity";
-    }
-
-    // Update validation errors
-    setValidationErrors((prev) => ({
+    // Update editedFields for form values
+    setEditedFields((prev) => ({
       ...prev,
-      [detailId]: errors,
+      [detailId]: {
+        ...prev[detailId],
+        [field]: newValue,
+      },
     }));
 
-    // Only proceed if no validation errors
-    if (Object.keys(errors).length === 0) {
-      // Update editedFields for form values
-      setEditedFields((prev) => ({
-        ...prev,
-        [detailId]: {
-          ...prev[detailId],
-          [field]: newValue,
-        },
-      }));
+    // Update changedOrders array
+    setChangedOrders((prev) => {
+      const filtered = prev.filter((item) => item.Id !== detailId);
+      const updatedDetail = {
+        Id: detailId,
+        orderId: orderDetail.orderId,
+        artistIncentive:
+          field === "artistIncentive"
+            ? newValue
+            : editedFields[detailId]?.artistIncentive ||
+              orderDetail.artistIncentive,
+        major:
+          field === "major"
+            ? newValue
+            : editedFields[detailId]?.major || orderDetail.major,
+        minor:
+          field === "minor"
+            ? newValue
+            : editedFields[detailId]?.minor || orderDetail.minor,
+      };
 
-      // Update changedOrders array
-      setChangedOrders((prev) => {
-        // Remove any existing entry for this detail
-        const filtered = prev.filter((item) => item.Id !== detailId);
+      const hasChanges =
+        updatedDetail.artistIncentive !== orderDetail.artistIncentive ||
+        updatedDetail.major !== orderDetail.major ||
+        updatedDetail.minor !== orderDetail.minor;
 
-        // Create new detail entry with latest values
-        const updatedDetail = {
-          Id: detailId, // This is od.id for updating order_details table
-          orderId: orderDetail.orderId, // This is o.orderId for reference
-          artistIncentive:
-            field === "artistIncentive"
-              ? newValue
-              : editedFields[detailId]?.artistIncentive ||
-                orderDetail.artistIncentive,
-          major:
-            field === "major"
-              ? newValue
-              : editedFields[detailId]?.major || orderDetail.major,
-          minor:
-            field === "minor"
-              ? newValue
-              : editedFields[detailId]?.minor || orderDetail.minor,
-        };
-
-        // Only add to changes if values are different from original
-        const hasChanges =
-          updatedDetail.artistIncentive !== orderDetail.artistIncentive ||
-          updatedDetail.major !== orderDetail.major ||
-          updatedDetail.minor !== orderDetail.minor;
-
-        console.log("Updated Detail:", updatedDetail);
-        console.log("Original Detail:", orderDetail);
-        console.log("Has Changes:", hasChanges);
-
-        return hasChanges ? [...filtered, updatedDetail] : filtered;
-      });
-    }
+      return hasChanges ? [...filtered, updatedDetail] : filtered;
+    });
   };
 
   // Modify handleUpdate to use changedOrders array
@@ -189,6 +146,74 @@ function ArtistLog() {
         return;
       }
 
+      // All validations in one place
+      for (const order of changedOrders) {
+        // Check artist not empty
+        if (!order.artistIncentive || order.artistIncentive.trim() === "") {
+          setAlert({
+            show: true,
+            title: "Validation Error",
+            message: "Artist cannot be empty.",
+            type: "alert",
+          });
+          document.getElementById(`artist-select-${order.Id}`)?.focus();
+          return;
+        }
+
+        // Check major and minor not both zero
+        if (
+          (order.major === 0 || order.major === "") &&
+          (order.minor === 0 || order.minor === "")
+        ) {
+          setAlert({
+            show: true,
+            title: "Validation Error",
+            message: "Major and minor cannot both be zero.",
+            type: "alert",
+          });
+          document.getElementById(`major-input-${order.Id}`)?.focus();
+          return;
+        }
+
+        // Check major is positive
+        if (order.major < 0) {
+          setAlert({
+            show: true,
+            title: "Validation Error",
+            message: "Major must be positive",
+            type: "alert",
+          });
+          document.getElementById(`major-input-${order.Id}`)?.focus();
+          return;
+        }
+
+        // Check minor is positive
+        if (order.minor < 0) {
+          setAlert({
+            show: true,
+            title: "Validation Error",
+            message: "Minor must be positive",
+            type: "alert",
+          });
+          document.getElementById(`minor-input-${order.Id}`)?.focus();
+          return;
+        }
+
+        // Check total doesn't exceed quantity
+        const orderDetail = orders.find((detail) => detail.Id === order.Id);
+        if (orderDetail && order.major + order.minor > orderDetail.quantity) {
+          setAlert({
+            show: true,
+            title: "Validation Error",
+            message: "Major + Minor cannot exceed Quantity",
+            type: "alert",
+          });
+          document.getElementById(`major-input-${order.Id}`)?.focus();
+          return;
+        }
+      }
+
+      // If we get here, all validations passed
       const response = await axios.put(
         `${ServerIP}/auth/order_details/update_incentives`,
         changedOrders,
@@ -204,9 +229,9 @@ function ArtistLog() {
           message: "Artist incentives updated successfully",
           type: "alert",
         });
-        setEditedFields({}); // Clear form values
-        setChangedOrders([]); // Clear changes array
-        fetchData(); // Refresh data
+        setEditedFields({});
+        setChangedOrders([]);
+        fetchData();
       } else {
         setAlert({
           show: true,
@@ -327,6 +352,7 @@ function ArtistLog() {
                     </td>
                     <td className="artist-incentive">
                       <select
+                        id={`artist-select-${item.Id}`}
                         className={`form-select form-select-sm ${
                           validationErrors[item.Id]?.artist ? "is-invalid" : ""
                         }`}
@@ -353,6 +379,7 @@ function ArtistLog() {
                     </td>
                     <td className="major">
                       <input
+                        id={`major-input-${item.Id}`}
                         type="number"
                         min="0"
                         className={`form-control form-control-sm ${
@@ -369,6 +396,7 @@ function ArtistLog() {
                     </td>
                     <td className="minor">
                       <input
+                        id={`minor-input-${item.Id}`}
                         type="number"
                         min="0"
                         className={`form-control form-control-sm ${

@@ -621,6 +621,7 @@ function Prod() {
                 <th onClick={handleForProdSort} style={{ cursor: "pointer" }}>
                   <div className="d-flex align-items-center">
                     <CheckBoxHeader
+                      id="forProdSort-checkbox"
                       checked={forProdSort !== "none"}
                       indeterminate={forProdSort === "desc"}
                     />

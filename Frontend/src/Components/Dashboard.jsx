@@ -49,7 +49,6 @@ const Dashboard = () => {
       }
 
       const decoded = jwtDecode(token);
-      console.log("Decoded token:", decoded); // Debug decoded token
 
       const newPermissions = {
         isAdmin: decoded.categoryId === 1,
@@ -61,7 +60,6 @@ const Dashboard = () => {
         categoryId: decoded.categoryId,
       };
 
-      console.log("Set permissions:", newPermissions); // Debug permissions
       setPermissions(newPermissions);
       setEmployeeName(decoded.name);
 
@@ -113,16 +111,11 @@ const Dashboard = () => {
 
   // Helper function to check route access
   const canAccessRoute = (route) => {
-    console.log(`Checking access for route: ${route}`);
-    console.log("Current permissions:", permissions);
-
     if (permissions.categoryId === 1) {
-      console.log("Admin access granted");
       return true;
     }
 
     if (!permissions.isActive) {
-      console.log("User not active, access denied");
       return false;
     }
 
@@ -131,29 +124,23 @@ const Dashboard = () => {
       case "quotes":
       case "orders":
         hasAccess = permissions.isSales;
-        console.log("Sales route access:", hasAccess);
         break;
       case "prod":
       case "payment":
         hasAccess = permissions.isAccounting;
-        console.log("Accounting route access:", hasAccess);
         break;
       case "artistlog":
         hasAccess = permissions.isArtist;
-        console.log("Artist route access:", hasAccess);
         break;
       case "printlog":
         hasAccess = permissions.isOperator;
-        console.log("Operator route access:", hasAccess);
         break;
       case "dashboard":
       case "profile":
         hasAccess = true;
-        console.log("Common route access granted");
         break;
       default:
         hasAccess = false;
-        console.log("Unknown route, access denied");
     }
 
     return hasAccess;
@@ -211,11 +198,9 @@ const Dashboard = () => {
             >
               {navItems.map((item) => {
                 // Debug each nav item
-                console.log(`Checking nav item: ${item.path}`);
                 const hasAccess =
                   (item.adminOnly && permissions.categoryId === 1) ||
                   (!item.adminOnly && canAccessRoute(item.path));
-                console.log(`Access granted: ${hasAccess}`);
 
                 if (!hasAccess) {
                   return null;
