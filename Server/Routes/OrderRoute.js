@@ -337,40 +337,48 @@ router.get("/orders-details-forprod", async (req, res) => {
   }
 });
 
-// Get orders marked for artist incentive
+// Get orders with artist incentive details
 router.get("/orders-details-artistIncentive", async (req, res) => {
   try {
     const sql = `
       SELECT 
-        o.orderID as id,
-        o.clientId,
-        o.projectName,
-        o.dueDate,
-        o.dueTime,
-        c.clientName,
-        od.quantity,
-        od.width,
-        od.height,
-        od.unit,
-        od.material,
-        od.printHrs,
-        od.squareFeet,
-        od.displayOrder
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
+    o.orderId,
+    o.projectName,
+    o.dueDate,
+    o.dueTime,
+    c.clientName,
+    o.productionDate,
+    o.status,
+    od.Id,
+    od.quantity,
+    od.width,
+    od.height,
+    od.unit,
+    od.material,
+    od.artistIncentive,
+    od.major,
+    od.minor
+FROM orders o
+LEFT JOIN client c ON o.clientId = c.Id
       LEFT JOIN order_details od ON o.orderID = od.orderId
-      WHERE o.forProd = 1
+      WHERE o.status = 'Prod' 
+      AND (o.productionDate IS NOT NULL AND o.productionDate + INTERVAL 24 HOUR > NOW())
       ORDER BY o.orderID ASC, od.displayOrder ASC`;
 
-    con.query(sql, (err, result) => {
-      if (err) {
-        console.log(err);
-        return res.json({ Status: false, Error: "Query Error" });
-      }
-      return res.json({ Status: true, Result: result });
+    const result = await new Promise((resolve, reject) => {
+      con.query(sql, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
     });
-  } catch (error) {
-    return res.json({ Status: false, Error: "Query Error" + error });
+
+    return res.json({ Status: true, Result: result });
+  } catch (err) {
+    console.error("Error fetching artist incentive details:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to fetch artist incentive details",
+    });
   }
 });
 
@@ -774,6 +782,48 @@ router.put("/orders/:orderId/update_edited_info", (req, res) => {
       return res.json({ Status: true });
     }
   );
+});
+
+// Update order detail artist incentives
+router.put("/order_details/update_incentives", async (req, res) => {
+  try {
+    const updates = req.body;
+    console.log("Received updates:", updates);
+
+    // Process each update
+    for (const update of updates) {
+      const sql = `
+        UPDATE order_details 
+        SET 
+          artistIncentive = ?,
+          major = ?,
+          minor = ?
+        WHERE Id = ?
+      `;
+
+      await new Promise((resolve, reject) => {
+        con.query(
+          sql,
+          [update.artistIncentive, update.major, update.minor, update.Id],
+          (err, result) => {
+            if (err) reject(err);
+            resolve(result);
+          }
+        );
+      });
+    }
+
+    return res.json({
+      Status: true,
+      Message: "Updates completed successfully",
+    });
+  } catch (err) {
+    console.error("Error updating artist incentives:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update artist incentives",
+    });
+  }
 });
 
 // Update order detail

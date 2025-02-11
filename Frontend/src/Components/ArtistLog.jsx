@@ -1,497 +1,399 @@
-import axios from "../utils/axiosConfig";
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import debounce from "lodash/debounce";
+import React, { useState, useEffect } from "react";
 import Button from "./UI/Button";
-import DisplayPage from "./UI/DisplayPage";
-import Pagination from "./UI/Pagination";
+import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
-import ClientFilter from "./Logic/ClientFilter";
-import SalesFilter from "./Logic/SalesFilter";
-import StatusBadges from "./UI/StatusBadges";
-import "./Orders.css";
+import { formatDateTime, formatNumber } from "../utils/orderUtils";
 import "./ArtistLog.css";
+import ModalAlert from "./UI/ModalAlert";
 
-function Prod() {
-  const navigate = useNavigate();
+function ArtistLog() {
   const [orders, setOrders] = useState([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(() => {
-    return parseInt(localStorage.getItem("ordersListPage")) || 1;
+  const [artists, setArtists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "info",
   });
-  const [recordsPerPage, setRecordsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(0);
-  const [sortConfig, setSortConfig] = useState(() => {
-    const saved = localStorage.getItem("artistLogSortConfig");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          key: "id",
-          direction: "desc",
-        };
-  });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusOptions, setStatusOptions] = useState([]);
-  const [selectedStatuses, setSelectedStatuses] = useState(() => {
-    const saved = localStorage.getItem("orderStatusFilters");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [selectedSales, setSelectedSales] = useState([]);
-  const [isProdChecked, setIsProdChecked] = useState(false);
-  const [isAllChecked, setIsAllChecked] = useState(false);
-  const [selectedClients, setSelectedClients] = useState([]);
-  const [hasClientFilter, setHasClientFilter] = useState(false);
-  const [hasSalesFilter, setHasSalesFilter] = useState(false);
-  const [clientList, setClientList] = useState([]);
-  const [salesEmployees, setSalesEmployees] = useState([]);
-  const salesFilterRef = useRef(null);
-  const clientFilterRef = useRef(null);
+  const [editedFields, setEditedFields] = useState({});
+  const [validationErrors, setValidationErrors] = useState({});
+  const [changedOrders, setChangedOrders] = useState([]);
 
-  const fetchOrders = async () => {
-    if (selectedStatuses.length === 0) {
-      setOrders([]);
-      setTotalCount(0);
-      return;
-    }
-    console.log("FETCHING");
-    setLoading(true);
+  // Move fetchData outside useEffect so it can be reused
+  const fetchData = async () => {
     try {
-      const params = {
-        page: currentPage,
-        limit: recordsPerPage,
-        sortBy: sortConfig.key,
-        sortDirection: sortConfig.direction,
-        search: searchTerm,
-        statuses: selectedStatuses.join(","),
-        sales: selectedSales.length ? selectedSales.join(",") : undefined,
-        clients: selectedClients.length ? selectedClients.join(",") : undefined,
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const config = {
+        headers: { Authorization: `Bearer ${token}` },
       };
 
-      const response = await axios.get(`${ServerIP}/auth/orders`, { params });
-      if (response.data.Status) {
-        setOrders(response.data.Result.orders);
-        setTotalCount(response.data.Result.total);
-        setTotalPages(Math.ceil(response.data.Result.total / recordsPerPage));
+      // Fetch orders and artists in parallel
+      const [ordersResponse, artistsResponse] = await Promise.all([
+        axios.get(`${ServerIP}/auth/orders-details-artistIncentive`),
+        axios.get(`${ServerIP}/auth/artists`, config),
+      ]);
+
+      if (ordersResponse.data.Status) {
+        setOrders(ordersResponse.data.Result);
+        if (!ordersResponse.data.Result.length) {
+          setAlert({
+            show: true,
+            title: "No Prod Orders",
+            message: "There are no orders for Artist logging at this time.",
+            type: "info",
+          });
+        }
       }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      setOrders([]);
-      setTotalCount(0);
+
+      if (artistsResponse.data.Status) {
+        setArtists(artistsResponse.data.Result);
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial data fetch
   useEffect(() => {
-    const initializeComponent = async () => {
-      try {
-        // Fetch all initial data in parallel
-        const [statusResponse, clientResponse, salesResponse] =
-          await Promise.all([
-            axios.get(`${ServerIP}/auth/order-statuses`),
-            axios.get(`${ServerIP}/auth/clients`),
-            axios.get(`${ServerIP}/auth/sales_employees`),
-          ]);
-
-        // Handle status options and initial filters
-        if (statusResponse.data.Status) {
-          const sortedStatuses = statusResponse.data.Result.sort(
-            (a, b) => a.step - b.step
-          );
-          setStatusOptions(sortedStatuses);
-
-          // Set initial prod statuses
-          const prodStatuses = sortedStatuses
-            .slice(2, 6)
-            .map((s) => s.statusId);
-          setSelectedStatuses(prodStatuses);
-          setIsProdChecked(true);
-          localStorage.setItem(
-            "orderStatusFilters",
-            JSON.stringify(prodStatuses)
-          );
-        }
-
-        // Handle other responses
-        if (clientResponse.data.Status)
-          setClientList(clientResponse.data.Result);
-        if (salesResponse.data.Status)
-          setSalesEmployees(salesResponse.data.Result);
-      } catch (error) {
-        console.error("Error in initialization:", error);
-      }
-    };
-
-    initializeComponent();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(fetchOrders, searchTerm ? 500 : 0);
-    return () => clearTimeout(timeoutId);
-  }, [
-    selectedStatuses,
-    currentPage,
-    recordsPerPage,
-    sortConfig,
-    searchTerm,
-    selectedSales,
-    selectedClients,
-  ]);
+  if (loading) {
+    return (
+      <div className="text-center my-3">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
-  // Debounced search handler
-  const debouncedSearch = useCallback(
-    debounce((term) => {
-      setSearchTerm(term);
-      setCurrentPage(1);
-    }, 500),
-    []
-  );
-
-  const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    debouncedSearch(term);
-  };
-
-  // Sort handler
-  const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
+  // Group orders by orderId (not by order_details.id)
+  const groupedOrders = orders.reduce((acc, order) => {
+    if (!acc[order.orderId]) {
+      acc[order.orderId] = [];
     }
-    const newSortConfig = { key, direction };
-    setSortConfig(newSortConfig);
-    setCurrentPage(1);
-    localStorage.setItem("artistLogSortConfig", JSON.stringify(newSortConfig));
+    acc[order.orderId].push(order);
+    return acc;
+  }, {});
+
+  const handleArtistChange = (orderId, artistId) => {
+    // Implement the logic to update the artist for the given order
+    console.log(`Changing artist for order ${orderId} to ${artistId}`);
   };
 
-  // Status filter handlers
-  const handleStatusFilter = (statusId) => {
-    setSelectedStatuses((prev) => {
-      let newStatuses;
-      if (prev.includes(statusId)) {
-        newStatuses = prev.filter((s) => s !== statusId);
-      } else {
-        newStatuses = [...prev, statusId];
+  // Modify handleFieldChange to use order_details id
+  const handleFieldChange = (detailId, field, value) => {
+    // detailId here is od.id (order_details.id)
+    const orderDetail = orders.find((detail) => detail.Id === detailId);
+    if (!orderDetail) return;
+
+    const newValue = field === "artistIncentive" ? value : Number(value);
+
+    // Validation rules
+    const errors = {};
+
+    // Get current or edited values for validation
+    const major =
+      field === "major"
+        ? newValue
+        : editedFields[detailId]?.major || orderDetail.major || 0;
+    const minor =
+      field === "minor"
+        ? newValue
+        : editedFields[detailId]?.minor || orderDetail.minor || 0;
+    const quantity = orderDetail.quantity;
+
+    // Validation checks
+    if (field === "major" && newValue < 0) {
+      errors.major = "Major must be positive";
+    }
+    if (field === "minor" && newValue < 0) {
+      errors.minor = "Minor must be positive";
+    }
+    if (major + minor > quantity) {
+      errors.total = "Major + Minor cannot exceed Quantity";
+    }
+
+    // Update validation errors
+    setValidationErrors((prev) => ({
+      ...prev,
+      [detailId]: errors,
+    }));
+
+    // Only proceed if no validation errors
+    if (Object.keys(errors).length === 0) {
+      // Update editedFields for form values
+      setEditedFields((prev) => ({
+        ...prev,
+        [detailId]: {
+          ...prev[detailId],
+          [field]: newValue,
+        },
+      }));
+
+      // Update changedOrders array
+      setChangedOrders((prev) => {
+        // Remove any existing entry for this detail
+        const filtered = prev.filter((item) => item.Id !== detailId);
+
+        // Create new detail entry with latest values
+        const updatedDetail = {
+          Id: detailId, // This is od.id for updating order_details table
+          orderId: orderDetail.orderId, // This is o.orderId for reference
+          artistIncentive:
+            field === "artistIncentive"
+              ? newValue
+              : editedFields[detailId]?.artistIncentive ||
+                orderDetail.artistIncentive,
+          major:
+            field === "major"
+              ? newValue
+              : editedFields[detailId]?.major || orderDetail.major,
+          minor:
+            field === "minor"
+              ? newValue
+              : editedFields[detailId]?.minor || orderDetail.minor,
+        };
+
+        // Only add to changes if values are different from original
+        const hasChanges =
+          updatedDetail.artistIncentive !== orderDetail.artistIncentive ||
+          updatedDetail.major !== orderDetail.major ||
+          updatedDetail.minor !== orderDetail.minor;
+
+        console.log("Updated Detail:", updatedDetail);
+        console.log("Original Detail:", orderDetail);
+        console.log("Has Changes:", hasChanges);
+
+        return hasChanges ? [...filtered, updatedDetail] : filtered;
+      });
+    }
+  };
+
+  // Modify handleUpdate to use changedOrders array
+  const handleUpdate = async () => {
+    try {
+      console.log("Changed Orders:", changedOrders);
+      if (changedOrders.length === 0) {
+        setAlert({
+          show: true,
+          title: "Info",
+          message: "No changes to update",
+          type: "alert",
+        });
+        return;
       }
-      console.log("New statuses after toggle:", newStatuses); // Debugging log
-      // Update Prod checkbox state
-      const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-      const selectedProdStatuses = newStatuses.filter((s) =>
-        prodStatuses.includes(s)
+
+      const response = await axios.put(
+        `${ServerIP}/auth/order_details/update_incentives`,
+        changedOrders,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
-      console.log("Prod statuses:", prodStatuses); // Debugging log
-      console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
-      setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
 
-      // Update All checkbox state
-      setIsAllChecked(newStatuses.length === statusOptions.length);
-
-      // Save to localStorage
-      localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-      return newStatuses;
-    });
-    setCurrentPage(1);
-  };
-
-  // Helper function for sort indicator
-  const getSortIndicator = (key) => {
-    if (sortConfig.key === key) {
-      return sortConfig.direction === "asc" ? " ↑" : " ↓";
+      if (response.data.Status) {
+        setAlert({
+          show: true,
+          title: "Success",
+          message: "Artist incentives updated successfully",
+          type: "alert",
+        });
+        setEditedFields({}); // Clear form values
+        setChangedOrders([]); // Clear changes array
+        fetchData(); // Refresh data
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to update artist incentives",
+          type: "error",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating artist incentives:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to update artist incentives",
+        type: "error",
+      });
     }
-    return "";
   };
-
-  // Calculate pagination values
-  useEffect(() => {
-    setTotalPages(Math.ceil(totalCount / recordsPerPage));
-  }, [totalCount, recordsPerPage]);
-
-  // Modify the page change handler
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    localStorage.setItem("ordersListPage", pageNumber.toString());
-  };
-
-  // Handle records per page change
-  const handleRecordsPerPageChange = (e) => {
-    setRecordsPerPage(Number(e.target.value));
-    setCurrentPage(1); // Reset to first page
-  };
-
-  const isProdIndeterminate = () => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = selectedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
-    return (
-      selectedProdStatuses.length > 0 &&
-      selectedProdStatuses.length < prodStatuses.length
-    );
-  };
-
-  const handleProdCheckbox = (e) => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    let newStatuses;
-    if (e.target.checked) {
-      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-    } else {
-      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
-    }
-
-    setSelectedStatuses(newStatuses);
-    setIsProdChecked(e.target.checked);
-    setIsAllChecked(newStatuses.length === statusOptions.length);
-
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  };
-
-  const isAllIndeterminate = () => {
-    return (
-      selectedStatuses.length > 0 &&
-      selectedStatuses.length < statusOptions.length
-    );
-  };
-
-  const handleAllCheckbox = (e) => {
-    let newStatuses = [];
-    if (e.target.checked) {
-      newStatuses = statusOptions.map((s) => s.statusId);
-    }
-    setSelectedStatuses(newStatuses);
-    setIsAllChecked(e.target.checked);
-    setIsProdChecked(e.target.checked);
-
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  };
-
-  // Add a cleanup effect to save the page when unmounting
-  useEffect(() => {
-    return () => {
-      localStorage.setItem("ordersListPage", currentPage.toString());
-    };
-  }, [currentPage]);
 
   return (
     <div className="artist-theme">
       <div className="artist-page-background px-5">
-        <div className="artist-header d-flex justify-content-center">
+        <div className="artist-header text-center mb-4">
           <h3>Artist Log</h3>
         </div>
-        {/* Search and filters row */}
-        <div className="d-flex justify-content-between mb-3">
-          <input
-            type="text"
-            className="form-control form-control-sm"
-            placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-            onChange={handleSearch}
-            style={{ width: "400px" }}
-          />
-        </div>
-        {/* Loading indicator */}
-        {loading && (
-          <div className="text-center my-3">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-          </div>
-        )}
-
         <div className="table-responsive">
-          <SalesFilter
-            ref={salesFilterRef}
-            salesEmployees={salesEmployees}
-            selectedSales={selectedSales}
-            setSelectedSales={setSelectedSales}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasSalesFilter(isFilterActive)
-            }
-          />
-          <ClientFilter
-            ref={clientFilterRef}
-            clientList={clientList}
-            selectedClients={selectedClients}
-            setSelectedClients={setSelectedClients}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasClientFilter(isFilterActive)
-            }
-          />
-          <table className="table">
+          <div className="d-flex mb-3">
+            <Button
+              variant="add"
+              disabled={changedOrders.length === 0}
+              onClick={handleUpdate}
+              aria-label="Save Changes"
+            >
+              Save
+            </Button>
+          </div>
+          <table className="table table-striped table-hover">
             <thead>
-              <tr>
-                <th>Action</th>
-                <th
-                  onClick={() => handleSort("id")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Order ID {getSortIndicator("id")}
-                </th>
-                <th
-                  onClick={() => handleSort("clientName")}
-                  style={{
-                    cursor: "pointer",
-                    color: hasClientFilter ? "#0d6efd" : "inherit",
-                  }}
-                >
-                  Client {getSortIndicator("clientName")}
-                </th>
-                <th>Project Name</th>
-                <th>Ordered By</th>
-                {/* <th>Order Date</th> */}
-                <th>Due Date</th>
-                <th>Due Time</th>
-                <th
-                  onClick={() => handleSort("status")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Status {getSortIndicator("status")}
-                </th>
-                <th
-                  onClick={() => handleSort("drnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  DR# {getSortIndicator("drnum")}
-                </th>
-                <th
-                  onClick={() => handleSort("invnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  INV# {getSortIndicator("invnum")}
-                </th>
-                <th>Grand Total</th>
-                <th
-                  onClick={() => handleSort("ornum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  OR# {getSortIndicator("ornum")}
-                </th>
-                <th>Amount Paid</th>
-                <th>Date Paid</th>
-                <th
-                  onClick={() => handleSort("salesName")}
-                  style={{
-                    cursor: "pointer",
-                    color: hasSalesFilter ? "#0d6efd" : "inherit",
-                  }}
-                >
-                  Sales {getSortIndicator("salesName")}
-                </th>
-                <th>Order Ref</th>
+              <tr className="table-header">
+                <th aria-label="order-id">Order ID</th>
+                <th aria-label="project">Project</th>
+                <th aria-label="client">Client</th>
+                <th aria-label="due-date">Due Date</th>
+                <th aria-label="production-date">Production Date</th>
+                <th aria-label="status">Status</th>
+                <th aria-label="qty">Qty</th>
+                <th aria-label="width">Width</th>
+                <th aria-label="height">Height</th>
+                <th aria-label="unit">Unit</th>
+                <th aria-label="material">Material</th>
+                <th aria-label="artist-incentive">Artist</th>
+                <th aria-label="major">Major</th>
+                <th aria-label="minor">Minor</th>
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="view"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/artistlog/view/${order.id}`)
+              {Object.entries(groupedOrders).map(([orderId, items]) =>
+                items.map((item, index) => (
+                  <tr
+                    key={`${orderId}-${index}`}
+                    className="table-row"
+                    data-first-row={index === 0 ? "true" : "false"}
+                  >
+                    <td
+                      className="text-center order-id"
+                      id={`order-id-${index}`}
+                    >
+                      {index === 0 ? item.orderId : ""}
+                    </td>
+                    <td className="project-name" id={`project-${index}`}>
+                      {index === 0 ? item.projectName : ""}
+                    </td>
+                    <td className="client-name" id={`client-${index}`}>
+                      {index === 0 ? item.clientName : ""}
+                    </td>
+                    <td className="due-date" id={`due-datetime-${index}`}>
+                      {index === 0 && item.dueDate
+                        ? `${new Date(item.dueDate).toLocaleDateString()} ${
+                            item.dueTime || ""
+                          }`
+                        : ""}
+                    </td>
+                    <td
+                      className="production-date"
+                      id={`production-date-${index}`}
+                    >
+                      {index === 0 && item.productionDate
+                        ? formatDateTime(item.productionDate)
+                        : ""}
+                    </td>
+                    <td className="status-cell" id={`status-${index}`}>
+                      {index === 0 && (
+                        <span className={`status-badge ${item.status}`}>
+                          {item.status}
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-center quantity" id={`qty-${index}`}>
+                      {item.quantity}
+                    </td>
+                    <td
+                      className="text-center dimensions"
+                      id={`width-${index}`}
+                    >
+                      {item.width}
+                    </td>
+                    <td
+                      className="text-center dimensions"
+                      id={`height-${index}`}
+                    >
+                      {item.height}
+                    </td>
+                    <td className="text-center unit" id={`unit-${index}`}>
+                      {item.unit}
+                    </td>
+                    <td className="material" id={`material-${index}`}>
+                      {item.material}
+                    </td>
+                    <td className="artist-incentive">
+                      <select
+                        className={`form-select form-select-sm ${
+                          validationErrors[item.Id]?.artist ? "is-invalid" : ""
+                        }`}
+                        value={
+                          editedFields[item.Id]?.artistIncentive ||
+                          item.artistIncentive ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          handleFieldChange(
+                            item.Id,
+                            "artistIncentive",
+                            e.target.value
+                          )
+                        }
+                      >
+                        <option value="">Select Artist</option>
+                        {artists.map((artist) => (
+                          <option key={artist.id} value={artist.name}>
+                            {artist.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="major">
+                      <input
+                        type="number"
+                        min="0"
+                        className={`form-control form-control-sm ${
+                          validationErrors[item.Id]?.major ||
+                          validationErrors[item.Id]?.total
+                            ? "is-invalid"
+                            : ""
+                        }`}
+                        value={editedFields[item.Id]?.major || item.major || ""}
+                        onChange={(e) =>
+                          handleFieldChange(item.Id, "major", e.target.value)
                         }
                       />
-                      {/* <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/orders/edit/${order.id}`)
+                    </td>
+                    <td className="minor">
+                      <input
+                        type="number"
+                        min="0"
+                        className={`form-control form-control-sm ${
+                          validationErrors[item.Id]?.minor ||
+                          validationErrors[item.Id]?.total
+                            ? "is-invalid"
+                            : ""
+                        }`}
+                        value={editedFields[item.Id]?.minor || item.minor || ""}
+                        onChange={(e) =>
+                          handleFieldChange(item.Id, "minor", e.target.value)
                         }
-                      /> */}
-                    </div>
-                  </td>
-                  <td>{order.id}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.clientName}
-                  </td>
-                  <td>{order.projectName}</td>
-                  <td>{order.orderedBy}</td>
-                  {/* <td>
-                    {order.orderDate
-                      ? new Date(order.orderDate).toLocaleDateString()
-                      : ""}
-                  </td> */}
-                  <td>
-                    {order.dueDate
-                      ? new Date(order.dueDate).toLocaleDateString()
-                      : ""}
-                  </td>
-                  <td>{order.dueTime || ""}</td>
-                  <td>
-                    <span className={`status-badge ${order.status}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>{order.drnum || ""}</td>
-                  <td>{order.invnum || ""}</td>
-                  <td>
-                    {order.grandTotal
-                      ? `₱${order.grandTotal.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td>{order.ornum || ""}</td>
-                  <td></td>
-                  <td>
-                    {order.datePaid
-                      ? new Date(order.datePaid).toLocaleDateString()
-                      : ""}
-                  </td>
-                  <td
-                    className="sales-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.salesName}
-                  </td>
-                  <td>{order.orderReference}</td>
-                </tr>
-              ))}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-        </div>
-
-        {/* Pagination and Filters Section */}
-        <div className="d-flex justify-content-between align-items-start mt-3">
-          <DisplayPage
-            recordsPerPage={recordsPerPage}
-            setRecordsPerPage={setRecordsPerPage}
-            currentPage={currentPage}
-            totalCount={totalCount}
-            setCurrentPage={setCurrentPage}
-          />
-
-          <StatusBadges
-            statusOptions={statusOptions}
-            selectedStatuses={selectedStatuses}
-            onStatusChange={(newStatuses) => {
-              setSelectedStatuses(newStatuses);
-              localStorage.setItem(
-                "orderStatusFilters",
-                JSON.stringify(newStatuses)
-              );
-            }}
-          />
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
+          <ModalAlert
+            show={alert.show}
+            title={alert.title}
+            message={alert.message}
+            type={alert.type}
+            onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
           />
         </div>
       </div>
@@ -499,4 +401,4 @@ function Prod() {
   );
 }
 
-export default Prod;
+export default ArtistLog;

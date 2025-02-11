@@ -2,7 +2,7 @@
   --artist-bg-color: #ffbfa3;
   --artist-text-color: #333333;
   --artist-content-bg: #ffffff;
-  --artist-border-color: #45d2a1;
+  --artist-border-color: #937d74;
   --artist-border-light: #f0f0f0;
   --artist-border-hover: #d0d0d0;
   --artist-table-bg: #ffffff;
@@ -135,8 +135,7 @@
   background-color: var(--artist-content-bg) !important;
 }
 
-/* Update other component backgrounds to white */
-.table,
+/* Update other component backgrounds to white .table,
 .table thead,
 .table tbody,
 .table thead th,
@@ -148,7 +147,7 @@
 .artist-details-header {
   background-color: var(--artist-content-bg);
   color: var(--artist-text-color);
-}
+} */
 
 /* Keep the table container white */
 .table-responsive {
@@ -156,4 +155,9 @@
   border-radius: 8px;
   padding: 20px;
   color: var(--artist-text-color);
+}
+
+.table-row:first-child,
+.table-row[data-first-row="true"] {
+  border-top: 2px solid var(--artist-border-color);
 }
