@@ -6,6 +6,7 @@ import "./Reports.css";
 import axios from "axios";
 import { ServerIP } from "../../config";
 import ReportSalesSummary from "./ReportSalesSummary";
+import ReportArtistIncentives from "./ReportArtistIncentives";
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState("sales-report");
@@ -90,13 +91,39 @@ const Reports = () => {
           type: "error",
         });
       }
+    } else if (selectedReport === "artist-incentives") {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${ServerIP}/report/artist-incentive-summary`,
+          {
+            params: { dateFrom, dateTo },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        console.log("response data set:", response);
+        if (response.data.Status) {
+          setReportData(response.data.Result);
+          console.log(
+            "Report Artist Incentives data set:",
+            response.data.Result
+          );
+        }
+      } catch (error) {
+        console.error("Error generating artist incentive report:", error);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to generate artist incentive report",
+          type: "error",
+        });
+      }
     }
     // ... handle other report types
   };
 
   const renderSortOptions = () => {
     if (selectedReport !== "sales-report") return null;
-
     return (
       <div className="sort-options mb-3">
         <label className="form-label d-block">Group by:</label>
@@ -172,6 +199,9 @@ const Reports = () => {
             </div>
             {selectedReport === "sales-report" && reportData && (
               <ReportSalesSummary data={reportData} groupBy={groupBy} />
+            )}
+            {selectedReport === "artist-incentives" && reportData && (
+              <ReportArtistIncentives data={reportData} />
             )}
           </div>
         </div>

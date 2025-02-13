@@ -29,7 +29,7 @@ const ReportSalesSummary = ({ data, groupBy }) => {
       case "machine":
         return ["Order Count", "Machine Type", "Total Amount", "Amount Paid"];
       default:
-        return ["Total Orders", "Total Sales", "Amount Paid"]; // No Grouping
+        return ["", "Total Orders", "Total Sales", "Amount Paid"]; // No Grouping
     }
   };
 
@@ -56,6 +56,7 @@ const ReportSalesSummary = ({ data, groupBy }) => {
       default:
         return [
           item.orderCount,
+          "",
           formatNumber(item.totalSales || item.totalAmount),
           formatNumber(item.amountPaid || 0),
         ]; // No Grouping
@@ -76,11 +77,30 @@ const ReportSalesSummary = ({ data, groupBy }) => {
     lastFetchedGroupBy.current
   );
 
+  // Add a function to get the report title
+  const getReportTitle = () => {
+    switch (lastFetchedGroupBy.current) {
+      case "sales":
+        return "Sales Report - by Sales";
+      case "client":
+        return "Sales Report - by Client";
+      case "month ":
+        return "Sales Report - by Month";
+      case "material":
+        return "Sales Report - by Material";
+      case "machine":
+        return "Sales Report - by Machine";
+      default:
+        return "Sales Report";
+    }
+  };
+
   return (
     <div className="report-summary-container">
+      <h4 className="report-title">{getReportTitle()}</h4>
       <div className="table-responsive">
         <table className="table table-hover">
-          <thead>
+          <thead className="table-active">
             <tr>
               {renderHeader().map((header, index) => (
                 <th key={index}>{header}</th>

@@ -1,5 +1,5 @@
 .report-summary-container {
-  margin-top: 2rem;
+  margin-top: 0.5rem;
   background-color: var(--reports-content-bg);
   border-radius: 8px;
   border: 1px solid var(--reports-border-light);
@@ -36,4 +36,14 @@
 .report-summary-container td:nth-last-child(2),
 .report-summary-container th:nth-last-child(2) {
   text-align: right;
+}
+
+.report-title {
+  font-weight: 600;
+  text-align: center;
+}
+
+.table-responsive {
+  margin-top: 0rem;
+  padding-top: 1rem;
 }

@@ -166,4 +166,52 @@ router.get("/sales-machine-summary", verifyUser, async (req, res) => {
   }
 });
 
+// Get Sales Summary Report by Machine
+router.get("/artist-incentive-summary", verifyUser, async (req, res) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      return res.json({ Status: false, Error: "Date range is required" });
+    }
+
+    const query = `
+      SELECT 
+        COUNT(DISTINCT o.orderId) AS orderCount,
+        SUM(od.amount) AS totalAmount,
+        SUM(o.amountPaid * (od.amount / NULLIF(o.grandTotal, 0))) AS amountPaid,
+        od.artistIncentive AS category,
+        SUM(od.major) AS major,
+        SUM(od.minor) AS minor
+      FROM orders o
+      JOIN order_details od ON o.orderId = od.orderId
+      WHERE o.productionDate BETWEEN ? AND ? 
+      AND o.status != 'Cancel'
+      GROUP BY od.artistIncentive
+      ORDER BY od.artistIncentive ASC
+`;
+
+    con.query(query, [dateFrom, dateTo], (err, result) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.json({
+          Status: false,
+          Error: "Database error: " + err.message,
+        });
+      }
+
+      return res.json({
+        Status: true,
+        Result: result,
+      });
+    });
+  } catch (error) {
+    console.error("Error in machine sales summary:", error.message);
+    return res.json({
+      Status: false,
+      Error: "Failed to generate machine sales summary: " + error.message,
+    });
+  }
+});
+
 export { router as ReportRouter };
