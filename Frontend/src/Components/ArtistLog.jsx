@@ -42,7 +42,7 @@ function ArtistLog() {
             show: true,
             title: "No Prod Orders",
             message: "There are no orders for Artist logging at this time.",
-            type: "info",
+            type: "alert",
           });
         }
       }

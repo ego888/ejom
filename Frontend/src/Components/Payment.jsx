@@ -25,7 +25,7 @@ function Prod() {
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [sortConfig, setSortConfig] = useState(() => {
-    const saved = localStorage.getItem("paymentsSortConfig");
+    const saved = localStorage.getItem("ordersSortConfig");
     return saved
       ? JSON.parse(saved)
       : {
