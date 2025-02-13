@@ -1,3 +1,43 @@
+/* ✅ Default badge styling */
+.status-badge {
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  min-width: 60px;
+  padding: 0.35em 0.65em;
+  transition: all 0.2s ease;
+}
+
+/* ✅ Selected (Active) State */
+.status-badge.active {
+  background-color: #0d6efd; /* Bootstrap primary color */
+  color: white;
+}
+
+/* ✅ Default Inactive State */
+.status-badge.inactive {
+  background-color: #6c757d; /* Bootstrap secondary color */
+  color: white;
+}
+
+/* ✅ Checkbox styles */
+.checkbox-wrapper.transparent input[type="checkbox"] {
+  background-color: #fff;
+  border: 1px solid #666;
+  transition: all 0.2s ease-in-out;
+}
+
+.checkbox-wrapper.transparent input[type="checkbox"]:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.checkbox-wrapper.transparent input[type="checkbox"]:indeterminate {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* ✅ Divider Styles */
 .divider-line {
   position: absolute;
   height: 1px;
@@ -15,6 +55,7 @@
   width: 100%;
 }
 
+/* ✅ Checkbox Container */
 .checkbox-container {
   display: flex;
   justify-content: center;
@@ -33,24 +74,13 @@
   background-color: transparent !important;
 }
 
-.checkbox-wrapper.transparent input[type="checkbox"] {
-  background-color: #fff;
-  border: 1px solid #666;
-}
-
-.checkbox-wrapper.transparent input[type="checkbox"]:checked {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
-}
-
-.checkbox-wrapper.transparent input[type="checkbox"]:indeterminate {
-  background-color: #6c757d;
-  border-color: #6c757d;
-}
-
 .checkbox-wrapper.transparent label {
   margin-bottom: 0;
   color: inherit;
   background-color: transparent;
   padding: 0 4px;
+}
+
+.status-badge:hover {
+  opacity: 0.9;
 }

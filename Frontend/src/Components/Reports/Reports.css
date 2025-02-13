@@ -1,0 +1,174 @@
+.reports-theme {
+  --reports-bg-color: #9eafed; /* Light cool gray-blue */
+  --reports-text-color: #2c3e50; /* Deep navy gray */
+  --reports-content-bg: #ffffff; /* Clean white */
+  --reports-border-color: #b0bec5; /* Muted steel gray */
+  --reports-border-light: #dfe6eb; /* Light border tone */
+  --reports-border-hover: #a0aec0; /* Darker border hover */
+  --reports-table-bg: #ffffff; /* White for clarity */
+  --reports-active-bg: #2c3e50; /* Dark navy for active elements */
+  --reports-active-color: #ffffff; /* White text for contrast */
+  --reports-hover-bg: #f6f9fc; /* Very light blue-gray */
+  --reports-font-size: 14px;
+  --reports-header-size: 16px;
+  --reports-title-size: 20px;
+}
+
+.reports-page-container {
+  position: absolute;
+  top: 0;
+  left: 140px;
+  right: 0;
+  bottom: 0;
+  background-color: var(--reports-bg-color);
+  padding: 1.5rem;
+}
+
+.reports-container {
+  display: flex;
+  height: 100%;
+  background-color: var(--reports-content-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.reports-sidebar {
+  width: 210px;
+  background-color: var(--reports-content-bg);
+  border-right: 1px solid var(--reports-border-light);
+  padding: 1rem 0;
+}
+
+.reports-sidebar-header {
+  padding: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--reports-text-color);
+  font-weight: 600;
+  border-bottom: 1px solid var(--reports-border-light);
+  font-size: var(--reports-title-size);
+}
+
+.reports-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.reports-menu-item {
+  padding: 0.75rem 1.5rem;
+  color: var(--reports-text-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  border-left: 3px solid transparent;
+  font-size: var(--reports-font-size);
+}
+
+.reports-menu-item:hover {
+  background-color: var(--reports-hover-bg);
+  border-left-color: var(--reports-border-hover);
+}
+
+.reports-menu-item.active {
+  background-color: var(--reports-active-bg);
+  color: var(--reports-active-color);
+  border-left-color: var(--reports-active-color);
+}
+
+.reports-menu-item i {
+  margin-right: 10px;
+  font-size: var(--reports-font-size);
+}
+
+.reports-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: var(--reports-content-bg);
+}
+
+.reports-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--reports-border-light);
+}
+
+.reports-header h4 {
+  color: var(--reports-text-color);
+  font-weight: 600;
+  margin: 0;
+  font-size: var(--reports-header-size);
+}
+
+.reports-filters {
+  max-width: 600px;
+  display: flex;
+  gap: 1rem;
+}
+
+.form-label {
+  font-weight: 500;
+  color: var(--reports-text-color);
+  margin-bottom: 0.5rem;
+  font-size: var(--reports-font-size);
+}
+
+.form-control {
+  font-size: var(--reports-font-size);
+  border-color: var(--reports-border-light);
+  color: var(--reports-text-color);
+  transition: all 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: var(--reports-border-hover);
+  box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.15);
+}
+
+/* Button styling */
+.btn-add {
+  font-size: var(--reports-font-size);
+  background-color: var(--reports-active-bg);
+  color: var(--reports-active-color);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-add:hover:not(:disabled) {
+  background-color: #34495e;
+}
+
+.btn-add:disabled {
+  background-color: var(--reports-border-color);
+  cursor: not-allowed;
+}
+
+.sort-options {
+  background-color: var(--reports-content-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--reports-border-light);
+  width: 100px;
+}
+
+.sort-options .form-check {
+  margin-bottom: 0.5rem;
+}
+
+.sort-options .d-flex {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sort-options .form-check-input:checked {
+  background-color: var(--reports-active-bg);
+  border-color: var(--reports-active-bg);
+}
+
+.sort-options .form-check-label {
+  color: var(--reports-text-color);
+  font-size: var(--reports-font-size);
+}

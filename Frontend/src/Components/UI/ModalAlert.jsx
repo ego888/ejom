@@ -97,7 +97,7 @@ const ModalAlert = ({
                 )}
                 {title}
               </h5>
-              {type === "alert" && (
+              {(type === "alert" || type === "info") && (
                 <button
                   type="button"
                   className="btn-close"

@@ -22,7 +22,7 @@
 .status-badge.Requote {
   background-color: #52b084; /* bg-warning */
 }
-.status-badge.Finish {
+.status-badge.Finished {
   background-color: #3aae78; /* bg-success */
 }
 .status-badge.Delivered {

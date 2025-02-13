@@ -1,0 +1,39 @@
+.report-summary-container {
+  margin-top: 2rem;
+  background-color: var(--reports-content-bg);
+  border-radius: 8px;
+  border: 1px solid var(--reports-border-light);
+  padding: 1.5rem;
+}
+
+.report-summary-container table {
+  margin-bottom: 0;
+}
+
+.report-summary-container th {
+  background-color: var(--reports-hover-bg);
+  color: var(--reports-text-color);
+  font-weight: 600;
+  border-bottom: 2px solid var(--reports-border-color);
+}
+
+.report-summary-container td {
+  color: var(--reports-text-color);
+  vertical-align: middle;
+}
+
+.report-summary-container tfoot tr {
+  font-weight: 600;
+}
+
+.report-summary-container td:first-child,
+.report-summary-container th:first-child {
+  text-align: center;
+}
+
+.report-summary-container td:last-child,
+.report-summary-container th:last-child,
+.report-summary-container td:nth-last-child(2),
+.report-summary-container th:nth-last-child(2) {
+  text-align: right;
+}

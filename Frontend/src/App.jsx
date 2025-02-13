@@ -35,6 +35,11 @@ import ProdPrintDR from "./Components/ProdPrintDR";
 import ProdPrintOneDR from "./Components/ProdPrintOneDR";
 import EmployeeLogin from "./Components/EmployeeLogin";
 import axios from "./utils/axiosConfig";
+import SOA from "./Components/Reports/SOA";
+import ArtistIncentives from "./Components/Reports/ArtistIncentives";
+import SalesIncentives from "./Components/Reports/SalesIncentives";
+import SalesReport from "./Components/Reports/SalesReport";
+import Reports from "./Components/Reports/Reports";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
@@ -183,6 +188,8 @@ function App() {
           <Route path="/dashboard/artistlog" element={<ArtistLog />}></Route>
           <Route path="/dashboard/printlog" element={<PrintLog />}></Route>
           <Route path="/dashboard/payment" element={<Payment />}></Route>
+          <Route path="reports" element={<Reports />} />
+          <Route path="reports/:type" element={<Reports />} />
         </Route>
       </Routes>
     </BrowserRouter>

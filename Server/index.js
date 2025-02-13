@@ -15,6 +15,7 @@ import { verifyUser } from "./middleware.js";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { ReportRouter } from "./Routes/ReportRoute.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +43,7 @@ app.use("/auth", JomControlRouter);
 app.use("/auth", PaymentRouter);
 app.use("/employee", EmployeeRouter);
 app.use("/public", express.static("public"));
+app.use("/report", ReportRouter);
 
 app.use(express.static("Public"));
 

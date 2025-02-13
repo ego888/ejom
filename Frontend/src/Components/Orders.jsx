@@ -33,10 +33,6 @@ function Orders() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
-  const [selectedStatuses, setSelectedStatuses] = useState(() => {
-    const saved = localStorage.getItem("orderStatusFilters");
-    return saved ? JSON.parse(saved) : [];
-  });
   const [selectedSales, setSelectedSales] = useState([]);
   const [isProdChecked, setIsProdChecked] = useState(false);
   const [isAllChecked, setIsAllChecked] = useState(false);
@@ -63,12 +59,16 @@ function Orders() {
       recordsPerPage,
       sortConfig,
       searchTerm,
-      selectedStatuses,
       selectedSales,
       selectedClients
     );
     try {
       const token = localStorage.getItem("token");
+      const activeStatuses = JSON.parse(
+        localStorage.getItem("orderStatusFilter") || "[]"
+      );
+      console.log("Fetching with statuses:", activeStatuses);
+
       const response = await axios.get(`${ServerIP}/auth/orders`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
@@ -77,9 +77,7 @@ function Orders() {
           sortBy: sortConfig.key,
           sortDirection: sortConfig.direction,
           search: searchTerm,
-          statuses: selectedStatuses.length
-            ? selectedStatuses.join(",")
-            : undefined,
+          statuses: activeStatuses.join(","),
           sales: selectedSales.length ? selectedSales.join(",") : undefined,
           clients: selectedClients.length
             ? selectedClients.join(",")
@@ -120,7 +118,6 @@ function Orders() {
     recordsPerPage,
     sortConfig,
     searchTerm,
-    selectedStatuses,
     selectedSales,
     selectedClients,
   ]);
@@ -138,44 +135,12 @@ function Orders() {
             (a, b) => a.step - b.step
           );
           setStatusOptions(sortedStatuses);
-
-          // Get saved filters or default to first two statuses
-          const saved = localStorage.getItem("orderStatusFilters");
-          if (saved) {
-            const savedStatuses = JSON.parse(saved);
-            setSelectedStatuses(savedStatuses);
-
-            // Update Prod checkbox state
-            const prodStatuses = sortedStatuses
-              .slice(2, 6)
-              .map((s) => s.statusId);
-            const selectedProdStatuses = savedStatuses.filter((s) =>
-              prodStatuses.includes(s)
-            );
-            setIsProdChecked(
-              selectedProdStatuses.length === prodStatuses.length
-            );
-
-            // Update All checkbox state
-            setIsAllChecked(savedStatuses.length === sortedStatuses.length);
-          } else {
-            // Default to first two statuses
-            const firstTwoStatuses = sortedStatuses
-              .slice(0, 2)
-              .map((s) => s.statusId);
-            setSelectedStatuses(firstTwoStatuses);
-            localStorage.setItem(
-              "orderStatusFilters",
-              JSON.stringify(firstTwoStatuses)
-            );
-            setIsProdChecked(false);
-            setIsAllChecked(false);
-          }
         }
       } catch (err) {
         console.error("Error fetching status options:", err);
       }
     };
+
     fetchStatusOptions();
   }, []);
 
@@ -242,31 +207,15 @@ function Orders() {
     localStorage.setItem("ordersSortConfig", JSON.stringify(newSortConfig));
   };
 
-  // Status filter handlers
-  const handleStatusFilter = (statusId) => {
-    setSelectedStatuses((prev) => {
-      let newStatuses;
-      if (prev.includes(statusId)) {
-        newStatuses = prev.filter((s) => s !== statusId);
-      } else {
-        newStatuses = [...prev, statusId];
-      }
-
-      // Update Prod checkbox state
-      const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-      const selectedProdStatuses = newStatuses.filter((s) =>
-        prodStatuses.includes(s)
-      );
-      setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
-
-      // Update All checkbox state
-      setIsAllChecked(newStatuses.length === statusOptions.length);
-
-      // Save to localStorage
-      localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-      return newStatuses;
-    });
-    setCurrentPage(1);
+  // Handle status changes from StatusBadges
+  const handleStatusChange = (newActiveStatuses) => {
+    console.log("Orders received new statuses:", newActiveStatuses);
+    // Get the latest statuses from localStorage before fetching
+    const savedStatuses = JSON.parse(
+      localStorage.getItem("orderStatusFilter") || "[]"
+    );
+    console.log("Saved statuses:", savedStatuses);
+    fetchOrders();
   };
 
   // Helper function for sort indicator
@@ -296,9 +245,9 @@ function Orders() {
 
   const isProdIndeterminate = () => {
     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = selectedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
+    const selectedProdStatuses = JSON.parse(
+      localStorage.getItem("orderStatusFilter") || "[]"
+    ).filter((s) => prodStatuses.includes(s));
     return (
       selectedProdStatuses.length > 0 &&
       selectedProdStatuses.length < prodStatuses.length
@@ -309,23 +258,29 @@ function Orders() {
     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
     let newStatuses;
     if (e.target.checked) {
-      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
+      newStatuses = [
+        ...new Set([
+          ...JSON.parse(localStorage.getItem("orderStatusFilter") || "[]"),
+          ...prodStatuses,
+        ]),
+      ];
     } else {
-      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
+      newStatuses = JSON.parse(
+        localStorage.getItem("orderStatusFilter") || "[]"
+      ).filter((s) => !prodStatuses.includes(s));
     }
 
-    setSelectedStatuses(newStatuses);
+    localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
     setIsProdChecked(e.target.checked);
     setIsAllChecked(newStatuses.length === statusOptions.length);
-
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
   const isAllIndeterminate = () => {
     return (
-      selectedStatuses.length > 0 &&
-      selectedStatuses.length < statusOptions.length
+      JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length >
+        0 &&
+      JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length <
+        statusOptions.length
     );
   };
 
@@ -334,20 +289,17 @@ function Orders() {
     if (e.target.checked) {
       newStatuses = statusOptions.map((s) => s.statusId);
     }
-    setSelectedStatuses(newStatuses);
+    localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
     setIsAllChecked(e.target.checked);
     setIsProdChecked(e.target.checked);
-
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
   // Add a cleanup effect to save the page when unmounting
-  useEffect(() => {
-    return () => {
-      localStorage.setItem("ordersListPage", currentPage.toString());
-    };
-  }, [currentPage]);
+  // useEffect(() => {
+  //   return () => {
+  //     localStorage.setItem("ordersListPage", currentPage.toString());
+  //   };
+  // }, [currentPage]);
 
   return (
     <div className="px-5 orders-page-background">
@@ -578,13 +530,9 @@ function Orders() {
 
         <StatusBadges
           statusOptions={statusOptions}
-          selectedStatuses={selectedStatuses}
-          onStatusChange={handleStatusFilter}
-          badgeProps={(status) => ({
-            id: `status-${status.statusId}`,
-            "aria-label": `Filter by status ${status.statusId}`,
-            role: "button",
-          })}
+          onStatusChange={handleStatusChange}
+          showProdFilter={true}
+          isDisabled={false}
         />
 
         <Pagination

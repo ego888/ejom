@@ -1,11 +1,11 @@
 .payment-theme {
-  --payment-bg-color: #fcd8f3;
-  --payment-text-color: #333333;
-  --payment-content-bg: #ffffff;
-  --payment-border-color: #45d2a1;
-  --payment-border-light: #f0f0f0;
-  --payment-border-hover: #d0d0d0;
-  --payment-table-bg: #ffffff;
+  --payment-bg-color: #fcd8f3; /* Soft pinkish lavender */
+  --payment-text-color: #2c3e50; /* Deep navy gray for contrast */
+  --payment-content-bg: #ffffff; /* Clean white for clarity */
+  --payment-border-color: #7a5195; /* Elegant deep plum */
+  --payment-border-light: #e8eaf6; /* Subtle lavender-gray for a soft look */
+  --payment-border-hover: #c0a0c8; /* Muted lavender for gentle emphasis */
+  --payment-table-bg: #ffffff; /* White for maximum readability */
 }
 
 .payment-page-background {
@@ -166,7 +166,7 @@
   background: white;
   padding: 8px;
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   min-width: 200px;
   text-align: center;

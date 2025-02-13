@@ -112,7 +112,11 @@ function AddOrder() {
     onConfirm: null,
   });
 
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminOverride, setAdminOverride] = useState(false);
+
   const canEdit = () => {
+    if (adminOverride && isAdmin) return true;
     return data.status === "Open" || currentUser.category_id === 1;
   };
 
@@ -256,6 +260,14 @@ function AddOrder() {
       const decoded = jwtDecode(token);
       setCurrentUser(decoded);
       setData((prev) => ({ ...prev, preparedBy: decoded.id }));
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = jwtDecode(token);
+      setIsAdmin(decoded.categoryId === 1);
     }
   }, []);
 
@@ -1223,6 +1235,20 @@ function AddOrder() {
             <h3 className="m-0">
               {id ? `Edit Order #${data.orderId}` : "Add New Order"}
             </h3>
+            {isAdmin && (
+              <div className="form-check">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="adminOverride"
+                  checked={adminOverride}
+                  onChange={(e) => setAdminOverride(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="adminOverride">
+                  Admin Edit Override
+                </label>
+              </div>
+            )}
           </div>
           <div className="d-flex gap-2">
             {isHeaderSaved && (

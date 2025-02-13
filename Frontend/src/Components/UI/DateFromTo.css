@@ -1,0 +1,56 @@
+.date-range-container {
+  background-color: var(--content-bg, #ffffff);
+  padding: 1.5rem;
+  border-radius: 8px;
+  width: 288px;
+  border: 1px solid var(--border-light, #dfe6eb);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.date-control {
+  position: relative;
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-input-group .form-control {
+  flex: 1;
+}
+
+.date-input-group button {
+  padding: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-input-group button i {
+  font-size: 1.2rem;
+}
+
+.date-buttons-center {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+}
+
+.date-buttons-center button {
+  padding: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-buttons-center button i {
+  font-size: 1.2rem;
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}

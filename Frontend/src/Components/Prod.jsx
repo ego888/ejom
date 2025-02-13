@@ -69,6 +69,11 @@ function Prod() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      const activeStatuses = JSON.parse(
+        localStorage.getItem("orderStatusFilter") || "[]"
+      );
+      console.log("Fetching with statuses:", activeStatuses);
+
       const response = await axios.get(`${ServerIP}/auth/orders`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
@@ -77,14 +82,11 @@ function Prod() {
           sortBy: sortConfig.key,
           sortDirection: sortConfig.direction,
           search: searchTerm,
-          statuses: selectedStatuses.length
-            ? selectedStatuses.join(",")
-            : undefined,
+          statuses: activeStatuses.join(","),
           sales: selectedSales.length ? selectedSales.join(",") : undefined,
           clients: selectedClients.length
             ? selectedClients.join(",")
             : undefined,
-          forProdSort: forProdSort !== "none" ? forProdSort : undefined,
         },
       });
 
@@ -333,11 +335,11 @@ function Prod() {
   };
 
   // Add a cleanup effect to save the page when unmounting
-  useEffect(() => {
-    return () => {
-      localStorage.setItem("ordersListPage", currentPage.toString());
-    };
-  }, [currentPage]);
+  // useEffect(() => {
+  //   return () => {
+  //     localStorage.setItem("ordersListPage", currentPage.toString());
+  //   };
+  // }, [currentPage]);
 
   // Add function to handle forProd update
   const handleForProdChange = async (orderId, newValue) => {

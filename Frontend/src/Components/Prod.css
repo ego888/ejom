@@ -1,11 +1,11 @@
 .prod-theme {
-  --prod-bg-color: #95fbd7;
-  --prod-text-color: #333333;
-  --prod-content-bg: #ffffff;
-  --prod-border-color: #45d2a1;
-  --prod-border-light: #f0f0f0;
-  --prod-border-hover: #d0d0d0;
-  --prod-table-bg: #ffffff;
+  --prod-bg-color: #95fbd7; /* Bright mint green */
+  --prod-text-color: #2c3e50; /* Deep navy gray for contrast */
+  --prod-content-bg: #ffffff; /* Clean white for readability */
+  --prod-border-color: #158467; /* Rich teal for professionalism */
+  --prod-border-light: #c0f2e5; /* Soft pastel mint for subtle contrast */
+  --prod-border-hover: #11735c; /* Deep forest green for strong emphasis */
+  --prod-table-bg: #ffffff; /* White to maintain clarity */
 }
 
 .prod-page-background {

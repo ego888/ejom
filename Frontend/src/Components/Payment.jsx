@@ -80,15 +80,15 @@ function Prod() {
 
   // 1. Move fetchOrderData outside useEffect
   const fetchOrderData = async () => {
-    if (selectedStatuses.length === 0) {
-      setOrders([]);
-      setTotalCount(0);
-      return;
-    }
-
+    console.log("fetchOrderData function called");
     setLoading(true);
     try {
-      // Use the search endpoint if searching by client name
+      // Read statuses directly from localStorage like Orders.jsx
+      const activeStatuses = JSON.parse(
+        localStorage.getItem("orderStatusFilter") || "[]"
+      );
+      console.log("Fetching with statuses:", activeStatuses);
+
       const endpoint = searchClientName.trim()
         ? `${ServerIP}/auth/search-orders-by-client`
         : `${ServerIP}/auth/orders`;
@@ -98,12 +98,14 @@ function Prod() {
         limit: recordsPerPage,
         sortBy: sortConfig.key,
         sortDirection: sortConfig.direction,
-        statuses: selectedStatuses.join(","),
+        statuses: activeStatuses.join(","), // Use activeStatuses instead of selectedStatuses
         sales: selectedSales.length ? selectedSales.join(",") : undefined,
         ...(searchClientName.trim() && { clientName: searchClientName }),
-        ...(searchTerm && { search: searchTerm }),
+        ...(searchTerm.trim() && { search: searchTerm.trim() }),
       };
 
+      console.log("Endpoint:", endpoint);
+      console.log("Params:", params);
       const response = await axios.get(endpoint, { params });
 
       if (response.data.Status) {
@@ -122,6 +124,7 @@ function Prod() {
 
   // 2. Update the initialization effect
   useEffect(() => {
+    console.log("RUN initializeComponent");
     const initializeComponent = async () => {
       try {
         const [
@@ -178,6 +181,10 @@ function Prod() {
           setClientList(clientResponse.data.Result);
         if (salesResponse.data.Status)
           setSalesEmployees(salesResponse.data.Result);
+
+        console.log("FINISH initializeComponent");
+        // Call fetchOrderData after initialization is complete
+        await fetchOrderData();
       } catch (error) {
         console.error("Error in initialization:", error);
       }
@@ -186,32 +193,10 @@ function Prod() {
     initializeComponent();
   }, []); // Run once on mount
 
-  // 3. Update the data fetching effect to use the function
-  useEffect(() => {
-    const timeoutId = setTimeout(fetchOrderData, searchTerm ? 500 : 0);
-    return () => clearTimeout(timeoutId);
-  }, [
-    selectedStatuses,
-    currentPage,
-    recordsPerPage,
-    sortConfig,
-    searchTerm,
-    searchClientName,
-    selectedSales,
-  ]);
-
-  // Keep the debounced search handler
-  const debouncedSearch = useCallback(
-    debounce((term) => {
-      setSearchTerm(term);
-      setCurrentPage(1);
-    }, 500),
-    []
-  );
-
-  // Update handleSearch to properly clear client search and trigger fetch
+  // Update handleSearch to use current term directly
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
+    console.log("Search term:", term);
 
     // Clear client name search when using the search bar
     setSearchClientName("");
@@ -220,18 +205,59 @@ function Prod() {
       clientName: "",
     }));
 
-    // Set search term immediately for the first character
+    // Update search term state
     setSearchTerm(term);
     setCurrentPage(1);
 
-    // Then use debounced search for subsequent changes
-    if (term.length > 1) {
-      debouncedSearch(term);
-    } else {
-      // For first character or empty search, trigger fetch immediately
-      fetchOrderData();
-    }
+    // Call fetchOrderData with the current term directly
+    const fetchWithTerm = async () => {
+      setLoading(true);
+      try {
+        const endpoint = searchClientName.trim()
+          ? `${ServerIP}/auth/search-orders-by-client`
+          : `${ServerIP}/auth/orders`;
+
+        const params = {
+          page: currentPage,
+          limit: recordsPerPage,
+          sortBy: sortConfig.key,
+          sortDirection: sortConfig.direction,
+          statuses: selectedStatuses.join(","),
+          sales: selectedSales.length ? selectedSales.join(",") : undefined,
+          ...(searchClientName.trim() && { clientName: searchClientName }),
+          search: term, // Use current term directly instead of searchTerm state
+        };
+
+        console.log("Searching with term:", term);
+        const response = await axios.get(endpoint, { params });
+
+        if (response.data.Status) {
+          setOrders(response.data.Result.orders);
+          setTotalCount(response.data.Result.total);
+          setTotalPages(response.data.Result.totalPages);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        setOrders([]);
+        setTotalCount(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWithTerm();
   };
+
+  // Add a new useEffect for other changes (not search)
+  useEffect(() => {
+    fetchOrderData();
+  }, [
+    currentPage,
+    recordsPerPage,
+    sortConfig,
+    selectedSales,
+    // searchTerm removed from dependencies
+  ]);
 
   // Sort handler
   const handleSort = (key) => {
@@ -246,33 +272,33 @@ function Prod() {
   };
 
   // Status filter handlers
-  const handleStatusFilter = (statusId) => {
-    setSelectedStatuses((prev) => {
-      let newStatuses;
-      if (prev.includes(statusId)) {
-        newStatuses = prev.filter((s) => s !== statusId);
-      } else {
-        newStatuses = [...prev, statusId];
-      }
-      console.log("New statuses after toggle:", newStatuses); // Debugging log
-      // Update Prod checkbox state
-      const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-      const selectedProdStatuses = newStatuses.filter((s) =>
-        prodStatuses.includes(s)
-      );
-      console.log("Prod statuses:", prodStatuses); // Debugging log
-      console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
-      setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
+  // const handleStatusFilter = (statusId) => {
+  //   setSelectedStatuses((prev) => {
+  //     let newStatuses;
+  //     if (prev.includes(statusId)) {
+  //       newStatuses = prev.filter((s) => s !== statusId);
+  //     } else {
+  //       newStatuses = [...prev, statusId];
+  //     }
+  //     console.log("New statuses after toggle:", newStatuses); // Debugging log
+  //     // Update Prod checkbox state
+  //     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //     const selectedProdStatuses = newStatuses.filter((s) =>
+  //       prodStatuses.includes(s)
+  //     );
+  //     console.log("Prod statuses:", prodStatuses); // Debugging log
+  //     console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
+  //     setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
 
-      // Update All checkbox state
-      setIsAllChecked(newStatuses.length === statusOptions.length);
+  //     // Update All checkbox state
+  //     setIsAllChecked(newStatuses.length === statusOptions.length);
 
-      // Save to localStorage
-      localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-      return newStatuses;
-    });
-    setCurrentPage(1);
-  };
+  //     // Save to localStorage
+  //     localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+  //     return newStatuses;
+  //   });
+  //   setCurrentPage(1);
+  // };
 
   // Helper function for sort indicator
   const getSortIndicator = (key) => {
@@ -290,76 +316,78 @@ function Prod() {
   // Modify the page change handler
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
+    console.log("pageNumber 2", pageNumber);
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
   // Handle records per page change
-  const handleRecordsPerPageChange = (e) => {
-    setRecordsPerPage(Number(e.target.value));
-    setCurrentPage(1); // Reset to first page
-  };
+  // const handleRecordsPerPageChange = (e) => {
+  //   setRecordsPerPage(Number(e.target.value));
+  //   setCurrentPage(1); // Reset to first page
+  // };
 
-  const isProdIndeterminate = () => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = selectedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
-    return (
-      selectedProdStatuses.length > 0 &&
-      selectedProdStatuses.length < prodStatuses.length
-    );
-  };
+  // const isProdIndeterminate = () => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
+  //     prodStatuses.includes(s)
+  //   );
+  //   return (
+  //     selectedProdStatuses.length > 0 &&
+  //     selectedProdStatuses.length < prodStatuses.length
+  //   );
+  // };
 
-  const handleProdCheckbox = (e) => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    let newStatuses;
-    if (e.target.checked) {
-      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-    } else {
-      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
-    }
+  // const handleProdCheckbox = (e) => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   let newStatuses;
+  //   if (e.target.checked) {
+  //     newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
+  //   } else {
+  //     newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
+  //   }
 
-    setSelectedStatuses(newStatuses);
-    setIsProdChecked(e.target.checked);
-    setIsAllChecked(newStatuses.length === statusOptions.length);
+  //   setSelectedStatuses(newStatuses);
+  //   setIsProdChecked(e.target.checked);
+  //   setIsAllChecked(newStatuses.length === statusOptions.length);
 
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  };
+  //   // Save to localStorage
+  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+  // };
 
-  const isAllIndeterminate = () => {
-    return (
-      selectedStatuses.length > 0 &&
-      selectedStatuses.length < statusOptions.length
-    );
-  };
+  // const isAllIndeterminate = () => {
+  //   return (
+  //     selectedStatuses.length > 0 &&
+  //     selectedStatuses.length < statusOptions.length
+  //   );
+  // };
 
-  const handleAllCheckbox = (e) => {
-    let newStatuses = [];
-    if (e.target.checked) {
-      newStatuses = statusOptions.map((s) => s.statusId);
-    }
-    setSelectedStatuses(newStatuses);
-    setIsAllChecked(e.target.checked);
-    setIsProdChecked(e.target.checked);
+  // const handleAllCheckbox = (e) => {
+  //   let newStatuses = [];
+  //   if (e.target.checked) {
+  //     newStatuses = statusOptions.map((s) => s.statusId);
+  //   }
+  //   setSelectedStatuses(newStatuses);
+  //   setIsAllChecked(e.target.checked);
+  //   setIsProdChecked(e.target.checked);
 
-    // Save to localStorage
-    localStorage.setItem("paymentStatusFilters", JSON.stringify(newStatuses));
-  };
+  //   // Save to localStorage
+  //   localStorage.setItem("paymentStatusFilters", JSON.stringify(newStatuses));
+  // };
 
   // Add a cleanup effect to save the page when unmounting
-  useEffect(() => {
-    return () => {
-      localStorage.setItem("ordersListPage", currentPage.toString());
-    };
-  }, [currentPage]);
+  // useEffect(() => {
+  //   return () => {
+  //     console.log("currentPage 1", currentPage);
+  //     localStorage.setItem("ordersListPage", currentPage.toString());
+  //   };
+  // }, [currentPage]);
 
   // Separate the search logic into its own function
-  const handleClientSearch = async () => {
-    if (!searchClientName.trim()) {
-      fetchOrderData();
-      return;
-    }
+  const handleClientSearch = async (e) => {
+    if (e.type === "keydown" && e.key !== "Enter") return; // Prevent fetch on every key press
+    if (e.type === "blur" && searchClientName.trim() === "") return; // Prevent empty search
+
+    fetchOrderData();
 
     setLoading(true);
     try {
@@ -680,6 +708,7 @@ function Prod() {
           ...prev,
           amount: "", // Empty string for input field
         }));
+        console.log("fetchOrder from postPaymentToServer");
         fetchOrderData();
       }
     } catch (error) {
@@ -1235,9 +1264,10 @@ function Prod() {
             onStatusChange={(newStatuses) => {
               setSelectedStatuses(newStatuses);
               localStorage.setItem(
-                "orderStatusFilters",
+                "orderStatusFilter",
                 JSON.stringify(newStatuses)
               );
+              fetchOrderData();
             }}
           />
 

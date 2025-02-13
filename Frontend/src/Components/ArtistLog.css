@@ -1,11 +1,11 @@
 .artist-theme {
-  --artist-bg-color: #ffbfa3;
-  --artist-text-color: #333333;
-  --artist-content-bg: #ffffff;
-  --artist-border-color: #937d74;
-  --artist-border-light: #f0f0f0;
-  --artist-border-hover: #d0d0d0;
-  --artist-table-bg: #ffffff;
+  --artist-bg-color: #ffbfa3; /* Warm peach-orange */
+  --artist-text-color: #2c3e50; /* Deep navy-gray for readability */
+  --artist-content-bg: #ffffff; /* Clean white for contrast */
+  --artist-border-color: #a05a46; /* Rich terracotta for depth */
+  --artist-border-light: #e6d5c3; /* Soft beige for a subtle highlight */
+  --artist-border-hover: #864d3c; /* Deep warm brown for a sophisticated look */
+  --artist-table-bg: #ffffff; /* White to keep content clear */
 }
 
 .artist-page-background {

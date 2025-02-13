@@ -155,6 +155,11 @@ const Dashboard = () => {
     { path: "artistlog", icon: "bi-palette", text: "Artist Log" },
     { path: "printlog", icon: "bi-printer", text: "Print Log" },
     { path: "payment", icon: "bi-cash", text: "Payments" },
+    {
+      path: "reports",
+      icon: "bi-file-earmark-ruled",
+      text: "Reports",
+    },
     { path: "client", icon: "bi-building", text: "Clients", adminOnly: true },
     {
       path: "material",
@@ -197,13 +202,43 @@ const Dashboard = () => {
               id="menu"
             >
               {navItems.map((item) => {
-                // Debug each nav item
                 const hasAccess =
                   (item.adminOnly && permissions.categoryId === 1) ||
                   (!item.adminOnly && canAccessRoute(item.path));
 
                 if (!hasAccess) {
                   return null;
+                }
+
+                if (item.subItems) {
+                  return (
+                    <li key={item.path} className="nav-item dropdown">
+                      <a
+                        className="sidebar-nav-link dropdown-toggle"
+                        href="#"
+                        role="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                      >
+                        <i className={`bi ${item.icon}`}></i>
+                        <span className="d-none d-sm-inline">{item.text}</span>
+                      </a>
+                      <ul className="dropdown-menu">
+                        {item.subItems.map((subItem) => (
+                          <li key={subItem.path}>
+                            <NavLink
+                              to={`/dashboard/reports/${subItem.path}`}
+                              className={({ isActive }) =>
+                                `dropdown-item ${isActive ? "active" : ""}`
+                              }
+                            >
+                              {subItem.text}
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  );
                 }
 
                 return (

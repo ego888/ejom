@@ -49,26 +49,29 @@ function Prod() {
   const clientFilterRef = useRef(null);
 
   const fetchOrders = async () => {
-    if (selectedStatuses.length === 0) {
-      setOrders([]);
-      setTotalCount(0);
-      return;
-    }
-    console.log("FETCHING");
     setLoading(true);
     try {
-      const params = {
-        page: currentPage,
-        limit: recordsPerPage,
-        sortBy: sortConfig.key,
-        sortDirection: sortConfig.direction,
-        search: searchTerm,
-        statuses: selectedStatuses.join(","),
-        sales: selectedSales.length ? selectedSales.join(",") : undefined,
-        clients: selectedClients.length ? selectedClients.join(",") : undefined,
-      };
+      const token = localStorage.getItem("token");
+      const activeStatuses = JSON.parse(
+        localStorage.getItem("orderStatusFilter") || "[]"
+      );
+      console.log("Fetching with statuses:", activeStatuses);
 
-      const response = await axios.get(`${ServerIP}/auth/orders`, { params });
+      const response = await axios.get(`${ServerIP}/auth/orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          page: currentPage,
+          limit: recordsPerPage,
+          sortBy: sortConfig.key,
+          sortDirection: sortConfig.direction,
+          search: searchTerm,
+          statuses: activeStatuses.join(","),
+          sales: selectedSales.length ? selectedSales.join(",") : undefined,
+          clients: selectedClients.length
+            ? selectedClients.join(",")
+            : undefined,
+        },
+      });
       if (response.data.Status) {
         setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
@@ -268,11 +271,11 @@ function Prod() {
   };
 
   // Add a cleanup effect to save the page when unmounting
-  useEffect(() => {
-    return () => {
-      localStorage.setItem("ordersListPage", currentPage.toString());
-    };
-  }, [currentPage]);
+  // useEffect(() => {
+  //   return () => {
+  //     localStorage.setItem("ordersListPage", currentPage.toString());
+  //   };
+  // }, [currentPage]);
 
   return (
     <div className="printlog">

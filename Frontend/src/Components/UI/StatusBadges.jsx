@@ -1,131 +1,152 @@
-import React, { useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "./StatusBadges.css";
+
+// Add delay utility
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function StatusBadges({
   statusOptions,
-  selectedStatuses,
-  onStatusChange,
+  onStatusChange, // Will receive array of active statuses
   showProdFilter = true,
   isDisabled = false,
 }) {
-  const [isProdChecked, setIsProdChecked] = React.useState(false);
-  const [isAllChecked, setIsAllChecked] = React.useState(false);
-
-  // Effect to update checkbox states when selectedStatuses or statusOptions change
-  React.useEffect(() => {
-    if (statusOptions && statusOptions.length > 0) {
-      updateCheckboxStates(selectedStatuses);
+  // Initialize from localStorage with proper error handling
+  const [activeStatuses, setActiveStatuses] = useState(() => {
+    try {
+      const saved = localStorage.getItem("orderStatusFilter");
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.warn("Error parsing status filters from localStorage:", error);
+      localStorage.removeItem("orderStatusFilter"); // Clear invalid data
+      return [];
     }
-  }, [selectedStatuses, statusOptions]);
+  });
+  const [isProdChecked, setIsProdChecked] = useState(false);
+  const [isAllChecked, setIsAllChecked] = useState(false);
 
-  const handleStatusFilter = (statusId) => {
+  // Update localStorage whenever activeStatuses changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("orderStatusFilter", JSON.stringify(activeStatuses));
+    } catch (error) {
+      console.error("Error saving status filters to localStorage:", error);
+    }
+  }, [activeStatuses, onStatusChange]);
+
+  // Initialize with default statuses if none exist
+  useEffect(() => {
+    if (statusOptions.length > 0 && activeStatuses.length === 0) {
+      // Default to first two statuses (usually Open and Pending)
+      const defaultStatuses = statusOptions.slice(0, 2).map((s) => s.statusId);
+      setActiveStatuses(defaultStatuses);
+    }
+  }, [statusOptions]);
+
+  const handleStatusToggle = async (statusId) => {
     if (isDisabled) return;
 
-    let newStatuses;
-    if (selectedStatuses.includes(statusId)) {
-      newStatuses = selectedStatuses.filter((id) => id !== statusId);
+    let newActiveStatuses;
+    if (activeStatuses.includes(statusId)) {
+      newActiveStatuses = activeStatuses.filter((id) => id !== statusId);
     } else {
-      newStatuses = [...selectedStatuses, statusId];
+      newActiveStatuses = [...activeStatuses, statusId];
     }
 
-    console.log("New statuses after toggle (StatusBadges):", newStatuses); // Debugging log
-    // Always call onStatusChange with the new statuses
-    onStatusChange(newStatuses);
+    setActiveStatuses(newActiveStatuses);
 
-    // Update checkbox states after the status change
-    updateCheckboxStates(newStatuses);
+    try {
+      localStorage.setItem(
+        "orderStatusFilter",
+        JSON.stringify(newActiveStatuses)
+      );
+      await delay(0); // Ensure localStorage is updated
+      console.log("activeStatuses toggle", newActiveStatuses);
+      onStatusChange(newActiveStatuses);
+    } catch (error) {
+      console.error("Error saving status:", error);
+    }
   };
 
-  const handleProdCheckbox = (e) => {
+  const handleProdCheckbox = async (e) => {
+    if (isDisabled) return;
     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    let newStatuses;
+
+    let newActiveStatuses;
     if (e.target.checked) {
-      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
+      newActiveStatuses = [...new Set([...activeStatuses, ...prodStatuses])];
     } else {
-      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
+      newActiveStatuses = activeStatuses.filter(
+        (id) => !prodStatuses.includes(id)
+      );
     }
 
-    onStatusChange(newStatuses);
-    updateCheckboxStates(newStatuses);
-  };
+    setActiveStatuses(newActiveStatuses);
+    setIsProdChecked(e.target.checked);
 
-  const handleAllCheckbox = (e) => {
-    let newStatuses = [];
-    if (e.target.checked) {
-      newStatuses = statusOptions.map((s) => s.statusId);
+    try {
+      localStorage.setItem(
+        "orderStatusFilter",
+        JSON.stringify(newActiveStatuses)
+      );
+      await delay(0); // Ensure localStorage is updated
+      console.log("activeStatuses Prod", newActiveStatuses);
+      onStatusChange(newActiveStatuses);
+    } catch (error) {
+      console.error("Error saving status:", error);
     }
-    onStatusChange(newStatuses);
-    updateCheckboxStates(newStatuses);
   };
 
-  const updateCheckboxStates = (statuses) => {
-    if (!statusOptions || statusOptions.length === 0) return;
+  const handleAllCheckbox = async (e) => {
+    if (isDisabled) return;
+
+    const newActiveStatuses = e.target.checked
+      ? statusOptions.map((s) => s.statusId)
+      : [];
+
+    setActiveStatuses(newActiveStatuses);
+    setIsAllChecked(e.target.checked);
+    setIsProdChecked(e.target.checked);
+
+    try {
+      localStorage.setItem(
+        "orderStatusFilter",
+        JSON.stringify(newActiveStatuses)
+      );
+      await delay(0); // Ensure localStorage is updated
+      console.log("activeStatuses All", newActiveStatuses);
+      onStatusChange(newActiveStatuses);
+    } catch (error) {
+      console.error("Error saving status:", error);
+    }
+  };
+
+  // Update checkbox states when active statuses change
+  useEffect(() => {
+    if (!statusOptions.length) return;
 
     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const isProdSelected = prodStatuses.every((status) =>
-      statuses.includes(status)
-    );
-    setIsProdChecked(isProdSelected);
-    setIsAllChecked(statuses.length === statusOptions.length);
-  };
-
-  const isProdIndeterminate = () => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = selectedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
-    return (
-      selectedProdStatuses.length > 0 &&
-      selectedProdStatuses.length < prodStatuses.length
-    );
-  };
-
-  const isAllIndeterminate = () => {
-    return (
-      selectedStatuses.length > 0 &&
-      selectedStatuses.length < statusOptions.length
-    );
-  };
+    setIsProdChecked(prodStatuses.every((id) => activeStatuses.includes(id)));
+    setIsAllChecked(activeStatuses.length === statusOptions.length);
+  }, [activeStatuses, statusOptions]);
 
   return (
     <div className="d-flex flex-column align-items-center gap-0">
-      {/* Status Badges */}
       <div className="d-flex gap-1">
-        {statusOptions && statusOptions.length > 0 ? (
-          statusOptions.map((status) => (
-            <button
-              key={status.statusId}
-              id={`status-${status.statusId}`}
-              className={`badge ${
-                selectedStatuses.includes(status.statusId)
-                  ? "bg-primary"
-                  : "bg-secondary"
-              }`}
-              onClick={() => handleStatusFilter(status.statusId)}
-              style={{
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.75rem",
-                minWidth: "60px",
-                padding: "0.35em 0.65em",
-              }}
-              aria-label={`Filter by status ${status.statusId}`}
-              aria-pressed={selectedStatuses.includes(status.statusId)}
-              role="button"
-            >
-              {status.statusId}
-            </button>
-          ))
-        ) : (
-          <div role="status" aria-live="polite">
-            Loading statuses...
-          </div>
-        )}
+        {statusOptions.map((status) => (
+          <button
+            key={status.statusId}
+            className={`status-badge ${
+              activeStatuses.includes(status.statusId) ? "active" : "inactive"
+            }`}
+            onClick={() => handleStatusToggle(status.statusId)}
+          >
+            {status.statusId}
+          </button>
+        ))}
       </div>
 
       {showProdFilter && (
         <>
-          {/* Prod Section */}
           <div
             className="position-relative w-100"
             style={{ padding: "0.25rem 0" }}
@@ -135,26 +156,16 @@ function StatusBadges({
               <div className="checkbox-wrapper transparent">
                 <input
                   id="prodStatusFilter"
-                  name="prodStatusFilter"
                   type="checkbox"
                   className="form-check-input me-1"
-                  ref={(el) => {
-                    if (el) {
-                      el.indeterminate = isProdIndeterminate();
-                    }
-                  }}
                   checked={isProdChecked}
                   onChange={handleProdCheckbox}
-                  aria-label="Filter production statuses"
                 />
-                <label htmlFor="prodStatusFilter" className="form-check-label">
-                  Prod
-                </label>
+                <label htmlFor="prodStatusFilter">Prod</label>
               </div>
             </div>
           </div>
 
-          {/* All Section */}
           <div
             className="position-relative w-100"
             style={{ padding: "0rem 0" }}
@@ -164,21 +175,12 @@ function StatusBadges({
               <div className="checkbox-wrapper transparent">
                 <input
                   id="allStatusFilter"
-                  name="allStatusFilter"
                   type="checkbox"
                   className="form-check-input me-1"
-                  ref={(el) => {
-                    if (el) {
-                      el.indeterminate = isAllIndeterminate();
-                    }
-                  }}
                   checked={isAllChecked}
                   onChange={handleAllCheckbox}
-                  aria-label="Select all statuses"
                 />
-                <label htmlFor="allStatusFilter" className="form-check-label">
-                  All
-                </label>
+                <label htmlFor="allStatusFilter">All</label>
               </div>
             </div>
           </div>
