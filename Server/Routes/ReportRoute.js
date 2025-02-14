@@ -175,41 +175,75 @@ router.get("/artist-incentive-summary", verifyUser, async (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    const query = `
+    // First get the incentive rates from jomcontrol
+    const ratesQuery = `
+      SELECT VAT, major, minor, ArtistMaxPercent, ArtistMinAmount, HalfIncentiveSqFt 
+      FROM jomcontrol 
+      LIMIT 1
+    `;
+
+    // Then get the summary data with calculations included
+    const summaryQuery = `
       SELECT 
         COUNT(DISTINCT o.orderId) AS orderCount,
-        SUM(od.amount) AS totalAmount,
+        o.grandTotal as totalAmount,
+        od.quantity,
+        od.perSqFt,
+        m.noIncentive
         SUM(o.amountPaid * (od.amount / NULLIF(o.grandTotal, 0))) AS amountPaid,
         od.artistIncentive AS category,
         SUM(od.major) AS major,
-        SUM(od.minor) AS minor
+        SUM(od.minor) AS minor,
+        SUM(od.major * j.major) AS majorAmount,
+        SUM(od.minor * j.minor) AS minorAmount,
+        SUM(od.major * j.major + od.minor * j.minor) AS totalIncentive
       FROM orders o
       JOIN order_details od ON o.orderId = od.orderId
+      JOIN material m ON od.material = m.Material
+      CROSS JOIN jomcontrol j
       WHERE o.productionDate BETWEEN ? AND ? 
       AND o.status != 'Cancel'
       GROUP BY od.artistIncentive
       ORDER BY od.artistIncentive ASC
-`;
+    `;
 
-    con.query(query, [dateFrom, dateTo], (err, result) => {
+    // Execute both queries
+    con.query(ratesQuery, (err, ratesResult) => {
       if (err) {
-        console.error("Database error:", err);
+        console.error("Database error (rates):", err);
         return res.json({
           Status: false,
           Error: "Database error: " + err.message,
         });
       }
 
-      return res.json({
-        Status: true,
-        Result: result,
+      con.query(summaryQuery, [dateFrom, dateTo], (err, summaryResult) => {
+        if (err) {
+          console.error("Database error (summary):", err);
+          return res.json({
+            Status: false,
+            Error: "Database error: " + err.message,
+          });
+        }
+
+        return res.json({
+          Status: true,
+          Result: {
+            summary: summaryResult,
+            rates: ratesResult[0] || {
+              major: 0,
+              minor: 0,
+              maxArtistIncentive: 0,
+            },
+          },
+        });
       });
     });
   } catch (error) {
-    console.error("Error in machine sales summary:", error.message);
+    console.error("Error in artist incentive summary:", error.message);
     return res.json({
       Status: false,
-      Error: "Failed to generate machine sales summary: " + error.message,
+      Error: "Failed to generate artist incentive summary: " + error.message,
     });
   }
 });

@@ -41,9 +41,9 @@ app.use("/auth", MaterialRouter);
 app.use("/auth", OrderStatusRouter);
 app.use("/auth", JomControlRouter);
 app.use("/auth", PaymentRouter);
+app.use("/auth", ReportRouter);
 app.use("/employee", EmployeeRouter);
 app.use("/public", express.static("public"));
-app.use("/report", ReportRouter);
 
 app.use(express.static("Public"));
 

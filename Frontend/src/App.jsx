@@ -36,8 +36,8 @@ import ProdPrintOneDR from "./Components/ProdPrintOneDR";
 import EmployeeLogin from "./Components/EmployeeLogin";
 import axios from "./utils/axiosConfig";
 import SOA from "./Components/Reports/SOA";
-import ArtistIncentives from "./Components/Reports/ArtistIncentives";
-import SalesIncentives from "./Components/Reports/SalesIncentives";
+import ArtistIncentives from "./Components/Reports/ReportArtistIncentives";
+import SalesIncentives from "./Components/Reports/ReportSalesIncentives";
 import SalesReport from "./Components/Reports/SalesReport";
 import Reports from "./Components/Reports/Reports";
 

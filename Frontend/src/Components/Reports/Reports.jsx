@@ -51,12 +51,12 @@ const Reports = () => {
     if (selectedReport === "sales-report") {
       try {
         const token = localStorage.getItem("token");
-        let endpoint = "/report/sales-summary";
+        let endpoint = "/auth/sales-summary";
 
         if (groupBy === "material") {
-          endpoint = "/report/sales-material-summary";
+          endpoint = "/auth/sales-material-summary";
         } else if (groupBy === "machine") {
-          endpoint = "/report/sales-machine-summary";
+          endpoint = "/auth/sales-machine-summary";
         }
 
         const response = await axios.get(`${ServerIP}${endpoint}`, {
@@ -95,19 +95,23 @@ const Reports = () => {
       try {
         const token = localStorage.getItem("token");
         const response = await axios.get(
-          `${ServerIP}/report/artist-incentive-summary`,
+          `${ServerIP}/auth/artist-incentive-summary`,
           {
             params: { dateFrom, dateTo },
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log("response data set:", response);
+        console.log("Artist Incentives API Response:", response.data);
+
         if (response.data.Status) {
           setReportData(response.data.Result);
-          console.log(
-            "Report Artist Incentives data set:",
-            response.data.Result
-          );
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: response.data.Error || "Failed to fetch artist incentives",
+            type: "error",
+          });
         }
       } catch (error) {
         console.error("Error generating artist incentive report:", error);
