@@ -37,16 +37,16 @@ const ReportArtistIncentives = () => {
       }
 
       // Then get the orders data
-      const endpoint = showSummary
-        ? "artist-incentive-summary"
-        : "artist-incentive";
+      //const endpoint = showSummary ? "artist-incentive" : "artist-incentive";
 
-      const ordersResponse = await axios.get(`${ServerIP}/auth/${endpoint}`, {
-        params: { dateFrom, dateTo },
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const ordersResponse = await axios.get(
+        `${ServerIP}/auth/artist-incentive`,
+        {
+          params: { dateFrom, dateTo },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      console.log("endpoint:", endpoint);
       console.log("ordersResponse.data:", ordersResponse.data);
       console.log(
         "artistIncentiveResponse.data:",
