@@ -29,7 +29,7 @@ router.get("/jomcontrol/lastDR", (req, res) => {
 
 // get VAT%
 router.get("/jomcontrol/VAT", (req, res) => {
-  const sql = "SELECT VAT FROM jomControl LIMIT 1";
+  const sql = "SELECT vatPercent FROM jomControl LIMIT 1";
   con.query(sql, (err, result) => {
     if (err) {
       console.error("Error fetching company control:", err);
@@ -39,22 +39,40 @@ router.get("/jomcontrol/VAT", (req, res) => {
   });
 });
 
-// get artist incentive, major, minor, max artist incentive
-router.get("/jomcontrol/artistIncentive", (req, res) => {
-  const sql = "SELECT major, minor, maxArtistIncentive FROM jomControl LIMIT 1";
+// Get artist incentive settings
+router.get("/jomcontrol/artistIncentive", verifyUser, (req, res) => {
+  const sql = `
+    SELECT 
+      vatPercent,
+      major,
+      minor,
+      ArtistMaxPercent,
+      ArtistMinAmount,
+      HalfIncentiveSqFt
+    FROM jomcontrol 
+    LIMIT 1
+  `;
+
   con.query(sql, (err, result) => {
     if (err) {
-      console.error("Error fetching company control:", err);
-      return res.json({ Status: false, Error: "Query Error" });
+      console.error("Error fetching artist incentive settings:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to fetch artist incentive settings: " + err.message,
+      });
     }
-    return res.json({ Status: true, Result: result[0] });
+
+    return res.json({
+      Status: true,
+      Result: result[0],
+    });
   });
 });
 
 // get sales incentive, override incentive, max sales incentive
 router.get("/jomcontrol/salesIncentive", (req, res) => {
   const sql =
-    "SELECT salesIncentive, overrideIncentive, maxSalesIncentive FROM jomControl LIMIT 1";
+    "SELECT salesIncentive, overrideIncentive, HalfIncentiveSqFt, vatPercent FROM jomControl LIMIT 1";
   con.query(sql, (err, result) => {
     if (err) {
       console.error("Error fetching company control:", err);

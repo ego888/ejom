@@ -1,141 +1,130 @@
-import React, { useState, useEffect } from "react";
-import { formatNumber } from "../../utils/orderUtils";
-import "./ReportSalesSummary.css";
+import React, { useState } from "react";
 import axios from "axios";
 import { ServerIP } from "../../config";
+import DateFromTo from "../UI/DateFromTo";
+import Button from "../UI/Button";
+import ReportArtistIncentiveDetails from "./ReportArtistIncentiveDetails";
+import ReportArtistIncentiveSummary from "./ReportArtistIncentiveSummary";
+import { calculateArtistIncentive } from "../../utils/artistIncentiveCalculator";
+import "./Reports.css";
 
-const ReportArtistIncentives = ({ data }) => {
-  const [incentiveSettings, setIncentiveSettings] = useState({
-    major: data.rates?.major || 0,
-    minor: data.rates?.minor || 0,
-    maxArtistIncentive: data.rates?.ArtistMaxPercent || 0,
-  });
+const ReportArtistIncentives = () => {
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showSummary, setShowSummary] = useState(true);
+  const [reportData, setReportData] = useState(null);
+  const [alert, setAlert] = useState(null);
 
-  // Update settings when data.rates changes
-  useEffect(() => {
-    if (data.rates) {
-      setIncentiveSettings({
-        major: data.rates.major || 0,
-        minor: data.rates.minor || 0,
-        maxArtistIncentive: data.rates.ArtistMaxPercent || 0,
+  const handleDateChange = (from, to) => {
+    setDateFrom(from);
+    setDateTo(to);
+  };
+
+  const handleGenerateReport = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // First get the settings
+      const artistIncentiveResponse = await axios.get(
+        `${ServerIP}/auth/jomcontrol/artistIncentive`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!artistIncentiveResponse.data.Status) {
+        throw new Error(artistIncentiveResponse.data.Error);
+      }
+
+      // Then get the orders data
+      const endpoint = showSummary
+        ? "artist-incentive-summary"
+        : "artist-incentive";
+
+      const ordersResponse = await axios.get(`${ServerIP}/auth/${endpoint}`, {
+        params: { dateFrom, dateTo },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("endpoint:", endpoint);
+      console.log("ordersResponse.data:", ordersResponse.data);
+      console.log(
+        "artistIncentiveResponse.data:",
+        artistIncentiveResponse.data
+      );
+
+      if (ordersResponse.data.Status) {
+        // Calculate incentives right after fetching data
+        const calculatedOrders = calculateArtistIncentive(
+          ordersResponse.data.Result,
+          artistIncentiveResponse.data.Result
+        );
+
+        setReportData({
+          orders: calculatedOrders,
+          settings: artistIncentiveResponse.data.Result,
+        });
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message:
+            ordersResponse.data.Error || "Failed to fetch artist incentives",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating artist incentive report:", error);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to generate artist incentive report",
+        type: "error",
       });
     }
-  }, [data.rates]);
-
-  console.log("ReportArtistIncentives Props Data:", data);
-
-  // Update to use data.summary instead of data directly
-  const totals = (data.summary || []).reduce(
-    (acc, curr) => ({
-      totalOrders: acc.totalOrders + (curr.orderCount || 0),
-      totalAmount: acc.totalAmount + (curr.totalAmount || 0),
-      totalPaid: acc.totalPaid + (curr.amountPaid || 0),
-      totalMajor: acc.totalMajor + (curr.major || 0),
-      totalMinor: acc.totalMinor + (curr.minor || 0),
-      totalMajorAmount: acc.totalMajorAmount + (curr.majorAmount || 0),
-      totalMinorAmount: acc.totalMinorAmount + (curr.minorAmount || 0),
-      totalIncentive: acc.totalIncentive + (curr.totalIncentive || 0),
-    }),
-    {
-      totalOrders: 0,
-      totalAmount: 0,
-      totalPaid: 0,
-      totalMajor: 0,
-      totalMinor: 0,
-      totalMajorAmount: 0,
-      totalMinorAmount: 0,
-      totalIncentive: 0,
-    }
-  );
+  };
 
   return (
-    <div className="report-summary-container">
-      <h4 className="report-title">Artist Incentive Summary Report</h4>
-      <div className="mb-3 text-end">
-        <small className="text-muted">
-          Current Rates - Major: ₱{formatNumber(incentiveSettings.major)} |
-          Minor: ₱{formatNumber(incentiveSettings.minor)} | Max: ₱
-          {formatNumber(incentiveSettings.maxArtistIncentive)}
-        </small>
+    <div className="reports-content">
+      <div className="reports-header d-flex justify-content-between align-items-center">
+        <h4 className="mb-0">Artist Incentives Report</h4>
+        <Button
+          variant="add"
+          onClick={handleGenerateReport}
+          disabled={!dateFrom || !dateTo}
+        >
+          Generate Report
+        </Button>
       </div>
-      <div className="table-responsive">
-        <table className="table table-hover">
-          <thead className="table-active">
-            <tr>
-              <th>Count</th>
-              <th>Artist</th>
-              <th colSpan="2">Major</th>
-              <th colSpan="2">Minor</th>
-              <th>Total</th>
-              <th className="text-end">Total Amount</th>
-              <th className="text-end">Amount Paid</th>
-            </tr>
-            <tr>
-              <th></th>
-              <th></th>
-              <th>Count</th>
-              <th>Amount</th>
-              <th>Count</th>
-              <th>Amount</th>
-              <th> Incentive</th>
-              <th></th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.summary && data.summary.length > 0 ? (
-              data.summary.map((item, index) => (
-                <tr key={index}>
-                  <td className="text-center">{item.orderCount}</td>
-                  <td>{item.category || "Unknown"}</td>
-                  <td className="text-center">{item.major || "-"}</td>
-                  <td className="text-end">
-                    ₱{formatNumber(item.majorAmount)}
-                  </td>
-                  <td className="text-center">{item.minor || "-"}</td>
-                  <td className="text-end">
-                    ₱{formatNumber(item.minorAmount)}
-                  </td>
-                  <td className="text-end">
-                    ₱{formatNumber(item.totalIncentive)}
-                  </td>
-                  <td className="text-end">
-                    ₱{formatNumber(item.totalAmount)}
-                  </td>
-                  <td className="text-end">₱{formatNumber(item.amountPaid)}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="text-center">
-                  No data available.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          <tfoot>
-            <tr className="table-active">
-              <td colSpan={2}>{totals.totalOrders} Total Orders</td>
-              <td className="text-center">{totals.totalMajor}</td>
-              <td className="text-end">
-                ₱{formatNumber(totals.totalMajorAmount)}
-              </td>
-              <td className="text-center">{totals.totalMinor}</td>
-              <td className="text-end">
-                ₱{formatNumber(totals.totalMinorAmount)}
-              </td>
-              <td className="text-end">
-                ₱
-                {formatNumber(
-                  totals.totalMajorAmount + totals.totalMinorAmount
-                )}
-              </td>
-              <td className="text-end">₱{formatNumber(totals.totalAmount)}</td>
-              <td className="text-end">₱{formatNumber(totals.totalPaid)}</td>
-            </tr>
-          </tfoot>
-        </table>
+
+      <div className="reports-filters">
+        <div className="d-flex align-items-start gap-3">
+          <DateFromTo onDateChange={handleDateChange} />
+          <div className="sort-options mb-3">
+            <div className="form-check mt-2">
+              <input
+                className="form-check-input blue-checkbox"
+                type="checkbox"
+                id="summaryToggle"
+                checked={showSummary}
+                onChange={(e) => setShowSummary(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="summaryToggle">
+                Summary
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
+      {reportData && (
+        <div className="report-container">
+          {showSummary ? (
+            <ReportArtistIncentiveSummary data={reportData} />
+          ) : (
+            <ReportArtistIncentiveDetails data={reportData} />
+          )}
+        </div>
+      )}
     </div>
   );
 };

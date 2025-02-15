@@ -47,6 +47,7 @@ const ReportSalesSummary = ({ data, groupBy }) => {
         ];
       case "material":
       case "machine":
+        console.log("Material or Machine", item);
         return [
           item.orderCount,
           item.category || "Unknown",

@@ -38,7 +38,7 @@ import axios from "./utils/axiosConfig";
 import SOA from "./Components/Reports/SOA";
 import ArtistIncentives from "./Components/Reports/ReportArtistIncentives";
 import SalesIncentives from "./Components/Reports/ReportSalesIncentives";
-import SalesReport from "./Components/Reports/SalesReport";
+import ReportSales from "./Components/Reports/ReportSales";
 import Reports from "./Components/Reports/Reports";
 
 // Replace the global axios with our configured instance

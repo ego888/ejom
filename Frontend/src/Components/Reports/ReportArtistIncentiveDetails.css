@@ -1,0 +1,8 @@
+.half-rate-warning {
+  color: #dc3545 !important; /* Bootstrap's danger red */
+  font-weight: 500;
+}
+
+.border-start {
+  border-left: 2px solid #dee2e6 !important; /* Bootstrap's border color */
+}
