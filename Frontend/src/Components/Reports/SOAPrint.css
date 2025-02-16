@@ -1,0 +1,288 @@
+/* Base styles */
+.print-quote-page {
+  background: white;
+  min-height: 11in;
+  width: 8.5in;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.print-quote-container {
+  width: 100%;
+  min-height: 11in;
+  padding: 0.5in;
+  padding-top: 0.25in;
+  background: white;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  position: relative;
+}
+
+/* Header Styles */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch; /* Make both .header-left and .header-right fill available height */
+}
+
+.header-left {
+  flex: 0 0 auto;
+  align-self: flex-start; /* Ensures it remains at the top */
+}
+
+.header-right {
+  flex: 0 0 auto;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* Push content inside .header-right to the bottom */
+  align-items: flex-end; /* Right-align text */
+  align-self: flex-end; /* Ensures .header-right itself aligns at the bottom */
+}
+
+.logo {
+  width: 180px;
+  height: auto;
+  object-fit: contain;
+}
+
+.header-right p {
+  margin: 0;
+  line-height: 1.4;
+  font-size: 12px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid black;
+  margin: 10px 0;
+}
+
+.quote-title {
+  text-align: center;
+  margin: 10px 0;
+}
+
+.quote-title h1 {
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 0;
+}
+
+/* Quote Info Styles */
+.quote-info {
+  margin: 20px 0;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 10px;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.info-item {
+  flex: 0 1 30%;
+  display: flex;
+  gap: 10px;
+}
+
+.info-item .label {
+  font-weight: bold;
+  min-width: 100px;
+}
+
+.info-item .value {
+  flex: 1;
+}
+
+/* Table Styles */
+.quote-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+}
+
+.quote-details-table th,
+.quote-details-table td {
+  padding: 4px 6px;
+  font-size: 12px;
+  border: none; /* Remove all borders */
+}
+
+/* Add top and bottom borders for header */
+.quote-details-table thead {
+  border-top: 2px solid black;
+  border-bottom: 2px solid black;
+}
+
+.quote-details-table th {
+  background-color: #fff;
+  font-weight: bold;
+  text-align: left;
+  padding: 8px 6px; /* Slightly more padding for header */
+}
+
+/* Add border for total row */
+.quote-details-table tfoot tr {
+  border-top: 2px solid black;
+}
+
+.quote-details-table tbody tr {
+  border-bottom: 1px solid #ddd; /* Optional: light separator between rows */
+}
+
+.quote-details-center {
+  text-align: center;
+}
+
+.row-gray {
+  background-color: #f8f9fa;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* Footer Section */
+.quote-footer-section {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+
+.prepared-by {
+  width: 60%;
+}
+
+.signature-line {
+  margin: 15px 0;
+}
+
+.signature-line .line {
+  border-bottom: 1px solid #000;
+  display: inline-block;
+  min-width: 200px;
+  margin-left: 10px;
+}
+
+.terms-delivery {
+  margin-top: 10px;
+}
+
+.totals-right {
+  width: 35%;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.grand-total {
+  font-weight: bold;
+  border-top: 1px solid #000;
+  padding-top: 5px;
+  margin-top: 5px;
+}
+
+/* Approval Section */
+.approval-section {
+  margin: 30px 0;
+}
+
+.approval-section p {
+  margin-bottom: 20px;
+}
+
+.signature-section {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.signature-block {
+  width: 45%;
+}
+
+.signature-block .signature-line {
+  border-top: 1px solid #000;
+  margin-top: 30px;
+  padding-top: 5px;
+}
+
+.signature-title {
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+/* Document Footer */
+.document-footer {
+  position: absolute;
+  bottom: 0.5in;
+  left: 0.5in;
+  right: 0.5in;
+  font-size: 8px;
+  display: flex;
+  justify-content: space-between; /* Push items to left and right */
+  align-items: center;
+  width: calc(100% - 1in); /* Ensure it spans the document width */
+}
+.edited-by {
+  flex-grow: 1; /* Makes this take up available space */
+}
+
+.print-date {
+  flex: 0 0 auto; /* Ensures it stays right-aligned */
+  text-align: right;
+}
+
+/* Print styles */
+@media print {
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+
+  /* Remove Vite + React header
+  #root > div:first-child {
+    display: none !important;
+  }
+
+  .print-quote-page {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-quote-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0.5in;
+    padding-top: 0.25in;
+    box-shadow: none;
+  } */
+
+  .quote-info {
+    margin: 15px 0;
+  }
+
+  .info-row {
+    margin-bottom: 8px;
+    gap: 15px;
+  }
+
+  .info-item .label {
+    min-width: 90px;
+  }
+}

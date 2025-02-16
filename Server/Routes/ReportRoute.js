@@ -280,4 +280,166 @@ router.get("/sales-incentive", verifyUser, (req, res) => {
   }
 });
 
+// Statement of Account Report
+router.get("/statement-of-account", verifyUser, (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        c.id as clientId,
+        c.clientName,
+        SUM(CASE 
+          WHEN o.status IN ('Prod', 'Finished') 
+          THEN o.grandTotal - o.amountPaid 
+          ELSE 0 
+        END) as production,
+        SUM(CASE 
+          WHEN o.status IN ('Delivered', 'Billed') 
+          AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 30 
+          THEN o.grandTotal - o.amountPaid 
+          ELSE 0 
+        END) as days_0_30,
+        SUM(CASE 
+          WHEN o.status IN ('Delivered', 'Billed') 
+          AND DATEDIFF(CURRENT_DATE, o.productionDate) > 30 
+          AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 60 
+          THEN o.grandTotal - o.amountPaid 
+          ELSE 0 
+        END) as days_31_60,
+        SUM(CASE 
+          WHEN o.status IN ('Delivered', 'Billed') 
+          AND DATEDIFF(CURRENT_DATE, o.productionDate) > 60 
+          AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 90 
+          THEN o.grandTotal - o.amountPaid 
+          ELSE 0 
+        END) as days_61_90,
+        SUM(CASE 
+          WHEN o.status IN ('Delivered', 'Billed') 
+          AND DATEDIFF(CURRENT_DATE, o.productionDate) > 90 
+          THEN o.grandTotal - o.amountPaid 
+          ELSE 0 
+        END) as days_over_90,
+        SUM(CASE 
+          WHEN o.status IN ('Delivered', 'Billed') 
+          THEN o.grandTotal - o.amountPaid 
+          ELSE 0 
+        END) as total_ar
+      FROM client c
+      LEFT JOIN orders o ON c.id = o.clientId 
+        AND o.status != 'Cancel'
+        AND (o.grandTotal - o.amountPaid) > 0
+      GROUP BY c.id, c.clientName
+      HAVING production > 0 OR total_ar > 0
+      ORDER BY c.clientName
+    `;
+
+    con.query(sql, (err, results) => {
+      console.log("SOA:", results);
+      if (err) {
+        console.error("Database error:", err);
+        return res.json({
+          Status: false,
+          Error: "Database error: " + err.message,
+        });
+      }
+
+      return res.json({
+        Status: true,
+        Result: results,
+      });
+    });
+  } catch (error) {
+    console.error("Error in statement of account:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to generate statement of account: " + error.message,
+    });
+  }
+});
+
+// SOA Details
+router.get("/soa-details", verifyUser, (req, res) => {
+  try {
+    const { clientId, category } = req.query;
+
+    let statusCondition = "";
+    let dateCondition = "";
+
+    switch (category) {
+      case "production":
+        statusCondition = "o.status IN ('Prod', 'Finished')";
+        break;
+      case "0-30":
+        statusCondition = "o.status IN ('Delivered', 'Billed')";
+        dateCondition = "DATEDIFF(CURRENT_DATE, o.productionDate) <= 30";
+        break;
+      case "31-60":
+        statusCondition = "o.status IN ('Delivered', 'Billed')";
+        dateCondition =
+          "DATEDIFF(CURRENT_DATE, o.productionDate) > 30 AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 60";
+        break;
+      case "61-90":
+        statusCondition = "o.status IN ('Delivered', 'Billed')";
+        dateCondition =
+          "DATEDIFF(CURRENT_DATE, o.productionDate) > 60 AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 90";
+        break;
+      case "over90":
+        statusCondition = "o.status IN ('Delivered', 'Billed')";
+        dateCondition = "DATEDIFF(CURRENT_DATE, o.productionDate) > 90";
+        break;
+      case "total":
+        statusCondition = "o.status IN ('Delivered', 'Billed')";
+        break;
+    }
+
+    const sql = `
+      SELECT 
+        o.orderId,
+        c.clientName,
+        o.terms,
+        o.orderReference,
+        o.projectName,
+        e.name as preparedBy,
+        o.totalAmount,
+        o.percentDisc,
+        o.amountDisc,
+        o.grandTotal,
+        o.amountPaid,
+        (o.grandTotal - o.amountPaid) as balance,
+        o.datePaid,
+        o.productionDate,
+        o.status
+      FROM orders o
+      JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE o.clientId = ?
+        AND ${statusCondition}
+        ${dateCondition ? `AND ${dateCondition}` : ""}
+        AND o.status != 'Cancel'
+        AND (o.grandTotal - o.amountPaid) > 0
+      ORDER BY o.productionDate
+    `;
+
+    con.query(sql, [clientId], (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.json({
+          Status: false,
+          Error: "Database error: " + err.message,
+        });
+      }
+
+      return res.json({
+        Status: true,
+        Result: results,
+      });
+    });
+  } catch (error) {
+    console.error("Error in SOA details:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to get SOA details: " + error.message,
+    });
+  }
+});
+
 export { router as ReportRouter };

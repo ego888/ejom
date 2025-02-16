@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Button from "../UI/Button";
-import DateFromTo from "../UI/DateFromTo";
 import "./Reports.css";
-import axios from "axios";
-import { ServerIP } from "../../config";
-import ReportSalesSummary from "./ReportSalesSummary";
 import ReportArtistIncentives from "./ReportArtistIncentives";
-import ReportArtistIncentiveDetails from "./ReportArtistIncentiveDetails";
 import ReportSales from "./ReportSales";
 import ReportSalesIncentives from "./ReportSalesIncentives";
+import SOA from "./SOA";
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState("sales-report");
@@ -37,6 +31,8 @@ const Reports = () => {
         return <ReportArtistIncentives />;
       case "sales-incentives":
         return <ReportSalesIncentives />;
+      case "soa":
+        return <SOA />;
       // Add other report types here
       default:
         return <div>Select a report type</div>;

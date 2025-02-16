@@ -40,6 +40,7 @@ import ArtistIncentives from "./Components/Reports/ReportArtistIncentives";
 import SalesIncentives from "./Components/Reports/ReportSalesIncentives";
 import ReportSales from "./Components/Reports/ReportSales";
 import Reports from "./Components/Reports/Reports";
+import SOAPrint from "./Components/Reports/SOAPrint";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
@@ -95,6 +96,14 @@ function App() {
           element={
             <PrivateRoute>
               <PrintQuote />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard/print_soa/:clientId"
+          element={
+            <PrivateRoute>
+              <SOAPrint />
             </PrivateRoute>
           }
         />
