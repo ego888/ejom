@@ -113,8 +113,8 @@
 
 /* Add top and bottom borders for header */
 .quote-details-table thead {
-  border-top: 2px solid black;
-  border-bottom: 2px solid black;
+  border-top: 1px solid black;
+  border-bottom: 1px solid black;
 }
 
 .quote-details-table th {
@@ -126,11 +126,12 @@
 
 /* Add border for total row */
 .quote-details-table tfoot tr {
-  border-top: 2px solid black;
+  border-top: 1px solid black;
+  border-bottom: 1px solid black;
 }
 
 .quote-details-table tbody tr {
-  border-bottom: 1px solid #ddd; /* Optional: light separator between rows */
+  border-bottom: 1px solid rgb(160, 160, 160); /* Optional: light separator between rows */
 }
 
 .quote-details-center {
@@ -184,6 +185,7 @@
 .grand-total {
   font-weight: bold;
   border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
   padding-top: 5px;
   margin-top: 5px;
 }
