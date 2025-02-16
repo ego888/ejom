@@ -222,4 +222,62 @@ router.get("/artist-incentive", verifyUser, (req, res) => {
   }
 });
 
+// Detailed artist incentive route
+router.get("/sales-incentive", verifyUser, (req, res) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      return res.json({ Status: false, Error: "Date range is required" });
+    }
+
+    // Simplified query to get raw data
+    const sql = `
+      SELECT 
+        o.orderId,
+        o.productionDate,
+        c.clientName AS clientName,
+        o.percentDisc,
+        o.grandTotal,
+        e.name AS preparedBy,
+        od.id,
+        od.salesIncentive,
+        od.overideIncentive,
+        od.perSqFt,
+        od.amount,
+        m.noIncentive,
+        m.Material as materialName
+      FROM orders o
+      JOIN order_details od ON o.orderId = od.orderId
+      JOIN material m ON od.material = m.Material
+      JOIN client c ON o.clientId = c.id
+      JOIN employee e ON o.preparedBy = e.id
+      WHERE o.productionDate BETWEEN ? AND ?
+      AND TRIM(o.status) IN ('Prod', 'Finish', 'Delivered', 'Billed', 'Closed')
+      ORDER BY o.orderId
+    `;
+
+    con.query(sql, [dateFrom, dateTo], (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.json({
+          Status: false,
+          Error: "Database error: " + err.message,
+        });
+      }
+
+      return res.json({
+        Status: true,
+        Result: results,
+      });
+    });
+  } catch (error) {
+    console.error("Error in artist incentive details:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to generate artist incentive details: " + error.message,
+    });
+  }
+});
+
 export { router as ReportRouter };

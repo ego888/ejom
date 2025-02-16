@@ -9,6 +9,7 @@ import ReportSalesSummary from "./ReportSalesSummary";
 import ReportArtistIncentives from "./ReportArtistIncentives";
 import ReportArtistIncentiveDetails from "./ReportArtistIncentiveDetails";
 import ReportSales from "./ReportSales";
+import ReportSalesIncentives from "./ReportSalesIncentives";
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState("sales-report");
@@ -34,6 +35,8 @@ const Reports = () => {
         return <ReportSales />;
       case "artist-incentives":
         return <ReportArtistIncentives />;
+      case "sales-incentives":
+        return <ReportSalesIncentives />;
       // Add other report types here
       default:
         return <div>Select a report type</div>;

@@ -865,6 +865,50 @@ router.put(
   }
 );
 
+// Update order detail sales incentives
+router.put(
+  "/order_details/update_sales_incentives_calculation",
+  verifyUser,
+  async (req, res) => {
+    try {
+      const updates = req.body;
+      console.log("Received updates:", updates);
+
+      // Process each update
+      for (const update of updates) {
+        const sql = `
+        UPDATE order_details 
+        SET salesIncentive = ?,
+            overideIncentive = ?
+        WHERE Id = ?
+      `;
+
+        await new Promise((resolve, reject) => {
+          con.query(
+            sql,
+            [update.salesIncentive, update.overideIncentive, update.Id],
+            (err, result) => {
+              if (err) reject(err);
+              resolve(result);
+            }
+          );
+        });
+      }
+
+      return res.json({
+        Status: true,
+        Message: "Updates completed successfully",
+      });
+    } catch (err) {
+      console.error("Error updating sales incentives:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to update sales incentives: " + err.message,
+      });
+    }
+  }
+);
+
 // Update order detail
 router.put("/order_details/:orderId/:displayOrder", (req, res) => {
   const { printHrs, ...otherData } = req.body;

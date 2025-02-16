@@ -1,8 +1,61 @@
-.half-rate-warning {
+.red-warning {
   color: #dc3545 !important; /* Bootstrap's danger red */
   font-weight: 500;
 }
 
 .border-start {
   border-left: 2px solid #dee2e6 !important; /* Bootstrap's border color */
+}
+
+.report-summary-container {
+  height: calc(100vh - 300px); /* Adjust based on your header/filter height */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.report-title {
+  margin-bottom: 0rem;
+}
+
+.table-responsive {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+/* Make header sticky */
+.table-responsive thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: #f8f9fa;
+}
+
+.table-responsive thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  bottom: 0;
+}
+
+.table-responsive thead tr:nth-child(2) th {
+  position: sticky;
+  top: 0px; /* Reduce gap between header rows */
+}
+
+/* Optional: Make totals row sticky at bottom */
+.table-responsive tfoot {
+  position: sticky;
+  bottom: 0;
+  background-color: #f8f9fa;
+  z-index: 1;
+}
+
+/* Ensure borders are visible on sticky elements */
+.table-responsive th {
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table-responsive tfoot td {
+  border-top: 2px solid #dee2e6;
 }
