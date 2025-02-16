@@ -182,6 +182,7 @@ router.get("/artist-incentive", verifyUser, (req, res) => {
         o.productionDate,
         c.clientName AS clientName,
         o.grandTotal,
+        od.id,
         od.artistIncentive,
         od.quantity,
         od.perSqFt,
@@ -195,7 +196,7 @@ router.get("/artist-incentive", verifyUser, (req, res) => {
       JOIN client c ON o.clientId = c.id
       WHERE o.productionDate BETWEEN ? AND ?
       AND TRIM(o.status) IN ('Prod', 'Finish', 'Delivered', 'Billed', 'Closed')
-      ORDER BY od.artistIncentive, o.orderId
+      ORDER BY o.orderId
     `;
 
     con.query(sql, [dateFrom, dateTo], (err, results) => {

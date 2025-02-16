@@ -37,8 +37,6 @@ const ReportArtistIncentives = () => {
       }
 
       // Then get the orders data
-      //const endpoint = showSummary ? "artist-incentive" : "artist-incentive";
-
       const ordersResponse = await axios.get(
         `${ServerIP}/auth/artist-incentive`,
         {
@@ -59,6 +57,26 @@ const ReportArtistIncentives = () => {
           ordersResponse.data.Result,
           artistIncentiveResponse.data.Result
         );
+
+        // Save calculated incentives back to database
+        const updates = calculatedOrders.map((order) => ({
+          Id: order.id,
+          artistIncentive: order.totalIncentive,
+        }));
+
+        const saveResponse = await axios.put(
+          `${ServerIP}/auth/order_details/update_incentives_calculation`,
+          updates,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!saveResponse.data.Status) {
+          throw new Error(
+            saveResponse.data.Error || "Failed to save incentives"
+          );
+        }
 
         setReportData({
           orders: calculatedOrders,

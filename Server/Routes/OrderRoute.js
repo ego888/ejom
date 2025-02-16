@@ -826,6 +826,45 @@ router.put("/order_details/update_incentives", async (req, res) => {
   }
 });
 
+// Update order detail artist incentives
+router.put(
+  "/order_details/update_incentives_calculation",
+  verifyUser,
+  async (req, res) => {
+    try {
+      const updates = req.body;
+      console.log("Received updates:", updates);
+
+      // Process each update
+      for (const update of updates) {
+        const sql = `
+        UPDATE order_details 
+        SET artistIncentiveAmount = ?
+        WHERE Id = ?
+      `;
+
+        await new Promise((resolve, reject) => {
+          con.query(sql, [update.artistIncentive, update.Id], (err, result) => {
+            if (err) reject(err);
+            resolve(result);
+          });
+        });
+      }
+
+      return res.json({
+        Status: true,
+        Message: "Updates completed successfully",
+      });
+    } catch (err) {
+      console.error("Error updating artist incentives:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to update artist incentives: " + err.message,
+      });
+    }
+  }
+);
+
 // Update order detail
 router.put("/order_details/:orderId/:displayOrder", (req, res) => {
   const { printHrs, ...otherData } = req.body;
