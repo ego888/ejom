@@ -90,7 +90,7 @@ const ReportSales = () => {
           onClick={handleGenerateReport}
           disabled={!dateFrom || !dateTo}
         >
-          Generate Report
+          Calculate
         </Button>
       </div>
 
