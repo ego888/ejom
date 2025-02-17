@@ -105,6 +105,7 @@ const ReportSalesIncentives = () => {
           variant="add"
           onClick={handleGenerateReport}
           disabled={!dateFrom || !dateTo}
+          aria-label="Generate sales incentives report"
         >
           Calculate
         </Button>

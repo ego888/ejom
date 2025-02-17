@@ -9,7 +9,10 @@ const SOADetails = ({ data }) => {
 
   return (
     <div className="table-responsive">
-      <table className="table table-hover">
+      <table
+        className="table table-hover"
+        aria-label="Statement of Account Details"
+      >
         <thead className="table-active">
           <tr>
             <th>Order ID</th>

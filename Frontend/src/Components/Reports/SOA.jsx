@@ -93,7 +93,7 @@ const SOA = () => {
   };
 
   const handlePrintSOA = (clientId) => {
-    navigate(`/dashboard/print_soa/${clientId}`);
+    window.open(`/dashboard/print_soa/${clientId}`, "_blank");
   };
 
   return (

@@ -75,7 +75,7 @@ function SOAPrint() {
       // Handle print completion
       const handlePrintEvent = () => {
         setTimeout(() => {
-          navigate(-1);
+          window.close();
         }, 100);
       };
 
@@ -86,10 +86,10 @@ function SOAPrint() {
         window.removeEventListener("afterprint", handlePrintEvent);
       };
     }
-  }, [loading, soaData, logoLoaded, navigate]);
+  }, [loading, soaData, logoLoaded]);
 
   if (loading || !soaData || !client || !companyInfo || !logoLoaded) {
-    return <div>Loadfdgregfing...</div>;
+    return <div>Loading...</div>;
   }
 
   const total = soaData.reduce(
@@ -123,18 +123,29 @@ function SOAPrint() {
         <div className="quote-info">
           <div className="info-row">
             <div className="info-item">
-              <span className="label">Client:</span>
-              <span className="value">{client.clientName}</span>
+              <span id="client-label" className="label">
+                Client:
+              </span>
+              <span aria-labelledby="client-label" className="value">
+                {client.clientName}
+              </span>
             </div>
             <div className="info-item">
-              <span className="label">Date:</span>
-              <span className="value">{new Date().toLocaleDateString()}</span>
+              <span id="date-label" className="label">
+                Date:
+              </span>
+              <span aria-labelledby="date-label" className="value">
+                {new Date().toLocaleDateString()}
+              </span>
             </div>
           </div>
         </div>
 
         {/* SOA Details Table */}
-        <table className="quote-details-table">
+        <table
+          className="quote-details-table"
+          aria-label="Statement of Account Details"
+        >
           <thead>
             <tr>
               <th>Date</th>

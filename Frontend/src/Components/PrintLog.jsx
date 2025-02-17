@@ -286,6 +286,7 @@ function Prod() {
         {/* Search and filters row */}
         <div className="d-flex justify-content-between mb-3">
           <input
+            id="search-input"
             type="text"
             className="form-control form-control-sm"
             placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."

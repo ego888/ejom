@@ -51,7 +51,6 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                 // Check if this row has the same order as previous
                 const sameOrder = item.orderId === previousOrderId;
                 previousOrderId = item.orderId;
-
                 return (
                   <tr key={index}>
                     <td>{!sameOrder ? item.orderId : ""}</td>

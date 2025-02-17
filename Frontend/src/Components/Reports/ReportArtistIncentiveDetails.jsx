@@ -57,10 +57,8 @@ const ReportArtistIncentiveDetails = ({ data }) => {
           <tbody>
             {calculatedData && calculatedData.length > 0 ? (
               calculatedData.map((item, index) => {
-                // Check if this row has the same order as previous
                 const sameOrder = item.orderId === previousOrderId;
                 previousOrderId = item.orderId;
-
                 return (
                   <tr key={index}>
                     <td>{!sameOrder ? item.orderId : ""}</td>
@@ -104,7 +102,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                     </td>
                     <td className="text-end border-start">
                       {formatNumber(item.originalMinor)}
-                    </td>{" "}
+                    </td>
                     <td
                       className={`text-end ${
                         item.originalMinor !== item.adjustedMinor

@@ -54,7 +54,9 @@ const ReportSales = () => {
 
   const renderSortOptions = () => (
     <div className="sort-options mb-3">
-      <label className="form-label d-block">Group by:</label>
+      <label htmlFor="groupBy" className="form-label d-block">
+        Group by:
+      </label>
       <div className="d-flex gap-1">
         {["Sales", "Month", "Client", "Material", "Machine", "None"].map(
           (option) => (
