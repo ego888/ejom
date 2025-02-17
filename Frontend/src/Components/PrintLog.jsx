@@ -408,7 +408,10 @@ function Prod() {
                       /> */}
                     </div>
                   </td>
-                  <td>{order.id}</td>
+                  <td>
+                    {order.id}
+                    {order.revision && `-${order.revision}`}
+                  </td>
                   <td
                     className="client-cell"
                     onClick={(e) => {

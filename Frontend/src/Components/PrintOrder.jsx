@@ -139,7 +139,12 @@ function PrintOrder() {
       <div className="header-box mb-3">
         <div className="d-flex align-items-center justify-content-between mb-2">
           {/* Left-aligned: Job Order */}
-          <h3 className="m-0 text-start">Job Order #{data.orderId || ""}</h3>
+          <h3 className="m-0 text-start">
+            Job Order #{data.orderId || ""}
+            {data.revision && (
+              <span className="text-muted ms-2">Rev.{data.revision}</span>
+            )}
+          </h3>
 
           {/* Centered: Logo */}
           <div className="flex-grow-1 d-flex justify-content-center">

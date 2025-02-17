@@ -299,7 +299,10 @@ function ArtistLog() {
                       className="text-center order-id"
                       id={`order-id-${index}`}
                     >
-                      {index === 0 ? item.orderId : ""}
+                      {index === 0
+                        ? item.orderId +
+                          (item.revision ? `-${item.revision}` : "")
+                        : ""}
                     </td>
                     <td className="project-name" id={`project-${index}`}>
                       {index === 0 ? item.projectName : ""}

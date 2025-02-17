@@ -198,6 +198,7 @@ router.get("/orders", async (req, res) => {
     const dataSql = `
       SELECT 
         o.orderID as id, 
+        o.revision,
         o.clientId, 
         c.clientName, 
         o.projectName, 
@@ -306,6 +307,7 @@ router.get("/orders-details-forprod", async (req, res) => {
     const sql = `
       SELECT 
         o.orderID as id,
+        o.revision,
         o.clientId,
         o.projectName,
         o.dueDate,
@@ -343,6 +345,7 @@ router.get("/orders-details-artistIncentive", async (req, res) => {
     const sql = `
       SELECT 
     o.orderId,
+    o.revision,
     o.projectName,
     o.dueDate,
     o.dueTime,
@@ -425,6 +428,51 @@ router.put("/update_orders_to_prod", (req, res) => {
     }
     return res.json({ Status: true, Result: result });
   });
+});
+
+// Update orders status with corresponding dates
+router.put("/update_order_status", verifyUser, async (req, res) => {
+  const { orderId, newStatus } = req.body;
+
+  try {
+    let sql = `
+      UPDATE orders 
+      SET status = ?
+    `;
+    const params = [newStatus];
+
+    // Add date updates based on status
+    if (newStatus === "Finished") {
+      sql += `, readyDate = NOW()`;
+    } else if (newStatus === "Delivered") {
+      sql += `, deliveryDate = NOW()`;
+    } else if (newStatus === "Billed") {
+      sql += `, billDate = NOW()`;
+    }
+
+    sql += ` WHERE orderID = ?`;
+    params.push(orderId);
+
+    const result = await new Promise((resolve, reject) => {
+      con.query(sql, params, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+
+    return res.json({
+      Status: true,
+      Result: result,
+      Message: `Order status updated to ${newStatus}`,
+    });
+  } catch (error) {
+    console.error("Update Error:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update order status",
+      Details: error.message,
+    });
+  }
 });
 
 // Update orders with DR number, update jomcontrol with lastDR number, with transaction rollback feature.
@@ -1044,6 +1092,7 @@ router.get("/search-orders-by-client", async (req, res) => {
     const ordersSql = `
       SELECT 
         o.orderID as id, 
+        o.revisionNumber,
         o.clientId, 
         c.clientName, 
         o.projectName, 
@@ -1129,6 +1178,72 @@ router.get("/wtax-types", async (req, res) => {
     return res.json({
       Status: false,
       Error: "Failed to fetch WTax types",
+    });
+  }
+});
+
+// Add this new route
+router.get("/order/ReviseNumber/:id", verifyUser, async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    // Start a transaction
+    await new Promise((resolve, reject) => {
+      con.beginTransaction((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    // Get current revision number
+    const [orderResult] = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT revision FROM orders WHERE orderId = ?",
+        [orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    const currentRevision = orderResult.revision || 0;
+    const newRevision = currentRevision + 1;
+
+    // Update order with new revision number and status
+    await new Promise((resolve, reject) => {
+      con.query(
+        "UPDATE orders SET revision = ?, status = 'Open' WHERE orderId = ?",
+        [newRevision, orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    // Commit the transaction
+    await new Promise((resolve, reject) => {
+      con.commit((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    return res.json({
+      Status: true,
+      revision: newRevision,
+    });
+  } catch (error) {
+    // Rollback on error
+    await new Promise((resolve) => {
+      con.rollback(() => resolve());
+    });
+
+    console.error("Error revising order:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to revise order: " + error.message,
     });
   }
 });

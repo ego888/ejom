@@ -294,13 +294,6 @@ function Orders() {
     setIsProdChecked(e.target.checked);
   };
 
-  // Add a cleanup effect to save the page when unmounting
-  // useEffect(() => {
-  //   return () => {
-  //     localStorage.setItem("ordersListPage", currentPage.toString());
-  //   };
-  // }, [currentPage]);
-
   return (
     <div className="px-5 orders-page-background">
       <div className="d-flex justify-content-center pt-4">
@@ -429,14 +422,6 @@ function Orders() {
               <tr key={order.id}>
                 <td>
                   <div className="d-flex justify-content-center gap-2">
-                    {/* <Button
-                      variant="view"
-                      iconOnly
-                      size="sm"
-                      onClick={() =>
-                        navigate(`/dashboard/view_order/${order.id}`)
-                      }
-                    /> */}
                     <Button
                       variant="edit"
                       iconOnly
@@ -447,7 +432,10 @@ function Orders() {
                     />
                   </div>
                 </td>
-                <td>{order.id}</td>
+                <td>
+                  {order.id}
+                  {order.revision && `-${order.revision}`}
+                </td>
                 <td
                   className="client-cell"
                   onClick={(e) => {

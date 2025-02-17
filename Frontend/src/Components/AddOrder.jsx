@@ -1050,7 +1050,7 @@ function AddOrder() {
       .catch((err) => handleApiError(err, navigate));
   }, []);
 
-  const handlePrintOrder = () => {
+  const handlePrintOrder = async () => {
     if (orderDetails.length === 0) {
       setAlert({
         show: true,
@@ -1059,8 +1059,42 @@ function AddOrder() {
           "Cannot print order. No order details found. Please add order details first.",
         type: "alert",
       });
+      return; // Add return to prevent navigation if no details
     }
-    navigate(`/dashboard/print_order/${id}`);
+
+    try {
+      // First update the status to "Printed"
+      const response = await axios.put(
+        `${ServerIP}/auth/update_order_status`,
+        {
+          orderId: id,
+          newStatus: "Printed",
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      if (response.data.Status) {
+        // Update local state
+        setData((prev) => ({
+          ...prev,
+          status: "Printed",
+        }));
+
+        // Navigate to print view
+        navigate(`/dashboard/print_order/${id}`);
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to update order status: " + response.data.Error,
+          type: "error",
+        });
+      }
+    } catch (error) {
+      handleApiError(error, setAlert);
+    }
   };
 
   // Add this new function to handle noPrint toggle
@@ -1227,6 +1261,44 @@ function AddOrder() {
       });
   };
 
+  // Add the handler function
+  const handleReviseOrder = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${ServerIP}/auth/order/ReviseNumber/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.Status) {
+        // Update local state
+        setData((prev) => ({
+          ...prev,
+          status: "Open",
+          revision: response.data.revision,
+        }));
+
+        setAlert({
+          show: true,
+          title: "Success",
+          message: `Order revised. New revision: ${response.data.revision}`,
+          type: "alert",
+        });
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error,
+          type: "error",
+        });
+      }
+    } catch (error) {
+      handleApiError(error, setAlert);
+    }
+  };
+
   return (
     <div className="px-4 mt-3">
       <div className="p-3 rounded border">
@@ -1234,6 +1306,9 @@ function AddOrder() {
           <div className="d-flex align-items-center gap-3">
             <h3 className="m-0">
               {id ? `Edit Order #${data.orderId}` : "Add New Order"}
+              {data.revision && (
+                <span className="text-muted ms-2">Rev.{data.revision}</span>
+              )}
             </h3>
             {isAdmin && (
               <div className="form-check">
@@ -1253,6 +1328,15 @@ function AddOrder() {
           <div className="d-flex gap-2">
             {isHeaderSaved && (
               <>
+                {data.status === "Printed" && (
+                  <Button
+                    variant="edit"
+                    onClick={handleReviseOrder}
+                    className="ms-2"
+                  >
+                    Revise
+                  </Button>
+                )}
                 <Button variant="save" onClick={handleReOrder}>
                   Reorder
                 </Button>{" "}
