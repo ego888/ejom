@@ -38,12 +38,13 @@
 }
 
 .btn-edit {
-  background-color: #17a2b8;
+  background-color: #fd7e14;
   color: white;
 }
 
 .btn-edit:hover {
-  background-color: #138496;
+  background-color: #d56c16;
+  color: white;
 }
 
 .btn-delete {
@@ -65,12 +66,12 @@
 }
 
 .btn-print {
-  background-color: #6c757d;
+  background-color: #825f53;
   color: white;
 }
 
 .btn-print:hover {
-  background-color: #5a6268;
+  background-color: #6d4232;
 }
 
 .btn-view {
@@ -83,12 +84,13 @@
 }
 
 .btn-cancel {
-  background-color: #6c757d;
+  background-color: #ffac07;
   color: white;
 }
 
 .btn-cancel:hover {
-  background-color: #5a6268;
+  background-color: #df981e;
+  color: white;
 }
 
 /* Primary variant (default) */

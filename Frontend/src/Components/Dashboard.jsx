@@ -186,83 +186,93 @@ const Dashboard = () => {
     <div className="container-fluid">
       <div className="row flex-nowrap">
         <div className="col-auto col-md-2 col-xl-1 px-0 sidebar">
-          <div className="d-flex flex-column align-items-center align-items-sm-start min-vh-100">
-            <div className="sidebar-header">
+          <div className="d-flex flex-column h-100">
+            <div className="sidebar-header position-sticky top-0 bg-white">
               <img src={logo} alt="Company Logo" className="img-fluid mb-2" />
               <span className="fw-bolder">Job Order Monitoring System</span>
               <Link to="/dashboard" className="sidebar-user">
-                <i className="bi bi-person-circle me-2"></i>
+                <i className="sidebar-user-icon bi bi-person-circle me-2"></i>
                 <span className="fw-bolder d-none d-sm-inline">
                   {employeeName}
                 </span>
               </Link>
             </div>
-            <ul
-              className="nav nav-pills flex-column mb-sm-auto mb-0 mt-4 align-items-center align-items-sm-start"
-              id="menu"
-            >
-              {navItems.map((item) => {
-                const hasAccess =
-                  (item.adminOnly && permissions.categoryId === 1) ||
-                  (!item.adminOnly && canAccessRoute(item.path));
+            <div className="sidebar-nav-scroll">
+              <ul
+                className="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start"
+                id="menu"
+              >
+                {navItems.map((item) => {
+                  const hasAccess =
+                    (item.adminOnly && permissions.categoryId === 1) ||
+                    (!item.adminOnly && canAccessRoute(item.path));
 
-                if (!hasAccess) {
-                  return null;
-                }
+                  if (!hasAccess) {
+                    return null;
+                  }
 
-                if (item.subItems) {
+                  if (item.subItems) {
+                    return (
+                      <li key={item.path} className="nav-item dropdown">
+                        <a
+                          className="sidebar-nav-link dropdown-toggle"
+                          href="#"
+                          role="button"
+                          data-bs-toggle="dropdown"
+                          aria-expanded="false"
+                        >
+                          <i className={`bi ${item.icon}`}></i>
+                          <span className="d-none d-sm-inline">
+                            {item.text}
+                          </span>
+                        </a>
+                        <ul className="dropdown-menu">
+                          {item.subItems.map((subItem) => (
+                            <li key={subItem.path}>
+                              <NavLink
+                                to={`/dashboard/reports/${subItem.path}`}
+                                className={({ isActive }) =>
+                                  `dropdown-item ${isActive ? "active" : ""}`
+                                }
+                              >
+                                {subItem.text}
+                              </NavLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    );
+                  }
+
                   return (
-                    <li key={item.path} className="nav-item dropdown">
-                      <a
-                        className="sidebar-nav-link dropdown-toggle"
-                        href="#"
-                        role="button"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
+                    <li key={item.path}>
+                      <NavLink
+                        to={
+                          item.path ? `/dashboard/${item.path}` : "/dashboard"
+                        }
+                        className={({ isActive }) =>
+                          `sidebar-nav-link ${isActive ? "active" : ""}`
+                        }
+                        end={item.path === ""}
                       >
                         <i className={`bi ${item.icon}`}></i>
                         <span className="d-none d-sm-inline">{item.text}</span>
-                      </a>
-                      <ul className="dropdown-menu">
-                        {item.subItems.map((subItem) => (
-                          <li key={subItem.path}>
-                            <NavLink
-                              to={`/dashboard/reports/${subItem.path}`}
-                              className={({ isActive }) =>
-                                `dropdown-item ${isActive ? "active" : ""}`
-                              }
-                            >
-                              {subItem.text}
-                            </NavLink>
-                          </li>
-                        ))}
-                      </ul>
+                      </NavLink>
                     </li>
                   );
-                }
-
-                return (
-                  <li key={item.path}>
-                    <NavLink
-                      to={item.path ? `/dashboard/${item.path}` : "/dashboard"}
-                      className={({ isActive }) =>
-                        `sidebar-nav-link ${isActive ? "active" : ""}`
-                      }
-                      end={item.path === ""}
-                    >
-                      <i className={`bi ${item.icon}`}></i>
-                      <span className="d-none d-sm-inline">{item.text}</span>
-                    </NavLink>
-                  </li>
-                );
-              })}
-              <li>
-                <a href="#" className="sidebar-nav-link" onClick={handleLogout}>
-                  <i className="bi-power"></i>
-                  <span className="d-none d-sm-inline">Logout</span>
-                </a>
-              </li>
-            </ul>
+                })}
+                <li>
+                  <a
+                    href="#"
+                    className="sidebar-nav-link"
+                    onClick={handleLogout}
+                  >
+                    <i className="bi-power"></i>
+                    <span className="d-none d-sm-inline">Logout</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
         <div className="col p-0 main-content">

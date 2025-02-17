@@ -52,12 +52,12 @@ const Button = ({
     // Map our variants to Bootstrap variants
     const variantMap = {
       add: "success",
-      edit: "info",
+      edit: "info btn-edit",
       delete: "danger",
       save: "success",
-      print: "secondary",
+      print: "secondary btn-print",
       view: "primary",
-      cancel: "warning",
+      cancel: "warning btn-cancel",
       warning: "warning",
       success: "success",
       danger: "danger",
