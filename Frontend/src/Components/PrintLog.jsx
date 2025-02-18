@@ -398,19 +398,11 @@ function Prod() {
                           navigate(`/dashboard/printlog/view/${order.id}`)
                         }
                       />
-                      {/* <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/orders/edit/${order.id}`)
-                        }
-                      /> */}
                     </div>
                   </td>
                   <td>
                     {order.id}
-                    {order.revision && `-${order.revision}`}
+                    {order.revision > 0 && `-${order.revision}`}
                   </td>
                   <td
                     className="client-cell"

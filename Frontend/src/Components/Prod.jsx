@@ -15,6 +15,7 @@ import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
 import { QRCodeSVG } from "qrcode.react";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
+import Modal from "./UI/Modal";
 //import { handlePrintProduction } from "./ProdPrintProduction";
 //import { handlePrintAllDR } from "./ProdPrintAllDR";
 
@@ -64,6 +65,9 @@ function Prod() {
     type: "alert",
     onConfirm: null,
   });
+  const [showInvModal, setShowInvModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [invNumber, setInvNumber] = useState("");
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -334,13 +338,6 @@ function Prod() {
     localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
-  // Add a cleanup effect to save the page when unmounting
-  // useEffect(() => {
-  //   return () => {
-  //     localStorage.setItem("ordersListPage", currentPage.toString());
-  //   };
-  // }, [currentPage]);
-
   // Add function to handle forProd update
   const handleForProdChange = async (orderId, newValue) => {
     // Find the order to check its status
@@ -545,6 +542,66 @@ function Prod() {
     }
   }, []);
 
+  const handleInvClick = (order) => {
+    const billableStatuses = [
+      "Open",
+      "Printed",
+      "Prod",
+      "Finished",
+      "Delivered",
+    ];
+    if (billableStatuses.includes(order.status)) {
+      setSelectedOrderId(order.id);
+      setInvNumber("");
+      setShowInvModal(true);
+    }
+  };
+
+  const handleInvSubmit = async () => {
+    if (!invNumber.trim()) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Please enter an invoice number",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `${ServerIP}/auth/update_order_invoice`,
+        {
+          orderId: selectedOrderId,
+          invNumber: invNumber.trim(),
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      if (response.data.Status) {
+        setAlert({
+          show: true,
+          title: "Success",
+          message: "Invoice number updated successfully",
+          type: "alert",
+        });
+        fetchOrders(); // Refresh the orders list
+        setShowInvModal(false);
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error,
+          type: "error",
+        });
+      }
+    } catch (error) {
+      handleApiError(error, setAlert);
+    }
+  };
+
   return (
     <div className="prod-theme">
       <div className="prod-page-background px-5">
@@ -731,7 +788,7 @@ function Prod() {
                   </td>
                   <td>
                     {order.id}
-                    {order.revision && `-${order.revision}`}
+                    {order.revision > 0 && `-${order.revision}`}
                   </td>
                   <td
                     className="client-cell"
@@ -758,12 +815,30 @@ function Prod() {
                   </td>
                   <td>{order.dueTime || ""}</td>
                   <td>
-                    <span className={`status-badge ${order.status}`}>
+                    <span
+                      className={`status-badge ${order.status}`}
+                      style={{ cursor: "default" }}
+                    >
                       {order.status}
                     </span>
                   </td>
                   <td>{order.drnum || ""}</td>
-                  <td>{order.invnum || ""}</td>
+                  <td
+                    onClick={() => handleInvClick(order)}
+                    style={{
+                      cursor: [
+                        "Open",
+                        "Printed",
+                        "Prod",
+                        "Finished",
+                        "Delivered",
+                      ].includes(order.status)
+                        ? "pointer"
+                        : "default",
+                    }}
+                  >
+                    {order.invnum || ""}
+                  </td>
                   <td className="number_right">
                     {order.grandTotal
                       ? `₱${order.grandTotal.toLocaleString()}`
@@ -828,17 +903,47 @@ function Prod() {
         </div>
       </div>
 
+      <Modal
+        show={showInvModal}
+        onHide={() => setShowInvModal(false)}
+        title="Enter Invoice Number"
+        footer={
+          <div className="d-flex justify-content-end gap-2">
+            <Button variant="cancel" onClick={() => setShowInvModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="save" onClick={handleInvSubmit}>
+              Save
+            </Button>
+          </div>
+        }
+      >
+        <div className="mb-3">
+          <label htmlFor="invNumber" className="form-label">
+            Invoice Number
+          </label>
+          <input
+            type="text"
+            className="form-control"
+            id="invNumber"
+            value={invNumber}
+            onChange={(e) => setInvNumber(e.target.value)}
+            autoFocus
+          />
+        </div>
+      </Modal>
+
       <ModalAlert
         show={alert.show}
         title={alert.title}
         message={alert.message}
         type={alert.type}
-        onClose={() => setAlert({ ...alert, show: false })}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
         onConfirm={() => {
           if (alert.onConfirm) {
             alert.onConfirm();
           }
-          setAlert({ ...alert, show: false });
+          setAlert((prev) => ({ ...prev, show: false }));
         }}
       />
     </div>

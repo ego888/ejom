@@ -337,7 +337,10 @@ function OrderView() {
               <div className="info-group">
                 <div className="d-flex justify-content-between align-items-center">
                   <div className="info-label mb-0">Status:</div>
-                  <span className={`status-badge ${data.status || "default"}`}>
+                  <span
+                    className={`status-badge ${data.status || "default"}`}
+                    style={{ cursor: "default" }}
+                  >
                     {data.status || "N/A"}
                   </span>
                 </div>
@@ -345,9 +348,7 @@ function OrderView() {
 
               <div className="info-group">
                 <div className="info-label">Edited By</div>
-                <div className="info-value">
-                  {localStorage.getItem("userName") || ""}
-                </div>
+                <div className="info-value">{data.editedBy || ""}</div>
               </div>
 
               <div className="info-group">

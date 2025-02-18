@@ -295,254 +295,259 @@ function Orders() {
   };
 
   return (
-    <div className="px-5 orders-page-background">
-      <div className="d-flex justify-content-center pt-4">
-        <h3>Orders List</h3>
-      </div>
-
-      {/* Search and filters row */}
-      <div className="d-flex justify-content-between mb-3">
-        <Button variant="add" onClick={() => navigate("/dashboard/orders/add")}>
-          Add Order
-        </Button>
-        <div className="search-container">
-          <label htmlFor="orderSearch" className="visually-hidden">
-            Search orders
-          </label>
-          <input
-            id="orderSearch"
-            name="orderSearch"
-            type="text"
-            className="form-control form-control-sm"
-            placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-            onChange={handleSearch}
-            style={{ width: "400px" }}
-            aria-label="Search orders"
-          />
+    <div className="orders-theme">
+      <div className="px-5 orders-page-background">
+        <div className="d-flex justify-content-center pt-4">
+          <h3>Orders List</h3>
         </div>
-      </div>
 
-      {/* Loading indicator */}
-      {loading && (
-        <div className="text-center my-3">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+        {/* Search and filters row */}
+        <div className="d-flex justify-content-between mb-3">
+          <Button
+            variant="add"
+            onClick={() => navigate("/dashboard/orders/add")}
+          >
+            Add Order
+          </Button>
+          <div className="search-container">
+            <label htmlFor="orderSearch" className="visually-hidden">
+              Search orders
+            </label>
+            <input
+              id="orderSearch"
+              name="orderSearch"
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+              onChange={handleSearch}
+              style={{ width: "400px" }}
+              aria-label="Search orders"
+            />
           </div>
         </div>
-      )}
 
-      <div className="table-responsive">
-        <SalesFilter
-          ref={salesFilterRef}
-          salesEmployees={salesEmployees}
-          selectedSales={selectedSales}
-          setSelectedSales={setSelectedSales}
-          onFilterUpdate={({ isFilterActive }) =>
-            setHasSalesFilter(isFilterActive)
-          }
-        />
-        <ClientFilter
-          ref={clientFilterRef}
-          clientList={clientList}
-          selectedClients={selectedClients}
-          setSelectedClients={setSelectedClients}
-          onFilterUpdate={({ isFilterActive }) =>
-            setHasClientFilter(isFilterActive)
-          }
-        />
-        <table className="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>Action</th>
-              <th
-                onClick={() => handleSort("id")}
-                style={{ cursor: "pointer" }}
-                role="columnheader"
-                aria-sort={
-                  sortConfig.key === "id" ? sortConfig.direction : "none"
-                }
-              >
-                Order ID {getSortIndicator("id")}
-              </th>
-              <th
-                onClick={() => handleSort("clientName")}
-                style={{
-                  cursor: "pointer",
-                  color: hasClientFilter ? "#0d6efd" : "inherit",
-                }}
-              >
-                Client {getSortIndicator("clientName")}
-              </th>
-              <th>Project Name</th>
-              <th>Ordered By</th>
-              {/* <th>Order Date</th> */}
-              <th>Due Date</th>
-              <th>Due Time</th>
-              <th
-                onClick={() => handleSort("status")}
-                style={{ cursor: "pointer" }}
-              >
-                Status {getSortIndicator("status")}
-              </th>
-              <th
-                onClick={() => handleSort("drnum")}
-                style={{ cursor: "pointer" }}
-              >
-                DR# {getSortIndicator("drnum")}
-              </th>
-              <th
-                onClick={() => handleSort("invnum")}
-                style={{ cursor: "pointer" }}
-              >
-                INV# {getSortIndicator("invnum")}
-              </th>
-              <th>Grand Total</th>
-              <th
-                onClick={() => handleSort("ornum")}
-                style={{ cursor: "pointer" }}
-              >
-                OR# {getSortIndicator("ornum")}
-              </th>
-              <th>Amount Paid</th>
-              <th>Date Paid</th>
-              <th
-                onClick={() => handleSort("salesName")}
-                style={{
-                  cursor: "pointer",
-                  color: hasSalesFilter ? "#0d6efd" : "inherit",
-                }}
-              >
-                Sales {getSortIndicator("salesName")}
-              </th>
-              <th>Order Ref</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td>
-                  <div className="d-flex justify-content-center gap-2">
-                    <Button
-                      variant="edit"
-                      iconOnly
-                      size="sm"
-                      onClick={() =>
-                        navigate(`/dashboard/orders/edit/${order.id}`)
-                      }
-                    />
-                  </div>
-                </td>
-                <td>
-                  {order.id}
-                  {order.revision && `-${order.revision}`}
-                </td>
-                <td
-                  className="client-cell"
-                  onClick={(e) => {
-                    if (clientFilterRef.current) {
-                      clientFilterRef.current.toggleFilterMenu(e);
-                    }
+        {/* Loading indicator */}
+        {loading && (
+          <div className="text-center my-3">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        )}
+
+        <div className="table-responsive">
+          <SalesFilter
+            ref={salesFilterRef}
+            salesEmployees={salesEmployees}
+            selectedSales={selectedSales}
+            setSelectedSales={setSelectedSales}
+            onFilterUpdate={({ isFilterActive }) =>
+              setHasSalesFilter(isFilterActive)
+            }
+          />
+          <ClientFilter
+            ref={clientFilterRef}
+            clientList={clientList}
+            selectedClients={selectedClients}
+            setSelectedClients={setSelectedClients}
+            onFilterUpdate={({ isFilterActive }) =>
+              setHasClientFilter(isFilterActive)
+            }
+          />
+          <table className="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th
+                  onClick={() => handleSort("id")}
+                  style={{ cursor: "pointer" }}
+                  role="columnheader"
+                  aria-sort={
+                    sortConfig.key === "id" ? sortConfig.direction : "none"
+                  }
+                >
+                  Order ID {getSortIndicator("id")}
+                </th>
+                <th
+                  onClick={() => handleSort("clientName")}
+                  style={{
+                    cursor: "pointer",
+                    color: hasClientFilter ? "#0d6efd" : "inherit",
                   }}
+                >
+                  Client {getSortIndicator("clientName")}
+                </th>
+                <th>Project Name</th>
+                <th>Ordered By</th>
+                {/* <th>Order Date</th> */}
+                <th>Due Date</th>
+                <th>Due Time</th>
+                <th
+                  onClick={() => handleSort("status")}
                   style={{ cursor: "pointer" }}
                 >
-                  {order.clientName}
-                </td>
-                <td>{order.projectName}</td>
-                <td>{order.orderedBy}</td>
-                {/* <td>
+                  Status {getSortIndicator("status")}
+                </th>
+                <th
+                  onClick={() => handleSort("drnum")}
+                  style={{ cursor: "pointer" }}
+                >
+                  DR# {getSortIndicator("drnum")}
+                </th>
+                <th
+                  onClick={() => handleSort("invnum")}
+                  style={{ cursor: "pointer" }}
+                >
+                  INV# {getSortIndicator("invnum")}
+                </th>
+                <th>Grand Total</th>
+                <th
+                  onClick={() => handleSort("ornum")}
+                  style={{ cursor: "pointer" }}
+                >
+                  OR# {getSortIndicator("ornum")}
+                </th>
+                <th>Amount Paid</th>
+                <th>Date Paid</th>
+                <th
+                  onClick={() => handleSort("salesName")}
+                  style={{
+                    cursor: "pointer",
+                    color: hasSalesFilter ? "#0d6efd" : "inherit",
+                  }}
+                >
+                  Sales {getSortIndicator("salesName")}
+                </th>
+                <th>Order Ref</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => (
+                <tr key={order.id}>
+                  <td>
+                    <div className="d-flex justify-content-center gap-2">
+                      <Button
+                        variant="edit"
+                        iconOnly
+                        size="sm"
+                        onClick={() =>
+                          navigate(`/dashboard/orders/edit/${order.id}`)
+                        }
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    {order.id}
+                    {order.revision > 0 && `-${order.revision}`}
+                  </td>
+                  <td
+                    className="client-cell"
+                    onClick={(e) => {
+                      if (clientFilterRef.current) {
+                        clientFilterRef.current.toggleFilterMenu(e);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {order.clientName}
+                  </td>
+                  <td>{order.projectName}</td>
+                  <td>{order.orderedBy}</td>
+                  {/* <td>
                   {order.orderDate
                     ? new Date(order.orderDate).toLocaleDateString()
                     : ""}
                 </td> */}
-                <td>
-                  {order.dueDate
-                    ? new Date(order.dueDate).toLocaleDateString()
-                    : ""}
-                </td>
-                <td>{order.dueTime || ""}</td>
-                <td>
-                  <span className={`status-badge ${order.status}`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td>{order.drnum || ""}</td>
-                <td>{order.invnum || ""}</td>
-                <td className="number_right">
-                  {order.grandTotal
-                    ? `₱${order.grandTotal.toLocaleString()}`
-                    : ""}
-                </td>
-                <td>{order.ornum || ""}</td>
-                <td>
-                  {order.amountPaid
-                    ? `₱${order.amountPaid.toLocaleString()}`
-                    : ""}
-                </td>
-                <td>
-                  {order.datePaid
-                    ? new Date(order.datePaid).toLocaleDateString()
-                    : ""}
-                </td>
-                <td
-                  className="sales-cell"
-                  onClick={(e) => {
-                    if (salesFilterRef.current) {
-                      salesFilterRef.current.toggleFilterMenu(e);
-                    }
-                  }}
-                  style={{ cursor: "pointer" }}
-                >
-                  {order.salesName}
-                </td>
-                <td>{order.orderReference}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  <td>
+                    {order.dueDate
+                      ? new Date(order.dueDate).toLocaleDateString()
+                      : ""}
+                  </td>
+                  <td>{order.dueTime || ""}</td>
+                  <td>
+                    <span className={`status-badge ${order.status}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td>{order.drnum || ""}</td>
+                  <td>{order.invnum || ""}</td>
+                  <td className="number_right">
+                    {order.grandTotal
+                      ? `₱${order.grandTotal.toLocaleString()}`
+                      : ""}
+                  </td>
+                  <td>{order.ornum || ""}</td>
+                  <td>
+                    {order.amountPaid
+                      ? `₱${order.amountPaid.toLocaleString()}`
+                      : ""}
+                  </td>
+                  <td>
+                    {order.datePaid
+                      ? new Date(order.datePaid).toLocaleDateString()
+                      : ""}
+                  </td>
+                  <td
+                    className="sales-cell"
+                    onClick={(e) => {
+                      if (salesFilterRef.current) {
+                        salesFilterRef.current.toggleFilterMenu(e);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {order.salesName}
+                  </td>
+                  <td>{order.orderReference}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Pagination and Filters Section */}
-      <div className="d-flex justify-content-between align-items-start mt-3">
-        <DisplayPage
-          recordsPerPage={recordsPerPage}
-          setRecordsPerPage={setRecordsPerPage}
-          currentPage={currentPage}
-          totalCount={totalCount}
-          setCurrentPage={setCurrentPage}
-          selectProps={{
-            id: "ordersPerPage",
-            name: "ordersPerPage",
-            "aria-label": "Number of orders per page",
+        {/* Pagination and Filters Section */}
+        <div className="d-flex justify-content-between align-items-start mt-3">
+          <DisplayPage
+            recordsPerPage={recordsPerPage}
+            setRecordsPerPage={setRecordsPerPage}
+            currentPage={currentPage}
+            totalCount={totalCount}
+            setCurrentPage={setCurrentPage}
+            selectProps={{
+              id: "ordersPerPage",
+              name: "ordersPerPage",
+              "aria-label": "Number of orders per page",
+            }}
+          />
+
+          <StatusBadges
+            statusOptions={statusOptions}
+            onStatusChange={handleStatusChange}
+            showProdFilter={true}
+            isDisabled={false}
+          />
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+
+        <ModalAlert
+          show={alert.show}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+          onConfirm={() => {
+            if (alert.onConfirm) {
+              alert.onConfirm();
+            }
+            setAlert((prev) => ({ ...prev, show: false }));
           }}
         />
-
-        <StatusBadges
-          statusOptions={statusOptions}
-          onStatusChange={handleStatusChange}
-          showProdFilter={true}
-          isDisabled={false}
-        />
-
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
       </div>
-
-      <ModalAlert
-        show={alert.show}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
-        onConfirm={() => {
-          if (alert.onConfirm) {
-            alert.onConfirm();
-          }
-          setAlert((prev) => ({ ...prev, show: false }));
-        }}
-      />
     </div>
   );
 }

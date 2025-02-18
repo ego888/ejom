@@ -23,6 +23,7 @@ import Input from "./UI/Input";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
+import StatusDropdown from "./UI/StatusDropdown";
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -114,6 +115,20 @@ function AddOrder() {
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminOverride, setAdminOverride] = useState(false);
+
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+
+  const statusOptions = [
+    "Open",
+    "Printed",
+    "Prod",
+    "Finished",
+    "Delivered",
+    "Billed",
+    "Closed",
+    "Cancel",
+  ];
 
   const canEdit = () => {
     if (adminOverride && isAdmin) return true;
@@ -1299,1314 +1314,1402 @@ function AddOrder() {
     }
   };
 
+  const handleStatusRightClick = (e) => {
+    e.preventDefault(); // Prevent default context menu
+    if (canEdit() && adminOverride) {
+      // Get the clicked element's position
+      const rect = e.currentTarget.getBoundingClientRect();
+      // Position the dropdown below and to the right of the status badge
+      setDropdownPosition({
+        x: rect.left,
+        y: rect.bottom + window.scrollY,
+      });
+      setShowStatusDropdown(true);
+    }
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    // Exit if status hasn't changed
+    if (newStatus === data.status) {
+      setShowStatusDropdown(false);
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `${ServerIP}/auth/admin-status-update`,
+        {
+          orderId: id,
+          newStatus,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      if (response.data.Status) {
+        setData((prev) => ({
+          ...prev,
+          status: newStatus,
+        }));
+        setAlert({
+          show: true,
+          title: "Success",
+          message: "Status updated successfully",
+          type: "alert",
+        });
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error,
+          type: "error",
+        });
+      }
+    } catch (error) {
+      handleApiError(error, setAlert);
+    } finally {
+      setShowStatusDropdown(false);
+    }
+  };
+
   return (
-    <div className="px-4 mt-3">
-      <div className="p-3 rounded border">
-        <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
-          <div className="d-flex align-items-center gap-3">
-            <h3 className="m-0">
-              {id ? `Edit Order #${data.orderId}` : "Add New Order"}
-              {data.revision && (
-                <span className="text-muted ms-2">Rev.{data.revision}</span>
+    <div className="orders-page-background">
+      <div className="px-4 mt-3">
+        <div className="p-3 rounded border">
+          <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-3">
+              <h3 className="m-0">
+                {id ? `Edit Order #${data.orderId}` : "Add New Order"}
+                {data.revision > 0 && (
+                  <span className="text-muted ms-2">Rev.{data.revision}</span>
+                )}
+              </h3>
+              {isAdmin && (
+                <div className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="adminOverride"
+                    checked={adminOverride}
+                    onChange={(e) => setAdminOverride(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="adminOverride">
+                    Admin Edit Override
+                  </label>
+                </div>
               )}
-            </h3>
-            {isAdmin && (
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id="adminOverride"
-                  checked={adminOverride}
-                  onChange={(e) => setAdminOverride(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="adminOverride">
-                  Admin Edit Override
-                </label>
-              </div>
-            )}
-          </div>
-          <div className="d-flex gap-2">
-            {isHeaderSaved && (
-              <>
-                {data.status === "Printed" && (
-                  <Button
-                    variant="edit"
-                    onClick={handleReviseOrder}
-                    className="ms-2"
-                  >
-                    Revise
-                  </Button>
-                )}
-                <Button variant="save" onClick={handleReOrder}>
-                  Reorder
-                </Button>{" "}
-                <Button variant="print" onClick={handlePrintOrder}>
-                  Print JO
-                </Button>
-              </>
-            )}
-            <Button variant="save" onClick={handleSubmit}>
-              {isHeaderSaved ? "Finish Edit" : "Save Order"}
-            </Button>
-            <Button
-              variant="cancel"
-              onClick={() => navigate("/dashboard/orders")}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-
-        <div className="d-flex">
-          <form
-            className="row g-1 flex-grow-1"
-            onSubmit={handleSubmit}
-            style={{ marginTop: "-0.8rem" }}
-          >
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="order-date" className="form-label">
-                  Order Date
-                </label>
-                <input
-                  id="order-date"
-                  type="date"
-                  className="form-control rounded-0"
-                  value={data.orderDate || ""}
-                  onChange={(e) =>
-                    setData({ ...data, orderDate: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
             </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="prepared-by" className="form-label">
-                  Prepared By
-                </label>
-                <Dropdown
-                  id="prepared-by"
-                  variant="form"
-                  value={data.preparedBy}
-                  onChange={(e) =>
-                    setData({ ...data, preparedBy: e.target.value })
-                  }
-                  options={salesEmployees}
-                  disabled={!isEditMode || !canEdit()}
-                  placeholder=""
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="terms"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Terms
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="terms"
-                  style={inputStyle}
-                  value={data.terms || ""}
-                  readOnly
-                />
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="clientId"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Client <span className="text-danger">*</span>
-                </label>
-                <Dropdown
-                  variant="form"
-                  id="clientId"
-                  value={data.clientId || ""}
-                  onChange={(e) => handleClientChange(e.target.value)}
-                  options={clients}
-                  disabled={!isEditMode || !canEdit()}
-                  error={error.clientId}
-                  required
-                  placeholder=""
-                  labelKey="clientName"
-                />
-                {error.clientId && (
-                  <div className="invalid-feedback">Client is required</div>
-                )}
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="projectName"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Project Name <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  className={`form-control rounded-0 ${
-                    error.projectName ? "is-invalid" : ""
-                  }`}
-                  id="projectName"
-                  style={inputStyle}
-                  value={data.projectName}
-                  onChange={(e) =>
-                    setData({ ...data, projectName: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-                {error.projectName && (
-                  <div className="invalid-feedback">
-                    Project Name is required
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="orderedBy"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Ordered By
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="orderedBy"
-                  style={inputStyle}
-                  value={data.orderedBy || ""}
-                  onChange={(e) =>
-                    setData({ ...data, orderedBy: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="orderReference"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Order Reference
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="orderReference"
-                  style={inputStyle}
-                  value={data.orderReference || ""}
-                  onChange={(e) =>
-                    setData({ ...data, orderReference: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="cellNumber"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Cell Number
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="cellNumber"
-                  style={inputStyle}
-                  value={data.cellNumber || ""}
-                  onChange={(e) =>
-                    setData({ ...data, cellNumber: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="dueDate"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  className="form-control rounded-0"
-                  id="dueDate"
-                  style={dateTimeStyle}
-                  value={data.dueDate || ""}
-                  onChange={(e) =>
-                    setData({ ...data, dueDate: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="dueTime"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Due Time
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="dueTime"
-                  style={inputStyle}
-                  value={data.dueTime || ""}
-                  onChange={(e) =>
-                    setData({ ...data, dueTime: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="graphicsBy"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Graphics By <span className="text-danger">*</span>
-                </label>
-                <Dropdown
-                  variant="form"
-                  id="graphicsBy"
-                  value={data.graphicsBy}
-                  onChange={(e) =>
-                    setData({ ...data, graphicsBy: e.target.value })
-                  }
-                  options={artists}
-                  disabled={!isEditMode || !canEdit()}
-                  error={error.graphicsBy}
-                  required
-                  placeholder=""
-                />
-                {error.graphicsBy && (
-                  <div className="invalid-feedback">
-                    Graphics By is required
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="specialInst"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Special Instructions
-                </label>
-                <textarea
-                  className="form-control rounded-0"
-                  id="specialInst"
-                  style={inputStyle}
-                  value={data.specialInst || ""}
-                  onChange={(e) =>
-                    setData({ ...data, specialInst: e.target.value })
-                  }
-                  rows="3"
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="deliveryInst"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Delivery Instructions
-                </label>
-                <textarea
-                  className="form-control rounded-0"
-                  id="deliveryInst"
-                  style={inputStyle}
-                  value={data.deliveryInst || ""}
-                  onChange={(e) =>
-                    setData({ ...data, deliveryInst: e.target.value })
-                  }
-                  rows="3"
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-12 mt-2 d-flex">
-              <div className="form-check form-check-inline d-flex align-items-center">
-                <input
-                  type="checkbox"
-                  className="form-check-input me-2"
-                  id="sample"
-                  checked={data.sample}
-                  onChange={(e) =>
-                    setData({ ...data, sample: e.target.checked })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-                <label
-                  className="form-label mb-0"
-                  style={labelStyle}
-                  htmlFor="sample"
-                >
-                  Sample
-                </label>
-              </div>
-              <div className="form-check form-check-inline d-flex align-items-center">
-                <input
-                  type="checkbox"
-                  className="form-check-input me-2"
-                  id="reprint"
-                  checked={data.reprint}
-                  onChange={(e) =>
-                    setData({ ...data, reprint: e.target.checked })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-                <label
-                  className="form-label mb-0"
-                  style={labelStyle}
-                  htmlFor="reprint"
-                >
-                  Reprint
-                </label>
-              </div>
-            </div>
-          </form>
-
-          <div className="right-panel">
-            <div className="right-panel-content">
-              <div className="info-group">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div className="info-label mb-0">Status:</div>
-                  <span className={`status-badge ${data.status || "default"}`}>
-                    {data.status || "N/A"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Edited By</div>
-                <div className="info-value">{data.editedBy || "-"}</div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Last Edited</div>
-                <div className="info-value">
-                  {data.lastEdited
-                    ? new Date(data.lastEdited)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : "-"}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Total Hours</div>
-                <div className="info-value">
-                  {formatNumber(data.totalHrs) || "-"}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Production Date</div>
-                <div className="info-value">
-                  {data.productionDate
-                    ? new Date(data.productionDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : "-"}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Ready Date</div>
-                <div className="info-value">
-                  {data.readyDate
-                    ? new Date(data.readyDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : "-"}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Delivery Date</div>
-                <div className="info-value">
-                  {data.deliveryDate
-                    ? new Date(data.deliveryDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : "-"}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Bill Date</div>
-                <div className="info-value">
-                  {data.billDate
-                    ? new Date(data.billDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : "-"}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {isHeaderSaved && (
-          <div className="mt-4">
-            <h5>Order Details List</h5>
-            <table className="order-table table table-striped">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th className="text-center">Qty</th>
-                  <th className="text-center">Width</th>
-                  <th className="text-center">Height</th>
-                  <th>Unit</th>
-                  <th>Material</th>
-                  <th className="text-end">Per Sq Ft</th>
-                  <th className="text-end">Price</th>
-                  <th className="text-end">Disc%</th>
-                  <th className="text-end">Amount</th>
-                  <th>Description</th>
-                  <th>JO Remarks</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderDetails.map((detail, index) => {
-                  const uniqueId = `${detail.orderId}_${detail.displayOrder}`;
-                  return (
-                    <tr
-                      key={uniqueId}
-                      className={detail.noPrint === 1 ? "no-print" : ""}
-                      data-toggleable="true"
-                      onDoubleClick={() =>
-                        handleNoPrintToggle(
-                          detail.orderId,
-                          detail.displayOrder,
-                          detail.noPrint
-                        )
-                      }
+            <div className="d-flex gap-2">
+              {isHeaderSaved && (
+                <>
+                  {data.status === "Printed" && (
+                    <Button
+                      variant="edit"
+                      onClick={handleReviseOrder}
+                      className="ms-2"
                     >
-                      {editingRowId === uniqueId ? (
-                        <>
-                          <td style={{ width: "40px" }}>
-                            {detail.displayOrder}
-                          </td>
-                          <td style={{ width: "60px" }}>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm quantity-input"
-                              value={
-                                editedValues[uniqueId]?.quantity
-                                  ? Number(
-                                      editedValues[uniqueId].quantity
-                                    ).toLocaleString()
-                                  : detail.quantity.toLocaleString()
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/,/g, "");
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "quantity",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              className="form-control form-control-sm dimension-input"
-                              value={
-                                editedValues[uniqueId]?.width || detail.width
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "width",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              className="form-control form-control-sm dimension-input"
-                              value={
-                                editedValues[uniqueId]?.height || detail.height
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "height",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </td>
-                          <td>
-                            <Dropdown
-                              variant="table"
-                              value={
-                                editedValues[uniqueId]?.unit ||
-                                detail.unit ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "unit",
-                                  e.target.value
-                                )
-                              }
-                              options={units}
-                              placeholder="Unit"
-                              labelKey="unit"
-                              valueKey="unit"
-                            />
-                          </td>
-                          <td>
-                            <Dropdown
-                              variant="table"
-                              value={
-                                editedValues[uniqueId]?.material ||
-                                detail.material ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "material",
-                                  e.target.value
-                                )
-                              }
-                              options={materials}
-                              placeholder="Material"
-                              labelKey="Material"
-                              valueKey="Material"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm persqft-input"
-                              value={
-                                editedValues[uniqueId]?.perSqFt
-                                  ? editingRowId === uniqueId
-                                    ? editedValues[uniqueId].perSqFt
-                                    : Number(
-                                        editedValues[uniqueId].perSqFt
-                                      ).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })
-                                  : Number(detail.perSqFt).toLocaleString(
-                                      undefined,
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      }
-                                    )
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[^\d.-]/g,
-                                  ""
-                                );
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "perSqFt",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm price-input"
-                              value={
-                                editedValues[uniqueId]?.unitPrice
-                                  ? editingRowId === uniqueId
-                                    ? editedValues[uniqueId].unitPrice
-                                    : Number(
-                                        editedValues[uniqueId].unitPrice
-                                      ).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })
-                                  : Number(detail.unitPrice).toLocaleString(
-                                      undefined,
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      }
-                                    )
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[^\d.-]/g,
-                                  ""
-                                );
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "unitPrice",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className="form-control form-control-sm discount-input"
-                              value={
-                                editedValues[uniqueId]?.discount
-                                  ? editingRowId === uniqueId
-                                    ? editedValues[uniqueId].discount
-                                    : Number(
-                                        editedValues[uniqueId].discount
-                                      ).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })
-                                  : Number(detail.discount).toLocaleString(
-                                      undefined,
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      }
-                                    )
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[^\d.-]/g,
-                                  ""
-                                );
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    uniqueId,
-                                    "discount",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
-                          <td className="numeric-cell">
-                            {formatNumber(
-                              editedValues[uniqueId]?.amount || detail.amount
-                            )}
-                          </td>
-                          <td>
-                            <textarea
-                              className="form-control form-control-sm description-input"
-                              value={
-                                editedValues[uniqueId]?.itemDescription ||
-                                detail.itemDescription
-                              }
-                              onChange={(e) => {
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "itemDescription",
-                                  e.target.value
-                                );
-                                e.target.style.height = "31px";
-                                e.target.style.height =
-                                  e.target.scrollHeight + "px";
-                              }}
-                              rows="1"
-                            />
-                          </td>
-                          <td>
-                            <textarea
-                              className="form-control form-control-sm remarks-input"
-                              value={
-                                editedValues[uniqueId]?.remarks ||
-                                detail.remarks
-                              }
-                              onChange={(e) => {
-                                handleDetailInputChange(
-                                  uniqueId,
-                                  "remarks",
-                                  e.target.value
-                                );
-                                e.target.style.height = "31px";
-                                e.target.style.height =
-                                  e.target.scrollHeight + "px";
-                              }}
-                              rows="1"
-                            />
-                          </td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <Button
-                                variant="view"
-                                iconOnly
-                                size="sm"
-                                icon={<BiRectangle size={14} />}
-                                onClick={() => {
-                                  setShowAllowanceTooltip(false);
-                                  setCurrentDetailId(uniqueId);
-                                  setAllowanceValues({
-                                    top: detail.top || 0,
-                                    bottom: detail.bottom || 0,
-                                    left: detail.allowanceLeft || 0,
-                                    right: detail.allowanceRight || 0,
-                                  });
-                                  setShowAllowanceModal(true);
-                                }}
-                              />
-                              <Button
-                                variant="save"
-                                iconOnly
-                                size="sm"
-                                onClick={() => handleSaveDetail(uniqueId)}
-                              />
-                              <Button
-                                variant="cancel"
-                                iconOnly
-                                size="sm"
-                                onClick={() => {
-                                  setEditingRowId(null);
-                                  setEditedValues({});
-                                  setEditErrors({});
-                                }}
-                              />
-                            </div>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td>
-                            {editingDisplayOrder ===
-                            `${detail.orderId}_${detail.displayOrder}` ? (
+                      Revise
+                    </Button>
+                  )}
+                  <Button variant="save" onClick={handleReOrder}>
+                    Reorder
+                  </Button>{" "}
+                  <Button variant="print" onClick={handlePrintOrder}>
+                    Print JO
+                  </Button>
+                </>
+              )}
+              <Button variant="save" onClick={handleSubmit}>
+                {isHeaderSaved ? "Finish Edit" : "Save Order"}
+              </Button>
+              <Button
+                variant="cancel"
+                onClick={() => navigate("/dashboard/orders")}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+
+          <div className="d-flex">
+            <form
+              className="row g-1 flex-grow-1"
+              onSubmit={handleSubmit}
+              style={{ marginTop: "-0.8rem" }}
+            >
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="order-date" className="form-label">
+                    Order Date
+                  </label>
+                  <input
+                    id="order-date"
+                    type="date"
+                    className="form-control rounded-0"
+                    value={data.orderDate || ""}
+                    onChange={(e) =>
+                      setData({ ...data, orderDate: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="prepared-by" className="form-label">
+                    Prepared By
+                  </label>
+                  <Dropdown
+                    id="prepared-by"
+                    variant="form"
+                    value={data.preparedBy}
+                    onChange={(e) =>
+                      setData({ ...data, preparedBy: e.target.value })
+                    }
+                    options={salesEmployees}
+                    disabled={!isEditMode || !canEdit()}
+                    placeholder=""
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="terms"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Terms
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="terms"
+                    style={inputStyle}
+                    value={data.terms || ""}
+                    readOnly
+                  />
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="clientId"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Client <span className="text-danger">*</span>
+                  </label>
+                  <Dropdown
+                    variant="form"
+                    id="clientId"
+                    value={data.clientId || ""}
+                    onChange={(e) => handleClientChange(e.target.value)}
+                    options={clients}
+                    disabled={!isEditMode || !canEdit()}
+                    error={error.clientId}
+                    required
+                    placeholder=""
+                    labelKey="clientName"
+                  />
+                  {error.clientId && (
+                    <div className="invalid-feedback">Client is required</div>
+                  )}
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="projectName"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Project Name <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`form-control rounded-0 ${
+                      error.projectName ? "is-invalid" : ""
+                    }`}
+                    id="projectName"
+                    style={inputStyle}
+                    value={data.projectName}
+                    onChange={(e) =>
+                      setData({ ...data, projectName: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                  {error.projectName && (
+                    <div className="invalid-feedback">
+                      Project Name is required
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="orderedBy"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Ordered By
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="orderedBy"
+                    style={inputStyle}
+                    value={data.orderedBy || ""}
+                    onChange={(e) =>
+                      setData({ ...data, orderedBy: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="orderReference"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Order Reference
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="orderReference"
+                    style={inputStyle}
+                    value={data.orderReference || ""}
+                    onChange={(e) =>
+                      setData({ ...data, orderReference: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="cellNumber"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Cell Number
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="cellNumber"
+                    style={inputStyle}
+                    value={data.cellNumber || ""}
+                    onChange={(e) =>
+                      setData({ ...data, cellNumber: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="dueDate"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    className="form-control rounded-0"
+                    id="dueDate"
+                    style={dateTimeStyle}
+                    value={data.dueDate || ""}
+                    onChange={(e) =>
+                      setData({ ...data, dueDate: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="dueTime"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Due Time
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="dueTime"
+                    style={inputStyle}
+                    value={data.dueTime || ""}
+                    onChange={(e) =>
+                      setData({ ...data, dueTime: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="graphicsBy"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Graphics By <span className="text-danger">*</span>
+                  </label>
+                  <Dropdown
+                    variant="form"
+                    id="graphicsBy"
+                    value={data.graphicsBy}
+                    onChange={(e) =>
+                      setData({ ...data, graphicsBy: e.target.value })
+                    }
+                    options={artists}
+                    disabled={!isEditMode || !canEdit()}
+                    error={error.graphicsBy}
+                    required
+                    placeholder=""
+                  />
+                  {error.graphicsBy && (
+                    <div className="invalid-feedback">
+                      Graphics By is required
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="specialInst"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Special Instructions
+                  </label>
+                  <textarea
+                    className="form-control rounded-0"
+                    id="specialInst"
+                    style={inputStyle}
+                    value={data.specialInst || ""}
+                    onChange={(e) =>
+                      setData({ ...data, specialInst: e.target.value })
+                    }
+                    rows="3"
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="deliveryInst"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Delivery Instructions
+                  </label>
+                  <textarea
+                    className="form-control rounded-0"
+                    id="deliveryInst"
+                    style={inputStyle}
+                    value={data.deliveryInst || ""}
+                    onChange={(e) =>
+                      setData({ ...data, deliveryInst: e.target.value })
+                    }
+                    rows="3"
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-12 mt-2 d-flex">
+                <div className="form-check form-check-inline d-flex align-items-center">
+                  <input
+                    type="checkbox"
+                    className="form-check-input me-2"
+                    id="sample"
+                    checked={data.sample}
+                    onChange={(e) =>
+                      setData({ ...data, sample: e.target.checked })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                  <label
+                    className="form-label mb-0"
+                    style={labelStyle}
+                    htmlFor="sample"
+                  >
+                    Sample
+                  </label>
+                </div>
+                <div className="form-check form-check-inline d-flex align-items-center">
+                  <input
+                    type="checkbox"
+                    className="form-check-input me-2"
+                    id="reprint"
+                    checked={data.reprint}
+                    onChange={(e) =>
+                      setData({ ...data, reprint: e.target.checked })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                  <label
+                    className="form-label mb-0"
+                    style={labelStyle}
+                    htmlFor="reprint"
+                  >
+                    Reprint
+                  </label>
+                </div>
+              </div>
+            </form>
+
+            <div className="right-panel">
+              <div className="right-panel-content">
+                <div className="info-group">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="info-label mb-0">Status:</div>
+                    <span
+                      className={`status-badge ${data.status || "default"}`}
+                      style={{
+                        cursor:
+                          canEdit() && adminOverride
+                            ? "context-menu"
+                            : "default",
+                      }}
+                      onContextMenu={handleStatusRightClick}
+                    >
+                      {data.status || "N/A"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Edited By</div>
+                  <div className="info-value">{data.editedBy || "-"}</div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Last Edited</div>
+                  <div className="info-value">
+                    {data.lastEdited
+                      ? new Date(data.lastEdited)
+                          .toLocaleString("en-CA", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                          .replace(",", "")
+                      : "-"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Total Hours</div>
+                  <div className="info-value">
+                    {formatNumber(data.totalHrs) || "-"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Production Date</div>
+                  <div className="info-value">
+                    {data.productionDate
+                      ? new Date(data.productionDate)
+                          .toLocaleString("en-CA", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                          .replace(",", "")
+                      : "-"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Ready Date</div>
+                  <div className="info-value">
+                    {data.readyDate
+                      ? new Date(data.readyDate)
+                          .toLocaleString("en-CA", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                          .replace(",", "")
+                      : "-"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Delivery Date</div>
+                  <div className="info-value">
+                    {data.deliveryDate
+                      ? new Date(data.deliveryDate)
+                          .toLocaleString("en-CA", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                          .replace(",", "")
+                      : "-"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Bill Date</div>
+                  <div className="info-value">
+                    {data.billDate
+                      ? new Date(data.billDate)
+                          .toLocaleString("en-CA", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                          .replace(",", "")
+                      : "-"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {isHeaderSaved && (
+            <div className="mt-4">
+              <h5>Order Details List</h5>
+              <table className="order-table table table-striped">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th className="text-center">Qty</th>
+                    <th className="text-center">Width</th>
+                    <th className="text-center">Height</th>
+                    <th>Unit</th>
+                    <th>Material</th>
+                    <th className="text-end">Per Sq Ft</th>
+                    <th className="text-end">Price</th>
+                    <th className="text-end">Disc%</th>
+                    <th className="text-end">Amount</th>
+                    <th>Description</th>
+                    <th>JO Remarks</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderDetails.map((detail, index) => {
+                    const uniqueId = `${detail.orderId}_${detail.displayOrder}`;
+                    return (
+                      <tr
+                        key={uniqueId}
+                        className={detail.noPrint === 1 ? "no-print" : ""}
+                        data-toggleable="true"
+                        onDoubleClick={() =>
+                          handleNoPrintToggle(
+                            detail.orderId,
+                            detail.displayOrder,
+                            detail.noPrint
+                          )
+                        }
+                      >
+                        {editingRowId === uniqueId ? (
+                          <>
+                            <td style={{ width: "40px" }}>
+                              {detail.displayOrder}
+                            </td>
+                            <td style={{ width: "60px" }}>
                               <input
-                                type="number"
-                                className="form-control form-control-sm display-order-input"
-                                value={tempDisplayOrder || ""}
+                                type="text"
+                                className="form-control form-control-sm quantity-input"
+                                value={
+                                  editedValues[uniqueId]?.quantity
+                                    ? Number(
+                                        editedValues[uniqueId].quantity
+                                      ).toLocaleString()
+                                    : detail.quantity.toLocaleString()
+                                }
                                 onChange={(e) => {
                                   const value = e.target.value.replace(
-                                    /[^0-9]/g,
+                                    /,/g,
                                     ""
                                   );
-                                  setTempDisplayOrder(value);
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "quantity",
+                                      value
+                                    );
+                                  }
                                 }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === "Tab") {
-                                    e.preventDefault();
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm dimension-input"
+                                value={
+                                  editedValues[uniqueId]?.width || detail.width
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "width",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm dimension-input"
+                                value={
+                                  editedValues[uniqueId]?.height ||
+                                  detail.height
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "height",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                            <td>
+                              <Dropdown
+                                variant="table"
+                                value={
+                                  editedValues[uniqueId]?.unit ||
+                                  detail.unit ||
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "unit",
+                                    e.target.value
+                                  )
+                                }
+                                options={units}
+                                placeholder="Unit"
+                                labelKey="unit"
+                                valueKey="unit"
+                              />
+                            </td>
+                            <td>
+                              <Dropdown
+                                variant="table"
+                                value={
+                                  editedValues[uniqueId]?.material ||
+                                  detail.material ||
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "material",
+                                    e.target.value
+                                  )
+                                }
+                                options={materials}
+                                placeholder="Material"
+                                labelKey="Material"
+                                valueKey="Material"
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm persqft-input"
+                                value={
+                                  editedValues[uniqueId]?.perSqFt
+                                    ? editingRowId === uniqueId
+                                      ? editedValues[uniqueId].perSqFt
+                                      : Number(
+                                          editedValues[uniqueId].perSqFt
+                                        ).toLocaleString(undefined, {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })
+                                    : Number(detail.perSqFt).toLocaleString(
+                                        undefined,
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "perSqFt",
+                                      value
+                                    );
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm price-input"
+                                value={
+                                  editedValues[uniqueId]?.unitPrice
+                                    ? editingRowId === uniqueId
+                                      ? editedValues[uniqueId].unitPrice
+                                      : Number(
+                                          editedValues[uniqueId].unitPrice
+                                        ).toLocaleString(undefined, {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })
+                                    : Number(detail.unitPrice).toLocaleString(
+                                        undefined,
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "unitPrice",
+                                      value
+                                    );
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm discount-input"
+                                value={
+                                  editedValues[uniqueId]?.discount
+                                    ? editingRowId === uniqueId
+                                      ? editedValues[uniqueId].discount
+                                      : Number(
+                                          editedValues[uniqueId].discount
+                                        ).toLocaleString(undefined, {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })
+                                    : Number(detail.discount).toLocaleString(
+                                        undefined,
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "discount",
+                                      value
+                                    );
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td className="numeric-cell">
+                              {formatNumber(
+                                editedValues[uniqueId]?.amount || detail.amount
+                              )}
+                            </td>
+                            <td>
+                              <textarea
+                                className="form-control form-control-sm description-input"
+                                value={
+                                  editedValues[uniqueId]?.itemDescription ||
+                                  detail.itemDescription
+                                }
+                                onChange={(e) => {
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "itemDescription",
+                                    e.target.value
+                                  );
+                                  e.target.style.height = "31px";
+                                  e.target.style.height =
+                                    e.target.scrollHeight + "px";
+                                }}
+                                rows="1"
+                              />
+                            </td>
+                            <td>
+                              <textarea
+                                className="form-control form-control-sm remarks-input"
+                                value={
+                                  editedValues[uniqueId]?.remarks ||
+                                  detail.remarks
+                                }
+                                onChange={(e) => {
+                                  handleDetailInputChange(
+                                    uniqueId,
+                                    "remarks",
+                                    e.target.value
+                                  );
+                                  e.target.style.height = "31px";
+                                  e.target.style.height =
+                                    e.target.scrollHeight + "px";
+                                }}
+                                rows="1"
+                              />
+                            </td>
+                            <td>
+                              <div className="d-flex gap-1">
+                                <Button
+                                  variant="view"
+                                  iconOnly
+                                  size="sm"
+                                  icon={<BiRectangle size={14} />}
+                                  onClick={() => {
+                                    setShowAllowanceTooltip(false);
+                                    setCurrentDetailId(uniqueId);
+                                    setAllowanceValues({
+                                      top: detail.top || 0,
+                                      bottom: detail.bottom || 0,
+                                      left: detail.allowanceLeft || 0,
+                                      right: detail.allowanceRight || 0,
+                                    });
+                                    setShowAllowanceModal(true);
+                                  }}
+                                />
+                                <Button
+                                  variant="save"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => handleSaveDetail(uniqueId)}
+                                />
+                                <Button
+                                  variant="cancel"
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingRowId(null);
+                                    setEditedValues({});
+                                    setEditErrors({});
+                                  }}
+                                />
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td>
+                              {editingDisplayOrder ===
+                              `${detail.orderId}_${detail.displayOrder}` ? (
+                                <input
+                                  type="number"
+                                  className="form-control form-control-sm display-order-input"
+                                  value={tempDisplayOrder || ""}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(
+                                      /[^0-9]/g,
+                                      ""
+                                    );
+                                    setTempDisplayOrder(value);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === "Tab") {
+                                      e.preventDefault();
+                                      handleDisplayOrderUpdate(
+                                        detail,
+                                        tempDisplayOrder
+                                      );
+                                    }
+                                  }}
+                                  onBlur={() => {
                                     handleDisplayOrderUpdate(
                                       detail,
                                       tempDisplayOrder
                                     );
+                                  }}
+                                  autoFocus
+                                  min="1"
+                                  step="1"
+                                />
+                              ) : (
+                                <span
+                                  className="display-order-text"
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingDisplayOrder(
+                                      `${detail.orderId}_${detail.displayOrder}`
+                                    );
+                                    setTempDisplayOrder(detail.displayOrder);
+                                  }}
+                                >
+                                  {detail.displayOrder}
+                                </span>
+                              )}
+                            </td>
+                            <td className="centered-cell">
+                              {Number(detail.quantity).toLocaleString()}
+                            </td>
+                            <td className="centered-cell">{detail.width}</td>
+                            <td className="centered-cell">{detail.height}</td>
+                            <td className="centered-cell">{detail.unit}</td>
+                            <td className="centered-cell">{detail.material}</td>
+                            <td className="centered-cell">{detail.perSqFt}</td>
+                            <td className="numeric-cell">
+                              {formatNumber(detail.unitPrice)}
+                            </td>
+                            <td className="numeric-cell">
+                              {formatNumber(detail.discount)}
+                            </td>
+                            <td className="numeric-cell">
+                              {formatNumber(detail.amount)}
+                            </td>
+                            <td>{detail.itemDescription}</td>
+                            <td>{detail.remarks}</td>
+                            <td>
+                              <div className="d-flex gap-1">
+                                <Button
+                                  variant="view"
+                                  iconOnly
+                                  size="sm"
+                                  icon={<BiRectangle size={14} />}
+                                  onClick={() => {
+                                    if (!canEdit()) return;
+                                    setShowAllowanceTooltip(false);
+                                    setCurrentDetailId(uniqueId);
+                                    setAllowanceValues({
+                                      top: detail.top || 0,
+                                      bottom: detail.bottom || 0,
+                                      left: detail.allowanceLeft || 0,
+                                      right: detail.allowanceRight || 0,
+                                    });
+                                    setShowAllowanceModal(true);
+                                  }}
+                                  onMouseOver={(e) => {
+                                    const rect =
+                                      e.currentTarget.getBoundingClientRect();
+                                    setTooltipPosition({
+                                      x: rect.left + 25,
+                                      y: rect.top + window.scrollY - 82,
+                                    });
+                                    setTooltipDetail(detail);
+                                    setShowAllowanceTooltip(true);
+                                  }}
+                                  onMouseLeave={() => {
+                                    setShowAllowanceTooltip(false);
+                                  }}
+                                />
+                                <Button
+                                  variant="edit"
+                                  disabled={!canEdit()}
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() =>
+                                    handleEditClick(uniqueId, detail)
                                   }
-                                }}
-                                onBlur={() => {
-                                  handleDisplayOrderUpdate(
-                                    detail,
-                                    tempDisplayOrder
-                                  );
-                                }}
-                                autoFocus
-                                min="1"
-                                step="1"
-                              />
-                            ) : (
-                              <span
-                                className="display-order-text"
-                                onDoubleClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingDisplayOrder(
-                                    `${detail.orderId}_${detail.displayOrder}`
-                                  );
-                                  setTempDisplayOrder(detail.displayOrder);
-                                }}
-                              >
-                                {detail.displayOrder}
-                              </span>
-                            )}
-                          </td>
-                          <td className="centered-cell">
-                            {Number(detail.quantity).toLocaleString()}
-                          </td>
-                          <td className="centered-cell">{detail.width}</td>
-                          <td className="centered-cell">{detail.height}</td>
-                          <td className="centered-cell">{detail.unit}</td>
-                          <td className="centered-cell">{detail.material}</td>
-                          <td className="centered-cell">{detail.perSqFt}</td>
-                          <td className="numeric-cell">
-                            {formatNumber(detail.unitPrice)}
-                          </td>
-                          <td className="numeric-cell">
-                            {formatNumber(detail.discount)}
-                          </td>
-                          <td className="numeric-cell">
-                            {formatNumber(detail.amount)}
-                          </td>
-                          <td>{detail.itemDescription}</td>
-                          <td>{detail.remarks}</td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <Button
-                                variant="view"
-                                iconOnly
-                                size="sm"
-                                icon={<BiRectangle size={14} />}
-                                onClick={() => {
-                                  if (!canEdit()) return;
-                                  setShowAllowanceTooltip(false);
-                                  setCurrentDetailId(uniqueId);
-                                  setAllowanceValues({
-                                    top: detail.top || 0,
-                                    bottom: detail.bottom || 0,
-                                    left: detail.allowanceLeft || 0,
-                                    right: detail.allowanceRight || 0,
-                                  });
-                                  setShowAllowanceModal(true);
-                                }}
-                                onMouseOver={(e) => {
-                                  const rect =
-                                    e.currentTarget.getBoundingClientRect();
-                                  setTooltipPosition({
-                                    x: rect.left + 25,
-                                    y: rect.top + window.scrollY - 82,
-                                  });
-                                  setTooltipDetail(detail);
-                                  setShowAllowanceTooltip(true);
-                                }}
-                                onMouseLeave={() => {
-                                  setShowAllowanceTooltip(false);
-                                }}
-                              />
-                              <Button
-                                variant="edit"
-                                disabled={!canEdit()}
-                                iconOnly
-                                size="sm"
-                                onClick={() =>
-                                  handleEditClick(uniqueId, detail)
-                                }
-                              />
-                              <Button
-                                variant="delete"
-                                disabled={!canEdit()}
-                                iconOnly
-                                size="sm"
-                                onClick={() => handleDeleteDetail(uniqueId)}
-                              />
-                            </div>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  );
-                })}
-                <tr style={{ borderTop: "2px solid lightgrey" }}>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2">Subtotal:</td>
-                  <td className="numeric-cell">
-                    {formatNumber(orderTotals.subtotal)}
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>Date Paid:</small>
-                      </div>
-                      <div>{data.datePaid}</div>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2 nowrap">Disc. Amount:</td>
-                  <td className="numeric-cell">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-end"
-                      value={orderTotals.discAmount}
-                      onChange={(e) =>
-                        handleDiscountChange("amount", e.target.value)
-                      }
-                      style={{ width: "100px", display: "inline-block" }}
-                      disabled={!canEdit()}
-                    />
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>OR Number:</small>
-                      </div>
-                      <div>{data.orNum}</div>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2">Percent Disc.:</td>
-                  <td className="numeric-cell">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-end"
-                      value={orderTotals.percentDisc}
-                      onChange={(e) =>
-                        handleDiscountChange("percent", e.target.value)
-                      }
-                      style={{ width: "100px", display: "inline-block" }}
-                      disabled={!canEdit()}
-                    />
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>Amount Paid:</small>
-                      </div>
-                      <div style={{ width: "80px", textAlign: "right" }}>
-                        {formatNumber(data.amountPaid || 0)}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2">Grand Total:</td>
-                  <td className="numeric-cell">
-                    {formatNumber(orderTotals.grandTotal)}
-                  </td>
-                  <td colSpan="3">
-                    <div className="ms-3 d-flex align-items-center">
-                      <div style={{ width: "100px", textAlign: "right" }}>
-                        <small style={{ fontSize: "1rem" }}>Balance:</small>
-                      </div>
-                      <div style={{ width: "80px", textAlign: "right" }}>
-                        {formatNumber(
-                          orderTotals.grandTotal - (data.amountPaid || 0)
+                                />
+                                <Button
+                                  variant="delete"
+                                  disabled={!canEdit()}
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => handleDeleteDetail(uniqueId)}
+                                />
+                              </div>
+                            </td>
+                          </>
                         )}
+                      </tr>
+                    );
+                  })}
+                  <tr style={{ borderTop: "2px solid lightgrey" }}>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2">Subtotal:</td>
+                    <td className="numeric-cell">
+                      {formatNumber(orderTotals.subtotal)}
+                    </td>
+                    <td colSpan="3">
+                      <div className="ms-3 d-flex align-items-center">
+                        <div style={{ width: "100px", textAlign: "right" }}>
+                          <small style={{ fontSize: "1rem" }}>Date Paid:</small>
+                        </div>
+                        <div>{data.datePaid}</div>
                       </div>
-                      <div className="ms-2">
-                        <small style={{ fontSize: "1rem" }}>
-                          (
-                          {orderTotals.grandTotal > 0
-                            ? (
-                                ((orderTotals.grandTotal -
-                                  (data.amountPaid || 0)) /
-                                  orderTotals.grandTotal) *
-                                100
-                              ).toFixed(2) + "%"
-                            : "0%"}
-                          )
-                        </small>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2 nowrap">Disc. Amount:</td>
+                    <td className="numeric-cell">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm text-end"
+                        value={orderTotals.discAmount}
+                        onChange={(e) =>
+                          handleDiscountChange("amount", e.target.value)
+                        }
+                        style={{ width: "100px", display: "inline-block" }}
+                        disabled={!canEdit()}
+                      />
+                    </td>
+                    <td colSpan="3">
+                      <div className="ms-3 d-flex align-items-center">
+                        <div style={{ width: "100px", textAlign: "right" }}>
+                          <small style={{ fontSize: "1rem" }}>OR Number:</small>
+                        </div>
+                        <div>{data.orNum}</div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2">Percent Disc.:</td>
+                    <td className="numeric-cell">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm text-end"
+                        value={orderTotals.percentDisc}
+                        onChange={(e) =>
+                          handleDiscountChange("percent", e.target.value)
+                        }
+                        style={{ width: "100px", display: "inline-block" }}
+                        disabled={!canEdit()}
+                      />
+                    </td>
+                    <td colSpan="3">
+                      <div className="ms-3 d-flex align-items-center">
+                        <div style={{ width: "100px", textAlign: "right" }}>
+                          <small style={{ fontSize: "1rem" }}>
+                            Amount Paid:
+                          </small>
+                        </div>
+                        <div style={{ width: "80px", textAlign: "right" }}>
+                          {formatNumber(data.amountPaid || 0)}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2">Grand Total:</td>
+                    <td className="numeric-cell">
+                      {formatNumber(orderTotals.grandTotal)}
+                    </td>
+                    <td colSpan="3">
+                      <div className="ms-3 d-flex align-items-center">
+                        <div style={{ width: "100px", textAlign: "right" }}>
+                          <small style={{ fontSize: "1rem" }}>Balance:</small>
+                        </div>
+                        <div style={{ width: "80px", textAlign: "right" }}>
+                          {formatNumber(
+                            orderTotals.grandTotal - (data.amountPaid || 0)
+                          )}
+                        </div>
+                        <div className="ms-2">
+                          <small style={{ fontSize: "1rem" }}>
+                            (
+                            {orderTotals.grandTotal > 0
+                              ? (
+                                  ((orderTotals.grandTotal -
+                                    (data.amountPaid || 0)) /
+                                    orderTotals.grandTotal) *
+                                  100
+                                ).toFixed(2) + "%"
+                              : "0%"}
+                            )
+                          </small>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {isHeaderSaved && canEdit() && (
+          <div className="mt-4">
+            <h5>Add Order Details</h5>
+            <AddOrderDetails
+              orderId={orderId}
+              onDetailAdded={handleDetailAdded}
+            />
           </div>
         )}
-      </div>
 
-      {isHeaderSaved && canEdit() && (
-        <div className="mt-4">
-          <h5>Add Order Details</h5>
-          <AddOrderDetails
-            orderId={orderId}
-            onDetailAdded={handleDetailAdded}
-          />
-        </div>
-      )}
-
-      {/* Allowance Modal */}
-      <Modal
-        variant="form"
-        show={showAllowanceModal}
-        onClose={() => setShowAllowanceModal(false)}
-        title="Edit Allowance"
-        footer={
-          <div className="d-flex justify-content-end gap-2">
-            <Button
-              variant="cancel"
-              onClick={() => setShowAllowanceModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="save"
-              onClick={async () => {
-                const [orderId, displayOrder] = currentDetailId.split("_");
-                const currentDetail = orderDetails.find(
-                  (d) =>
-                    d.orderId === parseInt(orderId) &&
-                    d.displayOrder === parseInt(displayOrder)
-                );
-
-                const { squareFeet, materialUsage, printHrs } = calculateValues(
-                  currentDetail,
-                  allowanceValues
-                );
-
-                const updatedDetail = {
-                  ...currentDetail,
-                  squareFeet,
-                  materialUsage,
-                  printHrs,
-                  top: allowanceValues.top,
-                  bottom: allowanceValues.bottom,
-                  allowanceLeft: allowanceValues.left,
-                  allowanceRight: allowanceValues.right,
-                };
-
-                // Save to database first
-                const token = localStorage.getItem("token");
-                try {
-                  await axios.put(
-                    `${ServerIP}/auth/order_details/${orderId}/${displayOrder}`,
-                    updatedDetail,
-                    { headers: { Authorization: `Bearer ${token}` } }
+        {/* Allowance Modal */}
+        <Modal
+          variant="form"
+          show={showAllowanceModal}
+          onClose={() => setShowAllowanceModal(false)}
+          title="Edit Allowance"
+          footer={
+            <div className="d-flex justify-content-end gap-2">
+              <Button
+                variant="cancel"
+                onClick={() => setShowAllowanceModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="save"
+                onClick={async () => {
+                  const [orderId, displayOrder] = currentDetailId.split("_");
+                  const currentDetail = orderDetails.find(
+                    (d) =>
+                      d.orderId === parseInt(orderId) &&
+                      d.displayOrder === parseInt(displayOrder)
                   );
 
-                  // Update local state only after successful save
-                  const updatedDetails = orderDetails.map((detail) =>
-                    detail.orderId === parseInt(orderId) &&
-                    detail.displayOrder === parseInt(displayOrder)
-                      ? updatedDetail
-                      : detail
-                  );
-                  setOrderDetails(updatedDetails);
+                  const { squareFeet, materialUsage, printHrs } =
+                    calculateValues(currentDetail, allowanceValues);
 
-                  // Recalculate totals
-                  const totals = calculateTotals(updatedDetails);
-                  setTotals(totals);
+                  const updatedDetail = {
+                    ...currentDetail,
+                    squareFeet,
+                    materialUsage,
+                    printHrs,
+                    top: allowanceValues.top,
+                    bottom: allowanceValues.bottom,
+                    allowanceLeft: allowanceValues.left,
+                    allowanceRight: allowanceValues.right,
+                  };
 
-                  // Update the main data state
-                  setData((prev) => ({
-                    ...prev,
-                    orderDetails: updatedDetails,
-                  }));
+                  // Save to database first
+                  const token = localStorage.getItem("token");
+                  try {
+                    await axios.put(
+                      `${ServerIP}/auth/order_details/${orderId}/${displayOrder}`,
+                      updatedDetail,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
 
-                  // Refresh the order details
-                  fetchOrderDetails();
+                    // Update local state only after successful save
+                    const updatedDetails = orderDetails.map((detail) =>
+                      detail.orderId === parseInt(orderId) &&
+                      detail.displayOrder === parseInt(displayOrder)
+                        ? updatedDetail
+                        : detail
+                    );
+                    setOrderDetails(updatedDetails);
 
-                  // Close the modal
-                  setShowAllowanceModal(false);
-                } catch (err) {
-                  console.error("Error saving allowance:", err);
-                  setAlert({
-                    show: true,
-                    title: "Error",
-                    message: "Failed to save allowance changes",
-                    type: "alert",
-                  });
-                }
-              }}
-            >
-              Save
-            </Button>
-          </div>
-        }
-      >
-        <div className="row g-3">
-          <div className="d-flex flex-column align-items-center gap-3">
-            <div style={{ width: "200px" }}>
-              <label className="form-label text-center w-100">
-                Top Allowance
-              </label>
-              <Input
-                variant="form"
-                type="number"
-                value={allowanceValues.top}
-                onChange={(e) =>
-                  setAllowanceValues((prev) => ({
-                    ...prev,
-                    top: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="d-flex gap-3">
-              <div style={{ width: "200px" }}>
-                <label className="form-label text-center w-100">
-                  Left Allowance
-                </label>
-                <Input
-                  variant="form"
-                  type="number"
-                  value={allowanceValues.left}
-                  onChange={(e) =>
-                    setAllowanceValues((prev) => ({
+                    // Recalculate totals
+                    const totals = calculateTotals(updatedDetails);
+                    setTotals(totals);
+
+                    // Update the main data state
+                    setData((prev) => ({
                       ...prev,
-                      left: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div style={{ width: "200px" }}>
-                <label className="form-label text-center w-100">
-                  Right Allowance
-                </label>
-                <Input
-                  variant="form"
-                  type="number"
-                  value={allowanceValues.right}
-                  onChange={(e) =>
-                    setAllowanceValues((prev) => ({
-                      ...prev,
-                      right: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-            <div style={{ width: "200px" }}>
-              <label className="form-label text-center w-100">
-                Bottom Allowance
-              </label>
-              <Input
-                variant="form"
-                type="number"
-                value={allowanceValues.bottom}
-                onChange={(e) =>
-                  setAllowanceValues((prev) => ({
-                    ...prev,
-                    bottom: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </Modal>
+                      orderDetails: updatedDetails,
+                    }));
 
-      {/* Allowance Tooltip */}
-      <Modal
-        variant="tooltip"
-        show={showAllowanceTooltip && tooltipDetail}
-        position={tooltipPosition}
-      >
-        <div className="text-center mb-1">
-          Print Hrs: {tooltipDetail?.printHrs || 0}
-        </div>
-        <div className="text-center">T: {tooltipDetail?.top || 0}</div>
-        <div className="d-flex justify-content-between">
-          <span>L: {tooltipDetail?.allowanceLeft || 0}</span>
-          <span className="ms-3">R: {tooltipDetail?.allowanceRight || 0}</span>
-        </div>
-        <div className="text-center">B: {tooltipDetail?.bottom || 0}</div>
-        <div className="text-center">
-          Usage: {tooltipDetail?.materialUsage || 0}
-        </div>
-      </Modal>
+                    // Refresh the order details
+                    fetchOrderDetails();
 
-      <ModalAlert
-        show={alert.show}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
-        onConfirm={() => {
-          if (alert.onConfirm) {
-            alert.onConfirm();
+                    // Close the modal
+                    setShowAllowanceModal(false);
+                  } catch (err) {
+                    console.error("Error saving allowance:", err);
+                    setAlert({
+                      show: true,
+                      title: "Error",
+                      message: "Failed to save allowance changes",
+                      type: "alert",
+                    });
+                  }
+                }}
+              >
+                Save
+              </Button>
+            </div>
           }
-          setAlert((prev) => ({ ...prev, show: false }));
-        }}
-      />
+        >
+          <div className="row g-3">
+            <div className="d-flex flex-column align-items-center gap-3">
+              <div style={{ width: "200px" }}>
+                <label className="form-label text-center w-100">
+                  Top Allowance
+                </label>
+                <Input
+                  variant="form"
+                  type="number"
+                  value={allowanceValues.top}
+                  onChange={(e) =>
+                    setAllowanceValues((prev) => ({
+                      ...prev,
+                      top: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="d-flex gap-3">
+                <div style={{ width: "200px" }}>
+                  <label className="form-label text-center w-100">
+                    Left Allowance
+                  </label>
+                  <Input
+                    variant="form"
+                    type="number"
+                    value={allowanceValues.left}
+                    onChange={(e) =>
+                      setAllowanceValues((prev) => ({
+                        ...prev,
+                        left: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div style={{ width: "200px" }}>
+                  <label className="form-label text-center w-100">
+                    Right Allowance
+                  </label>
+                  <Input
+                    variant="form"
+                    type="number"
+                    value={allowanceValues.right}
+                    onChange={(e) =>
+                      setAllowanceValues((prev) => ({
+                        ...prev,
+                        right: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div style={{ width: "200px" }}>
+                <label className="form-label text-center w-100">
+                  Bottom Allowance
+                </label>
+                <Input
+                  variant="form"
+                  type="number"
+                  value={allowanceValues.bottom}
+                  onChange={(e) =>
+                    setAllowanceValues((prev) => ({
+                      ...prev,
+                      bottom: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Allowance Tooltip */}
+        <Modal
+          variant="tooltip"
+          show={showAllowanceTooltip && tooltipDetail}
+          position={tooltipPosition}
+        >
+          <div className="text-center mb-1">
+            Print Hrs: {tooltipDetail?.printHrs || 0}
+          </div>
+          <div className="text-center">T: {tooltipDetail?.top || 0}</div>
+          <div className="d-flex justify-content-between">
+            <span>L: {tooltipDetail?.allowanceLeft || 0}</span>
+            <span className="ms-3">
+              R: {tooltipDetail?.allowanceRight || 0}
+            </span>
+          </div>
+          <div className="text-center">B: {tooltipDetail?.bottom || 0}</div>
+          <div className="text-center">
+            Usage: {tooltipDetail?.materialUsage || 0}
+          </div>
+        </Modal>
+
+        <ModalAlert
+          show={alert.show}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+          onConfirm={() => {
+            if (alert.onConfirm) {
+              alert.onConfirm();
+            }
+            setAlert((prev) => ({ ...prev, show: false }));
+          }}
+        />
+
+        {showStatusDropdown && (
+          <StatusDropdown
+            show={showStatusDropdown}
+            onClose={() => setShowStatusDropdown(false)}
+            position={dropdownPosition}
+            items={statusOptions.map((status) => ({
+              label: status,
+              onClick: () => handleStatusChange(status),
+            }))}
+          />
+        )}
+      </div>
     </div>
   );
 }

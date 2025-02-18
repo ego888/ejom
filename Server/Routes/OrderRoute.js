@@ -430,42 +430,126 @@ router.put("/update_orders_to_prod", (req, res) => {
   });
 });
 
-// Update orders status with corresponding dates
+// Update orders status with corresponding dates and logging
 router.put("/update_order_status", verifyUser, async (req, res) => {
   const { orderId, newStatus } = req.body;
+  const employeeName = req.user.name;
 
   try {
+    // First check current status
+    const [currentOrder] = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT status, log FROM orders WHERE orderID = ?",
+        [orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    if (!currentOrder) {
+      return res.json({
+        Status: false,
+        Error: "Order not found",
+      });
+    }
+
+    const restrictedStatuses = ["Billed", "Closed", "Cancel"];
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    let logMessage = "";
+    let statusToSet = newStatus;
+    let isRestricted = false;
+
+    // Handle status change rules
+    if (currentOrder.status === "Billed" || currentOrder.status === "Closed") {
+      // Don't change status, but log the attempt
+      statusToSet = currentOrder.status;
+      logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+      isRestricted = true;
+    } else if (currentOrder.status === "Cancel") {
+      // Allow status change from Cancel, but log it
+      statusToSet = newStatus;
+      logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+      isRestricted = true;
+    } else if (restrictedStatuses.includes(currentOrder.status)) {
+      // For other restricted statuses, just log the attempt
+      logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+      isRestricted = true;
+    }
+
+    // Start transaction
+    await new Promise((resolve, reject) => {
+      con.beginTransaction((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    // Build update query
     let sql = `
       UPDATE orders 
       SET status = ?
     `;
-    const params = [newStatus];
+    const params = [statusToSet];
 
-    // Add date updates based on status
-    if (newStatus === "Finished") {
-      sql += `, readyDate = NOW()`;
-    } else if (newStatus === "Delivered") {
-      sql += `, deliveryDate = NOW()`;
-    } else if (newStatus === "Billed") {
-      sql += `, billDate = NOW()`;
+    // Only add date updates if not restricted
+    if (!isRestricted) {
+      if (statusToSet === "Finished") {
+        sql += `, readyDate = NOW()`;
+      } else if (statusToSet === "Delivered") {
+        sql += `, deliveryDate = NOW()`;
+      } else if (statusToSet === "Billed") {
+        sql += `, billDate = NOW()`;
+      }
+    }
+
+    // Add log update if needed
+    if (logMessage) {
+      sql += `, log = RIGHT(CONCAT(IFNULL(log, ''), ?), 255)`;
+      params.push(logMessage);
     }
 
     sql += ` WHERE orderID = ?`;
     params.push(orderId);
 
-    const result = await new Promise((resolve, reject) => {
+    // Execute update
+    await new Promise((resolve, reject) => {
       con.query(sql, params, (err, result) => {
         if (err) reject(err);
         resolve(result);
       });
     });
 
+    // Commit transaction
+    await new Promise((resolve, reject) => {
+      con.commit((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
     return res.json({
       Status: true,
-      Result: result,
-      Message: `Order status updated to ${newStatus}`,
+      Result: {
+        updated: true,
+        logged: !!logMessage,
+        statusChanged: statusToSet === newStatus,
+        finalStatus: statusToSet,
+        datesUpdated: !isRestricted,
+      },
+      Message: `Order ${
+        statusToSet === newStatus
+          ? `status updated to ${statusToSet}`
+          : `remains ${statusToSet}`
+      }${logMessage ? " (with logging)" : ""}`,
     });
   } catch (error) {
+    // Rollback on error
+    await new Promise((resolve) => {
+      con.rollback(() => resolve());
+    });
+
     console.error("Update Error:", error);
     return res.json({
       Status: false,
@@ -1244,6 +1328,173 @@ router.get("/order/ReviseNumber/:id", verifyUser, async (req, res) => {
     return res.json({
       Status: false,
       Error: "Failed to revise order: " + error.message,
+    });
+  }
+});
+
+// Update order with invoice number and set to billed
+router.put("/update_order_invoice", verifyUser, async (req, res) => {
+  const { orderId, invNumber } = req.body;
+
+  try {
+    // First check current status
+    const [currentOrder] = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT status FROM orders WHERE orderID = ?",
+        [orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    if (!currentOrder) {
+      return res.json({
+        Status: false,
+        Error: "Order not found",
+      });
+    }
+
+    const billableStatuses = [
+      "Open",
+      "Printed",
+      "Prod",
+      "Finished",
+      "Delivered",
+    ];
+    if (!billableStatuses.includes(currentOrder.status)) {
+      return res.json({
+        Status: false,
+        Error: `${currentOrder.status} order cannot be billed anymore.`,
+      });
+    }
+
+    // Start transaction
+    await new Promise((resolve, reject) => {
+      con.beginTransaction((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    // Update order
+    await new Promise((resolve, reject) => {
+      con.query(
+        `UPDATE orders 
+         SET status = 'Billed',
+             invoiceNum = ?,
+             billDate = NOW()
+         WHERE orderID = ?`,
+        [invNumber, orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    // Commit transaction
+    await new Promise((resolve, reject) => {
+      con.commit((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    return res.json({
+      Status: true,
+      Message: "Invoice updated and order marked as billed",
+    });
+  } catch (error) {
+    // Rollback on error
+    await new Promise((resolve) => {
+      con.rollback(() => resolve());
+    });
+
+    console.error("Update Error:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update invoice",
+      Details: error.message,
+    });
+  }
+});
+
+// Admin status update route
+router.put("/admin-status-update", verifyUser, async (req, res) => {
+  const { orderId, newStatus } = req.body;
+  const employeeName = req.user.name;
+
+  try {
+    // First check current status
+    const [currentOrder] = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT status, log FROM orders WHERE orderID = ?",
+        [orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    if (!currentOrder) {
+      return res.json({
+        Status: false,
+        Error: "Order not found",
+      });
+    }
+
+    // Start transaction
+    await new Promise((resolve, reject) => {
+      con.beginTransaction((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+
+    // Update order with new status and log
+    await new Promise((resolve, reject) => {
+      con.query(
+        `UPDATE orders 
+         SET status = ?,
+             log = RIGHT(CONCAT(IFNULL(log, ''), ?), 255)
+         WHERE orderID = ?`,
+        [newStatus, logMessage, orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    // Commit transaction
+    await new Promise((resolve, reject) => {
+      con.commit((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    return res.json({
+      Status: true,
+      Message: "Status updated successfully",
+    });
+  } catch (error) {
+    // Rollback on error
+    await new Promise((resolve) => {
+      con.rollback(() => resolve());
+    });
+
+    console.error("Update Error:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update status",
+      Details: error.message,
     });
   }
 });

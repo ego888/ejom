@@ -152,6 +152,7 @@ const Dashboard = () => {
     { path: "quotes", icon: "bi-file-earmark-text", text: "Quotes" },
     { path: "orders", icon: "bi-cart", text: "Orders" },
     { path: "prod", icon: "bi-gear", text: "Prod" },
+    { path: "wiplog", icon: "bi-clipboard-check", text: "WIP Log" },
     { path: "artistlog", icon: "bi-palette", text: "Artist Log" },
     { path: "printlog", icon: "bi-printer", text: "Print Log" },
     { path: "payment", icon: "bi-cash", text: "Payments" },
