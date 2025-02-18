@@ -8,6 +8,7 @@ import { ServerIP } from "../config";
 const EditClient = () => {
   const [client, setClient] = useState({
     clientName: "",
+    customerName: "",
     contact: "",
     telNo: "",
     faxNo: "",
@@ -122,6 +123,7 @@ const EditClient = () => {
               <label htmlFor="clientName">Client Name:</label>
               <input
                 type="text"
+                id="clientName"
                 name="clientName"
                 className="form-control"
                 value={client.clientName}
@@ -131,14 +133,44 @@ const EditClient = () => {
               />
             </div>
             <div className="col-md-6 mb-3">
+              <label htmlFor="customerName">Customer Name:</label>
+              <input
+                type="text"
+                id="customerName"
+                name="customerName"
+                className="form-control"
+                value={client.customerName}
+                onChange={(e) =>
+                  setClient({ ...client, customerName: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-md-6 mb-3">
               <label htmlFor="contact">Contact Person:</label>
               <input
                 type="text"
+                id="contact"
                 name="contact"
                 className="form-control"
                 value={client.contact}
                 onChange={(e) =>
                   setClient({ ...client, contact: e.target.value })
+                }
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="email">Email:</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className="form-control"
+                value={client.email}
+                onChange={(e) =>
+                  setClient({ ...client, email: e.target.value })
                 }
               />
             </div>
@@ -181,17 +213,6 @@ const EditClient = () => {
                 }
               />
             </div>
-          </div>
-
-          <div className="mb-3">
-            <label htmlFor="email">Email:</label>
-            <input
-              type="email"
-              name="email"
-              className="form-control"
-              value={client.email}
-              onChange={(e) => setClient({ ...client, email: e.target.value })}
-            />
           </div>
 
           <div className="row">

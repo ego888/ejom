@@ -9,6 +9,7 @@ import ModalAlert from "./UI/ModalAlert";
 const AddClient = () => {
   const [client, setClient] = useState({
     clientName: "",
+    customerName: "",
     contact: "",
     telNo: "",
     faxNo: "",
@@ -142,6 +143,21 @@ const AddClient = () => {
               />
             </div>
             <div className="col-md-6 mb-3">
+              <label htmlFor="customer-name">Customer Name:</label>
+              <input
+                id="customer-name"
+                type="text"
+                name="customerName"
+                className="form-control rounded-0"
+                onChange={(e) =>
+                  setClient({ ...client, customerName: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-md-6 mb-3">
               <label htmlFor="contact-person">Contact Person:</label>
               <input
                 id="contact-person"
@@ -151,6 +167,19 @@ const AddClient = () => {
                 onChange={(e) =>
                   setClient({ ...client, contact: e.target.value })
                 }
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="email">Email:</label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                className="form-control rounded-0"
+                onChange={(e) =>
+                  setClient({ ...client, email: e.target.value })
+                }
+                autoComplete="email"
               />
             </div>
           </div>
@@ -223,18 +252,6 @@ const AddClient = () => {
                 valueKey="terms"
               />
             </div>
-          </div>
-
-          <div className="mb-3">
-            <label htmlFor="email">Email:</label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              className="form-control rounded-0"
-              onChange={(e) => setClient({ ...client, email: e.target.value })}
-              autoComplete="email"
-            />
           </div>
 
           <div className="row">

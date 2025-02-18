@@ -53,6 +53,78 @@ router.get("/client/:id", (req, res) => {
     return res.json({ Status: true, Result: result[0] });
   });
 });
+
+router.get("/client-list", (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const search = req.query.search || "";
+
+  // First get total count
+  let countSql = `
+    SELECT COUNT(*) as total 
+    FROM client c
+    LEFT JOIN employee e ON c.salesId = e.id
+  `;
+  let countParams = [];
+
+  if (search) {
+    countSql += ` WHERE c.clientName LIKE ? 
+      OR c.customerName LIKE ?
+      OR c.contact LIKE ? 
+      OR c.email LIKE ?
+      OR e.name LIKE ?`;
+    const searchParam = `%${search}%`;
+    countParams = [
+      searchParam,
+      searchParam,
+      searchParam,
+      searchParam,
+      searchParam,
+    ];
+  }
+
+  con.query(countSql, countParams, (err, countResult) => {
+    if (err) return res.json({ Status: false, Error: "Count Query Error" });
+
+    // Then get paginated data
+    let sql = `
+      SELECT c.*, e.name as salesName 
+      FROM client c 
+      LEFT JOIN employee e ON c.salesId = e.id
+    `;
+    let params = [];
+
+    if (search) {
+      sql += ` WHERE c.clientName LIKE ? 
+        OR c.customerName LIKE ?
+        OR c.contact LIKE ? 
+        OR c.email LIKE ?
+        OR e.name LIKE ?`;
+      const searchParam = `%${search}%`;
+      params = [
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+      ];
+    }
+
+    sql += " ORDER BY c.clientName LIMIT ? OFFSET ?";
+    params.push(limit, offset);
+
+    con.query(sql, params, (err, result) => {
+      if (err) return res.json({ Status: false, Error: "Query Error" });
+      return res.json({
+        Status: true,
+        Result: result,
+        totalCount: countResult[0].total,
+      });
+    });
+  });
+});
+
 // Add new client
 router.post("/client/add", (req, res) => {
   const sql = `

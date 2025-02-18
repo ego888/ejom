@@ -51,6 +51,11 @@ app.get("/verify", verifyUser, (req, res) => {
   return res.json({ Status: true, role: req.user.role, id: req.user.id });
 });
 
+app.get("/test", (req, res) => {
+  console.log("Test route hit");
+  res.json({ message: "Server is running" });
+});
+
 app.listen(3000, () => {
   console.log(
     "🚀 Server restarted on port 3000 at",
