@@ -357,14 +357,14 @@ function Quotes() {
                 <tr key={quote.id}>
                   <td>
                     <div className="d-flex justify-content-center gap-2">
-                      <Button
+                      {/* <Button
                         variant="view"
                         iconOnly
                         size="sm"
                         onClick={() =>
                           navigate(`/dashboard/view_quote/${quote.id}`)
                         }
-                      />
+                      /> */}
                       <Button
                         variant="edit"
                         iconOnly

@@ -432,3 +432,22 @@ input[type="number"] {
 #clientId {
   min-width: 400px;
 }
+
+/* Add this to control the gap between rows */
+.order-header .row {
+  row-gap: 0.5rem !important; /* Reduce from default 1rem to 0.5rem */
+}
+
+/* Add this to control the gap between rows */
+.form-section .row {
+  row-gap: 0.5rem !important; /* Tighter spacing for form rows */
+}
+
+/* Adjust the checkbox spacing */
+.form-check {
+  margin-top: -1rem; /* Move checkboxes up slightly */
+}
+
+.form-check-label {
+  margin-left: 0.25rem; /* Reduce space between checkbox and label */
+}

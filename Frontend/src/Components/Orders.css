@@ -117,18 +117,18 @@
 
 /* Right panel styles */
 .right-panel {
-  width: 250px;
+  width: 400px;
   margin-left: 1rem;
 }
 
 .right-panel-content {
   border: 1px solid #dee2e6;
   border-radius: 0.25rem;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 .info-group {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.25rem;
 }
 
 .info-label {

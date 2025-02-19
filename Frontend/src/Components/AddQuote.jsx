@@ -1548,838 +1548,853 @@ function AddQuote() {
   });
 
   return (
-    <div className="px-4 mt-3 quote-page-background">
-      <div className="p-3 rounded quote-form-container">
-        <div className="quote-section-header d-flex align-items-center justify-content-between">
-          <div className="d-flex align-items-center gap-3">
-            <h3 className="m-0">
-              {id ? `Edit Quote #${data.orderId}` : "Add New Quote"}
-            </h3>
+    <div className="quote">
+      <div className="px-4 mt-3 quote-page-background">
+        <div className="p-3 rounded quote-form-container">
+          <div className="quote-section-header d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-3">
+              <h3 className="m-0">
+                {id ? `Edit Quote #${data.orderId}` : "Add New Quote"}
+              </h3>
+            </div>
+            <div className="d-flex gap-2">
+              <>
+                <Button variant="delete" onClick={handleLoss}>
+                  Loss
+                </Button>
+                <Button variant="save" onClick={handleMakeJO}>
+                  Make JO
+                </Button>
+                <Button variant="warning" onClick={handleRequote}>
+                  Requote
+                </Button>
+              </>
+              <Button variant="print" onClick={handlePrintQuote}>
+                Print Quote
+              </Button>
+              {canEdit() && (
+                <Button variant="save" onClick={handleSubmit}>
+                  {isHeaderSaved ? "Finish Edit" : "Save Quote"}
+                </Button>
+              )}
+              <Button variant="cancel" onClick={handleNavigation}>
+                Cancel
+              </Button>
+            </div>
           </div>
-          <div className="d-flex gap-2">
-            <>
-              <Button variant="delete" onClick={handleLoss}>
-                Loss
-              </Button>
-              <Button variant="save" onClick={handleMakeJO}>
-                Make JO
-              </Button>
-              <Button variant="warning" onClick={handleRequote}>
-                Requote
-              </Button>
-            </>
-            <Button variant="print" onClick={handlePrintQuote}>
-              Print Quote
-            </Button>
-            {canEdit() && (
-              <Button variant="save" onClick={handleSubmit}>
-                {isHeaderSaved ? "Finish Edit" : "Save Quote"}
-              </Button>
-            )}
-            <Button variant="cancel" onClick={handleNavigation}>
-              Cancel
-            </Button>
-          </div>
-        </div>
 
-        <div className="d-flex">
-          <form
-            className="row g-1 flex-grow-1"
-            role="form"
-            aria-label="Add New Quote"
-            onSubmit={handleSubmit}
-            style={{ marginTop: "-0.8rem" }}
-          >
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="quoteDate"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Quote Date
-                </label>
-                <input
-                  type="date"
-                  className="form-control rounded-0"
-                  id="quoteDate"
-                  style={dateTimeStyle}
-                  value={data.quoteDate || ""}
-                  onChange={(e) =>
-                    setData({ ...data, quoteDate: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
+          <div className="d-flex">
+            <form
+              className="row g-1 flex-grow-1"
+              role="form"
+              aria-label="Add New Quote"
+              onSubmit={handleSubmit}
+              style={{ marginTop: "-0.8rem" }}
+            >
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="quoteDate"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Quote Date
+                  </label>
+                  <input
+                    type="date"
+                    className="form-control rounded-0"
+                    id="quoteDate"
+                    style={dateTimeStyle}
+                    value={data.quoteDate || ""}
+                    onChange={(e) =>
+                      setData({ ...data, quoteDate: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="preparedBy"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Prepared By
-                </label>
-                <Dropdown
-                  variant="form"
-                  id="preparedBy"
-                  value={data.preparedBy}
-                  onChange={(e) =>
-                    setData({ ...data, preparedBy: e.target.value })
-                  }
-                  options={salesEmployees}
-                  disabled={!isEditMode || !canEdit()}
-                  placeholder=""
-                />
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="preparedBy"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Prepared By
+                  </label>
+                  <Dropdown
+                    variant="form"
+                    id="preparedBy"
+                    value={data.preparedBy}
+                    onChange={(e) =>
+                      setData({ ...data, preparedBy: e.target.value })
+                    }
+                    options={salesEmployees}
+                    disabled={!isEditMode || !canEdit()}
+                    placeholder=""
+                  />
+                </div>
               </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="terms"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Terms
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="terms"
-                  style={inputStyle}
-                  value={data.terms || ""}
-                  readOnly
-                />
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="terms"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Terms
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="terms"
+                    style={inputStyle}
+                    value={data.terms || ""}
+                    readOnly
+                  />
+                </div>
               </div>
-            </div>
-            <div className="col-12">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="customerName"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Customer Name
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="customerName"
-                  style={inputStyle}
-                  value={data.customerName || ""}
-                  readOnly
-                />
+
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="clientId"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Client <span className="text-danger">*</span>
+                  </label>
+                  <Dropdown2
+                    variant="form"
+                    id="clientId"
+                    value={data.clientId || ""}
+                    onChange={handleClientChange}
+                    options={clients}
+                    disabled={!isEditMode || !canEdit()}
+                    error={error.clientId}
+                    required
+                    placeholder=""
+                    column1Key="clientName"
+                    column2Key="customerName"
+                    valueKey="id"
+                  />
+                  {error.clientId && (
+                    <div className="invalid-feedback">Client is required</div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="clientId"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Client <span className="text-danger">*</span>
-                </label>
-                <Dropdown2
-                  variant="form"
-                  id="clientId"
-                  value={data.clientId || ""}
-                  onChange={handleClientChange}
-                  options={clients}
-                  disabled={!isEditMode || !canEdit()}
-                  error={error.clientId}
-                  required
-                  placeholder=""
-                  column1Key="clientName"
-                  column2Key="customerName"
-                  valueKey="id"
-                />
-                {error.clientId && (
-                  <div className="invalid-feedback">Client is required</div>
-                )}
+              <div className="col-8">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="customerName"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Customer Name
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="customerName"
+                    style={inputStyle}
+                    value={data.customerName || ""}
+                    readOnly
+                  />
+                </div>
               </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="projectName"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Project Name <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  className={`form-control rounded-0 ${
-                    error.projectName ? "is-invalid" : ""
-                  }`}
-                  id="projectName"
-                  style={inputStyle}
-                  value={data.projectName}
-                  onChange={(e) =>
-                    setData({ ...data, projectName: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-                {error.projectName && (
-                  <div className="invalid-feedback">
-                    Project Name is required
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="projectName"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Project Name <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`form-control rounded-0 ${
+                      error.projectName ? "is-invalid" : ""
+                    }`}
+                    id="projectName"
+                    style={inputStyle}
+                    value={data.projectName}
+                    onChange={(e) =>
+                      setData({ ...data, projectName: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                  {error.projectName && (
+                    <div className="invalid-feedback">
+                      Project Name is required
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="orderedBy"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Ordered By
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="orderedBy"
+                    style={inputStyle}
+                    value={data.orderedBy || ""}
+                    onChange={(e) =>
+                      setData({ ...data, orderedBy: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="dueDate"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    className="form-control rounded-0"
+                    id="dueDate"
+                    style={dateTimeStyle}
+                    value={data.dueDate || ""}
+                    onChange={(e) =>
+                      setData({ ...data, dueDate: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="email"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    className="form-control rounded-0"
+                    id="email"
+                    style={inputStyle}
+                    value={data.email || ""}
+                    onChange={(e) =>
+                      setData({ ...data, email: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="cellNumber"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Cell Number
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="cellNumber"
+                    style={inputStyle}
+                    value={data.cellNumber || ""}
+                    onChange={(e) =>
+                      setData({ ...data, cellNumber: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="telNum"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Telephone Number
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="telNum"
+                    style={inputStyle}
+                    value={data.telNum || ""}
+                    onChange={(e) =>
+                      setData({ ...data, telNum: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+            </form>
+
+            <div className="right-panel">
+              <div className="right-panel-content">
+                <div className="info-group">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="info-label mb-0">Status:</div>
+                    <span
+                      className={`status-badge ${data.status || "default"}`}
+                    >
+                      {data.status || "N/A"}
+                    </span>
                   </div>
-                )}
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="orderedBy"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Ordered By
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="orderedBy"
-                  style={inputStyle}
-                  value={data.orderedBy || ""}
-                  onChange={(e) =>
-                    setData({ ...data, orderedBy: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="dueDate"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  className="form-control rounded-0"
-                  id="dueDate"
-                  style={dateTimeStyle}
-                  value={data.dueDate || ""}
-                  onChange={(e) =>
-                    setData({ ...data, dueDate: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="email"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Email
-                </label>
-                <input
-                  type="email"
-                  className="form-control rounded-0"
-                  id="email"
-                  style={inputStyle}
-                  value={data.email || ""}
-                  onChange={(e) => setData({ ...data, email: e.target.value })}
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="cellNumber"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Cell Number
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="cellNumber"
-                  style={inputStyle}
-                  value={data.cellNumber || ""}
-                  onChange={(e) =>
-                    setData({ ...data, cellNumber: e.target.value })
-                  }
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label
-                  htmlFor="telNum"
-                  className="form-label"
-                  style={labelStyle}
-                >
-                  Telephone Number
-                </label>
-                <input
-                  type="text"
-                  className="form-control rounded-0"
-                  id="telNum"
-                  style={inputStyle}
-                  value={data.telNum || ""}
-                  onChange={(e) => setData({ ...data, telNum: e.target.value })}
-                  disabled={!isEditMode || !canEdit()}
-                />
-              </div>
-            </div>
-          </form>
-
-          <div className="right-panel">
-            <div className="right-panel-content">
-              <div className="info-group">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div className="info-label mb-0">Status:</div>
-                  <span className={`status-badge ${data.status || "default"}`}>
-                    {data.status || "N/A"}
-                  </span>
                 </div>
-              </div>
 
-              <div className="info-group">
-                <div className="info-label">Edited By</div>
-                <div className="info-value">{data.editedBy || "-"}</div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Last Edited</div>
-                <div className="info-value">
-                  {data.lastEdited
-                    ? new Date(data.lastEdited)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : "-"}
+                <div className="info-group">
+                  <div className="info-label">Edited By</div>
+                  <div className="info-value">{data.editedBy || "-"}</div>
                 </div>
-              </div>
 
-              <div className="info-group">
-                <div className="info-label">Total Hours</div>
-                <div className="info-value">
-                  {formatNumber(data.totalHrs) || "-"}
+                <div className="info-group">
+                  <div className="info-label">Last Edited</div>
+                  <div className="info-value">
+                    {data.lastEdited
+                      ? new Date(data.lastEdited)
+                          .toLocaleString("en-CA", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                          .replace(",", "")
+                      : "-"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <div className="info-label">Total Hours</div>
+                  <div className="info-value">
+                    {formatNumber(data.totalHrs) || "-"}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {isHeaderSaved && (
-          <div className="mt-4">
-            <div className="quote-details-header">
-              <h5 className="m-0">Quote Details List</h5>
-            </div>
-            <table className="quote-table table table-hover">
-              <thead>
-                <tr style={{ borderBottom: "2px solid lightgrey" }}>
-                  <th>#</th>
-                  <th className="text-center">Qty</th>
-                  <th className="text-center">Width</th>
-                  <th className="text-center">Height</th>
-                  <th className="text-center">Unit</th>
-                  <th className="text-center">Material</th>
-                  <th className="text-center">Per Sq Ft</th>
-                  <th>Description</th>
-                  <th className="text-end">Price</th>
-                  <th className="text-end">Disc%</th>
-                  <th className="text-end">Amount</th>
-                  <th className="text-center">Mat Usage</th>
-                  <th className="text-center">Print Hrs</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quoteDetails.map((detail, index) => (
-                  <tr key={`${detail.quoteId}_${detail.displayOrder}_${index}`}>
-                    {editingRowId ===
-                    `${detail.quoteId}_${detail.displayOrder}` ? (
-                      <>
-                        <td style={{ width: "40px" }}>{detail.displayOrder}</td>
-                        <td style={{ width: "60px" }}>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm text-center"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.quantity || detail.quantity
-                            }
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/,/g, "");
-                              if (!isNaN(value)) {
-                                handleDetailInputChange(
-                                  `${detail.quoteId}_${detail.displayOrder}`,
-                                  "quantity",
-                                  value
-                                );
+          {isHeaderSaved && (
+            <div className="mt-4">
+              <div className="quote-details-header">
+                <h5 className="m-0">Quote Details List</h5>
+              </div>
+              <table className="quote-table table table-hover">
+                <thead>
+                  <tr style={{ borderBottom: "2px solid lightgrey" }}>
+                    <th>#</th>
+                    <th className="text-center">Qty</th>
+                    <th className="text-center">Width</th>
+                    <th className="text-center">Height</th>
+                    <th className="text-center">Unit</th>
+                    <th className="text-center">Material</th>
+                    <th className="text-center">Per Sq Ft</th>
+                    <th>Description</th>
+                    <th className="text-end">Price</th>
+                    <th className="text-end">Disc%</th>
+                    <th className="text-end">Amount</th>
+                    <th className="text-center">Mat Usage</th>
+                    <th className="text-center">Print Hrs</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quoteDetails.map((detail, index) => (
+                    <tr
+                      key={`${detail.quoteId}_${detail.displayOrder}_${index}`}
+                    >
+                      {editingRowId ===
+                      `${detail.quoteId}_${detail.displayOrder}` ? (
+                        <>
+                          <td style={{ width: "40px" }}>
+                            {detail.displayOrder}
+                          </td>
+                          <td style={{ width: "60px" }}>
+                            <input
+                              type="text"
+                              className="form-control form-control-sm text-center"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.quantity || detail.quantity
                               }
-                            }}
-                          />
-                        </td>
-                        <td style={{ width: "60px" }}>
-                          <input
-                            type="number"
-                            className="form-control form-control-sm text-center"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.width || detail.width
-                            }
-                            onChange={(e) =>
-                              handleDetailInputChange(
-                                `${detail.quoteId}_${detail.displayOrder}`,
-                                "width",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </td>
-                        <td style={{ width: "60px" }}>
-                          <input
-                            type="number"
-                            className="form-control form-control-sm text-center"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.height || detail.height
-                            }
-                            onChange={(e) =>
-                              handleDetailInputChange(
-                                `${detail.quoteId}_${detail.displayOrder}`,
-                                "height",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </td>
-                        <td>
-                          <Dropdown
-                            variant="table"
-                            className="text-center"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.unit ||
-                              detail.unit ||
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleDetailInputChange(
-                                `${detail.quoteId}_${detail.displayOrder}`,
-                                "unit",
-                                e.target.value
-                              )
-                            }
-                            options={units}
-                            placeholder="Unit"
-                            labelKey="unit"
-                            valueKey="unit"
-                          />
-                        </td>
-                        <td>
-                          <Dropdown
-                            variant="table"
-                            className="text-center"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.material ||
-                              detail.material ||
-                              ""
-                            }
-                            onChange={(e) =>
-                              handleDetailInputChange(
-                                `${detail.quoteId}_${detail.displayOrder}`,
-                                "material",
-                                e.target.value
-                              )
-                            }
-                            options={materials}
-                            placeholder="Material"
-                            labelKey="Material"
-                            valueKey="Material"
-                          />
-                        </td>
-                        <td style={{ width: "70px" }}>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm text-center"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.persqft || detail.persqft
-                            }
-                            onChange={(e) => {
-                              const value = e.target.value.replace(
-                                /[^\d.-]/g,
-                                ""
-                              );
-                              if (!isNaN(value)) {
-                                handleDetailInputChange(
-                                  `${detail.quoteId}_${detail.displayOrder}`,
-                                  "persqft",
-                                  value
-                                );
-                              }
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <textarea
-                            className="form-control form-control-sm description-input"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.itemDescription || detail.itemDescription
-                            }
-                            onChange={(e) => {
-                              handleDetailInputChange(
-                                `${detail.quoteId}_${detail.displayOrder}`,
-                                "itemDescription",
-                                e.target.value
-                              );
-                              e.target.style.height = "31px";
-                              e.target.style.height =
-                                e.target.scrollHeight + "px";
-                            }}
-                            rows="1"
-                          />
-                        </td>
-                        <td style={{ width: "100px" }}>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm price-input"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.unitPrice || detail.unitPrice
-                            }
-                            onChange={(e) => {
-                              const value = e.target.value.replace(
-                                /[^\d.-]/g,
-                                ""
-                              );
-                              if (!isNaN(value)) {
-                                handleDetailInputChange(
-                                  `${detail.quoteId}_${detail.displayOrder}`,
-                                  "unitPrice",
-                                  value
-                                );
-                              }
-                            }}
-                          />
-                        </td>
-                        <td style={{ width: "60px" }}>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm discount-input"
-                            value={
-                              editedValues[
-                                `${detail.quoteId}_${detail.displayOrder}`
-                              ]?.discount || detail.discount
-                            }
-                            onChange={(e) => {
-                              const value = e.target.value.replace(
-                                /[^\d.-]/g,
-                                ""
-                              );
-                              if (!isNaN(value)) {
-                                handleDetailInputChange(
-                                  `${detail.quoteId}_${detail.displayOrder}`,
-                                  "discount",
-                                  value
-                                );
-                              }
-                            }}
-                          />
-                        </td>
-                        <td className="numeric-cell">
-                          {formatDisplay(
-                            editedValues[
-                              `${detail.quoteId}_${detail.displayOrder}`
-                            ]?.amount || detail.amount
-                          )}
-                        </td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.materialUsage)}
-                        </td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.printHours)}
-                        </td>
-                        <td>
-                          <div className="d-flex gap-1">
-                            {canEdit() && (
-                              <>
-                                <Button
-                                  variant="save"
-                                  iconOnly
-                                  size="sm"
-                                  onClick={() =>
-                                    handleSaveDetail(
-                                      `${detail.quoteId}_${detail.displayOrder}`
-                                    )
-                                  }
-                                />
-                                <Button
-                                  variant="cancel"
-                                  iconOnly
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingRowId(null);
-                                    setEditedValues({});
-                                    setEditErrors({});
-                                  }}
-                                />
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={{ width: "40px" }}>
-                          {editingDisplayOrder ===
-                          `${detail.quoteId}_${detail.displayOrder}` ? (
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/,/g, "");
+                                if (!isNaN(value)) {
+                                  handleDetailInputChange(
+                                    `${detail.quoteId}_${detail.displayOrder}`,
+                                    "quantity",
+                                    value
+                                  );
+                                }
+                              }}
+                            />
+                          </td>
+                          <td style={{ width: "60px" }}>
                             <input
                               type="number"
-                              className="form-control form-control-sm display-order-input"
-                              value={tempDisplayOrder || ""}
+                              className="form-control form-control-sm text-center"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.width || detail.width
+                              }
+                              onChange={(e) =>
+                                handleDetailInputChange(
+                                  `${detail.quoteId}_${detail.displayOrder}`,
+                                  "width",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </td>
+                          <td style={{ width: "60px" }}>
+                            <input
+                              type="number"
+                              className="form-control form-control-sm text-center"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.height || detail.height
+                              }
+                              onChange={(e) =>
+                                handleDetailInputChange(
+                                  `${detail.quoteId}_${detail.displayOrder}`,
+                                  "height",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <Dropdown
+                              variant="table"
+                              className="text-center"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.unit ||
+                                detail.unit ||
+                                ""
+                              }
+                              onChange={(e) =>
+                                handleDetailInputChange(
+                                  `${detail.quoteId}_${detail.displayOrder}`,
+                                  "unit",
+                                  e.target.value
+                                )
+                              }
+                              options={units}
+                              placeholder="Unit"
+                              labelKey="unit"
+                              valueKey="unit"
+                            />
+                          </td>
+                          <td>
+                            <Dropdown
+                              variant="table"
+                              className="text-center"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.material ||
+                                detail.material ||
+                                ""
+                              }
+                              onChange={(e) =>
+                                handleDetailInputChange(
+                                  `${detail.quoteId}_${detail.displayOrder}`,
+                                  "material",
+                                  e.target.value
+                                )
+                              }
+                              options={materials}
+                              placeholder="Material"
+                              labelKey="Material"
+                              valueKey="Material"
+                            />
+                          </td>
+                          <td style={{ width: "70px" }}>
+                            <input
+                              type="text"
+                              className="form-control form-control-sm text-center"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.persqft || detail.persqft
+                              }
                               onChange={(e) => {
                                 const value = e.target.value.replace(
-                                  /[^0-9]/g,
+                                  /[^\d.-]/g,
                                   ""
                                 );
-                                setTempDisplayOrder(value);
+                                if (!isNaN(value)) {
+                                  handleDetailInputChange(
+                                    `${detail.quoteId}_${detail.displayOrder}`,
+                                    "persqft",
+                                    value
+                                  );
+                                }
                               }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === "Tab") {
-                                  e.preventDefault();
+                            />
+                          </td>
+                          <td>
+                            <textarea
+                              className="form-control form-control-sm description-input"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.itemDescription || detail.itemDescription
+                              }
+                              onChange={(e) => {
+                                handleDetailInputChange(
+                                  `${detail.quoteId}_${detail.displayOrder}`,
+                                  "itemDescription",
+                                  e.target.value
+                                );
+                                e.target.style.height = "31px";
+                                e.target.style.height =
+                                  e.target.scrollHeight + "px";
+                              }}
+                              rows="1"
+                            />
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            <input
+                              type="text"
+                              className="form-control form-control-sm price-input"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.unitPrice || detail.unitPrice
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value.replace(
+                                  /[^\d.-]/g,
+                                  ""
+                                );
+                                if (!isNaN(value)) {
+                                  handleDetailInputChange(
+                                    `${detail.quoteId}_${detail.displayOrder}`,
+                                    "unitPrice",
+                                    value
+                                  );
+                                }
+                              }}
+                            />
+                          </td>
+                          <td style={{ width: "60px" }}>
+                            <input
+                              type="text"
+                              className="form-control form-control-sm discount-input"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.discount || detail.discount
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value.replace(
+                                  /[^\d.-]/g,
+                                  ""
+                                );
+                                if (!isNaN(value)) {
+                                  handleDetailInputChange(
+                                    `${detail.quoteId}_${detail.displayOrder}`,
+                                    "discount",
+                                    value
+                                  );
+                                }
+                              }}
+                            />
+                          </td>
+                          <td className="numeric-cell">
+                            {formatDisplay(
+                              editedValues[
+                                `${detail.quoteId}_${detail.displayOrder}`
+                              ]?.amount || detail.amount
+                            )}
+                          </td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.materialUsage)}
+                          </td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.printHours)}
+                          </td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              {canEdit() && (
+                                <>
+                                  <Button
+                                    variant="save"
+                                    iconOnly
+                                    size="sm"
+                                    onClick={() =>
+                                      handleSaveDetail(
+                                        `${detail.quoteId}_${detail.displayOrder}`
+                                      )
+                                    }
+                                  />
+                                  <Button
+                                    variant="cancel"
+                                    iconOnly
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingRowId(null);
+                                      setEditedValues({});
+                                      setEditErrors({});
+                                    }}
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ width: "40px" }}>
+                            {editingDisplayOrder ===
+                            `${detail.quoteId}_${detail.displayOrder}` ? (
+                              <input
+                                type="number"
+                                className="form-control form-control-sm display-order-input"
+                                value={tempDisplayOrder || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^0-9]/g,
+                                    ""
+                                  );
+                                  setTempDisplayOrder(value);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === "Tab") {
+                                    e.preventDefault();
+                                    handleDisplayOrderUpdate(
+                                      detail,
+                                      tempDisplayOrder
+                                    );
+                                  }
+                                }}
+                                onBlur={() => {
                                   handleDisplayOrderUpdate(
                                     detail,
                                     tempDisplayOrder
                                   );
-                                }
-                              }}
-                              onBlur={() => {
-                                handleDisplayOrderUpdate(
-                                  detail,
-                                  tempDisplayOrder
-                                );
-                              }}
-                              autoFocus
-                              min="1"
-                              step="1"
-                            />
-                          ) : (
-                            <span
-                              className="display-order-text"
-                              onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                setEditingDisplayOrder(
-                                  `${detail.quoteId}_${detail.displayOrder}`
-                                );
-                                setTempDisplayOrder(detail.displayOrder);
-                              }}
-                            >
-                              {detail.displayOrder}
-                            </span>
-                          )}
-                        </td>
-                        <td className="centered-cell">
-                          {Number(detail.quantity).toLocaleString()}
-                        </td>
-                        <td className="centered-cell">{detail.width}</td>
-                        <td className="centered-cell">{detail.height}</td>
-                        <td className="centered-cell">{detail.unit}</td>
-                        <td className="centered-cell">{detail.material}</td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.persqft)}
-                        </td>
-                        <td>{detail.itemDescription}</td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.unitPrice)}
-                        </td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.discount)}
-                        </td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.amount)}
-                        </td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.materialUsage)}
-                        </td>
-                        <td className="numeric-cell">
-                          {formatDisplay(detail.printHours)}
-                        </td>
-                        <td>
-                          <div className="d-flex gap-1">
-                            {canEdit() && (
-                              <>
-                                <Button
-                                  variant="edit"
-                                  iconOnly
-                                  size="sm"
-                                  onClick={() =>
-                                    handleEditClick(
-                                      `${detail.quoteId}_${detail.displayOrder}`,
-                                      detail
-                                    )
-                                  }
-                                />
-                                <Button
-                                  variant="delete"
-                                  iconOnly
-                                  size="sm"
-                                  onClick={() =>
-                                    handleDeleteDetail(
-                                      `${detail.quoteId}_${detail.displayOrder}`
-                                    )
-                                  }
-                                />
-                              </>
+                                }}
+                                autoFocus
+                                min="1"
+                                step="1"
+                              />
+                            ) : (
+                              <span
+                                className="display-order-text"
+                                onDoubleClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingDisplayOrder(
+                                    `${detail.quoteId}_${detail.displayOrder}`
+                                  );
+                                  setTempDisplayOrder(detail.displayOrder);
+                                }}
+                              >
+                                {detail.displayOrder}
+                              </span>
                             )}
-                          </div>
-                        </td>
-                      </>
-                    )}
+                          </td>
+                          <td className="centered-cell">
+                            {Number(detail.quantity).toLocaleString()}
+                          </td>
+                          <td className="centered-cell">{detail.width}</td>
+                          <td className="centered-cell">{detail.height}</td>
+                          <td className="centered-cell">{detail.unit}</td>
+                          <td className="centered-cell">{detail.material}</td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.persqft)}
+                          </td>
+                          <td>{detail.itemDescription}</td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.unitPrice)}
+                          </td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.discount)}
+                          </td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.amount)}
+                          </td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.materialUsage)}
+                          </td>
+                          <td className="numeric-cell">
+                            {formatDisplay(detail.printHours)}
+                          </td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              {canEdit() && (
+                                <>
+                                  <Button
+                                    variant="edit"
+                                    iconOnly
+                                    size="sm"
+                                    onClick={() =>
+                                      handleEditClick(
+                                        `${detail.quoteId}_${detail.displayOrder}`,
+                                        detail
+                                      )
+                                    }
+                                  />
+                                  <Button
+                                    variant="delete"
+                                    iconOnly
+                                    size="sm"
+                                    onClick={() =>
+                                      handleDeleteDetail(
+                                        `${detail.quoteId}_${detail.displayOrder}`
+                                      )
+                                    }
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                  <tr style={{ borderTop: "2px solid lightgrey" }}>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2 form-amount-label">
+                      Subtotal:
+                    </td>
+                    <td className="numeric-cell">
+                      {formatDisplay(data.totalAmount)}
+                    </td>
+                    <td colSpan="3"></td>
                   </tr>
-                ))}
-                <tr style={{ borderTop: "2px solid lightgrey" }}>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2 form-amount-label">Subtotal:</td>
-                  <td className="numeric-cell">
-                    {formatDisplay(data.totalAmount)}
-                  </td>
-                  <td colSpan="3"></td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2 form-amount-label">
-                    Disc. Amount:
-                  </td>
-                  <td className="numeric-cell">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-end"
-                      value={data.amountDiscount}
-                      onChange={(e) =>
-                        handleDiscountChange("amount", e.target.value)
-                      }
-                      style={{ width: "100px", display: "inline-block" }}
-                      disabled={!canEdit()}
-                    />
-                  </td>
-                  <td colSpan="3"></td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2 form-amount-label">
-                    Percent Disc.
-                  </td>
-                  <td className="numeric-cell">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-end"
-                      value={data.percentDisc}
-                      onChange={(e) =>
-                        handleDiscountChange("percent", e.target.value)
-                      }
-                      style={{ width: "100px", display: "inline-block" }}
-                      disabled={!canEdit()}
-                    />
-                  </td>
-                  <td colSpan="3"></td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td className="text-end pe-2 form-amount-label">
-                    Grand Total:
-                  </td>
-                  <td className="numeric-cell">
-                    {formatDisplay(data.grandTotal)}
-                  </td>
-                  <td colSpan="3"></td>
-                </tr>
-              </tbody>
-            </table>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2 form-amount-label">
+                      Disc. Amount:
+                    </td>
+                    <td className="numeric-cell">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm text-end"
+                        value={data.amountDiscount}
+                        onChange={(e) =>
+                          handleDiscountChange("amount", e.target.value)
+                        }
+                        style={{ width: "100px", display: "inline-block" }}
+                        disabled={!canEdit()}
+                      />
+                    </td>
+                    <td colSpan="3"></td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2 form-amount-label">
+                      Percent Disc.
+                    </td>
+                    <td className="numeric-cell">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm text-end"
+                        value={data.percentDisc}
+                        onChange={(e) =>
+                          handleDiscountChange("percent", e.target.value)
+                        }
+                        style={{ width: "100px", display: "inline-block" }}
+                        disabled={!canEdit()}
+                      />
+                    </td>
+                    <td colSpan="3"></td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-end pe-2 form-amount-label">
+                      Grand Total:
+                    </td>
+                    <td className="numeric-cell">
+                      {formatDisplay(data.grandTotal)}
+                    </td>
+                    <td colSpan="3"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {isHeaderSaved && canEdit() && (
+          <div className="mt-4">
+            <div className="quote-details-header">
+              <h5 className="m-0">Add Quote Details</h5>
+            </div>
+            <AddQuoteDetails
+              quoteId={orderId}
+              onDetailAdded={handleDetailAdded}
+            />
           </div>
         )}
+
+        <ModalAlert
+          show={alert.show}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+          onConfirm={() => {
+            if (alert.onConfirm) {
+              alert.onConfirm();
+            }
+            setAlert((prev) => ({ ...prev, show: false }));
+          }}
+        />
       </div>
-
-      {isHeaderSaved && canEdit() && (
-        <div className="mt-4">
-          <div className="quote-details-header">
-            <h5 className="m-0">Add Quote Details</h5>
-          </div>
-          <AddQuoteDetails
-            quoteId={orderId}
-            onDetailAdded={handleDetailAdded}
-          />
-        </div>
-      )}
-
-      <ModalAlert
-        show={alert.show}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
-        onConfirm={() => {
-          if (alert.onConfirm) {
-            alert.onConfirm();
-          }
-          setAlert((prev) => ({ ...prev, show: false }));
-        }}
-      />
     </div>
   );
 }
