@@ -131,6 +131,7 @@ const EditEmployee = () => {
             <input
               type="password"
               name="password"
+              id="password"
               className="form-control rounded-0"
               placeholder="Enter new password"
               value={data.password}

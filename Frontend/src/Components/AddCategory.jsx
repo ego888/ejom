@@ -27,7 +27,7 @@ const AddCategory = () => {
       .catch((err) => console.log(err));
   };
   return (
-    <div className="d-flex justify-content-center align-items-center h-75">
+    <div className="d-flex justify-content-center align-items-center mt-5">
       <div className="p-3 rounded w-25 border">
         <h2>Add Category</h2>
         <form onSubmit={handleSubmit}>
