@@ -283,6 +283,7 @@ router.get("/order/:id", (req, res) => {
       DATE_FORMAT(o.billDate, '%Y-%m-%d %H:%i:%s') as billDate,
       DATE_FORMAT(o.readyDate, '%Y-%m-%d %H:%i:%s') as readyDate,
       c.clientName,
+      c.customerName,
       e.name as preparedByName,
       e2.name as graphicsByName
     FROM orders o

@@ -5,6 +5,7 @@ import { jwtDecode } from "jwt-decode";
 import AddQuoteDetails from "./AddQuoteDetails";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
+import Dropdown2 from "./UI/Dropdown2";
 import { BiRectangle } from "react-icons/bi";
 import "./Quotes.css";
 import {
@@ -317,14 +318,14 @@ function AddQuote() {
         });
       });
 
-    axios
-      .get(`${ServerIP}/auth/artists`, config)
-      .then((result) => {
-        if (result.data.Status) {
-          setArtists(result.data.Result);
-        }
-      })
-      .catch((err) => console.log(err));
+    // axios
+    //   .get(`${ServerIP}/auth/artists`, config)
+    //   .then((result) => {
+    //     if (result.data.Status) {
+    //       setArtists(result.data.Result);
+    //     }
+    //   })
+    //   .catch((err) => console.log(err));
 
     if (token) {
       const decoded = jwtDecode(token);
@@ -369,12 +370,15 @@ function AddQuote() {
           if (result.data.Status) {
             const quoteData = result.data.Result;
             console.log("Raw quote data:", quoteData);
+            console.log("preparedBy value:", quoteData.preparedBy);
+            console.log("preparedBy type:", typeof quoteData.preparedBy);
 
             // Set all the data at once with proper type conversion
             const initialData = {
               clientId: parseInt(quoteData.clientId),
+              customerName: quoteData.customerName || "",
               projectName: quoteData.projectName || "",
-              preparedBy: parseInt(quoteData.preparedBy),
+              preparedBy: quoteData.preparedBy || "",
               quoteDate:
                 quoteData.quoteDate || new Date().toISOString().split("T")[0],
               orderedBy: quoteData.orderedBy || "",
@@ -1153,29 +1157,15 @@ function AddQuote() {
     }
   };
 
-  const handleClientChange = (clientId) => {
-    // Convert clientId to number since select values are strings
-    const id = parseInt(clientId);
-    setData((prev) => ({ ...prev, clientId: id }));
-
-    const token = localStorage.getItem("token");
-
-    // Fetch complete client data
-    axios
-      .get(`${ServerIP}/auth/client/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((result) => {
-        if (result.data.Status) {
-          const clientData = result.data.Result;
-          setData((prev) => ({
-            ...prev,
-            clientId: id,
-            terms: clientData.terms,
-          }));
-        }
-      })
-      .catch((err) => handleApiError(err, navigate));
+  const handleClientChange = (e) => {
+    const selectedClient = e.target.option; // Get the full client object
+    setData({
+      ...data,
+      clientId: selectedClient.id,
+      customerName: selectedClient.customerName || "",
+      terms: selectedClient.terms || "",
+    });
+    setError({ ...error, clientId: false });
   };
 
   useEffect(() => {
@@ -1663,6 +1653,25 @@ function AddQuote() {
                 />
               </div>
             </div>
+            <div className="col-12">
+              <div className="d-flex flex-column">
+                <label
+                  htmlFor="customerName"
+                  className="form-label"
+                  style={labelStyle}
+                >
+                  Customer Name
+                </label>
+                <input
+                  type="text"
+                  className="form-control rounded-0"
+                  id="customerName"
+                  style={inputStyle}
+                  value={data.customerName || ""}
+                  readOnly
+                />
+              </div>
+            </div>
             <div className="col-6">
               <div className="d-flex flex-column">
                 <label
@@ -1672,31 +1681,22 @@ function AddQuote() {
                 >
                   Client <span className="text-danger">*</span>
                 </label>
-                <Dropdown
+                <Dropdown2
                   variant="form"
                   id="clientId"
                   value={data.clientId || ""}
-                  onChange={(e) => handleClientChange(e.target.value)}
+                  onChange={handleClientChange}
                   options={clients}
                   disabled={!isEditMode || !canEdit()}
                   error={error.clientId}
                   required
                   placeholder=""
-                  labelKey="clientName"
-                  aria-required="true"
-                  aria-invalid={error.clientId ? "true" : "false"}
-                  aria-describedby={
-                    error.clientId ? "clientId-error" : undefined
-                  }
+                  column1Key="clientName"
+                  column2Key="customerName"
+                  valueKey="id"
                 />
                 {error.clientId && (
-                  <div
-                    id="clientId-error"
-                    className="invalid-feedback"
-                    role="alert"
-                  >
-                    Client is required
-                  </div>
+                  <div className="invalid-feedback">Client is required</div>
                 )}
               </div>
             </div>

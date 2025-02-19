@@ -24,6 +24,7 @@ import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import StatusDropdown from "./UI/StatusDropdown";
+import Dropdown2 from "./UI/Dropdown2";
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -195,30 +196,24 @@ function AddOrder() {
       .catch((err) => console.log(err));
   };
 
-  const fetchClients = async () => {
-    try {
-      const response = await axios.get(`${ServerIP}/auth/client`);
-      if (response.data.Status) {
-        const result = response.data.Result || [];
-        setClients(result);
-      } else {
-        setAlert({
-          show: true,
-          title: "Error",
-          message: response.data.Error || "Failed to fetch clients",
-          type: "alert",
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching clients:", err);
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Failed to fetch clients. Please try again.",
-        type: "alert",
-      });
-    }
-  };
+  // const fetchClients = async () => {
+  //   try {
+  //     const response = await axios.get(`${ServerIP}/auth/client-customer`);
+  //     if (response.data.Status) {
+  //       const result = response.data.Result || [];
+  //       setClients(result);
+  //     } else {
+  //       setAlert({
+  //         show: true,
+  //         title: "Error",
+  //         message: response.data.Error,
+  //         type: "alert",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     handleApiError(error, setAlert);
+  //   }
+  // };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -251,7 +246,7 @@ function AddOrder() {
           type: "alert",
         });
       });
-
+    console.log("Clients:", clients);
     axios
       .get(`${ServerIP}/auth/sales_employees`, config)
       .then((result) => {
@@ -473,29 +468,29 @@ function AddOrder() {
   };
 
   // Helper function for error handling
-  const handleError = (err) => {
-    if (
-      err.response?.status === 401 ||
-      err.response?.data?.Error?.includes("jwt expired") ||
-      err.response?.data?.Error?.includes("invalid token")
-    ) {
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Your session has expired. Please log out and log in again.",
-        type: "alert",
-      });
-      localStorage.removeItem("token");
-      navigate("/");
-    } else {
-      setAlert({
-        show: true,
-        title: "Error",
-        message: err.response?.data?.Error || "An error occurred",
-        type: "alert",
-      });
-    }
-  };
+  // const handleError = (err) => {
+  //   if (
+  //     err.response?.status === 401 ||
+  //     err.response?.data?.Error?.includes("jwt expired") ||
+  //     err.response?.data?.Error?.includes("invalid token")
+  //   ) {
+  //     setAlert({
+  //       show: true,
+  //       title: "Error",
+  //       message: "Your session has expired. Please log out and log in again.",
+  //       type: "alert",
+  //     });
+  //     localStorage.removeItem("token");
+  //     navigate("/");
+  //   } else {
+  //     setAlert({
+  //       show: true,
+  //       title: "Error",
+  //       message: err.response?.data?.Error || "An error occurred",
+  //       type: "alert",
+  //     });
+  //   }
+  // };
 
   const handleDetailAdded = () => {
     fetchOrderDetails();
@@ -1492,6 +1487,25 @@ function AddOrder() {
                   />
                 </div>
               </div>
+              <div className="col-12">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="customerName"
+                    className="form-label"
+                    style={labelStyle}
+                  >
+                    Customer Name
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control rounded-0"
+                    id="customerName"
+                    style={inputStyle}
+                    value={data.customerName || ""}
+                    readOnly
+                  />
+                </div>
+              </div>
               <div className="col-6">
                 <div className="d-flex flex-column">
                   <label
@@ -1501,7 +1515,7 @@ function AddOrder() {
                   >
                     Client <span className="text-danger">*</span>
                   </label>
-                  <Dropdown
+                  <Dropdown2
                     variant="form"
                     id="clientId"
                     value={data.clientId || ""}
@@ -1511,7 +1525,9 @@ function AddOrder() {
                     error={error.clientId}
                     required
                     placeholder=""
-                    labelKey="clientName"
+                    column1Key="clientName"
+                    column2Key="customerName"
+                    valueKey="id"
                   />
                   {error.clientId && (
                     <div className="invalid-feedback">Client is required</div>

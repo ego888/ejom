@@ -153,7 +153,8 @@ router.get("/quote/:id", (req, res) => {
       DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
       DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited,
       c.clientName,
-      e.name as preparedByName
+      c.customerName,
+      e.id as preparedBy
     FROM quotes q
     LEFT JOIN client c ON q.clientId = c.id
     LEFT JOIN employee e ON q.preparedBy = e.id
@@ -207,9 +208,17 @@ router.get("/next_display_quote/:quoteId", (req, res) => {
 // Get quote details
 router.get("/quote_details/:quoteId", (req, res) => {
   const sql = `
-    SELECT * FROM quote_details 
-    WHERE quoteId = ? 
-    ORDER BY displayOrder
+    SELECT 
+      qd.*,
+      c.clientName,
+      c.customerName,
+      e.name as preparedByName
+    FROM quote_details qd
+    LEFT JOIN quotes q ON qd.quoteId = q.quoteId
+    LEFT JOIN client c ON q.clientId = c.id
+    LEFT JOIN employee e ON q.preparedBy = e.id
+    WHERE qd.quoteId = ?
+    ORDER BY qd.displayOrder
   `;
 
   con.query(sql, [req.params.quoteId], (err, result) => {

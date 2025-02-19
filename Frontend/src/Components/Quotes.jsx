@@ -66,6 +66,7 @@ function Quotes() {
       };
 
       const response = await axios.get(`${ServerIP}/auth/quotes`, { params });
+      console.log("RESPONSE", response.data);
       if (response.data.Status) {
         setQuotes(response.data.Result.quotes);
         setTotalCount(response.data.Result.total);
@@ -208,21 +209,21 @@ function Quotes() {
   };
 
   // Handle records per page change
-  const handleRecordsPerPageChange = (e) => {
-    setRecordsPerPage(Number(e.target.value));
-    setCurrentPage(1); // Reset to first page
-  };
+  // const handleRecordsPerPageChange = (e) => {
+  //   setRecordsPerPage(Number(e.target.value));
+  //   setCurrentPage(1); // Reset to first page
+  // };
 
-  const isProdIndeterminate = () => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = selectedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
-    return (
-      selectedProdStatuses.length > 0 &&
-      selectedProdStatuses.length < prodStatuses.length
-    );
-  };
+  // const isProdIndeterminate = () => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
+  //     prodStatuses.includes(s)
+  //   );
+  //   return (
+  //     selectedProdStatuses.length > 0 &&
+  //     selectedProdStatuses.length < prodStatuses.length
+  //   );
+  // };
 
   const handleAllCheckbox = (e) => {
     let newStatuses = [];
@@ -244,10 +245,10 @@ function Quotes() {
   };
 
   // Handle client selection from ClientFilter
-  const handleClientSelection = (newSelectedClients) => {
-    setSelectedClients(newSelectedClients);
-    setCurrentPage(1); // Reset to first page when filter changes
-  };
+  // const handleClientSelection = (newSelectedClients) => {
+  //   setSelectedClients(newSelectedClients);
+  //   setCurrentPage(1); // Reset to first page when filter changes
+  // };
 
   return (
     <div className="quote">

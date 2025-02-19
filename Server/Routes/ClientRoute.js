@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/clients/search", verifyUser, (req, res) => {
   const { query } = req.query;
   const sql =
-    "SELECT DISTINCT clientName FROM client WHERE clientName LIKE ? ORDER BY clientName LIMIT 10";
+    "SELECT DISTINCT clientName, customerName FROM client WHERE clientName LIKE ? ORDER BY clientName LIMIT 10";
 
   con.query(sql, [`%${query}%`], (err, result) => {
     if (err) {
@@ -37,7 +37,7 @@ router.get("/client", (req, res) => {
 
 // Get clients id, clientName, terms
 router.get("/clients", (req, res) => {
-  const sql = "SELECT id, clientName, terms FROM client";
+  const sql = "SELECT id, clientName, customerName, terms FROM client";
   con.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
@@ -217,6 +217,20 @@ router.delete("/client/delete/:id", (req, res) => {
   con.query(sql, [id], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true });
+  });
+});
+
+// Get clients with combined client and customer names
+router.get("/client-customer", (req, res) => {
+  const sql = `
+    SELECT c.*, e.name as salesName,
+    CONCAT(c.clientName, ' - ', c.customerName) as clientCustomer
+    FROM client c 
+    LEFT JOIN employee e ON c.salesId = e.id
+  `;
+  con.query(sql, (err, result) => {
+    if (err) return res.json({ Status: false, Error: "Query Error" });
+    return res.json({ Status: true, Result: result });
   });
 });
 

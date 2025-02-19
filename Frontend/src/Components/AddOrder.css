@@ -410,3 +410,25 @@ input[type="number"] {
 .order-table tr[data-toggleable="true"] {
   cursor: pointer;
 }
+
+/* Add this to your existing CSS */
+.client-select-option {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 200px;
+  padding: 0.25rem 0.5rem;
+}
+
+.client-name {
+  font-weight: 500;
+}
+
+.customer-name {
+  color: #666;
+  text-align: right;
+}
+
+/* Adjust the dropdown width to accommodate the two columns */
+#clientId {
+  min-width: 400px;
+}
