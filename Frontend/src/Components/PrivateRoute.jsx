@@ -48,6 +48,7 @@ const checkRouteAccess = (route, permissions) => {
   switch (route) {
     case "quotes":
     case "orders":
+    case "client":
       return permissions.isSales;
     case "prod":
     case "payment":
@@ -57,7 +58,6 @@ const checkRouteAccess = (route, permissions) => {
     case "printlog":
       return permissions.isOperator;
     case "": // dashboard route
-    case "client":
     case "material":
     case "employee":
     case "category":

@@ -25,7 +25,9 @@ const Dashboard = () => {
     isActive: false,
     categoryId: null,
   });
-  const [employeeName, setEmployeeName] = useState("");
+  const [employeeName, setEmployeeName] = useState(
+    localStorage.getItem("userName") || ""
+  );
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,20 +54,24 @@ const Dashboard = () => {
 
       const newPermissions = {
         isAdmin: decoded.categoryId === 1,
-        isSales: decoded.sales === 1, // Add === 1 comparison
-        isAccounting: decoded.accounting === 1, // Add === 1 comparison
-        isArtist: decoded.artist === 1, // Add === 1 comparison
-        isOperator: decoded.operator === 1, // Add === 1 comparison
-        isActive: decoded.active === 1, // Add === 1 comparison
+        isSales: decoded.sales === 1,
+        isAccounting: decoded.accounting === 1,
+        isArtist: decoded.artist === 1,
+        isOperator: decoded.operator === 1,
+        isActive: decoded.active === 1,
         categoryId: decoded.categoryId,
       };
 
       setPermissions(newPermissions);
-      setEmployeeName(decoded.name);
 
-      // Redirect to appropriate initial route if we're at /dashboard exactly
+      // Set employee name from decoded token and save to localStorage
+      setEmployeeName(decoded.name);
+      localStorage.setItem("userName", decoded.name);
+
+      // Only redirect if we're at exactly /dashboard
       if (window.location.pathname === "/dashboard") {
-        navigate(getInitialRoute(newPermissions));
+        const initialRoute = getInitialRoute(newPermissions);
+        navigate(initialRoute);
       }
     } catch (error) {
       console.error("Token error:", error);
@@ -73,7 +79,7 @@ const Dashboard = () => {
       localStorage.removeItem("token");
       navigate("/");
     }
-  }, [navigate]);
+  }, []); // Remove navigate from dependencies
 
   useEffect(() => {
     const handleKeyNavigation = (e) => {
@@ -122,6 +128,7 @@ const Dashboard = () => {
     let hasAccess = false;
     switch (route) {
       case "quotes":
+      case "client":
       case "orders":
         hasAccess = permissions.isSales;
         break;
@@ -161,7 +168,7 @@ const Dashboard = () => {
       icon: "bi-file-earmark-ruled",
       text: "Reports",
     },
-    { path: "client", icon: "bi-building", text: "Clients", adminOnly: true },
+    { path: "client", icon: "bi-building", text: "Clients" },
     {
       path: "material",
       icon: "bi-box-seam",
