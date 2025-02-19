@@ -99,12 +99,18 @@ const Client = () => {
         </Button>
 
         <div className="d-flex gap-3 align-items-center">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search clients..."
-            onChange={(e) => debouncedSearch(e.target.value)}
-          />
+          <div className="mb-3">
+            <label htmlFor="search">Search:</label>
+            <input
+              type="text"
+              className="form-control"
+              id="search"
+              name="search"
+              autoComplete="off"
+              placeholder="Search clients..."
+              onChange={(e) => debouncedSearch(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 

@@ -85,6 +85,7 @@ const EditMaterial = () => {
             <label htmlFor="material">Material:</label>
             <input
               type="text"
+              id="material"
               name="material"
               placeholder="Enter Material"
               className="form-control"
@@ -99,6 +100,7 @@ const EditMaterial = () => {
             <label htmlFor="description">Description:</label>
             <input
               type="text"
+              id="description"
               name="description"
               placeholder="Enter Description"
               className="form-control"
@@ -112,6 +114,7 @@ const EditMaterial = () => {
             <label htmlFor="sqFtPerHour">SqFt Per Hour:</label>
             <input
               type="number"
+              id="sqFtPerHour"
               name="sqFtPerHour"
               placeholder="Enter SqFt Per Hour"
               className="form-control"
@@ -125,7 +128,7 @@ const EditMaterial = () => {
             <label htmlFor="minimumPrice">Minimum Price:</label>
             <input
               type="number"
-              step="0.01"
+              id="minimumPrice"
               name="minimumPrice"
               placeholder="Enter Minimum Price"
               className="form-control"
@@ -139,7 +142,7 @@ const EditMaterial = () => {
             <label htmlFor="fixWidth">Fix Width:</label>
             <input
               type="number"
-              step="0.01"
+              id="fixWidth"
               name="fixWidth"
               placeholder="Enter Fix Width"
               className="form-control"
@@ -153,7 +156,7 @@ const EditMaterial = () => {
             <label htmlFor="fixHeight">Fix Height:</label>
             <input
               type="number"
-              step="0.01"
+              id="fixHeight"
               name="fixHeight"
               placeholder="Enter Fix Height"
               className="form-control"
@@ -167,7 +170,7 @@ const EditMaterial = () => {
             <label htmlFor="cost">Cost:</label>
             <input
               type="number"
-              step="0.01"
+              id="cost"
               name="cost"
               placeholder="Enter Cost"
               className="form-control"
@@ -183,6 +186,7 @@ const EditMaterial = () => {
             </label>
             <input
               type="checkbox"
+              id="noIncentive"
               name="noIncentive"
               checked={material.noIncentive}
               onChange={(e) =>

@@ -125,6 +125,7 @@ const EditClient = () => {
                 type="text"
                 id="clientName"
                 name="clientName"
+                autoComplete="off"
                 className="form-control"
                 value={client.clientName}
                 onChange={(e) =>
@@ -138,6 +139,7 @@ const EditClient = () => {
                 type="text"
                 id="customerName"
                 name="customerName"
+                autoComplete="off"
                 className="form-control"
                 value={client.customerName}
                 onChange={(e) =>
@@ -168,6 +170,7 @@ const EditClient = () => {
                 id="email"
                 name="email"
                 className="form-control"
+                autoComplete="off"
                 value={client.email}
                 onChange={(e) =>
                   setClient({ ...client, email: e.target.value })
@@ -181,6 +184,7 @@ const EditClient = () => {
               <label htmlFor="telNo">Telephone No:</label>
               <input
                 type="text"
+                id="telNo"
                 name="telNo"
                 className="form-control"
                 value={client.telNo}
@@ -193,6 +197,7 @@ const EditClient = () => {
               <label htmlFor="faxNo">Fax No:</label>
               <input
                 type="text"
+                id="faxNo"
                 name="faxNo"
                 className="form-control"
                 value={client.faxNo}
@@ -205,6 +210,7 @@ const EditClient = () => {
               <label htmlFor="celNo">Cell No:</label>
               <input
                 type="text"
+                id="celNo"
                 name="celNo"
                 className="form-control"
                 value={client.celNo}
@@ -220,6 +226,7 @@ const EditClient = () => {
               <label htmlFor="arContact">AR Contact:</label>
               <input
                 type="text"
+                id="arContact"
                 name="arContact"
                 className="form-control"
                 value={client.arContact}
@@ -232,6 +239,7 @@ const EditClient = () => {
               <label htmlFor="arTelNo">AR Tel No:</label>
               <input
                 type="text"
+                id="arTelNo"
                 name="arTelNo"
                 className="form-control"
                 value={client.arTelNo}
@@ -244,6 +252,7 @@ const EditClient = () => {
               <label htmlFor="arFaxNo">AR Fax No:</label>
               <input
                 type="text"
+                id="arFaxNo"
                 name="arFaxNo"
                 className="form-control"
                 value={client.arFaxNo}
@@ -259,6 +268,7 @@ const EditClient = () => {
               <label htmlFor="tinNumber">TIN Number:</label>
               <input
                 type="text"
+                id="tinNumber"
                 name="tinNumber"
                 className="form-control"
                 value={client.tinNumber}
@@ -306,6 +316,7 @@ const EditClient = () => {
               <label htmlFor="creditLimit">Credit Limit:</label>
               <input
                 type="number"
+                id="creditLimit"
                 name="creditLimit"
                 className="form-control"
                 value={client.creditLimit}
@@ -319,6 +330,7 @@ const EditClient = () => {
           <div className="mb-3">
             <label htmlFor="notes">Notes:</label>
             <textarea
+              id="notes"
               name="notes"
               className="form-control"
               value={client.notes}

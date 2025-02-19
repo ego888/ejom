@@ -131,12 +131,14 @@ const AddClient = () => {
         <form onSubmit={handleSubmit}>
           <div className="row">
             <div className="col-md-6 mb-3">
-              <label htmlFor="client-name">Client Name:</label>
+              <label htmlFor="clientName">Client Name:</label>
               <input
-                id="client-name"
                 type="text"
+                id="clientName"
                 name="clientName"
-                className="form-control rounded-0"
+                autoComplete="off"
+                className="form-control"
+                placeholder="Enter client name"
                 onChange={(e) =>
                   setClient({ ...client, clientName: e.target.value })
                 }
@@ -158,12 +160,14 @@ const AddClient = () => {
 
           <div className="row">
             <div className="col-md-6 mb-3">
-              <label htmlFor="contact-person">Contact Person:</label>
+              <label htmlFor="contact">Contact Person:</label>
               <input
-                id="contact-person"
                 type="text"
+                id="contact"
                 name="contact"
-                className="form-control rounded-0"
+                autoComplete="off"
+                className="form-control"
+                placeholder="Enter contact person"
                 onChange={(e) =>
                   setClient({ ...client, contact: e.target.value })
                 }
