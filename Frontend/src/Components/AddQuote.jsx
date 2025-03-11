@@ -40,6 +40,7 @@ function AddQuote() {
 
   const [data, setData] = useState({
     clientId: "",
+    clientName: "",
     projectName: "",
     preparedBy: "",
     quoteDate: new Date().toISOString().split("T")[0],
@@ -376,6 +377,7 @@ function AddQuote() {
             // Set all the data at once with proper type conversion
             const initialData = {
               clientId: parseInt(quoteData.clientId),
+              clientName: quoteData.clientName || "",
               customerName: quoteData.customerName || "",
               projectName: quoteData.projectName || "",
               preparedBy: quoteData.preparedBy || "",
@@ -470,7 +472,7 @@ function AddQuote() {
 
     // Validate required fields
     const newError = {};
-    if (!data.clientId) newError.clientId = true;
+    if (!data.clientName) newError.clientId = true;
     if (!data.projectName) newError.projectName = true;
     if (!data.preparedBy) newError.preparedBy = true;
 
@@ -492,6 +494,7 @@ function AddQuote() {
     // Prepare data for sending
     const dataToSend = {
       clientId: data.clientId,
+      clientName: data.clientName,
       projectName: data.projectName,
       preparedBy: data.preparedBy,
       quoteDate: data.quoteDate || currentDateTime,
@@ -1158,14 +1161,24 @@ function AddQuote() {
   };
 
   const handleClientChange = (e) => {
-    const selectedClient = e.target.option; // Get the full client object
-    setData({
-      ...data,
-      clientId: selectedClient.id,
-      customerName: selectedClient.customerName || "",
-      terms: selectedClient.terms || "",
-    });
-    setError({ ...error, clientId: false });
+    const value = e.target.value.toUpperCase();
+    const selectedClient = clients.find(
+      (client) => client.clientName === value
+    );
+
+    setData((prev) => ({
+      ...prev,
+      clientId: selectedClient ? selectedClient.id : 0,
+      clientName: value,
+      customerName: selectedClient ? selectedClient.customerName : "",
+      terms: selectedClient ? selectedClient.terms : "COD",
+    }));
+
+    // Clear the error when user types
+    setError((prev) => ({
+      ...prev,
+      clientId: false,
+    }));
   };
 
   useEffect(() => {
@@ -1245,6 +1258,40 @@ function AddQuote() {
   };
 
   const handleMakeJO = () => {
+    if (data.clientId === 0) {
+      setAlert({
+        show: true,
+        title: "Client Required",
+        message: "Please select an existing client or create a new one.",
+        type: "confirm",
+        confirmText: "Add New Client",
+        cancelText: "Select Client",
+        onConfirm: () => {
+          navigate("/dashboard/client/add");
+        },
+        onCancel: () => {
+          setAlert((prev) => ({ ...prev, show: false }));
+        },
+      });
+      return;
+    }
+
+    setAlert({
+      show: true,
+      title: "Confirm Make Job Order",
+      message: "Are you sure you want to create a Job Order from this quote?",
+      type: "confirm",
+      confirmText: "Yes, Create",
+      cancelText: "Cancel",
+      // onConfirm: () => {
+      //   // Proceed with job order creation
+      //   createJobOrder(); // Replace with your actual function to create a job order
+      // },
+      onCancel: () => {
+        setAlert((prev) => ({ ...prev, show: false }));
+      },
+    });
+
     const token = localStorage.getItem("token");
     const quoteId = orderId || id;
 
@@ -1415,6 +1462,7 @@ function AddQuote() {
         // After setting current quote to Requote, create a new quote
         const newQuoteData = {
           clientId: data.clientId,
+          clientName: data.clientName,
           projectName: data.projectName.includes(" (Requote)")
             ? data.projectName // Keep it unchanged if already added
             : data.projectName + " (Requote)",
@@ -1651,6 +1699,7 @@ function AddQuote() {
                     style={inputStyle}
                     value={data.terms || ""}
                     readOnly
+                    tabIndex="-1"
                   />
                 </div>
               </div>
@@ -1664,20 +1713,23 @@ function AddQuote() {
                   >
                     Client <span className="text-danger">*</span>
                   </label>
-                  <Dropdown2
-                    variant="form"
-                    id="clientId"
-                    value={data.clientId || ""}
+                  <input
+                    type="text"
+                    id="clientName"
+                    list="clientList"
+                    className={`form-control ${
+                      error.clientId ? "is-invalid" : ""
+                    }`}
+                    value={data.clientName || ""}
                     onChange={handleClientChange}
-                    options={clients}
-                    disabled={!isEditMode || !canEdit()}
-                    error={error.clientId}
-                    required
-                    placeholder=""
-                    column1Key="clientName"
-                    column2Key="customerName"
-                    valueKey="id"
+                    placeholder="Enter or select client"
+                    style={{ textTransform: "uppercase" }}
                   />
+                  <datalist id="clientList">
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.clientName} />
+                    ))}
+                  </datalist>
                   {error.clientId && (
                     <div className="invalid-feedback">Client is required</div>
                   )}
@@ -1699,6 +1751,7 @@ function AddQuote() {
                     style={inputStyle}
                     value={data.customerName || ""}
                     readOnly
+                    tabIndex="-1"
                   />
                 </div>
               </div>
@@ -2393,6 +2446,14 @@ function AddQuote() {
             }
             setAlert((prev) => ({ ...prev, show: false }));
           }}
+          onCancel={() => {
+            if (alert.onCancel) {
+              alert.onCancel();
+            }
+            setAlert((prev) => ({ ...prev, show: false }));
+          }}
+          confirmText={alert.confirmText}
+          cancelText={alert.cancelText}
         />
       </div>
     </div>

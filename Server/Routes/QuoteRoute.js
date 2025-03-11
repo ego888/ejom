@@ -79,7 +79,7 @@ router.get("/quotes", async (req, res) => {
             SELECT 
                 q.quoteId as id, 
                 q.clientId, 
-                c.clientName as clientName, 
+                q.clientName, 
                 q.projectName, 
                 q.preparedBy, 
                 DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
@@ -152,7 +152,7 @@ router.get("/quote/:id", (req, res) => {
       DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
       DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
       DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited,
-      c.clientName,
+      q.clientName,
       c.customerName,
       e.id as preparedBy
     FROM quotes q
@@ -210,7 +210,7 @@ router.get("/quote_details/:quoteId", (req, res) => {
   const sql = `
     SELECT 
       qd.*,
-      c.clientName,
+      q.clientName,
       c.customerName,
       e.name as preparedByName
     FROM quote_details qd
@@ -288,6 +288,7 @@ router.put("/update_quote/:id", (req, res) => {
     UPDATE quotes 
     SET 
         clientId = ?,
+        clientName = ?, 
         projectName = ?,
         preparedBy = ?,
         quoteDate = ?,
@@ -310,7 +311,8 @@ router.put("/update_quote/:id", (req, res) => {
   `;
 
   const values = [
-    req.body.clientId,
+    req.body.clientId || 0,
+    req.body.clientName ? req.body.clientName.toUpperCase() : null,
     req.body.projectName,
     req.body.preparedBy,
     req.body.quoteDate || null,
@@ -516,16 +518,17 @@ router.post("/add_quote", verifyUser, (req, res) => {
 
     const sql = `
       INSERT INTO quotes (
-        clientId, projectName, preparedBy,
+        clientId, clientName, projectName, preparedBy,
         quoteDate, orderedBy, refId, email, 
         cellNumber, telNum, statusRem, dueDate, 
         totalAmount, amountDiscount, percentDisc, 
         grandTotal, totalHrs, editedBy, terms
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
-      req.body.clientId,
+      req.body.clientId || 0,
+      req.body.clientName ? req.body.clientName.toUpperCase() : null,
       req.body.projectName,
       req.body.preparedBy,
       req.body.quoteDate || null,

@@ -208,23 +208,6 @@ function Quotes() {
     localStorage.setItem("quotesListPage", pageNumber.toString());
   };
 
-  // Handle records per page change
-  // const handleRecordsPerPageChange = (e) => {
-  //   setRecordsPerPage(Number(e.target.value));
-  //   setCurrentPage(1); // Reset to first page
-  // };
-
-  // const isProdIndeterminate = () => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
-  //     prodStatuses.includes(s)
-  //   );
-  //   return (
-  //     selectedProdStatuses.length > 0 &&
-  //     selectedProdStatuses.length < prodStatuses.length
-  //   );
-  // };
-
   const handleAllCheckbox = (e) => {
     let newStatuses = [];
     if (e.target.checked) {
@@ -243,12 +226,6 @@ function Quotes() {
       selectedStatuses.length < statusOptions.length
     );
   };
-
-  // Handle client selection from ClientFilter
-  // const handleClientSelection = (newSelectedClients) => {
-  //   setSelectedClients(newSelectedClients);
-  //   setCurrentPage(1); // Reset to first page when filter changes
-  // };
 
   return (
     <div className="quote">
@@ -357,14 +334,6 @@ function Quotes() {
                 <tr key={quote.id}>
                   <td>
                     <div className="d-flex justify-content-center gap-2">
-                      {/* <Button
-                        variant="view"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/view_quote/${quote.id}`)
-                        }
-                      /> */}
                       <Button
                         variant="edit"
                         iconOnly
