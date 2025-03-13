@@ -35,8 +35,8 @@ router.get("/material/:id", (req, res) => {
 
 router.post("/material/add", (req, res) => {
   const sql = `INSERT INTO material 
-          (Material, Description, SqFtPerHour, MinimumPrice, FixWidth, FixHeight, Cost, NoIncentive) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+          (Material, Description, SqFtPerHour, MinimumPrice, FixWidth, FixHeight, Cost, UnitCost, MaterialType, MachineType, NoIncentive) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   const values = [
     req.body.material,
@@ -46,6 +46,9 @@ router.post("/material/add", (req, res) => {
     req.body.fixWidth,
     req.body.fixHeight,
     req.body.cost,
+    req.body.unitCost,
+    req.body.materialType,
+    req.body.machineType,
     req.body.noIncentive ? 1 : 0,
   ];
 
@@ -68,6 +71,9 @@ router.put("/material/edit/:id", (req, res) => {
               FixWidth = ?, 
               FixHeight = ?, 
               Cost = ?, 
+              unitCost = ?,
+              materialType = ?,
+              machineType = ?,
               NoIncentive = ?
           WHERE id = ?`;
 
@@ -79,6 +85,9 @@ router.put("/material/edit/:id", (req, res) => {
     req.body.fixWidth,
     req.body.fixHeight,
     req.body.cost,
+    req.body.unitCost,
+    req.body.materialType,
+    req.body.machineType,
     req.body.noIncentive ? 1 : 0,
     id,
   ];

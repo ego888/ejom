@@ -82,6 +82,7 @@ router.get("/quotes", async (req, res) => {
                 q.clientName, 
                 q.projectName, 
                 q.preparedBy, 
+                q.orderedBy,
                 DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
                 DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
                 q.status, 

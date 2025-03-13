@@ -298,6 +298,12 @@ function Quotes() {
                   Quote ID {getSortIndicator("quoteId")}
                 </th>
                 <th
+                  onClick={() => handleSort("quoteDate")}
+                  style={{ cursor: "pointer" }}
+                >
+                  Quote Date {getSortIndicator("quoteDate")}
+                </th>
+                <th
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
@@ -345,6 +351,7 @@ function Quotes() {
                     </div>
                   </td>
                   <td>{quote.id}</td>
+                  <td>{quote.quoteDate}</td>
                   <td
                     className="client-cell"
                     onClick={(e) => {
