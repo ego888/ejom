@@ -24,7 +24,6 @@ const Client = () => {
     type: "alert",
     onConfirm: null,
   });
-
   const navigate = useNavigate();
 
   // Update admin check to use JWT token
@@ -54,6 +53,7 @@ const Client = () => {
       });
   };
   console.log(clients);
+  console.log("Admin is", isAdmin);
 
   // Debounced search handler
   const debouncedSearch = debounce((value) => {

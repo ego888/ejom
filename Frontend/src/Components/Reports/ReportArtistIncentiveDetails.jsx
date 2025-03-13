@@ -1,10 +1,20 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { formatNumber } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 import "./ReportArtistIncentiveDetails.css";
+import { jwtDecode } from "jwt-decode";
 
 const ReportArtistIncentiveDetails = ({ data }) => {
+  const [isAdmin, setIsAdmin] = useState(false);
   const calculatedData = data.orders;
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = jwtDecode(token);
+      setIsAdmin(decoded.categoryId === 1);
+    }
+  }, []);
 
   // Track previous row for comparison
   let previousOrderId = null;
@@ -31,7 +41,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                 Minor
               </th>
               <th className="text-center">Total</th>
-              <th className="text-center">Max</th>
+              {isAdmin && <th className="text-center">Max</th>}
               <th className="text-center"></th>
             </tr>
             <tr>
@@ -50,7 +60,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
               <th className="text-center">Adj</th>
               <th className="text-center">Amount</th>
               <th className="text-center">Incentive</th>
-              <th className="text-center">Amount</th>
+              {isAdmin && <th className="text-center">Amount</th>}
               <th className="text-center">Remarks</th>
             </tr>
           </thead>
@@ -118,16 +128,20 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                     <td className="text-end border-start">
                       ₱{formatNumber(item.totalIncentive)}
                     </td>
-                    <td className="text-end">
-                      ₱{formatNumber(item.maxOrderIncentive)}
-                    </td>
+                    {isAdmin && (
+                      <td className="text-end">
+                        {!sameOrder
+                          ? `₱${formatNumber(item.maxOrderIncentive)}`
+                          : ""}
+                      </td>
+                    )}
                     <td className="text-left">{item.remarks}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={13} className="text-center">
+                <td colSpan={isAdmin ? 17 : 16} className="text-center">
                   No data available.
                 </td>
               </tr>

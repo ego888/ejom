@@ -17,7 +17,7 @@ const ReportSales = () => {
     setDateTo(to);
   };
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (from, to) => {
     try {
       const token = localStorage.getItem("token");
       let endpoint = "/auth/sales-summary";
@@ -26,8 +26,13 @@ const ReportSales = () => {
       } else if (groupBy === "machine") {
         endpoint = "/auth/sales-machine-summary";
       }
+
+      console.log("dates from:", from);
+      console.log("dates to:", to);
+      console.log("groupBy:", groupBy);
+
       const response = await axios.get(`${ServerIP}${endpoint}`, {
-        params: { dateFrom, dateTo, groupBy },
+        params: { dateFrom: from, dateTo: to, groupBy },
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -89,7 +94,7 @@ const ReportSales = () => {
         <h4 className="mb-0">Sales Report</h4>
         <Button
           variant="add"
-          onClick={handleGenerateReport}
+          onClick={() => handleGenerateReport(dateFrom, dateTo)}
           disabled={!dateFrom || !dateTo}
         >
           Calculate

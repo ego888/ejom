@@ -76,11 +76,6 @@ const DateFromTo = ({ onDateChange, className }) => {
     onDateChange?.(dateFrom, newDate);
   };
 
-  const adjustBothDates = (months) => {
-    adjustFromDate(months);
-    adjustToDate(months);
-  };
-
   const adjustFromYear = (years) => {
     const fromDate = new Date(dateFrom);
     fromDate.setHours(12);
@@ -125,9 +120,97 @@ const DateFromTo = ({ onDateChange, className }) => {
     onDateChange?.(dateFrom, newDate);
   };
 
+  const adjustBothDates = (months) => {
+    // Calculate new from date
+    const fromDate = new Date(dateFrom);
+    fromDate.setHours(12);
+    fromDate.setMonth(fromDate.getMonth() + months);
+    const newFromDate = fromDate.toISOString().slice(0, 10);
+
+    // Calculate new to date
+    let toDate = new Date(dateTo);
+    toDate.setHours(12);
+    const currentYear = toDate.getFullYear();
+    const currentMonth = toDate.getMonth();
+    const currentDate = toDate.getDate();
+    const lastDayOfCurrentMonth = new Date(
+      currentYear,
+      currentMonth + 1,
+      0,
+      12
+    ).getDate();
+    const isLastDayOfMonth = currentDate === lastDayOfCurrentMonth;
+
+    let newMonth = currentMonth + months;
+    let newYear = currentYear;
+    while (newMonth > 11) {
+      newMonth -= 12;
+      newYear++;
+    }
+    while (newMonth < 0) {
+      newMonth += 12;
+      newYear--;
+    }
+
+    if (isLastDayOfMonth) {
+      const lastDayOfNewMonth = new Date(
+        newYear,
+        newMonth + 1,
+        0,
+        12
+      ).getDate();
+      toDate = new Date(newYear, newMonth, lastDayOfNewMonth, 12);
+    } else {
+      toDate = new Date(newYear, newMonth, currentDate, 12);
+    }
+    const newToDate = toDate.toISOString().slice(0, 10);
+
+    // Update both dates at once
+    setDateFrom(newFromDate);
+    setDateTo(newToDate);
+    onDateChange?.(newFromDate, newToDate);
+  };
+
   const adjustBothYears = (years) => {
-    adjustFromYear(years);
-    adjustToYear(years);
+    // Calculate new from date
+    const fromDate = new Date(dateFrom);
+    fromDate.setHours(12);
+    fromDate.setFullYear(fromDate.getFullYear() + years);
+    const newFromDate = fromDate.toISOString().slice(0, 10);
+
+    // Calculate new to date
+    let toDate = new Date(dateTo);
+    toDate.setHours(12);
+    const currentYear = toDate.getFullYear();
+    const currentMonth = toDate.getMonth();
+    const currentDate = toDate.getDate();
+    const lastDayOfCurrentMonth = new Date(
+      currentYear,
+      currentMonth + 1,
+      0,
+      12
+    ).getDate();
+    const isLastDayOfMonth = currentDate === lastDayOfCurrentMonth;
+
+    const newYear = currentYear + years;
+
+    if (isLastDayOfMonth) {
+      const lastDayOfNewMonth = new Date(
+        newYear,
+        currentMonth + 1,
+        0,
+        12
+      ).getDate();
+      toDate = new Date(newYear, currentMonth, lastDayOfNewMonth, 12);
+    } else {
+      toDate = new Date(newYear, currentMonth, currentDate, 12);
+    }
+    const newToDate = toDate.toISOString().slice(0, 10);
+
+    // Update both dates at once
+    setDateFrom(newFromDate);
+    setDateTo(newToDate);
+    onDateChange?.(newFromDate, newToDate);
   };
 
   const handleFromDateChange = (e) => {

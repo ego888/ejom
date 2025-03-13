@@ -1,12 +1,26 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { formatNumber } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 import "./ReportArtistIncentiveDetails.css";
+import { jwtDecode } from "jwt-decode";
 
 const ReportArtistIncentiveSummary = ({ data }) => {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    console.log("Token:", token);
+
+    if (token) {
+      const decoded = jwtDecode(token);
+      setIsAdmin(decoded.categoryId === 1);
+    }
+  }, []);
+
   // Group and summarize data by artist
   const summarizedData = data.orders.reduce((acc, order) => {
     const artist = order.artistIncentive || "Unknown";
+    const orderKey = `${order.orderId}_${artist}`;
 
     if (!acc[artist]) {
       acc[artist] = {
@@ -22,12 +36,11 @@ const ReportArtistIncentiveSummary = ({ data }) => {
         minorAmount: 0,
         totalIncentive: 0,
         maxIncentive: 0,
+        processedOrders: new Set(), // Track processed orders
       };
     }
 
-    acc[artist].orderCount++;
     acc[artist].totalQuantity += order.quantity;
-    acc[artist].totalGrand += order.grandTotal;
     acc[artist].majorOriginal += order.originalMajor;
     acc[artist].majorAdjusted += order.adjustedMajor;
     acc[artist].majorAmount += order.majorAmount;
@@ -35,12 +48,25 @@ const ReportArtistIncentiveSummary = ({ data }) => {
     acc[artist].minorAdjusted += order.adjustedMinor;
     acc[artist].minorAmount += order.minorAmount;
     acc[artist].totalIncentive += order.totalIncentive;
-    acc[artist].maxIncentive += order.maxOrderIncentive;
+
+    // Only add these once per order
+    if (!acc[artist].processedOrders.has(order.orderId)) {
+      acc[artist].orderCount++;
+      acc[artist].totalGrand += order.grandTotal;
+      acc[artist].maxIncentive += order.maxOrderIncentive;
+      acc[artist].processedOrders.add(order.orderId);
+    }
 
     return acc;
   }, {});
 
-  const summaryArray = Object.values(summarizedData);
+  // Clean up by removing the processedOrders Set before rendering
+  const summaryArray = Object.values(summarizedData).map(
+    ({ processedOrders, ...rest }) => rest
+  );
+
+  // Track previous group for comparison
+  let previousGroup = null;
 
   return (
     <div className="report-summary-container">
@@ -60,7 +86,7 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                 Minor
               </th>
               <th className="text-center">Total</th>
-              <th className="text-center">Max</th>
+              {isAdmin && <th className="text-center">Max</th>}
             </tr>
             <tr>
               <th className="text-center">Name</th>
@@ -74,42 +100,52 @@ const ReportArtistIncentiveSummary = ({ data }) => {
               <th className="text-center">Adj</th>
               <th className="text-center">Amount</th>
               <th className="text-center">Incentive</th>
-              <th className="text-center">Amount</th>
+              {isAdmin && <th className="text-center">Amount</th>}
             </tr>
           </thead>
           <tbody>
             {summaryArray.length > 0 ? (
-              summaryArray.map((item, index) => (
-                <tr key={index}>
-                  <td>{item.artist}</td>
-                  <td className="text-center">{item.orderCount}</td>
-                  <td className="text-end">₱{formatNumber(item.totalGrand)}</td>
-                  <td className="text-center">{item.totalQuantity}</td>
-                  <td className="text-center border-start">
-                    {item.majorOriginal}
-                  </td>
-                  <td className="text-center">{item.majorAdjusted}</td>
-                  <td className="text-center">
-                    {formatNumber(item.majorAmount)}
-                  </td>
-                  <td className="text-center border-start">
-                    {item.minorOriginal}
-                  </td>
-                  <td className="text-center">{item.minorAdjusted}</td>
-                  <td className="text-center">
-                    {formatNumber(item.minorAmount)}
-                  </td>
-                  <td className="text-end border-start">
-                    ₱{formatNumber(item.totalIncentive)}
-                  </td>
-                  <td className="text-end">
-                    ₱{formatNumber(item.maxIncentive)}
-                  </td>
-                </tr>
-              ))
+              summaryArray.map((item, index) => {
+                const sameGroup = item.artist === previousGroup;
+                previousGroup = item.artist;
+                return (
+                  <tr key={index}>
+                    <td>{item.artist}</td>
+                    <td className="text-center">{item.orderCount}</td>
+                    <td className="text-end">
+                      ₱{formatNumber(item.totalGrand)}
+                    </td>
+                    <td className="text-center">{item.totalQuantity}</td>
+                    <td className="text-center border-start">
+                      {item.majorOriginal}
+                    </td>
+                    <td className="text-center">{item.majorAdjusted}</td>
+                    <td className="text-center">
+                      {formatNumber(item.majorAmount)}
+                    </td>
+                    <td className="text-center border-start">
+                      {item.minorOriginal}
+                    </td>
+                    <td className="text-center">{item.minorAdjusted}</td>
+                    <td className="text-center">
+                      {formatNumber(item.minorAmount)}
+                    </td>
+                    <td className="text-end border-start">
+                      ₱{formatNumber(item.totalIncentive)}
+                    </td>
+                    {isAdmin && (
+                      <td className="text-end">
+                        {!sameGroup
+                          ? `₱${formatNumber(item.maxIncentive)}`
+                          : ""}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={12} className="text-center">
+                <td colSpan={isAdmin ? 12 : 11} className="text-center">
                   No data available.
                 </td>
               </tr>
@@ -183,15 +219,17 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                     )
                   )}
                 </td>
-                <td className="text-end">
-                  ₱
-                  {formatNumber(
-                    summaryArray.reduce(
-                      (sum, item) => sum + item.maxIncentive,
-                      0
-                    )
-                  )}
-                </td>
+                {isAdmin && (
+                  <td className="text-end">
+                    ₱
+                    {formatNumber(
+                      summaryArray.reduce(
+                        (sum, item) => sum + item.maxIncentive,
+                        0
+                      )
+                    )}
+                  </td>
+                )}
               </tr>
             </tfoot>
           )}
