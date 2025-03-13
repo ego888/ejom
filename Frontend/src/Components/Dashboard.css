@@ -1,6 +1,24 @@
 .main-content {
   margin-left: 140px;
   width: calc(100% - 140px);
+  height: 100vh; /* Ensures full height */
+  overflow-y: auto; /* Enables scrolling inside main content */
+}
+
+/* Ensure the table container allows sticky positioning */
+.table-container {
+  max-height: calc(100vh - 175px); /* Adjust height to fit your layout */
+  overflow-y: auto; /* Enables scrolling for the table */
+  position: relative; /* Ensures sticky positioning works */
+}
+
+/* Make table header sticky */
+.table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: white;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar {
@@ -12,6 +30,7 @@
   bottom: 0;
   left: 0;
   width: 140px;
+  overflow-y: auto; /* Enables scrolling inside sidebar */
 }
 
 .sidebar-header {

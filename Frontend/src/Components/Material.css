@@ -1,0 +1,46 @@
+.table-container {
+  position: relative;
+  max-height: calc(100vh - 175px); /* Limits the table height */
+  overflow-y: auto; /* Enables scrolling */
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* Ensures column alignment */
+}
+
+.table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: white;
+}
+
+.table thead tr {
+  background-color: white;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table thead th {
+  background-color: white;
+  z-index: 11;
+  white-space: nowrap;
+  padding: 10px;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-pointer:hover {
+  background-color: #f8f9fa;
+}
+
+.search-input {
+  width: 300px;
+}

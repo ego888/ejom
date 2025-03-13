@@ -143,7 +143,7 @@ const Material = () => {
 
       <div className="table-container">
         <table className="table">
-          <thead>
+          <thead className="sticky-header">
             <tr>
               <th
                 className="text-center cursor-pointer"
@@ -179,49 +179,42 @@ const Material = () => {
               <th className="text-center">Action</th>
             </tr>
           </thead>
+          <tbody>
+            {filteredAndSortedMaterials.map((m) => (
+              <tr key={m.id}>
+                <td className="text-center">{m.Material}</td>
+                <td className="text-center">{m.Description}</td>
+                <td className="text-center">{m.SqFtPerHour}</td>
+                <td className="text-center">${m.MinimumPrice}</td>
+                <td className="text-center">{m.FixWidth}</td>
+                <td className="text-center">{m.FixHeight}</td>
+                <td className="text-center">${m.Cost}</td>
+                <td className="text-center">${m.UnitCost}</td>
+                <td className="text-center">{m.MaterialType}</td>
+                <td className="text-center">{m.MachineType}</td>
+                <td className="text-center">{m.NoIncentive ? "Yes" : "No"}</td>
+                <td>
+                  <div className="d-flex justify-content-center gap-2">
+                    <Button
+                      variant="edit"
+                      iconOnly
+                      size="sm"
+                      onClick={() =>
+                        navigate(`/dashboard/material/edit/${m.id}`)
+                      }
+                    />
+                    <Button
+                      variant="delete"
+                      iconOnly
+                      size="sm"
+                      onClick={() => handleDelete(m.id)}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
-
-        <div className="table-scroll">
-          <table className="table">
-            <tbody>
-              {filteredAndSortedMaterials.map((m) => (
-                <tr key={m.id}>
-                  <td className="text-center">{m.Material}</td>
-                  <td className="text-center">{m.Description}</td>
-                  <td className="text-center">{m.SqFtPerHour}</td>
-                  <td className="text-center">${m.MinimumPrice}</td>
-                  <td className="text-center">{m.FixWidth}</td>
-                  <td className="text-center">{m.FixHeight}</td>
-                  <td className="text-center">${m.Cost}</td>
-                  <td className="text-center">${m.UnitCost}</td>
-                  <td className="text-center">{m.MaterialType}</td>
-                  <td className="text-center">{m.MachineType}</td>
-                  <td className="text-center">
-                    {m.NoIncentive ? "Yes" : "No"}
-                  </td>
-                  <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/material/edit/${m.id}`)
-                        }
-                      />
-                      <Button
-                        variant="delete"
-                        iconOnly
-                        size="sm"
-                        onClick={() => handleDelete(m.id)}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
 
       <ModalAlert
@@ -237,62 +230,6 @@ const Material = () => {
           setAlert((prev) => ({ ...prev, show: false }));
         }}
       />
-
-      <style>
-        {`
-          .table-container {
-  position: relative;
-  height: calc(100vh - 50px);
-  overflow: hidden; /* Prevents entire container from scrolling */
-          }
-
-          .table-scroll {
-  height: calc(100vh - 175px); /* Limits height to allow tbody scrolling */
-  overflow-y: auto; /* Enables scrolling for tbody only */
-          }
-
-          .table {
-            margin-bottom: 0;
-          }
-
-          .table thead {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background-color: white;
-          }
-
-          .table thead tr {
-            background-color: white;
-            border-bottom: 2px solid #dee2e6;
-          }
-
-          .table thead th {
-  background-color: white;
-  z-index: 4;
-          }
-
-          .cursor-pointer {
-            cursor: pointer;
-          }
-
-          .cursor-pointer:hover {
-            background-color: #f8f9fa;
-          }
-
-          thead th {
-            white-space: nowrap;
-          }
-
-          .input-group-text {
-            border-right: 1px solid #ced4da;
-          }
-
-          .search-input {
-            width: 300px;
-          }
-        `}
-      </style>
     </div>
   );
 };
