@@ -87,7 +87,7 @@
 }
 
 .sidebar-nav-link:hover {
-  background: rgba(255, 160, 0, 0.1);
+  background: #f2eaa6;
   color: #f57f17;
   text-decoration: none;
 }
@@ -98,11 +98,6 @@
   color: #5d2100; /* Dark Orange */
   background: #ffa000;
 }
-
-/*.sidebar-nav-link.active:hover {
-  color: #e65100;
-  color: #ffffff;
-}*/
 
 .sidebar-nav-link i,
 .sidebar-nav-link span {
@@ -127,4 +122,40 @@
   width: 100%;
   text-align: left;
   padding: 0.5rem 1rem;
+}
+
+/* Submenu styles */
+.submenu-link {
+  padding-left: 2rem !important;
+  font-size: 0.9em;
+}
+
+/* Ensure submenu container maintains background */
+.nav .nav {
+  background-color: #fff9c4;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.nav .nav.d-none {
+  max-height: 0;
+}
+
+.nav .nav.d-block {
+  max-height: 500px;
+}
+
+/* Chevron icon styles */
+.sidebar-nav-link i.bi-chevron-right,
+.sidebar-nav-link i.bi-chevron-down {
+  transition: transform 0.5s ease;
+  font-size: 1.2rem;
+}
+
+.sidebar-nav-link i.bi-chevron-down {
+  transform: rotate(0deg);
+}
+
+.sidebar-nav-link i.bi-chevron-right {
+  transform: rotate(-90deg);
 }

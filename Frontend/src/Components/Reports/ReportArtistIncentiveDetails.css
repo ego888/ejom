@@ -10,6 +10,7 @@
 .report-summary-container {
   position: relative;
   height: calc(100vh - 100px);
+  width: 80%;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -19,17 +20,9 @@
   margin-bottom: 1rem;
 }
 
-.table-responsive {
-  flex: 1;
-  overflow: auto;
-  position: relative;
-  border: 1px solid #dee2e6;
-}
-
 .table {
   margin-bottom: 0;
-  width: auto;
-  min-width: 100%;
+  width: 100%;
 }
 
 /* Fixed Headers */
@@ -49,17 +42,6 @@
 .table thead tr:nth-child(2) th {
   top: 42px; /* Adjust based on your first header height */
   z-index: 3;
-}
-
-/* Add shadow to indicate scrolling */
-.table thead tr:nth-child(2) th::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 1px;
-  background-color: #dee2e6;
 }
 
 /* Column styles */
@@ -97,21 +79,4 @@
 
 .text-left {
   text-align: left !important;
-}
-
-/* Optional: Make totals row sticky at bottom */
-.table-responsive tfoot {
-  position: sticky;
-  bottom: 0;
-  background-color: #f8f9fa;
-  z-index: 1;
-}
-
-/* Ensure borders are visible on sticky elements */
-.table-responsive th {
-  border-bottom: 2px solid #dee2e6;
-}
-
-.table-responsive tfoot td {
-  border-top: 2px solid #dee2e6;
 }

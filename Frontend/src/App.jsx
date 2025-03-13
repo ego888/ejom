@@ -35,11 +35,10 @@ import ProdPrintDR from "./Components/ProdPrintDR";
 import ProdPrintOneDR from "./Components/ProdPrintOneDR";
 import EmployeeLogin from "./Components/EmployeeLogin";
 import axios from "./utils/axiosConfig";
-import SOA from "./Components/Reports/SOA";
-import ArtistIncentives from "./Components/Reports/ReportArtistIncentives";
-import SalesIncentives from "./Components/Reports/ReportSalesIncentives";
 import ReportSales from "./Components/Reports/ReportSales";
-import Reports from "./Components/Reports/Reports";
+import SOA from "./Components/Reports/SOA";
+import ReportArtistIncentives from "./Components/Reports/ReportArtistIncentives";
+import ReportSalesIncentives from "./Components/Reports/ReportSalesIncentives";
 import SOAPrint from "./Components/Reports/SOAPrint";
 import WIPLog from "./Components/WIPLog";
 
@@ -198,8 +197,16 @@ function App() {
           <Route path="/dashboard/artistlog" element={<ArtistLog />}></Route>
           <Route path="/dashboard/printlog" element={<PrintLog />}></Route>
           <Route path="/dashboard/payment" element={<Payment />}></Route>
-          <Route path="reports" element={<Reports />} />
-          <Route path="reports/:type" element={<Reports />} />
+          <Route path="/dashboard/sales-report" element={<ReportSales />} />
+          <Route path="/dashboard/soa" element={<SOA />} />
+          <Route
+            path="/dashboard/artist-incentives"
+            element={<ReportArtistIncentives />}
+          />
+          <Route
+            path="/dashboard/sales-incentives"
+            element={<ReportSalesIncentives />}
+          />
           <Route path="wiplog" element={<WIPLog />} />
         </Route>
       </Routes>

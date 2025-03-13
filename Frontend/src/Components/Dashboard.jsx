@@ -28,6 +28,7 @@ const Dashboard = () => {
   const [employeeName, setEmployeeName] = useState(
     localStorage.getItem("userName") || ""
   );
+  const [openSubmenu, setOpenSubmenu] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -167,16 +168,41 @@ const Dashboard = () => {
       path: "reports",
       icon: "bi-file-earmark-ruled",
       text: "Reports",
+      subItems: [
+        {
+          path: "sales-report",
+          icon: "bi-file-earmark-bar-graph",
+          text: "Sales Report",
+        },
+        {
+          path: "soa",
+          icon: "bi-file-text",
+          text: "Statement of Account",
+        },
+        {
+          path: "artist-incentives",
+          icon: "bi-file-easel",
+          text: "Artist Incentives",
+        },
+        {
+          path: "sales-incentives",
+          icon: "bi-file-plus",
+          text: "Sales Incentives",
+        },
+      ],
     },
-    { path: "client", icon: "bi-building", text: "Clients" },
     {
-      path: "material",
-      icon: "bi-box-seam",
-      text: "Materials",
+      path: "masterfiles",
+      icon: "bi-folder",
+      text: "Masterfiles",
       adminOnly: true,
+      subItems: [
+        { path: "client", icon: "bi-building", text: "Clients" },
+        { path: "material", icon: "bi-box-seam", text: "Materials" },
+        { path: "employee", icon: "bi-people", text: "Employee" },
+        { path: "category", icon: "bi-list", text: "Category" },
+      ],
     },
-    { path: "employee", icon: "bi-people", text: "Employee", adminOnly: true },
-    { path: "category", icon: "bi-list", text: "Category", adminOnly: true },
     { path: "profile", icon: "bi-person", text: "Profile", adminOnly: true },
   ];
 
@@ -188,6 +214,11 @@ const Dashboard = () => {
     if (permissions.isArtist) return "/dashboard/artistlog";
     if (permissions.isOperator) return "/dashboard/printlog";
     return "/dashboard/orders"; // fallback
+  };
+
+  // Toggle submenu function
+  const toggleSubmenu = (path) => {
+    setOpenSubmenu(openSubmenu === path ? "" : path);
   };
 
   return (
@@ -221,29 +252,44 @@ const Dashboard = () => {
 
                   if (item.subItems) {
                     return (
-                      <li key={item.path} className="nav-item dropdown">
+                      <li key={item.path} className="w-100">
                         <a
-                          className="sidebar-nav-link dropdown-toggle"
                           href="#"
-                          role="button"
-                          data-bs-toggle="dropdown"
-                          aria-expanded="false"
+                          className="sidebar-nav-link"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            toggleSubmenu(item.path);
+                          }}
                         >
                           <i className={`bi ${item.icon}`}></i>
                           <span className="d-none d-sm-inline">
                             {item.text}
                           </span>
+                          <i
+                            className={`bi ${
+                              openSubmenu === item.path
+                                ? "bi-chevron-up"
+                                : "bi-chevron-right"
+                            } ms-2`}
+                          ></i>
                         </a>
-                        <ul className="dropdown-menu">
+                        <ul
+                          className={`nav flex-column ms-3 ${
+                            openSubmenu === item.path ? "d-block" : "d-none"
+                          }`}
+                        >
                           {item.subItems.map((subItem) => (
                             <li key={subItem.path}>
                               <NavLink
-                                to={`/dashboard/reports/${subItem.path}`}
+                                to={`/dashboard/${subItem.path}`}
                                 className={({ isActive }) =>
-                                  `dropdown-item ${isActive ? "active" : ""}`
+                                  `sidebar-nav-link ${isActive ? "active" : ""}`
                                 }
                               >
-                                {subItem.text}
+                                <i className={`bi ${subItem.icon}`}></i>
+                                <span className="d-none d-sm-inline">
+                                  {subItem.text}
+                                </span>
                               </NavLink>
                             </li>
                           ))}

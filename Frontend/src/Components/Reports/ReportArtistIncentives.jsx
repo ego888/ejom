@@ -24,79 +24,59 @@ const ReportArtistIncentives = () => {
     try {
       const token = localStorage.getItem("token");
 
-      // First get the settings
-      const artistIncentiveResponse = await axios.get(
-        `${ServerIP}/auth/jomcontrol/artistIncentive`,
-        {
+      // Get settings and orders data in parallel
+      const [artistIncentiveResponse, ordersResponse] = await Promise.all([
+        axios.get(`${ServerIP}/auth/jomcontrol/artistIncentive`, {
           headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+        }),
+        axios.get(`${ServerIP}/auth/artist-incentive`, {
+          params: { dateFrom, dateTo },
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
       if (!artistIncentiveResponse.data.Status) {
         throw new Error(artistIncentiveResponse.data.Error);
       }
 
-      // Then get the orders data
-      const ordersResponse = await axios.get(
-        `${ServerIP}/auth/artist-incentive`,
-        {
-          params: { dateFrom, dateTo },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      console.log("ordersResponse.data:", ordersResponse.data);
-      console.log(
-        "artistIncentiveResponse.data:",
-        artistIncentiveResponse.data
-      );
-
-      if (ordersResponse.data.Status) {
-        // Calculate incentives right after fetching data
-        const calculatedOrders = calculateArtistIncentive(
-          ordersResponse.data.Result,
-          artistIncentiveResponse.data.Result
+      if (!ordersResponse.data.Status) {
+        throw new Error(
+          ordersResponse.data.Error || "Failed to fetch artist incentives"
         );
-
-        // Save calculated incentives back to database
-        const updates = calculatedOrders.map((order) => ({
-          Id: order.id,
-          artistIncentive: order.totalIncentive,
-        }));
-
-        const saveResponse = await axios.put(
-          `${ServerIP}/auth/order_details/update_incentives_calculation`,
-          updates,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (!saveResponse.data.Status) {
-          throw new Error(
-            saveResponse.data.Error || "Failed to save incentives"
-          );
-        }
-
-        setReportData({
-          orders: calculatedOrders,
-          settings: artistIncentiveResponse.data.Result,
-        });
-      } else {
-        setAlert({
-          show: true,
-          title: "Error",
-          message:
-            ordersResponse.data.Error || "Failed to fetch artist incentives",
-          type: "error",
-        });
       }
+
+      // Calculate incentives
+      const calculatedOrders = calculateArtistIncentive(
+        ordersResponse.data.Result,
+        artistIncentiveResponse.data.Result
+      );
+
+      // Save calculated incentives
+      const updates = calculatedOrders.map((order) => ({
+        Id: order.id,
+        artistIncentive: order.totalIncentive,
+      }));
+
+      const saveResponse = await axios.put(
+        `${ServerIP}/auth/order_details/update_incentives_calculation`,
+        updates,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!saveResponse.data.Status) {
+        throw new Error(saveResponse.data.Error || "Failed to save incentives");
+      }
+
+      setReportData({
+        orders: calculatedOrders,
+        settings: artistIncentiveResponse.data.Result,
+      });
     } catch (error) {
       console.error("Error generating artist incentive report:", error);
       setAlert({
         show: true,
         title: "Error",
-        message: "Failed to generate artist incentive report",
+        message: error.message || "Failed to generate artist incentive report",
         type: "error",
       });
     }
@@ -134,6 +114,7 @@ const ReportArtistIncentives = () => {
           </div>
         </div>
       </div>
+
       {reportData && (
         <div className="report-container">
           {showSummary ? (

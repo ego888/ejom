@@ -4,6 +4,7 @@ import { ServerIP } from "../../config";
 import DateFromTo from "../UI/DateFromTo";
 import Button from "../UI/Button";
 import ReportSalesSummary from "./ReportSalesSummary";
+import "./Reports.css";
 
 const ReportSales = () => {
   const [dateFrom, setDateFrom] = useState("");
