@@ -1691,27 +1691,31 @@ function AddQuote() {
                   <label htmlFor="clientId" className="form-label">
                     Client <span className="text-danger">*</span>
                   </label>
-                  <input
-                    type="text"
-                    id="clientName"
-                    list="clientList"
-                    className={`form-input ${
-                      error.clientId ? "is-invalid" : ""
-                    }`}
-                    value={data.clientName || ""}
-                    onChange={handleClientChange}
-                    placeholder="Enter or select client"
-                    style={{ textTransform: "uppercase" }}
+                  <Dropdown2
+                    id="clientId"
+                    value={data.clientId}
+                    onChange={(e) => {
+                      const selectedClient = e.target.option;
+                      setData((prev) => ({
+                        ...prev,
+                        clientId: selectedClient.id,
+                        clientName: selectedClient.clientName,
+                        customerName: selectedClient.customerName || "",
+                        terms: selectedClient.terms || "COD",
+                      }));
+                      setError((prev) => ({
+                        ...prev,
+                        clientId: false,
+                      }));
+                    }}
+                    options={clients}
+                    placeholder="Select Client"
+                    column1Key="clientName"
+                    column2Key="customerName"
+                    valueKey="id"
+                    error={error.clientId ? "Client is required" : ""}
                     disabled={!isEditMode || !canEdit()}
                   />
-                  <datalist id="clientList">
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.clientName} />
-                    ))}
-                  </datalist>
-                  {error.clientId && (
-                    <div className="invalid-feedback">Client is required</div>
-                  )}
                 </div>
               </div>
               <div className="col-8">

@@ -5,23 +5,23 @@
   color: #212529;
   border-collapse: collapse;
   font-size: 0.9rem;
-  table-layout: auto; /* This allows the table to expand */
+  table-layout: auto;
 }
 
-.order-table th,
+/* .order-table th,
 .order-table td {
   padding: 0.75rem;
   vertical-align: middle;
   border-top: 1px solid #dee2e6;
-}
+} */
 
-.order-table thead th {
+/* .order-table thead th {
   vertical-align: middle;
   border-bottom: 2px solid #dee2e6;
   background-color: #f8f9fa;
   font-weight: bold;
   white-space: nowrap;
-}
+} */
 
 .order-table tbody tr:hover {
   background-color: rgba(0, 0, 0, 0.075);

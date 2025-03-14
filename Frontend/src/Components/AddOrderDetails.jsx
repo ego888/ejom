@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../utils/axiosConfig";
 import Button from "./UI/Button";
+import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
 import {
   validateDetail,
@@ -369,13 +370,15 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
     <div className="add-order-details">
       <form onSubmit={handleSubmit} role="form" aria-label="Add Order Details">
         <div className="table-responsive">
-          <table className="order-table" role="grid">
+          <table className="table detail" role="grid">
             <thead>
               <tr>
                 <th scope="col">Qty</th>
                 <th scope="col">W</th>
                 <th scope="col">H</th>
-                <th scope="col">Unit</th>
+                <th scope="col" style={{ width: "45px" }}>
+                  Unit
+                </th>
                 <th scope="col">Material</th>
                 <th scope="col">Description</th>
                 <th scope="col">Per SqFt</th>
@@ -396,7 +399,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     id="quantity"
                     type="number"
                     step="1.0"
-                    className="form-control form-control-sm"
+                    className="form-input detail"
                     name="quantity"
                     value={detail.quantity}
                     onChange={handleInputChange}
@@ -411,7 +414,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     id="width"
                     type="number"
                     step="1.0"
-                    className="form-control form-control-sm"
+                    className="form-input detail"
                     name="width"
                     value={detail.width}
                     onChange={handleInputChange}
@@ -426,7 +429,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     id="height"
                     type="number"
                     step="1.0"
-                    className="form-control form-control-sm"
+                    className="form-input detail"
                     name="height"
                     value={detail.height}
                     onChange={handleInputChange}
@@ -437,41 +440,41 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   <label htmlFor="unit" className="visually-hidden">
                     Unit
                   </label>
-                  <select
-                    id="unit"
-                    className="form-select form-select-sm"
-                    name="unit"
+                  <Dropdown
+                    className="form-input detail"
+                    variant="table"
+                    size="small"
                     value={detail.unit || ""}
-                    onChange={handleInputChange}
-                    aria-label="Unit"
-                  >
-                    <option value="">Select</option>
-                    {units.map((unit) => (
-                      <option key={unit.unit} value={unit.unit}>
-                        {unit.unit}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) =>
+                      handleInputChange({
+                        target: { name: "unit", value: e.target.value },
+                      })
+                    }
+                    options={units}
+                    placeholder="Unit"
+                    labelKey="unit"
+                    valueKey="unit"
+                  />
                 </td>
                 <td>
                   <label htmlFor="material" className="visually-hidden">
                     Material
                   </label>
-                  <select
-                    id="material"
-                    className="form-select form-select-sm"
-                    name="material"
+                  <Dropdown
+                    className="form-input detail"
+                    variant="table"
+                    size="small"
                     value={detail.material || ""}
-                    onChange={handleInputChange}
-                    aria-label="Material"
-                  >
-                    <option value="">Select Material</option>
-                    {materials.map((material) => (
-                      <option key={material.id} value={material.Material}>
-                        {material.Material}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) =>
+                      handleInputChange({
+                        target: { name: "material", value: e.target.value },
+                      })
+                    }
+                    options={materials}
+                    placeholder="Material"
+                    labelKey="Material"
+                    valueKey="Material"
+                  />
                 </td>
                 <td>
                   <label htmlFor="itemDescription" className="visually-hidden">
@@ -480,7 +483,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   <input
                     id="itemDescription"
                     type="text"
-                    className="form-control"
+                    className="form-input detail"
                     name="itemDescription"
                     value={detail.itemDescription}
                     onChange={handleInputChange}
@@ -495,7 +498,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     id="perSqFt"
                     type="number"
                     step="1.0"
-                    className="form-control"
+                    className="form-input detail"
                     name="perSqFt"
                     value={detail.perSqFt}
                     onChange={handlePerSqFtChange}
@@ -510,7 +513,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     id="unitPrice"
                     type="number"
                     step="1.0"
-                    className="form-control"
+                    className="form-input detail"
                     name="unitPrice"
                     value={detail.unitPrice}
                     onChange={handleInputChange}
@@ -525,7 +528,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     id="discount"
                     type="number"
                     step="1.0"
-                    className="form-control"
+                    className="form-input detail"
                     name="discount"
                     value={detail.discount}
                     onChange={handleInputChange}
@@ -540,7 +543,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     id="amount"
                     type="number"
                     step="0.01"
-                    className="form-control"
+                    className="form-input detail"
                     name="amount"
                     value={detail.amount}
                     readOnly
@@ -554,7 +557,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   <input
                     id="remarks"
                     type="text"
-                    className="form-control"
+                    className="form-input detail"
                     name="remarks"
                     value={detail.remarks}
                     onChange={handleInputChange}

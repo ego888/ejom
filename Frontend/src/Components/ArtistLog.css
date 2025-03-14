@@ -131,9 +131,9 @@
 } */
 
 /* Style for the checkboxes background */
-.bg-white {
+/* .bg-white {
   background-color: var(--artist-content-bg) !important;
-}
+} */
 
 /* Update other component backgrounds to white .table,
 .table thead,
@@ -150,7 +150,7 @@
 } */
 
 /* Keep the table container white */
-.table-responsive {
+/* .table-responsive {
   background-color: var(--artist-content-bg);
   border-radius: 8px;
   padding: 20px;
@@ -160,4 +160,4 @@
 .table-row:first-child,
 .table-row[data-first-row="true"] {
   border-top: 2px solid var(--artist-border-color);
-}
+} */

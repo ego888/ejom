@@ -1869,19 +1869,19 @@ function AddOrder() {
           {isHeaderSaved && (
             <div className="mt-4">
               <h5>Order Details List</h5>
-              <table className="order-table table table-striped">
+              <table className="table detail table-striped">
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th className="text-center">Qty</th>
-                    <th className="text-center">Width</th>
-                    <th className="text-center">Height</th>
+                    <th>Qty</th>
+                    <th>Width</th>
+                    <th>Height</th>
                     <th>Unit</th>
                     <th>Material</th>
-                    <th className="text-end">Per Sq Ft</th>
-                    <th className="text-end">Price</th>
-                    <th className="text-end">Disc%</th>
-                    <th className="text-end">Amount</th>
+                    <th>Per Sq Ft</th>
+                    <th>Price</th>
+                    <th>Disc%</th>
+                    <th>Amount</th>
                     <th>Description</th>
                     <th>JO Remarks</th>
                     <th>Action</th>
@@ -1911,7 +1911,7 @@ function AddOrder() {
                             <td style={{ width: "60px" }}>
                               <input
                                 type="text"
-                                className="form-control form-control-sm quantity-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.quantity
                                     ? Number(
@@ -1937,7 +1937,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="number"
-                                className="form-control form-control-sm dimension-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.width || detail.width
                                 }
@@ -1953,7 +1953,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="number"
-                                className="form-control form-control-sm dimension-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.height ||
                                   detail.height
@@ -1969,7 +1969,9 @@ function AddOrder() {
                             </td>
                             <td>
                               <Dropdown
+                                className="form-input detail"
                                 variant="table"
+                                size="small"
                                 value={
                                   editedValues[uniqueId]?.unit ||
                                   detail.unit ||
@@ -1990,7 +1992,9 @@ function AddOrder() {
                             </td>
                             <td>
                               <Dropdown
+                                className="form-input detail"
                                 variant="table"
+                                size="small"
                                 value={
                                   editedValues[uniqueId]?.material ||
                                   detail.material ||
@@ -2012,7 +2016,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="text"
-                                className="form-control form-control-sm persqft-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.perSqFt
                                     ? editingRowId === uniqueId
@@ -2049,7 +2053,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="text"
-                                className="form-control form-control-sm price-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.unitPrice
                                     ? editingRowId === uniqueId
@@ -2086,7 +2090,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="text"
-                                className="form-control form-control-sm discount-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.discount
                                     ? editingRowId === uniqueId
@@ -2127,7 +2131,7 @@ function AddOrder() {
                             </td>
                             <td>
                               <textarea
-                                className="form-control form-control-sm description-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.itemDescription ||
                                   detail.itemDescription
@@ -2147,7 +2151,7 @@ function AddOrder() {
                             </td>
                             <td>
                               <textarea
-                                className="form-control form-control-sm remarks-input"
+                                className="form-input detail"
                                 value={
                                   editedValues[uniqueId]?.remarks ||
                                   detail.remarks

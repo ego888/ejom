@@ -110,9 +110,11 @@ a:hover {
   font-size: var(--reports-font-size);
 }
 
+/* Apply similar styles to form-select */
 .form-input,
 .form-textarea,
-.form-select {
+.form-select,
+.custom-dropdown {
   border: 1px solid #ced4da;
   border-radius: 5px;
   padding: 0.375rem 0.75rem;
@@ -124,11 +126,40 @@ a:hover {
   width: 100%;
 }
 
+/* Ensure dropdown has similar behavior */
+.custom-dropdown {
+  appearance: none; /* Removes default browser styles */
+  cursor: pointer;
+}
+
+/* Optional: Add a custom dropdown arrow */
+.custom-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.custom-dropdown-wrapper::after {
+  content: "▼"; /* Custom dropdown arrow */
+  font-size: 12px;
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #555;
+}
+
 /* Style for multiline fields */
 .form-input.multiline {
   min-height: 70px;
   align-items: flex-start;
   white-space: pre-wrap;
+}
+
+.form-input.detail {
+  padding: 1px 6px;
+  min-height: 22px;
 }
 
 .form-input:disabled,
@@ -184,15 +215,34 @@ a:hover {
   margin-bottom: 1em;
 }
 
+.table.detail tr {
+  height: 22px;
+}
+
+.table.detail th {
+  padding: 6px 6px; /* Smaller padding */
+  line-height: 1.2; /* Tighter spacing */
+  white-space: nowrap; /* Prevent multi-line rows */
+  text-align: center;
+}
+
+.table.detail td {
+  padding: 1px 6px; /* Smaller padding */
+  line-height: 1.2; /* Tighter spacing */
+  white-space: nowrap; /* Prevent multi-line rows */
+}
+
 .table thead {
   background-color: grey;
   color: white;
+  vertical-align: middle;
 }
 
 .table th,
 .table td {
   padding: 0.75em;
   border: 1px solid #dee2e6;
+  vertical-align: middle;
 }
 
 .table th {

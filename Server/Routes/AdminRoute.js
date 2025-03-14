@@ -30,14 +30,19 @@ const checkAndInsertAdmin = () => {
         }
 
         const insertSql =
-          "INSERT INTO employee (email, password, active, admin) VALUES (?, ?, 1, 1)";
-        con.query(insertSql, [defaultEmail, hashedPassword], (err, result) => {
-          if (err) {
-            console.error("Error inserting default admin:", err);
-            return;
-          }
-          console.log("Default admin inserted!");
-        });
+          //        "INSERT INTO employee (name, email, password, category_id, active, admin) VALUES ('erwin', ?, ?, 1,  1, 1)";
+          //          "UPDATE employee SET name = 'erwin', email = ?, password = ?, category_id = 1, active = 1, admin = 1 WHERE id = 1";
+          con.query(
+            insertSql,
+            [defaultEmail, hashedPassword],
+            (err, result) => {
+              if (err) {
+                console.error("Error inserting default admin:", err);
+                return;
+              }
+              console.log("Default ejom admin inserted!");
+            }
+          );
       });
     }
   });

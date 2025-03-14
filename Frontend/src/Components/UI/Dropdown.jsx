@@ -1,7 +1,6 @@
-import React from "react";
-
 const Dropdown = ({
   variant = "form", // "form" or "table"
+  size = "normal", // New prop: "normal" or "small"
   value,
   onChange,
   options,
@@ -11,17 +10,18 @@ const Dropdown = ({
   required,
   disabled,
   error,
-  labelKey = "name", // key to use for option label
-  valueKey = "id", // key to use for option value
+  labelKey = "name",
+  valueKey = "id",
   className = "",
   label,
   ...props
 }) => {
   const getDropdownClass = () => {
-    const baseClass =
-      variant === "form" ? "form-select" : "form-control form-control-sm";
+    const baseClass = variant === "form" ? "form-input" : "form-input detail";
 
-    return `${baseClass} ${error ? "is-invalid" : ""} ${className}`.trim();
+    const sizeClass = size === "small" ? "dropdown-sm" : "";
+
+    return `custom-dropdown ${error ? "is-invalid" : ""} ${className}`.trim();
   };
 
   return (

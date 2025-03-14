@@ -70,7 +70,7 @@ const Dropdown2 = ({
   };
 
   return (
-    <div className="dropdown-wrapper" ref={dropdownRef}>
+    <div className={`custom-dropdown ${error ? "is-invalid" : ""}`}>
       {label && (
         <label
           htmlFor={id}
@@ -79,48 +79,46 @@ const Dropdown2 = ({
           {label}
         </label>
       )}
-      <div className={`custom-dropdown ${error ? "is-invalid" : ""}`}>
-        <div
-          className="form-input"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
-        >
-          {selectedLabel}
-        </div>
-        {isOpen && !disabled && (
-          <div className="dropdown-options">
-            <div className="dropdown-search" onClick={handleSearchClick}>
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search..."
-                autoFocus
-              />
-            </div>
-            {required && (
-              <div
-                className="dropdown-option placeholder"
-                onClick={() => handleSelect({ [valueKey]: "" })}
-              >
-                {placeholder}
-              </div>
-            )}
-            {filteredOptions.map((option) => (
-              <div
-                key={option[valueKey]}
-                className={`dropdown-option ${
-                  option[valueKey] === value ? "selected" : ""
-                }`}
-                onClick={() => handleSelect(option)}
-              >
-                <span className="option-col1">{option[column1Key]}</span>
-                <span className="option-col2">{option[column2Key]}</span>
-              </div>
-            ))}
-          </div>
-        )}
+      <div
+        className="form-input"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+      >
+        {selectedLabel}
       </div>
+      {isOpen && !disabled && (
+        <div className="dropdown-options">
+          <div className="dropdown-search" onClick={handleSearchClick}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search..."
+              autoFocus
+            />
+          </div>
+          {required && (
+            <div
+              className="dropdown-option placeholder"
+              onClick={() => handleSelect({ [valueKey]: "" })}
+            >
+              {placeholder}
+            </div>
+          )}
+          {filteredOptions.map((option) => (
+            <div
+              key={option[valueKey]}
+              className={`dropdown-option ${
+                option[valueKey] === value ? "selected" : ""
+              }`}
+              onClick={() => handleSelect(option)}
+            >
+              <span className="option-col1">{option[column1Key]}</span>
+              <span className="option-col2">{option[column2Key]}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {error && (
         <div className="invalid-feedback" role="alert" aria-live="polite">
           {error}
