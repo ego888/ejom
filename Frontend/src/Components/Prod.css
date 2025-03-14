@@ -73,7 +73,7 @@
   border: 1px solid var(--prod-border-light);
   color: var(--prod-text-color);
 }
-
+/* 
 .prod-table-container {
   background-color: var(--prod-content-bg);
   padding: 15px;
@@ -109,51 +109,4 @@
   border-bottom: 2px solid var(--prod-border-color);
   margin-bottom: 15px;
   font-weight: 600;
-}
-
-.table {
-  background-color: var(--prod-content-bg);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.table thead {
-  background-color: var(--prod-content-bg);
-  color: var(--prod-text-color);
-}
-
-.table thead th {
-  border-bottom: 2px solid var(--prod-border-color) !important;
-}
-
-.table tbody {
-  background-color: var(--prod-content-bg);
-}
-
-/* Style for the checkboxes background */
-.bg-white {
-  background-color: var(--prod-content-bg) !important;
-}
-
-/* Update other component backgrounds to white */
-.table,
-.table thead,
-.table tbody,
-.table thead th,
-.prod-status-filter,
-.prod-form-container,
-.prod-section-header,
-.prod-table-container,
-.prod-records-info,
-.prod-details-header {
-  background-color: var(--prod-content-bg);
-  color: var(--prod-text-color);
-}
-
-/* Keep the table container white */
-.table-responsive {
-  background-color: var(--prod-content-bg);
-  border-radius: 8px;
-  padding: 20px;
-  color: var(--prod-text-color);
-}
+} */

@@ -184,6 +184,11 @@ a:hover {
   margin-bottom: 1em;
 }
 
+.table thead {
+  background-color: grey;
+  color: white;
+}
+
 .table th,
 .table td {
   padding: 0.75em;

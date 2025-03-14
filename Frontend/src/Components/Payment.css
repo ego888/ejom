@@ -111,53 +111,6 @@
   font-weight: 600;
 }
 
-.table {
-  background-color: var(--payment-content-bg);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.table thead {
-  background-color: var(--payment-content-bg);
-  color: var(--payment-text-color);
-}
-
-.table thead th {
-  border-bottom: 2px solid var(--payment-border-color) !important;
-}
-
-.table tbody {
-  background-color: var(--payment-content-bg);
-}
-
-/* Style for the checkboxes background */
-.bg-white {
-  background-color: var(--payment-content-bg) !important;
-}
-
-/* Update other component backgrounds to white */
-.table,
-.table thead,
-.table tbody,
-.table thead th,
-.payment-status-filter,
-.payment-form-container,
-.payment-section-header,
-.payment-table-container,
-.payment-records-info,
-.payment-details-header {
-  background-color: var(--payment-content-bg);
-  color: var(--payment-text-color);
-}
-
-/* Keep the table container white */
-.table-responsive {
-  background-color: var(--payment-content-bg);
-  border-radius: 8px;
-  padding: 20px;
-  color: var(--payment-text-color);
-}
-
 .tooltip-modal {
   position: absolute;
   top: 100%;

@@ -110,7 +110,7 @@
   margin-bottom: 15px;
   font-weight: 600;
 }
-
+/* 
 .table {
   background-color: var(--artist-content-bg);
   border-radius: 4px;
@@ -128,7 +128,7 @@
 
 .table tbody {
   background-color: var(--artist-content-bg);
-}
+} */
 
 /* Style for the checkboxes background */
 .bg-white {

@@ -1,7 +1,6 @@
 import React from "react";
 import { formatNumber } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
-import "./ReportArtistIncentiveDetails.css";
 
 const ReportSalesIncentiveSummary = ({ data }) => {
   // Group and summarize data by preparedBy

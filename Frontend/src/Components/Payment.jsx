@@ -8,7 +8,6 @@ import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
-import "./Orders.css";
 import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import ModalAlert from "../Components/UI/ModalAlert";
@@ -271,35 +270,6 @@ function Prod() {
     localStorage.setItem("paymentsSortConfig", JSON.stringify(newSortConfig));
   };
 
-  // Status filter handlers
-  // const handleStatusFilter = (statusId) => {
-  //   setSelectedStatuses((prev) => {
-  //     let newStatuses;
-  //     if (prev.includes(statusId)) {
-  //       newStatuses = prev.filter((s) => s !== statusId);
-  //     } else {
-  //       newStatuses = [...prev, statusId];
-  //     }
-  //     console.log("New statuses after toggle:", newStatuses); // Debugging log
-  //     // Update Prod checkbox state
-  //     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //     const selectedProdStatuses = newStatuses.filter((s) =>
-  //       prodStatuses.includes(s)
-  //     );
-  //     console.log("Prod statuses:", prodStatuses); // Debugging log
-  //     console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
-  //     setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
-
-  //     // Update All checkbox state
-  //     setIsAllChecked(newStatuses.length === statusOptions.length);
-
-  //     // Save to localStorage
-  //     localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  //     return newStatuses;
-  //   });
-  //   setCurrentPage(1);
-  // };
-
   // Helper function for sort indicator
   const getSortIndicator = (key) => {
     if (sortConfig.key === key) {
@@ -319,68 +289,6 @@ function Prod() {
     console.log("pageNumber 2", pageNumber);
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
-
-  // Handle records per page change
-  // const handleRecordsPerPageChange = (e) => {
-  //   setRecordsPerPage(Number(e.target.value));
-  //   setCurrentPage(1); // Reset to first page
-  // };
-
-  // const isProdIndeterminate = () => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
-  //     prodStatuses.includes(s)
-  //   );
-  //   return (
-  //     selectedProdStatuses.length > 0 &&
-  //     selectedProdStatuses.length < prodStatuses.length
-  //   );
-  // };
-
-  // const handleProdCheckbox = (e) => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   let newStatuses;
-  //   if (e.target.checked) {
-  //     newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-  //   } else {
-  //     newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
-  //   }
-
-  //   setSelectedStatuses(newStatuses);
-  //   setIsProdChecked(e.target.checked);
-  //   setIsAllChecked(newStatuses.length === statusOptions.length);
-
-  //   // Save to localStorage
-  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  // };
-
-  // const isAllIndeterminate = () => {
-  //   return (
-  //     selectedStatuses.length > 0 &&
-  //     selectedStatuses.length < statusOptions.length
-  //   );
-  // };
-
-  // const handleAllCheckbox = (e) => {
-  //   let newStatuses = [];
-  //   if (e.target.checked) {
-  //     newStatuses = statusOptions.map((s) => s.statusId);
-  //   }
-  //   setSelectedStatuses(newStatuses);
-  //   setIsAllChecked(e.target.checked);
-  //   setIsProdChecked(e.target.checked);
-
-  //   // Save to localStorage
-  //   localStorage.setItem("paymentStatusFilters", JSON.stringify(newStatuses));
-  // };
-
-  // Add a cleanup effect to save the page when unmounting
-  // useEffect(() => {
-  //   return () => {
-  //     console.log("currentPage 1", currentPage);
-  //     localStorage.setItem("ordersListPage", currentPage.toString());
-  //   };
-  // }, [currentPage]);
 
   // Separate the search logic into its own function
   const handleClientSearch = async (e) => {
@@ -949,7 +857,7 @@ function Prod() {
             }
           />
           <table className="table table-hover">
-            <thead>
+            <thead className="table table-head">
               <tr>
                 <th>Action</th>
                 <th
@@ -962,7 +870,6 @@ function Prod() {
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
-                    color: hasClientFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Client {getSortIndicator("clientName")}
@@ -974,7 +881,6 @@ function Prod() {
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
-                    color: hasSalesFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Sales {getSortIndicator("salesName")}

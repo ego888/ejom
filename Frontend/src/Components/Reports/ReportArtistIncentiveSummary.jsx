@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { formatNumber } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
-import "./ReportArtistIncentiveDetails.css";
 import { jwtDecode } from "jwt-decode";
 
 const ReportArtistIncentiveSummary = ({ data }) => {

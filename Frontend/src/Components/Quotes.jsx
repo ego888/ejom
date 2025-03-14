@@ -307,7 +307,6 @@ function Quotes() {
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
-                    color: hasClientFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Client {getSortIndicator("clientName")}
@@ -327,7 +326,6 @@ function Quotes() {
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
-                    color: hasSalesFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Sales {getSortIndicator("salesName")}
