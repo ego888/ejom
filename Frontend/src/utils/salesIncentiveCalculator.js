@@ -23,6 +23,13 @@ export const calculateSalesIncentive = (orders, settings) => {
       salesIncentive = (order.amount / VATDivider) * salesIncentiveMultiplier;
       overideIncentive =
         (order.amount / VATDivider) * overrideIncentiveMultiplier;
+    } else {
+      return {
+        ...order,
+        salesIncentive: 0,
+        overideIncentive: 0,
+        remarks: "Item zero amount",
+      };
     }
 
     // Apply half rate if applicable

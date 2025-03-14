@@ -154,7 +154,7 @@ function OrderView() {
                   <label htmlFor="view-order-date" className="form-label">
                     Order Date
                   </label>
-                  <div id="view-order-date" className="order-info-field">
+                  <div id="view-order-date" className="form-input">
                     {data.orderDate || ""}
                   </div>
                 </div>
@@ -164,7 +164,7 @@ function OrderView() {
                   <label htmlFor="view-prepared-by" className="form-label">
                     Prepared By
                   </label>
-                  <div id="view-prepared-by" className="order-info-field">
+                  <div id="view-prepared-by" className="form-input">
                     {data.preparedByName || ""}
                   </div>
                 </div>
@@ -174,7 +174,7 @@ function OrderView() {
                   <label htmlFor="view-terms" className="form-label">
                     Terms
                   </label>
-                  <div id="view-terms" className="order-info-field">
+                  <div id="view-terms" className="form-input">
                     {data.terms || ""}
                   </div>
                 </div>
@@ -184,87 +184,97 @@ function OrderView() {
                   <label htmlFor="view-client" className="form-label">
                     Client
                   </label>
-                  <div id="view-client" className="order-info-field">
+                  <div id="view-client" className="form-input">
                     {data.clientName || ""}
                   </div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-8 order-info-row">
                 <div className="d-flex flex-column">
-                  <label htmlFor="view-project" className="form-label">
-                    Project Name
+                  <label htmlFor="view-customer-name" className="form-label">
+                    Customer Name
                   </label>
-                  <div id="view-project" className="order-info-field">
-                    {data.projectName || ""}
+                  <div id="view-customer-name" className="form-input">
+                    {data.customerName || ""}
                   </div>
                 </div>
-              </div>{" "}
-              <div className="col-4 order-info-row">
+              </div>
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-dr-date" className="form-label">
                     DR Date
                   </label>
-                  <div id="view-dr-date" className="order-info-field">
+                  <div id="view-dr-date" className="form-input">
                     {data.drDate || ""}
                   </div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
+                <div className="d-flex flex-column">
+                  <label htmlFor="view-project" className="form-label">
+                    Project Name
+                  </label>
+                  <div id="view-project" className="form-input">
+                    {data.projectName || ""}
+                  </div>
+                </div>
+              </div>{" "}
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-ordered-by" className="form-label">
                     Ordered By
                   </label>
-                  <div id="view-ordered-by" className="order-info-field">
+                  <div id="view-ordered-by" className="form-input">
                     {data.orderedBy || ""}
                   </div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-order-ref" className="form-label">
                     Order Reference
                   </label>
-                  <div id="view-order-ref" className="order-info-field">
+                  <div id="view-order-ref" className="form-input">
                     {data.orderReference || ""}
                   </div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-cell-number" className="form-label">
                     Cell Number
                   </label>
-                  <div id="view-cell-number" className="order-info-field">
+                  <div id="view-cell-number" className="form-input">
                     {data.cellNumber || ""}
                   </div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-due-date" className="form-label">
                     Due Date
                   </label>
-                  <div id="view-due-date" className="order-info-field">
+                  <div id="view-due-date" className="form-input">
                     {data.dueDate || ""}
                   </div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-due-time" className="form-label">
                     Due Time
                   </label>
-                  <div id="view-due-time" className="order-info-field">
+                  <div id="view-due-time" className="form-input">
                     {data.dueTime || ""}
                   </div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-graphics-by" className="form-label">
                     Graphics By
                   </label>
-                  <div id="view-graphics-by" className="order-info-field">
+                  <div id="view-graphics-by" className="form-input">
                     {data.graphicsByName || ""}
                   </div>
                 </div>
@@ -274,10 +284,7 @@ function OrderView() {
                   <label htmlFor="view-special-inst" className="form-label">
                     Special Instructions
                   </label>
-                  <div
-                    id="view-special-inst"
-                    className="order-info-field multiline"
-                  >
+                  <div id="view-special-inst" className="form-input multiline">
                     {data.specialInst || ""}
                   </div>
                 </div>
@@ -287,10 +294,7 @@ function OrderView() {
                   <label htmlFor="view-delivery-inst" className="form-label">
                     Delivery Instructions
                   </label>
-                  <div
-                    id="view-delivery-inst"
-                    className="order-info-field multiline"
-                  >
+                  <div id="view-delivery-inst" className="form-input multiline">
                     {data.deliveryInst || ""}
                   </div>
                 </div>

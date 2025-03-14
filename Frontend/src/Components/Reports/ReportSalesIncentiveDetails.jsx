@@ -65,7 +65,9 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                       {!sameOrder ? `₱${formatNumber(item.grandTotal)}` : ""}
                     </td>
                     <td>{item.materialName}</td>
-                    <td className="text-end">₱{formatNumber(item.amount)}</td>
+                    <td className="text-end" style={{ fontWeight: "bold" }}>
+                      ₱{formatNumber(item.amount)}
+                    </td>
                     <td
                       className={`text-end ${
                         item.perSqFt < data.settings.HalfIncentiveSqFt

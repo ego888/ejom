@@ -81,7 +81,7 @@ const Dropdown2 = ({
       )}
       <div className={`custom-dropdown ${error ? "is-invalid" : ""}`}>
         <div
-          className="dropdown-selected"
+          className="form-input"
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
           {selectedLabel}

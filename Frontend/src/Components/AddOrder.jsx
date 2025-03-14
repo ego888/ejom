@@ -642,12 +642,6 @@ function AddOrder() {
     navigate("/dashboard/orders");
   };
 
-  const labelStyle = {
-    fontSize: "0.9rem",
-    marginBottom: "0.01rem",
-    marginTop: "0.3rem",
-  };
-
   const inputStyle = {
     fontSize: "0.9rem",
   };
@@ -1444,7 +1438,7 @@ function AddOrder() {
                       <input
                         id="order-date"
                         type="date"
-                        className="form-control rounded-0"
+                        className="form-input"
                         value={data.orderDate || ""}
                         onChange={(e) =>
                           setData({ ...data, orderDate: e.target.value })
@@ -1478,7 +1472,7 @@ function AddOrder() {
                       </label>
                       <input
                         type="text"
-                        className="form-control rounded-0"
+                        className="form-input"
                         id="terms"
                         style={inputStyle}
                         value={data.terms || ""}
@@ -1488,11 +1482,7 @@ function AddOrder() {
                   </div>
                   <div className="col-4">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="clientId"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="clientId" className="form-label">
                         Client <span className="text-danger">*</span>
                       </label>
                       <Dropdown2
@@ -1518,16 +1508,12 @@ function AddOrder() {
                   </div>
                   <div className="col-8">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="customerName"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="customerName" className="form-label">
                         Customer Name
                       </label>
                       <input
                         type="text"
-                        className="form-control rounded-0"
+                        className="form-input"
                         id="customerName"
                         style={inputStyle}
                         value={data.customerName || ""}
@@ -1537,16 +1523,12 @@ function AddOrder() {
                   </div>
                   <div className="col-4">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="projectName"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="projectName" className="form-label">
                         Project Name <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
-                        className={`form-control rounded-0 ${
+                        className={`form-input ${
                           error.projectName ? "is-invalid" : ""
                         }`}
                         id="projectName"
@@ -1566,16 +1548,12 @@ function AddOrder() {
                   </div>
                   <div className="col-4">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="orderedBy"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="orderedBy" className="form-label">
                         Ordered By
                       </label>
                       <input
                         type="text"
-                        className="form-control rounded-0"
+                        className="form-input"
                         id="orderedBy"
                         style={inputStyle}
                         value={data.orderedBy || ""}
@@ -1588,16 +1566,12 @@ function AddOrder() {
                   </div>
                   <div className="col-4">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="orderReference"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="orderReference" className="form-label">
                         Order Reference
                       </label>
                       <input
                         type="text"
-                        className="form-control rounded-0"
+                        className="form-input"
                         id="orderReference"
                         style={inputStyle}
                         value={data.orderReference || ""}
@@ -1610,16 +1584,12 @@ function AddOrder() {
                   </div>
                   <div className="col-3">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="cellNumber"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="cellNumber" className="form-label">
                         Cell Number
                       </label>
                       <input
                         type="text"
-                        className="form-control rounded-0"
+                        className="form-input"
                         id="cellNumber"
                         style={inputStyle}
                         value={data.cellNumber || ""}
@@ -1632,16 +1602,12 @@ function AddOrder() {
                   </div>
                   <div className="col-3">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="dueDate"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="dueDate" className="form-label">
                         Due Date
                       </label>
                       <input
                         type="date"
-                        className="form-control rounded-0"
+                        className="form-input"
                         id="dueDate"
                         style={dateTimeStyle}
                         value={data.dueDate || ""}
@@ -1654,16 +1620,12 @@ function AddOrder() {
                   </div>
                   <div className="col-3">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="dueTime"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="dueTime" className="form-label">
                         Due Time
                       </label>
                       <input
                         type="text"
-                        className="form-control rounded-0"
+                        className="form-input"
                         id="dueTime"
                         style={inputStyle}
                         value={data.dueTime || ""}
@@ -1676,11 +1638,7 @@ function AddOrder() {
                   </div>
                   <div className="col-3">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="graphicsBy"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="graphicsBy" className="form-label">
                         Graphics By <span className="text-danger">*</span>
                       </label>
                       <Dropdown
@@ -1705,15 +1663,11 @@ function AddOrder() {
                   </div>
                   <div className="col-6">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="specialInst"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="specialInst" className="form-label">
                         Special Instructions
                       </label>
                       <textarea
-                        className="form-control rounded-0"
+                        className="form-input multiline"
                         id="specialInst"
                         style={inputStyle}
                         value={data.specialInst || ""}
@@ -1727,15 +1681,11 @@ function AddOrder() {
                   </div>
                   <div className="col-6">
                     <div className="d-flex flex-column">
-                      <label
-                        htmlFor="deliveryInst"
-                        className="form-label"
-                        style={labelStyle}
-                      >
+                      <label htmlFor="deliveryInst" className="form-label">
                         Delivery Instructions
                       </label>
                       <textarea
-                        className="form-control rounded-0"
+                        className="form-input multiline"
                         id="deliveryInst"
                         style={inputStyle}
                         value={data.deliveryInst || ""}

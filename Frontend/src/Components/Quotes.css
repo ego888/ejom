@@ -99,21 +99,8 @@
   font-weight: 600;
 }
 
-/* Form label styling */
-.form-label {
-  text-align: center;
-  font-weight: bold;
-  width: 100%;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
 .form-amount-label {
   font-weight: bold;
-}
-/* Remove required asterisk */
-.form-label::after {
-  content: none !important;
 }
 
 .client-cell {

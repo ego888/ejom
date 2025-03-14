@@ -832,12 +832,6 @@ function AddQuote() {
     });
   };
 
-  const labelStyle = {
-    fontSize: "0.9rem",
-    marginBottom: "0.01rem",
-    marginTop: "0.3rem",
-  };
-
   const inputStyle = {
     fontSize: "0.9rem",
   };
@@ -1641,16 +1635,12 @@ function AddQuote() {
             >
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="quoteDate"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="quoteDate" className="form-label">
                     Quote Date
                   </label>
                   <input
                     type="date"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="quoteDate"
                     style={dateTimeStyle}
                     value={data.quoteDate || ""}
@@ -1663,11 +1653,7 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="preparedBy"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="preparedBy" className="form-label">
                     Prepared By
                   </label>
                   <Dropdown
@@ -1685,16 +1671,12 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="terms"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="terms" className="form-label">
                     Terms
                   </label>
                   <input
                     type="text"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="terms"
                     style={inputStyle}
                     value={data.terms || ""}
@@ -1706,24 +1688,21 @@ function AddQuote() {
 
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="clientId"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="clientId" className="form-label">
                     Client <span className="text-danger">*</span>
                   </label>
                   <input
                     type="text"
                     id="clientName"
                     list="clientList"
-                    className={`form-control ${
+                    className={`form-input ${
                       error.clientId ? "is-invalid" : ""
                     }`}
                     value={data.clientName || ""}
                     onChange={handleClientChange}
                     placeholder="Enter or select client"
                     style={{ textTransform: "uppercase" }}
+                    disabled={!isEditMode || !canEdit()}
                   />
                   <datalist id="clientList">
                     {clients.map((client) => (
@@ -1737,16 +1716,12 @@ function AddQuote() {
               </div>
               <div className="col-8">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="customerName"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="customerName" className="form-label">
                     Customer Name
                   </label>
                   <input
                     type="text"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="customerName"
                     style={inputStyle}
                     value={data.customerName || ""}
@@ -1757,16 +1732,12 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="projectName"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="projectName" className="form-label">
                     Project Name <span className="text-danger">*</span>
                   </label>
                   <input
                     type="text"
-                    className={`form-control rounded-0 ${
+                    className={`form-input ${
                       error.projectName ? "is-invalid" : ""
                     }`}
                     id="projectName"
@@ -1786,16 +1757,12 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="orderedBy"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="orderedBy" className="form-label">
                     Ordered By
                   </label>
                   <input
                     type="text"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="orderedBy"
                     style={inputStyle}
                     value={data.orderedBy || ""}
@@ -1808,16 +1775,12 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="dueDate"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="dueDate" className="form-label">
                     Due Date
                   </label>
                   <input
                     type="date"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="dueDate"
                     style={dateTimeStyle}
                     value={data.dueDate || ""}
@@ -1830,16 +1793,12 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="email"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="email" className="form-label">
                     Email
                   </label>
                   <input
                     type="email"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="email"
                     style={inputStyle}
                     value={data.email || ""}
@@ -1852,16 +1811,12 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="cellNumber"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="cellNumber" className="form-label">
                     Cell Number
                   </label>
                   <input
                     type="text"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="cellNumber"
                     style={inputStyle}
                     value={data.cellNumber || ""}
@@ -1874,16 +1829,12 @@ function AddQuote() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label
-                    htmlFor="telNum"
-                    className="form-label"
-                    style={labelStyle}
-                  >
+                  <label htmlFor="telNum" className="form-label">
                     Telephone Number
                   </label>
                   <input
                     type="text"
-                    className="form-control rounded-0"
+                    className="form-input"
                     id="telNum"
                     style={inputStyle}
                     value={data.telNum || ""}

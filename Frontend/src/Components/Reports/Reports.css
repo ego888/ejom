@@ -107,13 +107,6 @@
   gap: 1rem;
 }
 
-.form-label {
-  font-weight: 500;
-  color: var(--reports-text-color);
-  margin-bottom: 0.5rem;
-  font-size: var(--reports-font-size);
-}
-
 .form-control {
   font-size: var(--reports-font-size);
   border-color: var(--reports-border-light);

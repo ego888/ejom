@@ -19,9 +19,7 @@ const Dropdown = ({
 }) => {
   const getDropdownClass = () => {
     const baseClass =
-      variant === "form"
-        ? "form-select rounded-0"
-        : "form-control form-control-sm";
+      variant === "form" ? "form-select" : "form-control form-control-sm";
 
     return `${baseClass} ${error ? "is-invalid" : ""} ${className}`.trim();
   };

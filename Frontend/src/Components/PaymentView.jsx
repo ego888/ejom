@@ -177,43 +177,37 @@ function OrderView() {
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Order Date</label>
-                  <div className="order-info-field">{data.orderDate || ""}</div>
+                  <div className="form-input">{data.orderDate || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Prepared By</label>
-                  <div className="order-info-field">
-                    {data.preparedByName || ""}
-                  </div>
+                  <div className="form-input">{data.preparedByName || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Terms</label>
-                  <div className="order-info-field">{data.terms || ""}</div>
+                  <div className="form-input">{data.terms || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Client</label>
-                  <div className="order-info-field">
-                    {data.clientName || ""}
-                  </div>
+                  <div className="form-input">{data.clientName || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Project Name</label>
-                  <div className="order-info-field">
-                    {data.projectName || ""}
-                  </div>
+                  <div className="form-input">{data.projectName || ""}</div>
                 </div>
               </div>{" "}
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">DR Date</label>
-                  <div className="order-info-field">
+                  <div className="form-input">
                     {new Date(data.drDate).toLocaleDateString() || ""}
                   </div>
                 </div>
@@ -221,49 +215,43 @@ function OrderView() {
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Ordered By</label>
-                  <div className="order-info-field">{data.orderedBy || ""}</div>
+                  <div className="form-input">{data.orderedBy || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Order Reference</label>
-                  <div className="order-info-field">
-                    {data.orderReference || ""}
-                  </div>
+                  <div className="form-input">{data.orderReference || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Cell Number</label>
-                  <div className="order-info-field">
-                    {data.cellNumber || ""}
-                  </div>
+                  <div className="form-input">{data.cellNumber || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Due Date</label>
-                  <div className="order-info-field">{data.dueDate || ""}</div>
+                  <div className="form-input">{data.dueDate || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Due Time</label>
-                  <div className="order-info-field">{data.dueTime || ""}</div>
+                  <div className="form-input">{data.dueTime || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Graphics By</label>
-                  <div className="order-info-field">
-                    {data.graphicsByName || ""}
-                  </div>
+                  <div className="form-input">{data.graphicsByName || ""}</div>
                 </div>
               </div>
               <div className="col-6 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Special Instructions</label>
-                  <div className="order-info-field multiline">
+                  <div className="form-input multiline">
                     {data.specialInst || ""}
                   </div>
                 </div>
@@ -271,7 +259,7 @@ function OrderView() {
               <div className="col-6 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Delivery Instructions</label>
-                  <div className="order-info-field multiline">
+                  <div className="form-input multiline">
                     {data.deliveryInst || ""}
                   </div>
                 </div>
