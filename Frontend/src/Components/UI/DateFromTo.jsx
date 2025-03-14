@@ -227,7 +227,7 @@ const DateFromTo = ({ onDateChange, className }) => {
     <div className={`date-range-container ${className || ""}`}>
       {/* From Date Row */}
       <div className="date-control mb-3">
-        <label htmlFor="dateFrom" className="form-label">
+        <label htmlFor="dateFrom" className="form-label text-center">
           Date From
         </label>
         <div className="date-input-group">
@@ -286,7 +286,7 @@ const DateFromTo = ({ onDateChange, className }) => {
           >
             <i className="bi bi-calendar-minus"></i>
           </button>
-          <label htmlFor="dateTo" className="form-label">
+          <label htmlFor="dateTo" className="form-label text-center w-100">
             Date To
           </label>
           <button

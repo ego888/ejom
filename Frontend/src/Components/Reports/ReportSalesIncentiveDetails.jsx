@@ -10,7 +10,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
   let previousOrderId = null;
 
   return (
-    <div className="report-summary-container">
+    <div className="report-container">
       <h4 className="report-title">Sales Incentive Report</h4>
       <div className="table-responsive">
         <table className="table table-hover">

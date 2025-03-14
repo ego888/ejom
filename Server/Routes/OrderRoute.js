@@ -345,28 +345,30 @@ router.get("/orders-details-artistIncentive", async (req, res) => {
   try {
     const sql = `
       SELECT 
-    o.orderId,
-    o.revision,
-    o.projectName,
-    o.dueDate,
-    o.dueTime,
-    c.clientName,
-    o.productionDate,
-    o.status,
-    od.Id,
-    od.quantity,
-    od.width,
-    od.height,
-    od.unit,
-    od.material,
-    od.artistIncentive,
-    od.major,
-    od.minor
-FROM orders o
-LEFT JOIN client c ON o.clientId = c.Id
+        o.orderId,
+        o.revision,
+        o.projectName,
+        o.dueDate,
+        o.dueTime,
+        c.clientName,
+        o.productionDate,
+        o.status,
+        od.Id,
+        od.quantity,
+        od.width,
+        od.height,
+        od.unit,
+        od.material,
+        od.artistIncentive,
+        od.major,
+        od.minor
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.Id
       LEFT JOIN order_details od ON o.orderID = od.orderId
+      LEFT JOIN material m ON od.material = m.material
       WHERE o.status = 'Prod' 
-      AND (o.productionDate IS NOT NULL AND o.productionDate + INTERVAL 24 HOUR > NOW())
+        AND (o.productionDate IS NOT NULL AND o.productionDate + INTERVAL 48 HOUR > NOW())
+        AND (m.noIncentive = 0)
       ORDER BY o.orderID ASC, od.displayOrder ASC`;
 
     const result = await new Promise((resolve, reject) => {
@@ -678,7 +680,7 @@ router.get("/orders-all-DR", async (req, res) => {
         od.displayOrder
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN order_details od ON o.orderID = od.orderId AND od.noPrint = 0
+      LEFT JOIN order_details od ON o.orderID = od.orderId AND od.noPrint = 0 AND od.perSqFt > 0
       WHERE !o.drnum 
         AND (o.status = 'Prod' OR o.status = 'Finish' OR o.status = 'Delivered')
       ORDER BY o.orderID ASC, od.displayOrder ASC;

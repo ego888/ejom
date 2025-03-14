@@ -185,6 +185,7 @@ router.get("/artist-incentive", verifyUser, (req, res) => {
         od.id,
         od.artistIncentive,
         od.quantity,
+        od.amount,
         od.perSqFt,
         od.major,
         od.minor,
@@ -195,7 +196,8 @@ router.get("/artist-incentive", verifyUser, (req, res) => {
       JOIN material m ON od.material = m.Material
       JOIN client c ON o.clientId = c.id
       WHERE o.productionDate BETWEEN ? AND ?
-      AND TRIM(o.status) IN ('Prod', 'Finish', 'Delivered', 'Billed', 'Closed')
+        AND TRIM(o.status) IN ('Delivered', 'Billed', 'Closed')
+        AND m.noIncentive = 0 AND od.perSqFt > 0
       ORDER BY o.orderId
     `;
 
@@ -253,7 +255,8 @@ router.get("/sales-incentive", verifyUser, (req, res) => {
       JOIN client c ON o.clientId = c.id
       JOIN employee e ON o.preparedBy = e.id
       WHERE o.productionDate BETWEEN ? AND ?
-      AND TRIM(o.status) IN ('Prod', 'Finish', 'Delivered', 'Billed', 'Closed')
+        AND TRIM(o.status) IN ('Delivered', 'Billed', 'Closed')
+        AND m.noIncentive = 0 AND od.perSqFt > 0
       ORDER BY o.orderId
     `;
 

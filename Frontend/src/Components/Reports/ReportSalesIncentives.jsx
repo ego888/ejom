@@ -99,8 +99,10 @@ const ReportSalesIncentives = () => {
 
   return (
     <div className="reports-content">
-      <div className="reports-header d-flex justify-content-between align-items-center">
-        <h4 className="mb-0">Sales Incentives Report</h4>
+      <div className="d-flex justify-content-center pt-4">
+        <h3>Sales Incentives Report</h3>
+      </div>
+      <div className="d-flex justify-content-between mb-3">
         <Button
           variant="add"
           onClick={handleGenerateReport}
@@ -123,7 +125,7 @@ const ReportSalesIncentives = () => {
                 checked={showSummary}
                 onChange={(e) => setShowSummary(e.target.checked)}
               />
-              <label className="form-check-label" htmlFor="summaryToggle">
+              <label className="form-label" htmlFor="summaryToggle">
                 Summary
               </label>
             </div>

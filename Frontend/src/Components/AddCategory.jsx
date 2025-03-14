@@ -31,20 +31,18 @@ const AddCategory = () => {
       <div className="p-3 rounded w-25 border">
         <h2>Add Category</h2>
         <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label htmlFor="category-input">
-              <strong>Category:</strong>
-            </label>
+          <div className="form-label">
+            <label>Category:</label>
             <input
               id="category-input"
               type="text"
               name="category"
               placeholder="Enter Category"
               onChange={(e) => setCategory(e.target.value)}
-              className="form-control rounded-0"
+              className="form-input"
             />
           </div>
-          <div className="d-flex justify-content-end gap-2">
+          <div className="d-flex justify-content-end gap-2 mt-3">
             <Button
               variant="cancel"
               onClick={() => navigate("/dashboard/category")}

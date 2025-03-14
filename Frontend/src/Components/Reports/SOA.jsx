@@ -98,11 +98,8 @@ const SOA = () => {
 
   return (
     <div className="reports-content">
-      <div className="reports-header d-flex justify-content-between align-items-center">
-        <h4 className="mb-0">Statement of Account</h4>
-        {/* <Button variant="add" onClick={loadSOAData}>
-          Calculate
-        </Button> */}
+      <div className="d-flex justify-content-center pt-4">
+        <h3>Statement of Account</h3>
       </div>
 
       {reportData && (

@@ -100,10 +100,9 @@ const Client = () => {
 
         <div className="d-flex gap-3 align-items-center">
           <div className="mb-3">
-            <label htmlFor="search">Search:</label>
             <input
               type="text"
-              className="form-control"
+              className="form-input"
               id="search"
               name="search"
               autoComplete="off"

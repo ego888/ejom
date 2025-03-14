@@ -20,7 +20,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
   let previousOrderId = null;
 
   return (
-    <div className="report-summary-container">
+    <div className="report-container">
       <h4 className="report-title">Artist Incentive Detailed Report</h4>
       <table className="table table-hover">
         <thead className="table-active">

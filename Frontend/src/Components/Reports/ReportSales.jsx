@@ -60,10 +60,10 @@ const ReportSales = () => {
 
   const renderSortOptions = () => (
     <div className="sort-options mb-3">
-      <label htmlFor="groupBy" className="form-label d-block">
+      <label htmlFor="groupBy" className="form-label mb-4">
         Group by:
       </label>
-      <div className="d-flex gap-1">
+      <div className="d-flex gap-2">
         {["Sales", "Month", "Client", "Material", "Machine", "None"].map(
           (option) => (
             <div className="form-check" key={option.toLowerCase()}>
@@ -91,8 +91,10 @@ const ReportSales = () => {
 
   return (
     <div className="reports-content">
-      <div className="reports-header d-flex justify-content-between align-items-center">
-        <h4 className="mb-0">Sales Report</h4>
+      <div className="d-flex justify-content-center pt-4">
+        <h3>Sales Report</h3>
+      </div>
+      <div className="d-flex justify-content-between mb-3">
         <Button
           variant="add"
           onClick={() => handleGenerateReport(dateFrom, dateTo)}

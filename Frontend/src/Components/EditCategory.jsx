@@ -70,7 +70,7 @@ const EditCategory = () => {
             </label>
             <input
               type="text"
-              className="form-control rounded-0"
+              className="form-input"
               id="categoryName"
               value={category.name}
               onChange={(e) =>
