@@ -10,32 +10,6 @@
   border-bottom: 1px solid #dee2e6;
 }
 
-.payment-header .table {
-  margin-bottom: 0;
-}
-
-.payment-header .table th {
-  font-weight: 600;
-  color: #6c757d;
-  padding: 0.5rem;
-}
-
-.payment-header .table td {
-  padding: 0.5rem;
-}
-
-.table-responsive {
-  margin-top: 1rem;
-}
-
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
 .allocation-details label {
   color: #6c757d;
   font-size: 0.875rem;
