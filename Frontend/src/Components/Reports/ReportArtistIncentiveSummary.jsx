@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { formatNumber } from "../../utils/orderUtils";
+import { formatNumber, formatPeso } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 import { jwtDecode } from "jwt-decode";
 

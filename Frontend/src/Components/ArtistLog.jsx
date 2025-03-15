@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Button from "./UI/Button";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
-import { formatDateTime, formatNumber } from "../utils/orderUtils";
+import { formatDateTime, formatNumber, formatPeso } from "../utils/orderUtils";
 import "./ArtistLog.css";
 import ModalAlert from "./UI/ModalAlert";
 

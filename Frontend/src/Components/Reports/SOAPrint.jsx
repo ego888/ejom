@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../utils/axiosConfig";
 import { ServerIP } from "../../config";
 import GoLargeLogo from "../../assets/Go Large logo 2009C2 small.jpg";
-import { formatNumber } from "../../utils/orderUtils";
+import { formatNumber, formatPeso } from "../../utils/orderUtils";
 import "./SOAPrint.css";
 
 function SOAPrint() {

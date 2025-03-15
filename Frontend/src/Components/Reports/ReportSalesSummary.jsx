@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { formatNumber } from "../../utils/orderUtils";
+import { formatNumber, formatPeso } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 
 const ReportSalesSummary = ({ data, groupBy }) => {

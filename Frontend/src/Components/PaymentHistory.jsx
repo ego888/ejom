@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
-import { formatNumber } from "../utils/orderUtils";
+import { formatNumber, formatPeso } from "../utils/orderUtils";
 import PropTypes from "prop-types";
 
 function PaymentHistory({ orderId, onPaymentSelect }) {

@@ -9,6 +9,7 @@ import {
   calculatePrice,
   calculateAmount,
   formatNumber,
+  formatPeso,
   handleApiError,
   calculateTotals,
   validateOrderData,

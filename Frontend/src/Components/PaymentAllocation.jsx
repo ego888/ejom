@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
-import { formatNumber, handleApiError } from "../utils/orderUtils";
+import { formatNumber, formatPeso, handleApiError } from "../utils/orderUtils";
 import "./PaymentAllocation.css";
 
 function PaymentAllocation({ payId }) {

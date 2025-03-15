@@ -13,6 +13,7 @@ import {
   calculatePrice,
   calculateAmount,
   formatNumber,
+  formatPeso,
   handleApiError,
   calculateTotals,
   calculatePerSqFt,
@@ -2491,7 +2492,7 @@ function AddOrder() {
                     <td></td>
                     <td className="text-end pe-2">Grand Total:</td>
                     <td className="numeric-cell">
-                      {formatNumber(orderTotals.grandTotal)}
+                      {formatPeso(orderTotals.grandTotal)}
                     </td>
                     <td colSpan="3">
                       <div className="ms-3 d-flex align-items-center">

@@ -6,7 +6,7 @@ import { BiRectangle } from "react-icons/bi";
 import "./AddOrder.css";
 import "./Orders.css";
 import "./OrderView.css";
-import { formatNumber, handleApiError } from "../utils/orderUtils";
+import { formatNumber, formatPeso, handleApiError } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
