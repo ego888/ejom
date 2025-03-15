@@ -1071,6 +1071,43 @@ router.put("/order_details/:orderId/:displayOrder", (req, res) => {
   );
 });
 
+// Update display order by detail ID
+router.put("/order_details-displayOrder/:detailId", (req, res) => {
+  const { detailId } = req.params;
+  const { displayOrder } = req.body;
+
+  if (!displayOrder || isNaN(displayOrder)) {
+    return res.json({
+      Status: false,
+      Error: "Invalid display order value",
+    });
+  }
+
+  const sql = "UPDATE order_details SET displayOrder = ? WHERE Id = ?";
+
+  con.query(sql, [displayOrder, detailId], (err, result) => {
+    if (err) {
+      console.log("Update Error:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to update display order",
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.json({
+        Status: false,
+        Error: "Order detail not found",
+      });
+    }
+
+    return res.json({
+      Status: true,
+      Result: result,
+    });
+  });
+});
+
 // Update noPrint status
 router.put("/order_detail_noprint/:orderId/:displayOrder", (req, res) => {
   const { orderId, displayOrder } = req.params;

@@ -7,6 +7,7 @@ import {
   FaPrint,
   FaEye,
   FaTimes,
+  FaCopy,
 } from "react-icons/fa";
 import "./Button.css";
 
@@ -40,6 +41,8 @@ const Button = ({
         return <FaEye aria-hidden="true" />;
       case "cancel":
         return <FaTimes aria-hidden="true" />;
+      case "copy":
+        return <FaCopy aria-hidden="true" />;
       default:
         return null;
     }

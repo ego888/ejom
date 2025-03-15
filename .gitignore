@@ -1,3 +1,15 @@
+#ignore setup files
+Server/utils/db.js
+Server/index.js
+Frontend/vite.config.js
+Frontend/src/config.js
+
+#install files
+Server/package-lock.json
+Server/node_modules
+Frontend/package-lock.json
+Frontend/node_modules
+
 # Old directories
 Orig/
 

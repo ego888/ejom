@@ -961,15 +961,13 @@ function AddOrder() {
 
   // Add this function to handle the update
   const handleDisplayOrderUpdate = async (detail, newOrder) => {
-    console.log("Detail object:", detail);
-
     // Validate that we have all required data
     if (!detail || !detail.Id) {
       console.error("Missing detail Id:", detail);
       setAlert({
         show: true,
         title: "Error",
-        message: "Could not identify the order detail",
+        message: "Error: Could not identify the order detail",
         type: "alert",
       });
       return;
@@ -990,13 +988,12 @@ function AddOrder() {
     try {
       const token = localStorage.getItem("token");
       console.log("Sending update request:", {
-        orderId,
         detailId: detail.Id,
         newOrder: orderNum,
       });
 
       await axios.put(
-        `${ServerIP}/auth/order_detail_display_order/${orderId}/${detail.Id}`,
+        `${ServerIP}/auth/order_details-displayOrder/${detail.Id}`,
         { displayOrder: orderNum },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1362,6 +1359,57 @@ function AddOrder() {
     }
   };
 
+  // Add this function near the other handlers
+  const handleCopyDetail = async (detail) => {
+    if (!canEdit()) {
+      setAlert({
+        show: true,
+        title: "Permission Denied",
+        message: "You don't have permission to copy details",
+        type: "alert",
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      // Get the highest display order
+      const maxDisplayOrder = Math.max(
+        ...orderDetails.map((d) => d.displayOrder),
+        0
+      );
+
+      // Create new detail object with incremented display order
+      const newDetail = {
+        ...detail,
+        displayOrder: maxDisplayOrder + 5,
+        Id: null, // Remove Id so a new one is generated
+      };
+
+      const response = await axios.post(
+        `${ServerIP}/auth/add_order_detail`,
+        newDetail,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.Status) {
+        // Refresh order details
+        fetchOrderDetails();
+      } else {
+        throw new Error(response.data.Error || "Failed to copy detail");
+      }
+    } catch (err) {
+      console.error("Error copying detail:", err);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to copy detail",
+        type: "alert",
+      });
+    }
+  };
+
   return (
     <div className="orders-page-background">
       <div className="px-4 mt-3">
@@ -1375,7 +1423,7 @@ function AddOrder() {
                 )}
               </h3>
               {isAdmin && (
-                <div className="form-check">
+                <div className="form-check mt-1">
                   <input
                     type="checkbox"
                     className="form-check-input"
@@ -1383,7 +1431,7 @@ function AddOrder() {
                     checked={adminOverride}
                     onChange={(e) => setAdminOverride(e.target.checked)}
                   />
-                  <label className="form-check-label" htmlFor="adminOverride">
+                  <label className="form-label" htmlFor="adminOverride">
                     Admin Edit Override
                   </label>
                 </div>
@@ -2214,7 +2262,8 @@ function AddOrder() {
                               `${detail.orderId}_${detail.displayOrder}` ? (
                                 <input
                                   type="number"
-                                  className="form-control form-control-sm display-order-input"
+                                  className="form-input detail"
+                                  style={{ width: "35px" }}
                                   value={tempDisplayOrder || ""}
                                   onChange={(e) => {
                                     const value = e.target.value.replace(
@@ -2277,7 +2326,7 @@ function AddOrder() {
                             <td>{detail.itemDescription}</td>
                             <td>{detail.remarks}</td>
                             <td>
-                              <div className="d-flex gap-1">
+                              <div className="d-flex gap-1 justify-content-center">
                                 <Button
                                   variant="view"
                                   iconOnly
@@ -2312,18 +2361,31 @@ function AddOrder() {
                                 <Button
                                   variant="edit"
                                   disabled={!canEdit()}
+                                  hidden={!canEdit()}
                                   iconOnly
                                   size="sm"
                                   onClick={() =>
                                     handleEditClick(uniqueId, detail)
                                   }
+                                  title="Edit record"
                                 />
                                 <Button
                                   variant="delete"
                                   disabled={!canEdit()}
+                                  hidden={!canEdit()}
                                   iconOnly
                                   size="sm"
                                   onClick={() => handleDeleteDetail(uniqueId)}
+                                  title="Delete record"
+                                />
+                                <Button
+                                  variant="copy"
+                                  disabled={!canEdit()}
+                                  hidden={!canEdit()}
+                                  iconOnly
+                                  size="sm"
+                                  onClick={() => handleCopyDetail(detail)}
+                                  title="Copy record"
                                 />
                               </div>
                             </td>

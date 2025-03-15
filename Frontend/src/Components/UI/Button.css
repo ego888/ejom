@@ -54,6 +54,7 @@
 
 .btn-delete:hover {
   background-color: #c82333;
+  color: white;
 }
 
 .btn-save {
@@ -63,6 +64,17 @@
 
 .btn-save:hover {
   background-color: #218838;
+  color: white;
+}
+
+.btn-copy {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-copy:hover {
+  background-color: #218838;
+  color: white;
 }
 
 .btn-print {
@@ -72,6 +84,7 @@
 
 .btn-print:hover {
   background-color: #6d4232;
+  color: white;
 }
 
 .btn-view {
@@ -81,6 +94,7 @@
 
 .btn-view:hover {
   background-color: #0056b3;
+  color: white;
 }
 
 .btn-cancel {
@@ -101,6 +115,7 @@
 
 .btn-primary:hover {
   background-color: #0056b3;
+  color: white;
 }
 
 /* Disabled state */
