@@ -29,7 +29,7 @@ const ReportSalesSummary = ({ data, groupBy }) => {
       case "machine":
         return ["Order Count", "Machine Type", "Total Amount", "Amount Paid"];
       default:
-        return ["", "Total Orders", "Total Sales", "Amount Paid"]; // No Grouping
+        return ["Total Orders", "", "Total Sales", "Amount Paid"]; // No Grouping
     }
   };
 
@@ -42,8 +42,8 @@ const ReportSalesSummary = ({ data, groupBy }) => {
         return [
           item.orderCount,
           item.category || "Unknown",
-          formatNumber(item.totalSales),
-          formatNumber(item.amountPaid || 0),
+          item.totalSales ? formatNumber(item.totalSales) : "",
+          item.amountPaid ? formatNumber(item.amountPaid) : "",
         ];
       case "material":
       case "machine":
@@ -51,15 +51,17 @@ const ReportSalesSummary = ({ data, groupBy }) => {
         return [
           item.orderCount,
           item.category || "Unknown",
-          formatNumber(item.totalAmount),
-          formatNumber(item.amountPaid || 0),
+          item.totalAmount ? formatNumber(item.totalAmount) : "",
+          item.amountPaid ? formatNumber(item.amountPaid) : "",
         ];
       default:
         return [
           item.orderCount,
           "",
-          formatNumber(item.totalSales || item.totalAmount),
-          formatNumber(item.amountPaid || 0),
+          item.totalSales || item.totalAmount
+            ? formatNumber(item.totalSales || item.totalAmount)
+            : "",
+          item.amountPaid ? formatNumber(item.amountPaid) : "",
         ]; // No Grouping
     }
   };
@@ -99,24 +101,43 @@ const ReportSalesSummary = ({ data, groupBy }) => {
   return (
     <div>
       <h4 className="report-title">{getReportTitle()}</h4>
-      <div className="table-responsive">
+      <div className="table-responsive w-50 mx-auto">
         <table className="table table-hover table-striped">
           <thead>
             <tr>
               {renderHeader().map((header, index) => (
-                <th key={index}>{header}</th>
+                <th className="text-center" key={index}>
+                  {header}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {displayData.length > 0 ? (
-              displayData.map((item, index) => (
-                <tr key={index}>
-                  {renderRow(item).map((cell, cellIndex) => (
-                    <td key={cellIndex}>{cell}</td>
-                  ))}
-                </tr>
-              ))
+              displayData
+                .filter((item) => {
+                  // Only filter out zero amounts for client and material/machine cases
+                  if (
+                    ["client", "material", "machine"].includes(
+                      lastFetchedGroupBy.current
+                    )
+                  ) {
+                    return (item.totalSales || item.totalAmount) > 0;
+                  }
+                  return true; // Keep all rows for other report types
+                })
+                .map((item, index) => (
+                  <tr key={index}>
+                    {renderRow(item).map((cell, cellIndex) => (
+                      <td
+                        key={cellIndex}
+                        className={cellIndex >= 2 ? "text-end" : "text-center"}
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))
             ) : (
               <tr>
                 <td colSpan={renderHeader().length} className="text-center">
@@ -130,11 +151,14 @@ const ReportSalesSummary = ({ data, groupBy }) => {
               <td colSpan={lastFetchedGroupBy.current ? 2 : 1}>
                 Total Orders: {totals.totalOrders}
               </td>
-              <td>
-                {isMaterialOrMachine ? "Total Amount: " : "Total Sales: "}P
-                {formatNumber(totals.totalAmount)}
+              <td className="text-end">
+                <strong>{isMaterialOrMachine ? "Total: " : "Sales: "}P</strong>
+                <strong>{formatNumber(totals.totalAmount)}</strong>
               </td>
-              <td>Amount Paid: P{formatNumber(totals.totalPaid)}</td>
+              <td className="text-end">
+                <strong>Paid: </strong>
+                <strong>{formatNumber(totals.totalPaid)}</strong>
+              </td>
             </tr>
           </tfoot>
         </table>
