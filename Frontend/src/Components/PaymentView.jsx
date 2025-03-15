@@ -6,7 +6,7 @@ import { BiRectangle } from "react-icons/bi";
 import "./AddOrder.css";
 import "./Orders.css";
 import "./PaymentView.css";
-import { formatNumber, handleApiError } from "../utils/orderUtils";
+import { formatNumber, formatPeso, handleApiError } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
@@ -248,20 +248,22 @@ function OrderView() {
                   <div className="form-input">{data.graphicsByName || ""}</div>
                 </div>
               </div>
-              <div className="col-6 order-info-row">
+              <div className="col-6">
                 <div className="d-flex flex-column">
                   <label className="form-label">Special Instructions</label>
-                  <div className="form-input multiline">
-                    {data.specialInst || ""}
-                  </div>
+                  <textarea
+                    className="form-input multiline"
+                    value={data.specialInst || ""}
+                  />
                 </div>
               </div>
-              <div className="col-6 order-info-row">
+              <div className="col-6">
                 <div className="d-flex flex-column">
                   <label className="form-label">Delivery Instructions</label>
-                  <div className="form-input multiline">
-                    {data.deliveryInst || ""}
-                  </div>
+                  <textarea
+                    className="form-input multiline"
+                    value={data.deliveryInst || ""}
+                  />
                 </div>
               </div>
               <div className="col-12 mt-2 d-flex">
@@ -434,21 +436,21 @@ function OrderView() {
                 role="tabpanel"
                 aria-labelledby="order-details-tab"
               >
-                <table className="order-table table table-striped">
+                <table className="table detail table-striped">
                   <thead>
                     <tr>
-                      <th id="qty">Qty</th>
-                      <th id="width">Width</th>
-                      <th id="height">Height</th>
-                      <th id="unit">Unit</th>
-                      <th id="material">Material</th>
-                      <th id="perSqFt">Per Sq Ft</th>
-                      <th id="price">Price</th>
-                      <th id="discount">Disc</th>
-                      <th id="total">Total</th>
-                      <th id="description">Description</th>
-                      <th id="joRemarks">JO Remarks</th>
-                      <th id="others">Others</th>
+                      <th>Qty</th>
+                      <th>Width</th>
+                      <th>Height</th>
+                      <th>Unit</th>
+                      <th>Material</th>
+                      <th>Per Sq Ft</th>
+                      <th>Price</th>
+                      <th>Disc%</th>
+                      <th>Amount</th>
+                      <th>Description</th>
+                      <th>JO Remarks</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -466,13 +468,13 @@ function OrderView() {
                         <td className="centered-cell">{detail.material}</td>
                         <td className="centered-cell">{detail.perSqFt}</td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.unitPrice)}
+                          {formatPeso(detail.unitPrice)}
                         </td>
                         <td className="numeric-cell">
                           {formatNumber(detail.discount)}
                         </td>
                         <td className="numeric-cell">
-                          {formatNumber(detail.amount)}
+                          {formatPeso(detail.amount)}
                         </td>
                         <td>{detail.itemDescription}</td>
                         <td>{detail.remarks}</td>
@@ -504,7 +506,7 @@ function OrderView() {
                         Subtotal:
                       </td>
                       <td className="numeric-cell">
-                        {formatNumber(data.totalAmount)}
+                        {formatPeso(data.totalAmount)}
                       </td>
                       <td colSpan="3">
                         <div className="ms-3 d-flex align-items-center">
@@ -554,7 +556,7 @@ function OrderView() {
                             </small>
                           </div>
                           <div style={{ width: "80px", textAlign: "right" }}>
-                            {formatNumber(data.amountPaid || 0)}
+                            {formatPeso(data.amountPaid || 0)}
                           </div>
                         </div>
                       </td>
@@ -564,7 +566,7 @@ function OrderView() {
                         Grand Total:
                       </td>
                       <td className="numeric-cell">
-                        {formatNumber(data.grandTotal)}
+                        {formatPeso(data.grandTotal)}
                       </td>
                       <td colSpan="3">
                         <div className="ms-3 d-flex align-items-center">
@@ -572,7 +574,7 @@ function OrderView() {
                             <small style={{ fontSize: "1rem" }}>Balance:</small>
                           </div>
                           <div style={{ width: "80px", textAlign: "right" }}>
-                            {formatNumber(
+                            {formatPeso(
                               data.grandTotal - (data.amountPaid || 0)
                             )}
                           </div>

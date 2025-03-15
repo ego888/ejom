@@ -3,9 +3,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Button from "./UI/Button";
 import { BiRectangle } from "react-icons/bi";
-//import "./AddOrder.css";
-//import "./Orders.css";
-//import "./OrderView.css";
+import "./AddOrder.css";
+import "./Orders.css";
+import "./OrderView.css";
 import { formatNumber, handleApiError } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import { ServerIP } from "../config";
@@ -279,24 +279,26 @@ function OrderView() {
                   </div>
                 </div>
               </div>
-              <div className="col-6 order-info-row">
+              <div className="col-6">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-special-inst" className="form-label">
                     Special Instructions
                   </label>
-                  <div id="view-special-inst" className="form-input multiline">
-                    {data.specialInst || ""}
-                  </div>
+                  <textarea
+                    className="form-input multiline"
+                    value={data.specialInst || ""}
+                  />
                 </div>
               </div>
-              <div className="col-6 order-info-row">
+              <div className="col-6">
                 <div className="d-flex flex-column">
                   <label htmlFor="view-delivery-inst" className="form-label">
                     Delivery Instructions
                   </label>
-                  <div id="view-delivery-inst" className="form-input multiline">
-                    {data.deliveryInst || ""}
-                  </div>
+                  <textarea
+                    className="form-input multiline"
+                    value={data.deliveryInst || ""}
+                  />
                 </div>
               </div>
               <div className="col-12 mt-2 d-flex">
@@ -462,37 +464,21 @@ function OrderView() {
 
           <div className="mt-4">
             <h5>Order Details List</h5>
-            <table className="order-table table table-striped">
+            <table className="table detail table-striped">
               <thead>
                 <tr>
-                  <th className="text-center" id="qty-header">
-                    Qty
-                  </th>
-                  <th className="text-center" id="width-header">
-                    Width
-                  </th>
-                  <th className="text-center" id="height-header">
-                    Height
-                  </th>
-                  <th id="unit-header">Unit</th>
-                  <th id="material-header">Material</th>
-                  <th className="text-end" id="sqft-header">
-                    Per Sq Ft
-                  </th>
-                  <th className="text-end" id="price-header">
-                    Price
-                  </th>
-                  <th className="text-end" id="disc-header">
-                    Disc%
-                  </th>
-                  <th className="text-end" id="amount-header">
-                    Amount
-                  </th>
-                  <th id="desc-header">Description</th>
-                  <th id="remarks-header">JO Remarks</th>
-                  <th className="text-center" id="action-header">
-                    Action
-                  </th>
+                  <th>Qty</th>
+                  <th>Width</th>
+                  <th>Height</th>
+                  <th>Unit</th>
+                  <th>Material</th>
+                  <th>Per Sq Ft</th>
+                  <th>Price</th>
+                  <th>Disc%</th>
+                  <th>Amount</th>
+                  <th>Description</th>
+                  <th>JO Remarks</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
