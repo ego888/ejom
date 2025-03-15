@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useState } from "react";
-import "./style.css";
+//import "./style.css";
 import { useNavigate } from "react-router-dom";
 import { ServerIP } from "../config";
 

@@ -7,7 +7,8 @@ import Pagination from "./UI/Pagination";
 import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
-import "./Orders.css";
+import { formatPeso } from "../utils/orderUtils";
+//import "./Orders.css";
 import StatusBadges from "./UI/StatusBadges";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
@@ -470,15 +471,11 @@ function Orders() {
                   <td>{order.drnum || ""}</td>
                   <td>{order.invnum || ""}</td>
                   <td className="number_right">
-                    {order.grandTotal
-                      ? `₱${order.grandTotal.toLocaleString()}`
-                      : ""}
+                    {order.grandTotal ? formatPeso(order.grandTotal) : ""}
                   </td>
                   <td>{order.ornum || ""}</td>
                   <td>
-                    {order.amountPaid
-                      ? `₱${order.amountPaid.toLocaleString()}`
-                      : ""}
+                    {order.amountPaid ? formatPeso(order.amountPaid) : ""}
                   </td>
                   <td>
                     {order.datePaid

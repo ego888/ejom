@@ -7,13 +7,14 @@ import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import Dropdown2 from "./UI/Dropdown2";
 import { BiRectangle } from "react-icons/bi";
-import "./Quotes.css";
+//import "./Quotes.css";
 import {
   validateDetail,
   calculateArea,
   calculatePrice,
   calculateAmount,
   formatNumber,
+  formatPeso,
   handleApiError,
   calculateTotals,
   calculatePerSqFt,
@@ -1691,31 +1692,26 @@ function AddQuote() {
                   <label htmlFor="clientId" className="form-label">
                     Client <span className="text-danger">*</span>
                   </label>
-                  <Dropdown2
+                  <input
+                    type="text"
+                    className={"form-input"}
                     id="clientId"
-                    value={data.clientId}
-                    onChange={(e) => {
-                      const selectedClient = e.target.option;
-                      setData((prev) => ({
-                        ...prev,
-                        clientId: selectedClient.id,
-                        clientName: selectedClient.clientName,
-                        customerName: selectedClient.customerName || "",
-                        terms: selectedClient.terms || "COD",
-                      }));
-                      setError((prev) => ({
-                        ...prev,
-                        clientId: false,
-                      }));
-                    }}
-                    options={clients}
-                    placeholder="Select Client"
-                    column1Key="clientName"
-                    column2Key="customerName"
-                    valueKey="id"
-                    error={error.clientId ? "Client is required" : ""}
+                    list="clientList"
+                    style={inputStyle}
+                    value={data.clientName || ""}
+                    onChange={handleClientChange}
                     disabled={!isEditMode || !canEdit()}
                   />
+                  <datalist id="clientList">
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.clientName}>
+                        {client.customerName}
+                      </option>
+                    ))}
+                  </datalist>
+                  {error.clientId && (
+                    <div className="invalid-feedback">Client is required</div>
+                  )}
                 </div>
               </div>
               <div className="col-8">
@@ -2240,7 +2236,7 @@ function AddQuote() {
                             {formatDisplay(detail.discount)}
                           </td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.amount)}
+                            {formatPeso(detail.amount)}
                           </td>
                           <td className="numeric-cell">
                             {formatDisplay(detail.materialUsage)}
@@ -2295,7 +2291,7 @@ function AddQuote() {
                       Subtotal:
                     </td>
                     <td className="numeric-cell">
-                      {formatDisplay(data.totalAmount)}
+                      {formatPeso(data.totalAmount)}
                     </td>
                     <td colSpan="3"></td>
                   </tr>
@@ -2367,7 +2363,7 @@ function AddQuote() {
                       Grand Total:
                     </td>
                     <td className="numeric-cell">
-                      {formatDisplay(data.grandTotal)}
+                      {formatPeso(data.grandTotal)}
                     </td>
                     <td colSpan="3"></td>
                   </tr>

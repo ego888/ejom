@@ -428,11 +428,6 @@ input[type="number"] {
   text-align: right;
 }
 
-/* Adjust the dropdown width to accommodate the two columns */
-#clientId {
-  min-width: 400px;
-}
-
 /* Add this to control the gap between rows */
 .order-header .row {
   row-gap: 0.5rem !important; /* Reduce from default 1rem to 0.5rem */

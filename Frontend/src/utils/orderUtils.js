@@ -213,6 +213,21 @@ export const formatNumber = (num) => {
   }).format(num);
 };
 
+{
+  /* USAGE:
+  <span className="number_right peso">
+  {formatPeso(detail.amount)}
+</span> */
+}
+export const formatPeso = (num) => {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
 // API error handler
 export const handleApiError = (err, navigate) => {
   if (

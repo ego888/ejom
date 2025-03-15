@@ -5,8 +5,8 @@ import AddOrderDetails from "./AddOrderDetails";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { BiRectangle } from "react-icons/bi";
-import "./AddOrder.css"; // Import the CSS file
-import "./Orders.css";
+//import "./AddOrder.css"; // Import the CSS file
+//import "./Orders.css";
 import {
   validateDetail,
   calculateArea,
@@ -1476,316 +1476,314 @@ function AddOrder() {
               style={{ marginTop: "-0.8rem" }}
             >
               {/* Start of form section */}
-              <div className="form-section">
-                <div className="row">
-                  <div className="col-4">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="orderDate" className="form-label">
-                        Order Date
-                      </label>
+              {/* <div className="form-section">
+                <div className="row"> */}
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="orderDate" className="form-label">
+                    Order Date
+                  </label>
+                  <input
+                    id="order-date"
+                    type="date"
+                    className="form-input"
+                    value={data.orderDate || ""}
+                    onChange={(e) =>
+                      setData({ ...data, orderDate: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="prepared-by" className="form-label">
+                    Prepared By
+                  </label>
+                  <Dropdown
+                    id="prepared-by"
+                    variant="form"
+                    value={data.preparedBy}
+                    onChange={(e) =>
+                      setData({ ...data, preparedBy: e.target.value })
+                    }
+                    options={salesEmployees}
+                    disabled={!isEditMode || !canEdit()}
+                    placeholder=""
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="terms" className="form-label">
+                    Terms
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    id="terms"
+                    style={inputStyle}
+                    value={data.terms || ""}
+                    readOnly
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="clientId" className="form-label">
+                    Client <span className="text-danger">*</span>
+                  </label>
+                  <Dropdown2
+                    variant="form"
+                    id="clientId"
+                    value={data.clientId || ""}
+                    onChange={(e) => handleClientChange(e.target.value)}
+                    options={clients}
+                    disabled={!isEditMode || !canEdit()}
+                    error={error.clientId}
+                    required
+                    placeholder=""
+                    column1Key="clientName"
+                    column2Key="customerName"
+                    valueKey="id"
+                  />
+                  {error.clientId && (
+                    <div className="invalid-feedback">Client is required</div>
+                  )}
+                </div>
+              </div>
+              <div className="col-8">
+                <div className="d-flex flex-column">
+                  <label htmlFor="customerName" className="form-label">
+                    Customer Name
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    id="customerName"
+                    style={inputStyle}
+                    value={data.customerName || ""}
+                    readOnly
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="projectName" className="form-label">
+                    Project Name <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`form-input ${
+                      error.projectName ? "is-invalid" : ""
+                    }`}
+                    id="projectName"
+                    style={inputStyle}
+                    value={data.projectName}
+                    onChange={(e) =>
+                      setData({ ...data, projectName: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                  {error.projectName && (
+                    <div className="invalid-feedback">
+                      Project Name is required
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="orderedBy" className="form-label">
+                    Ordered By
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    id="orderedBy"
+                    style={inputStyle}
+                    value={data.orderedBy || ""}
+                    onChange={(e) =>
+                      setData({ ...data, orderedBy: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="d-flex flex-column">
+                  <label htmlFor="orderReference" className="form-label">
+                    Order Reference
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    id="orderReference"
+                    style={inputStyle}
+                    value={data.orderReference || ""}
+                    onChange={(e) =>
+                      setData({ ...data, orderReference: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-3">
+                <div className="d-flex flex-column">
+                  <label htmlFor="cellNumber" className="form-label">
+                    Cell Number
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    id="cellNumber"
+                    style={inputStyle}
+                    value={data.cellNumber || ""}
+                    onChange={(e) =>
+                      setData({ ...data, cellNumber: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-3">
+                <div className="d-flex flex-column">
+                  <label htmlFor="dueDate" className="form-label">
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    id="dueDate"
+                    style={dateTimeStyle}
+                    value={data.dueDate || ""}
+                    onChange={(e) =>
+                      setData({ ...data, dueDate: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-3">
+                <div className="d-flex flex-column">
+                  <label htmlFor="dueTime" className="form-label">
+                    Due Time
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    id="dueTime"
+                    style={inputStyle}
+                    value={data.dueTime || ""}
+                    onChange={(e) =>
+                      setData({ ...data, dueTime: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-3">
+                <div className="d-flex flex-column">
+                  <label htmlFor="graphicsBy" className="form-label">
+                    Graphics By <span className="text-danger">*</span>
+                  </label>
+                  <Dropdown
+                    variant="form"
+                    id="graphicsBy"
+                    value={data.graphicsBy}
+                    onChange={(e) =>
+                      setData({ ...data, graphicsBy: e.target.value })
+                    }
+                    options={artists}
+                    disabled={!isEditMode || !canEdit()}
+                    error={error.graphicsBy}
+                    required
+                    placeholder=""
+                  />
+                  {error.graphicsBy && (
+                    <div className="invalid-feedback">
+                      Graphics By is required
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="d-flex flex-column">
+                  <label htmlFor="specialInst" className="form-label">
+                    Special Instructions
+                  </label>
+                  <textarea
+                    className="form-input multiline"
+                    id="specialInst"
+                    style={inputStyle}
+                    value={data.specialInst || ""}
+                    onChange={(e) =>
+                      setData({ ...data, specialInst: e.target.value })
+                    }
+                    rows="3"
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="d-flex flex-column">
+                  <label htmlFor="deliveryInst" className="form-label">
+                    Delivery Instructions
+                  </label>
+                  <textarea
+                    className="form-input multiline"
+                    id="deliveryInst"
+                    style={inputStyle}
+                    value={data.deliveryInst || ""}
+                    onChange={(e) =>
+                      setData({ ...data, deliveryInst: e.target.value })
+                    }
+                    rows="3"
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-3">
+                <div className="d-flex flex-column">
+                  <label htmlFor="sample" className="form-label">
+                    &nbsp;
+                  </label>
+                  <div className="d-flex gap-3">
+                    <div className="form-check">
                       <input
-                        id="order-date"
-                        type="date"
-                        className="form-input"
-                        value={data.orderDate || ""}
+                        type="checkbox"
+                        className="form-check-input me-2"
+                        id="sample"
+                        checked={data.sample}
                         onChange={(e) =>
-                          setData({ ...data, orderDate: e.target.value })
+                          setData({ ...data, sample: e.target.checked })
                         }
                         disabled={!isEditMode || !canEdit()}
                       />
-                    </div>
-                  </div>
-                  <div className="col-4">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="prepared-by" className="form-label">
-                        Prepared By
+                      <label className="form-check-label" htmlFor="sample">
+                        Sample
                       </label>
-                      <Dropdown
-                        id="prepared-by"
-                        variant="form"
-                        value={data.preparedBy}
-                        onChange={(e) =>
-                          setData({ ...data, preparedBy: e.target.value })
-                        }
-                        options={salesEmployees}
-                        disabled={!isEditMode || !canEdit()}
-                        placeholder=""
-                      />
                     </div>
-                  </div>
-                  <div className="col-4">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="terms" className="form-label">
-                        Terms
-                      </label>
+                    <div className="form-check">
                       <input
-                        type="text"
-                        className="form-input"
-                        id="terms"
-                        style={inputStyle}
-                        value={data.terms || ""}
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  <div className="col-4">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="clientId" className="form-label">
-                        Client <span className="text-danger">*</span>
-                      </label>
-                      <Dropdown2
-                        variant="form"
-                        id="clientId"
-                        value={data.clientId || ""}
-                        onChange={(e) => handleClientChange(e.target.value)}
-                        options={clients}
-                        disabled={!isEditMode || !canEdit()}
-                        error={error.clientId}
-                        required
-                        placeholder=""
-                        column1Key="clientName"
-                        column2Key="customerName"
-                        valueKey="id"
-                      />
-                      {error.clientId && (
-                        <div className="invalid-feedback">
-                          Client is required
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="col-8">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="customerName" className="form-label">
-                        Customer Name
-                      </label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        id="customerName"
-                        style={inputStyle}
-                        value={data.customerName || ""}
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  <div className="col-4">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="projectName" className="form-label">
-                        Project Name <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-input ${
-                          error.projectName ? "is-invalid" : ""
-                        }`}
-                        id="projectName"
-                        style={inputStyle}
-                        value={data.projectName}
+                        type="checkbox"
+                        className="form-check-input me-2"
+                        id="reprint"
+                        checked={data.reprint}
                         onChange={(e) =>
-                          setData({ ...data, projectName: e.target.value })
+                          setData({ ...data, reprint: e.target.checked })
                         }
                         disabled={!isEditMode || !canEdit()}
                       />
-                      {error.projectName && (
-                        <div className="invalid-feedback">
-                          Project Name is required
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="col-4">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="orderedBy" className="form-label">
-                        Ordered By
+                      <label className="form-check-label" htmlFor="reprint">
+                        Reprint
                       </label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        id="orderedBy"
-                        style={inputStyle}
-                        value={data.orderedBy || ""}
-                        onChange={(e) =>
-                          setData({ ...data, orderedBy: e.target.value })
-                        }
-                        disabled={!isEditMode || !canEdit()}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-4">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="orderReference" className="form-label">
-                        Order Reference
-                      </label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        id="orderReference"
-                        style={inputStyle}
-                        value={data.orderReference || ""}
-                        onChange={(e) =>
-                          setData({ ...data, orderReference: e.target.value })
-                        }
-                        disabled={!isEditMode || !canEdit()}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-3">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="cellNumber" className="form-label">
-                        Cell Number
-                      </label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        id="cellNumber"
-                        style={inputStyle}
-                        value={data.cellNumber || ""}
-                        onChange={(e) =>
-                          setData({ ...data, cellNumber: e.target.value })
-                        }
-                        disabled={!isEditMode || !canEdit()}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-3">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="dueDate" className="form-label">
-                        Due Date
-                      </label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        id="dueDate"
-                        style={dateTimeStyle}
-                        value={data.dueDate || ""}
-                        onChange={(e) =>
-                          setData({ ...data, dueDate: e.target.value })
-                        }
-                        disabled={!isEditMode || !canEdit()}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-3">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="dueTime" className="form-label">
-                        Due Time
-                      </label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        id="dueTime"
-                        style={inputStyle}
-                        value={data.dueTime || ""}
-                        onChange={(e) =>
-                          setData({ ...data, dueTime: e.target.value })
-                        }
-                        disabled={!isEditMode || !canEdit()}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-3">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="graphicsBy" className="form-label">
-                        Graphics By <span className="text-danger">*</span>
-                      </label>
-                      <Dropdown
-                        variant="form"
-                        id="graphicsBy"
-                        value={data.graphicsBy}
-                        onChange={(e) =>
-                          setData({ ...data, graphicsBy: e.target.value })
-                        }
-                        options={artists}
-                        disabled={!isEditMode || !canEdit()}
-                        error={error.graphicsBy}
-                        required
-                        placeholder=""
-                      />
-                      {error.graphicsBy && (
-                        <div className="invalid-feedback">
-                          Graphics By is required
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="col-6">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="specialInst" className="form-label">
-                        Special Instructions
-                      </label>
-                      <textarea
-                        className="form-input multiline"
-                        id="specialInst"
-                        style={inputStyle}
-                        value={data.specialInst || ""}
-                        onChange={(e) =>
-                          setData({ ...data, specialInst: e.target.value })
-                        }
-                        rows="3"
-                        disabled={!isEditMode || !canEdit()}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-6">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="deliveryInst" className="form-label">
-                        Delivery Instructions
-                      </label>
-                      <textarea
-                        className="form-input multiline"
-                        id="deliveryInst"
-                        style={inputStyle}
-                        value={data.deliveryInst || ""}
-                        onChange={(e) =>
-                          setData({ ...data, deliveryInst: e.target.value })
-                        }
-                        rows="3"
-                        disabled={!isEditMode || !canEdit()}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-3">
-                    <div className="d-flex flex-column">
-                      <label htmlFor="sample" className="form-label">
-                        &nbsp;
-                      </label>
-                      <div className="d-flex gap-3">
-                        <div className="form-check">
-                          <input
-                            type="checkbox"
-                            className="form-check-input me-2"
-                            id="sample"
-                            checked={data.sample}
-                            onChange={(e) =>
-                              setData({ ...data, sample: e.target.checked })
-                            }
-                            disabled={!isEditMode || !canEdit()}
-                          />
-                          <label className="form-check-label" htmlFor="sample">
-                            Sample
-                          </label>
-                        </div>
-                        <div className="form-check">
-                          <input
-                            type="checkbox"
-                            className="form-check-input me-2"
-                            id="reprint"
-                            checked={data.reprint}
-                            onChange={(e) =>
-                              setData({ ...data, reprint: e.target.checked })
-                            }
-                            disabled={!isEditMode || !canEdit()}
-                          />
-                          <label className="form-check-label" htmlFor="reprint">
-                            Reprint
-                          </label>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+              {/* </div>
+              </div> */}
               {/* End of form section */}
             </form>
 

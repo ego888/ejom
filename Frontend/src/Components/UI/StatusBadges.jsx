@@ -135,7 +135,7 @@ function StatusBadges({
         {statusOptions.map((status) => (
           <button
             key={status.statusId}
-            className={`status-badge ${
+            className={`status-filter-badge ${
               activeStatuses.includes(status.statusId) ? "active" : "inactive"
             }`}
             onClick={() => handleStatusToggle(status.statusId)}

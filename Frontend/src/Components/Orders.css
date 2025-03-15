@@ -23,40 +23,6 @@
   color: white;
 }
 
-.status-badge.Open {
-  background-color: #0066ff; /* bg-primary */
-}
-.status-badge.Printed {
-  background-color: #0d9dfd; /* bg-primary */
-}
-.status-badge.Prod,
-.status-badge.Requote {
-  background-color: #52b084; /* bg-warning */
-}
-.status-badge.Finished {
-  background-color: #3aae78; /* bg-success */
-}
-.status-badge.Delivered {
-  background-color: #27b171; /* bg-success */
-}
-.status-badge.Billed {
-  background-color: #00924e; /* bg-success */
-}
-.status-badge.Close,
-.status-badge.Closed {
-  background-color: #198754; /* bg-success */
-}
-.status-badge.Loss,
-.status-badge.Cancel {
-  background-color: #dc3545; /* bg-danger */
-}
-.status-badge.default {
-  background-color: #6c757d; /* bg-secondary */
-}
-.status-badge.default {
-  background-color: #0d6efd; /* bg-primary */
-}
-
 /* Sales header styles */
 .sales-header {
   -webkit-user-select: none; /* Safari */
