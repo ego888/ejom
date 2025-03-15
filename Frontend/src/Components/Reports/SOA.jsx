@@ -132,8 +132,8 @@ const SOA = () => {
 
       {reportData && (
         <div className="report-summary-container">
-          <div className="table-responsive">
-            <table className="table table-hover">
+          <div className="report-table-container">
+            <table className="table table-hover report-table">
               <thead className="table-active">
                 <tr>
                   <th

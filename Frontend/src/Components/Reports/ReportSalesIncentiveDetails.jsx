@@ -11,34 +11,19 @@ const ReportSalesIncentiveDetails = ({ data }) => {
   return (
     <div className="report-container">
       <h4 className="report-title">Sales Incentive Report</h4>
-      <div className="table-responsive">
-        <table className="table table-hover">
+      <div className="report-table-container">
+        <table className="table table-hover report-table">
           <thead className="table-active">
             <tr>
-              <th className="text-center">Order</th>
+              <th className="text-center">Order ID</th>
               <th className="text-center">Date</th>
-              <th className="text-center">Prepared</th>
+              <th className="text-center">Prepared By</th>
               <th className="text-center">Client</th>
-              <th className="text-center">Grand</th>
+              <th className="text-center">Grand Total</th>
               <th className="text-center">Material</th>
               <th className="text-center">Amount</th>
-              <th className="text-center">Per</th>
-              <th className="text-center">Disc</th>
-              <th className="text-center" colSpan="2">
-                Incentives
-              </th>
-              <th className="text-center"></th>
-            </tr>
-            <tr>
-              <th className="text-center">ID</th>
-              <th className="text-center"></th>
-              <th className="text-center">By</th>
-              <th className="text-center"></th>
-              <th className="text-center">Total</th>
-              <th className="text-center"></th>
-              <th className="text-center"></th>
-              <th className="text-center">SqFt</th>
-              <th className="text-center">%</th>
+              <th className="text-center">Per SqFt</th>
+              <th className="text-center">Disc %</th>
               <th className="text-center">Sales</th>
               <th className="text-center">Override</th>
               <th className="text-center">Remarks</th>
@@ -98,7 +83,15 @@ const ReportSalesIncentiveDetails = ({ data }) => {
             )}
           </tbody>
           {calculatedData && calculatedData.length > 0 && (
-            <tfoot className="table-active">
+            <tfoot
+              className="table-active"
+              style={{
+                position: "sticky",
+                bottom: 0,
+                backgroundColor: "#f8f9fa",
+                zIndex: 1,
+              }}
+            >
               <tr>
                 <td colSpan="4" className="text-end">
                   Total:
