@@ -33,7 +33,7 @@ export const calculateSalesIncentive = (orders, settings) => {
     }
 
     // Apply half rate if applicable
-    if (order.perSqFt < settings.HalfIncentiveSqFt) {
+    if (order.perSqFt < settings.HalfIncentiveSqFt && order.width > 0) {
       salesIncentive *= 0.5;
       overideIncentive *= 0.5;
       remarks = "Half rate";
@@ -42,6 +42,10 @@ export const calculateSalesIncentive = (orders, settings) => {
     // Apply discount reduction if applicable
     if (order.percentDisc) {
       const discountMultiplier = 1 - order.percentDisc / 100;
+      console.log("Order", order);
+      console.log("Percent Discount", order.percentDisc);
+      console.log("Discount Multiplier", discountMultiplier);
+      console.log("Sales Incentive", salesIncentive);
       salesIncentive *= discountMultiplier;
       overideIncentive *= discountMultiplier;
       remarks = remarks

@@ -243,6 +243,7 @@ router.get("/sales-incentive", verifyUser, (req, res) => {
         o.grandTotal,
         e.name AS preparedBy,
         od.id,
+        od.width,
         od.salesIncentive,
         od.overideIncentive,
         od.perSqFt,
@@ -256,7 +257,7 @@ router.get("/sales-incentive", verifyUser, (req, res) => {
       JOIN employee e ON o.preparedBy = e.id
       WHERE o.productionDate BETWEEN ? AND ?
         AND TRIM(o.status) IN ('Delivered', 'Billed', 'Closed')
-        AND m.noIncentive = 0 AND od.perSqFt > 0
+        AND m.noIncentive = 0 AND od.amount > 0
       ORDER BY o.orderId
     `;
 

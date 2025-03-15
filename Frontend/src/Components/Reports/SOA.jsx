@@ -16,6 +16,10 @@ const SOA = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [detailsTitle, setDetailsTitle] = useState("");
   const [selectedClient, setSelectedClient] = useState(null);
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "asc",
+  });
   const navigate = useNavigate();
 
   // Load data when component mounts
@@ -52,6 +56,30 @@ const SOA = () => {
         type: "error",
       });
     }
+  };
+
+  const handleSort = (key) => {
+    let direction = "desc";
+    if (sortConfig.key === key && sortConfig.direction === "desc") {
+      direction = "asc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortedData = () => {
+    if (!reportData || !sortConfig.key) return reportData;
+
+    return [...reportData].sort((a, b) => {
+      if (sortConfig.key === "clientName") {
+        return sortConfig.direction === "asc"
+          ? a.clientName.localeCompare(b.clientName)
+          : b.clientName.localeCompare(a.clientName);
+      }
+
+      return sortConfig.direction === "asc"
+        ? a[sortConfig.key] - b[sortConfig.key]
+        : b[sortConfig.key] - a[sortConfig.key];
+    });
   };
 
   const handleShowDetails = async (clientId, category, amount) => {
@@ -108,17 +136,73 @@ const SOA = () => {
             <table className="table table-hover">
               <thead className="table-active">
                 <tr>
-                  <th>Client Name</th>
-                  <th className="text-end">Production</th>
-                  <th className="text-end">0-30 Days</th>
-                  <th className="text-end">31-60 Days</th>
-                  <th className="text-end">61-90 Days</th>
-                  <th className="text-end">&gt;90 Days</th>
-                  <th className="text-end">Total AR</th>
+                  <th
+                    className="clickable"
+                    onClick={() => handleSort("clientName")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    Client Name{" "}
+                    {sortConfig.key === "clientName" &&
+                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    className="text-center clickable"
+                    onClick={() => handleSort("production")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    Production{" "}
+                    {sortConfig.key === "production" &&
+                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    className="text-center clickable"
+                    onClick={() => handleSort("days_0_30")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    0-30 Days{" "}
+                    {sortConfig.key === "days_0_30" &&
+                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    className="text-center clickable"
+                    onClick={() => handleSort("days_31_60")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    31-60 Days{" "}
+                    {sortConfig.key === "days_31_60" &&
+                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    className="text-center clickable"
+                    onClick={() => handleSort("days_61_90")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    61-90 Days{" "}
+                    {sortConfig.key === "days_61_90" &&
+                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    className="text-center clickable"
+                    onClick={() => handleSort("days_over_90")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    &gt;90 Days{" "}
+                    {sortConfig.key === "days_over_90" &&
+                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </th>
+                  <th
+                    className="text-center clickable"
+                    onClick={() => handleSort("total_ar")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    Total AR{" "}
+                    {sortConfig.key === "total_ar" &&
+                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {reportData.map((row, index) => (
+                {getSortedData()?.map((row, index) => (
                   <tr key={index}>
                     <td
                       className="clickable"
@@ -143,7 +227,9 @@ const SOA = () => {
                         cursor: row.production > 0 ? "pointer" : "default",
                       }}
                     >
-                      ₱{formatNumber(row.production)}
+                      {row.production > 0
+                        ? `₱${formatNumber(row.production)}`
+                        : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -157,7 +243,9 @@ const SOA = () => {
                         cursor: row.days_0_30 > 0 ? "pointer" : "default",
                       }}
                     >
-                      ₱{formatNumber(row.days_0_30)}
+                      {row.days_0_30 > 0
+                        ? `₱${formatNumber(row.days_0_30)}`
+                        : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -171,7 +259,9 @@ const SOA = () => {
                         cursor: row.days_31_60 > 0 ? "pointer" : "default",
                       }}
                     >
-                      ₱{formatNumber(row.days_31_60)}
+                      {row.days_31_60 > 0
+                        ? `₱${formatNumber(row.days_31_60)}`
+                        : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -185,7 +275,9 @@ const SOA = () => {
                         cursor: row.days_61_90 > 0 ? "pointer" : "default",
                       }}
                     >
-                      ₱{formatNumber(row.days_61_90)}
+                      {row.days_61_90 > 0
+                        ? `₱${formatNumber(row.days_61_90)}`
+                        : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -203,7 +295,9 @@ const SOA = () => {
                         cursor: row.days_over_90 > 0 ? "pointer" : "default",
                       }}
                     >
-                      ₱{formatNumber(row.days_over_90)}
+                      {row.days_over_90 > 0
+                        ? `₱${formatNumber(row.days_over_90)}`
+                        : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -217,7 +311,7 @@ const SOA = () => {
                         cursor: row.total_ar > 0 ? "pointer" : "default",
                       }}
                     >
-                      ₱{formatNumber(row.total_ar)}
+                      {row.total_ar > 0 ? `₱${formatNumber(row.total_ar)}` : ""}
                     </td>
                   </tr>
                 ))}

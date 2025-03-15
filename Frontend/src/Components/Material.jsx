@@ -142,7 +142,7 @@ const Material = () => {
       </div>
 
       <div className="table-container">
-        <table className="table">
+        <table className="table table-hover table-striped">
           <thead className="sticky-header">
             <tr>
               <th
