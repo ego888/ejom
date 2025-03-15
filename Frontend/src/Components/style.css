@@ -250,10 +250,6 @@ a:hover {
   font-weight: 600;
 }
 
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
 /* Style for the right panel */
 .right-panel {
   background-color: #ffffff;

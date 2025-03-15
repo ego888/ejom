@@ -97,11 +97,11 @@ const ReportSalesSummary = ({ data, groupBy }) => {
   };
 
   return (
-    <div className="report-summary-container">
+    <div>
       <h4 className="report-title">{getReportTitle()}</h4>
       <div className="table-responsive">
-        <table className="table table-hover">
-          <thead className="table-active">
+        <table className="table table-hover table-striped">
+          <thead>
             <tr>
               {renderHeader().map((header, index) => (
                 <th key={index}>{header}</th>

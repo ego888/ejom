@@ -859,8 +859,9 @@ function Prod() {
           <table className="table table-hover">
             <thead className="table table-head">
               <tr>
-                <th>Action</th>
+                <th className="text-center">Action</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("id")}
                   style={{ cursor: "pointer" }}
                 >
@@ -874,10 +875,11 @@ function Prod() {
                 >
                   Client {getSortIndicator("clientName")}
                 </th>
-                <th>Project Name</th>
-                <th>Ordered By</th>
-                <th>Order Ref</th>
+                <th className="text-center">Project Name</th>
+                <th className="text-center">Ordered By</th>
+                <th className="text-center">Order Ref</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
@@ -886,30 +888,33 @@ function Prod() {
                   Sales {getSortIndicator("salesName")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("status")}
                   style={{ cursor: "pointer" }}
                 >
                   Status {getSortIndicator("status")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("drnum")}
                   style={{ cursor: "pointer" }}
                 >
                   DR# {getSortIndicator("drnum")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("invnum")}
                   style={{ cursor: "pointer" }}
                 >
                   INV# {getSortIndicator("invnum")}
                 </th>
-                <th>Grand Total</th>
-                <th>Amount Paid</th>
+                <th className="text-center">Grand Total</th>
+                <th className="text-center">Amount Paid</th>
                 <th className="text-center">Pay</th>
                 <th className="text-right">Payment</th>
                 <th className="text-right">WTax</th>
                 <th className="text-right">Balance</th>
-                <th>Date Paid</th>
+                <th className="text-center">Date Paid</th>
               </tr>
             </thead>
             <tbody>

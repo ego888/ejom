@@ -3,17 +3,6 @@
   background-color: #e6f3ff !important;
 }
 
-/* Style for the right panel */
-.right-panel {
-  background-color: #ffffff;
-  border-radius: 4px;
-  padding: 1rem;
-  margin-left: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  min-width: 90px;
-  height: 100%;
-}
-
 /* Main content area */
 .order-content {
   width: 160%;

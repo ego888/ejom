@@ -290,20 +290,23 @@ function Quotes() {
           <table className="table table-striped table-hover">
             <thead>
               <tr>
-                <th>Action</th>
+                <th className="text-center">Action</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("quoteId")}
                   style={{ cursor: "pointer" }}
                 >
                   Quote ID {getSortIndicator("quoteId")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("quoteDate")}
                   style={{ cursor: "pointer" }}
                 >
                   Quote Date {getSortIndicator("quoteDate")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
@@ -311,18 +314,20 @@ function Quotes() {
                 >
                   Client {getSortIndicator("clientName")}
                 </th>
-                <th>Project Name</th>
-                <th>Ordered By</th>
-                <th>Due Date</th>
-                <th>Due Time</th>
+                <th className="text-center">Project Name</th>
+                <th className="text-center">Ordered By</th>
+                <th className="text-center">Due Date</th>
+                <th className="text-center">Due Time</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("status")}
                   style={{ cursor: "pointer" }}
                 >
                   Status {getSortIndicator("status")}
                 </th>
-                <th>Grand Total</th>
+                <th className="text-center">Grand Total</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
@@ -330,7 +335,7 @@ function Quotes() {
                 >
                   Sales {getSortIndicator("salesName")}
                 </th>
-                <th>Quote Ref</th>
+                <th className="text-center">Quote Ref</th>
               </tr>
             </thead>
             <tbody>

@@ -164,7 +164,7 @@ function PaymentAllocation({ payId }) {
                 Total:
               </td>
               <td className="text-end">
-                {formatNumber(
+                {formatPeso(
                   allocation.allocations?.reduce(
                     (sum, item) => sum + Number(item.amountApplied),
                     0

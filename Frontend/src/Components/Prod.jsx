@@ -676,7 +676,7 @@ function Prod() {
           <table className="table">
             <thead>
               <tr>
-                <th>Action</th>
+                <th className="text-center">Action</th>
                 <th onClick={handleForProdSort} style={{ cursor: "pointer" }}>
                   <div className="d-flex align-items-center">
                     <CheckBoxHeader
@@ -692,6 +692,7 @@ function Prod() {
                   </div>
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("id")}
                   style={{ cursor: "pointer" }}
                   aria-sort={
@@ -701,6 +702,7 @@ function Prod() {
                   Order ID {getSortIndicator("id")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
@@ -708,39 +710,44 @@ function Prod() {
                 >
                   Client {getSortIndicator("clientName")}
                 </th>
-                <th>Project Name</th>
-                <th>Ordered By</th>
+                <th className="text-center">Project Name</th>
+                <th className="text-center">Ordered By</th>
                 {/* <th>Order Date</th> */}
-                <th>Due Date</th>
-                <th>Due Time</th>
+                <th className="text-center">Due Date</th>
+                <th className="text-center">Due Time</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("status")}
                   style={{ cursor: "pointer" }}
                 >
                   Status {getSortIndicator("status")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("drnum")}
                   style={{ cursor: "pointer" }}
                 >
                   DR# {getSortIndicator("drnum")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("invnum")}
                   style={{ cursor: "pointer" }}
                 >
                   INV# {getSortIndicator("invnum")}
                 </th>
-                <th>Grand Total</th>
+                <th className="text-center">Grand Total</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("ornum")}
                   style={{ cursor: "pointer" }}
                 >
                   OR# {getSortIndicator("ornum")}
                 </th>
-                <th>Amount Paid</th>
-                <th>Date Paid</th>
+                <th className="text-center">Amount Paid</th>
+                <th className="text-center">Date Paid</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
@@ -748,7 +755,7 @@ function Prod() {
                 >
                   Sales {getSortIndicator("salesName")}
                 </th>
-                <th>Order Ref</th>
+                <th className="text-center">Order Ref</th>
               </tr>
             </thead>
             <tbody>

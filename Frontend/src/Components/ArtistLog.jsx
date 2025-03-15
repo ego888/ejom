@@ -271,20 +271,42 @@ function ArtistLog() {
           <table className="table table-striped table-hover">
             <thead>
               <tr className="table-header">
-                <th aria-label="order-id">Order ID</th>
-                <th aria-label="project">Project</th>
-                <th aria-label="client">Client</th>
-                <th aria-label="due-date">Due Date</th>
-                <th aria-label="production-date">Production Date</th>
-                <th aria-label="status">Status</th>
-                <th aria-label="qty">Qty</th>
-                <th aria-label="width">Width</th>
-                <th aria-label="height">Height</th>
-                <th aria-label="unit">Unit</th>
-                <th aria-label="material">Material</th>
-                <th aria-label="artist-incentive">Artist</th>
-                <th aria-label="major">Major</th>
-                <th aria-label="minor">Minor</th>
+                <th aria-label="order-id" className="text-center">
+                  Order ID
+                </th>
+                <th aria-label="project" className="text-center">
+                  Project
+                </th>
+                <th aria-label="client" className="text-center">
+                  Client
+                </th>
+                <th aria-label="due-date" className="text-center">
+                  Due Date
+                </th>
+                <th aria-label="production-date" className="text-center">
+                  Production Date
+                </th>
+                <th aria-label="status" className="text-center">
+                  Status
+                </th>
+                <th aria-label="width" className="text-center">
+                  Width
+                </th>
+                <th aria-label="height" className="text-center">
+                  Height
+                </th>
+                <th aria-label="unit" className="text-center">
+                  Unit
+                </th>
+                <th aria-label="material" className="text-center">
+                  Material
+                </th>
+                <th aria-label="major" className="text-center">
+                  Major
+                </th>
+                <th aria-label="minor" className="text-center">
+                  Minor
+                </th>
               </tr>
             </thead>
             <tbody>

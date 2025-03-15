@@ -78,7 +78,7 @@ function PaymentHistory({ orderId, onPaymentSelect }) {
               {payment.ornum}
             </td>
             <td id="amount" className="text-center">
-              {formatNumber(payment.amountApplied)}
+              {formatPeso(payment.amountApplied)}
             </td>
             <td id="payreference">{payment.payReference}</td>
             <td id="transactedby">{payment.transactedBy}</td>
@@ -101,7 +101,7 @@ function PaymentHistory({ orderId, onPaymentSelect }) {
           <td colSpan="4" className="text-end fw-bold">
             Total:
           </td>
-          <td className="text-right fw-bold">{formatNumber(totalAmount)}</td>
+          <td className="text-right fw-bold">{formatPeso(totalAmount)}</td>
           <td colSpan="5"></td>
         </tr>
       </tbody>

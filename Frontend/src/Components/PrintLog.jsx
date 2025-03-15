@@ -169,33 +169,33 @@ function Prod() {
   };
 
   // Status filter handlers
-  const handleStatusFilter = (statusId) => {
-    setSelectedStatuses((prev) => {
-      let newStatuses;
-      if (prev.includes(statusId)) {
-        newStatuses = prev.filter((s) => s !== statusId);
-      } else {
-        newStatuses = [...prev, statusId];
-      }
-      console.log("New statuses after toggle:", newStatuses); // Debugging log
-      // Update Prod checkbox state
-      const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-      const selectedProdStatuses = newStatuses.filter((s) =>
-        prodStatuses.includes(s)
-      );
-      console.log("Prod statuses:", prodStatuses); // Debugging log
-      console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
-      setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
+  // const handleStatusFilter = (statusId) => {
+  //   setSelectedStatuses((prev) => {
+  //     let newStatuses;
+  //     if (prev.includes(statusId)) {
+  //       newStatuses = prev.filter((s) => s !== statusId);
+  //     } else {
+  //       newStatuses = [...prev, statusId];
+  //     }
+  //     console.log("New statuses after toggle:", newStatuses); // Debugging log
+  //     // Update Prod checkbox state
+  //     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //     const selectedProdStatuses = newStatuses.filter((s) =>
+  //       prodStatuses.includes(s)
+  //     );
+  //     console.log("Prod statuses:", prodStatuses); // Debugging log
+  //     console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
+  //     setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
 
-      // Update All checkbox state
-      setIsAllChecked(newStatuses.length === statusOptions.length);
+  //     // Update All checkbox state
+  //     setIsAllChecked(newStatuses.length === statusOptions.length);
 
-      // Save to localStorage
-      localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-      return newStatuses;
-    });
-    setCurrentPage(1);
-  };
+  //     // Save to localStorage
+  //     localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+  //     return newStatuses;
+  //   });
+  //   setCurrentPage(1);
+  // };
 
   // Helper function for sort indicator
   const getSortIndicator = (key) => {
@@ -217,58 +217,58 @@ function Prod() {
   };
 
   // Handle records per page change
-  const handleRecordsPerPageChange = (e) => {
-    setRecordsPerPage(Number(e.target.value));
-    setCurrentPage(1); // Reset to first page
-  };
+  // const handleRecordsPerPageChange = (e) => {
+  //   setRecordsPerPage(Number(e.target.value));
+  //   setCurrentPage(1); // Reset to first page
+  // };
 
-  const isProdIndeterminate = () => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = selectedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
-    return (
-      selectedProdStatuses.length > 0 &&
-      selectedProdStatuses.length < prodStatuses.length
-    );
-  };
+  // const isProdIndeterminate = () => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
+  //     prodStatuses.includes(s)
+  //   );
+  //   return (
+  //     selectedProdStatuses.length > 0 &&
+  //     selectedProdStatuses.length < prodStatuses.length
+  //   );
+  // };
 
-  const handleProdCheckbox = (e) => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    let newStatuses;
-    if (e.target.checked) {
-      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-    } else {
-      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
-    }
+  // const handleProdCheckbox = (e) => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   let newStatuses;
+  //   if (e.target.checked) {
+  //     newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
+  //   } else {
+  //     newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
+  //   }
 
-    setSelectedStatuses(newStatuses);
-    setIsProdChecked(e.target.checked);
-    setIsAllChecked(newStatuses.length === statusOptions.length);
+  //   setSelectedStatuses(newStatuses);
+  //   setIsProdChecked(e.target.checked);
+  //   setIsAllChecked(newStatuses.length === statusOptions.length);
 
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  };
+  //   // Save to localStorage
+  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+  // };
 
-  const isAllIndeterminate = () => {
-    return (
-      selectedStatuses.length > 0 &&
-      selectedStatuses.length < statusOptions.length
-    );
-  };
+  // const isAllIndeterminate = () => {
+  //   return (
+  //     selectedStatuses.length > 0 &&
+  //     selectedStatuses.length < statusOptions.length
+  //   );
+  // };
 
-  const handleAllCheckbox = (e) => {
-    let newStatuses = [];
-    if (e.target.checked) {
-      newStatuses = statusOptions.map((s) => s.statusId);
-    }
-    setSelectedStatuses(newStatuses);
-    setIsAllChecked(e.target.checked);
-    setIsProdChecked(e.target.checked);
+  // const handleAllCheckbox = (e) => {
+  //   let newStatuses = [];
+  //   if (e.target.checked) {
+  //     newStatuses = statusOptions.map((s) => s.statusId);
+  //   }
+  //   setSelectedStatuses(newStatuses);
+  //   setIsAllChecked(e.target.checked);
+  //   setIsProdChecked(e.target.checked);
 
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  };
+  //   // Save to localStorage
+  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+  // };
 
   // Add a cleanup effect to save the page when unmounting
   // useEffect(() => {
@@ -325,14 +325,16 @@ function Prod() {
           <table className="table">
             <thead>
               <tr>
-                <th>Action</th>
+                <th className="text-center">Action</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("id")}
                   style={{ cursor: "pointer" }}
                 >
                   Order ID {getSortIndicator("id")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
@@ -340,39 +342,44 @@ function Prod() {
                 >
                   Client {getSortIndicator("clientName")}
                 </th>
-                <th>Project Name</th>
-                <th>Ordered By</th>
+                <th className="text-center">Project Name</th>
+                <th className="text-center">Ordered By</th>
                 {/* <th>Order Date</th> */}
-                <th>Due Date</th>
-                <th>Due Time</th>
+                <th className="text-center">Due Date</th>
+                <th className="text-center">Due Time</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("status")}
                   style={{ cursor: "pointer" }}
                 >
                   Status {getSortIndicator("status")}
                 </th>
-                <th
+                {/*     <th
+                  className="text-center"
                   onClick={() => handleSort("drnum")}
                   style={{ cursor: "pointer" }}
                 >
                   DR# {getSortIndicator("drnum")}
                 </th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("invnum")}
                   style={{ cursor: "pointer" }}
                 >
                   INV# {getSortIndicator("invnum")}
-                </th>
-                <th>Grand Total</th>
+            </th>
+                <th className="text-center">Grand Total</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("ornum")}
                   style={{ cursor: "pointer" }}
                 >
                   OR# {getSortIndicator("ornum")}
                 </th>
-                <th>Amount Paid</th>
-                <th>Date Paid</th>
+                <th className="text-center">Amount Paid</th> */}
+                <th className="text-center">Date Paid</th>
                 <th
+                  className="text-center"
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
@@ -380,7 +387,7 @@ function Prod() {
                 >
                   Sales {getSortIndicator("salesName")}
                 </th>
-                <th>Order Ref</th>
+                <th className="text-center">Order Ref</th>
               </tr>
             </thead>
             <tbody>
@@ -432,8 +439,8 @@ function Prod() {
                     </span>
                   </td>
                   <td>{order.drnum || ""}</td>
-                  <td>{order.invnum || ""}</td>
-                  <td>
+                  {/*                   <td>{order.invnum || ""}</td>
+<td>
                     {order.grandTotal
                       ? `₱${order.grandTotal.toLocaleString()}`
                       : ""}
@@ -448,7 +455,7 @@ function Prod() {
                     {order.datePaid
                       ? new Date(order.datePaid).toLocaleDateString()
                       : ""}
-                  </td>
+                  </td> */}
                   <td
                     className="sales-cell"
                     onClick={(e) => {
