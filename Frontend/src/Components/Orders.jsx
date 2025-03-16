@@ -455,7 +455,12 @@ function Orders() {
                     }}
                     style={{ cursor: "pointer" }}
                   >
-                    {order.clientName}
+                    <div>{order.clientName}</div>
+                    {order.customerName && (
+                      <div className="small text-muted">
+                        {order.customerName}
+                      </div>
+                    )}
                   </td>
                   <td>{order.projectName}</td>
                   <td>{order.orderedBy}</td>
@@ -470,7 +475,7 @@ function Orders() {
                       : ""}
                   </td>
                   <td>{order.dueTime || ""}</td>
-                  <td>
+                  <td className="text-center">
                     <span className={`status-badge ${order.status}`}>
                       {order.status}
                     </span>

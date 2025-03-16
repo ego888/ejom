@@ -30,7 +30,7 @@ router.get("/orders-min", async (req, res) => {
 
     if (search) {
       whereConditions.push(
-        "(o.orderID LIKE ? OR c.clientName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
+        "(o.orderID LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
       );
       const searchParam = `%${search}%`;
       params.push(
@@ -69,6 +69,7 @@ router.get("/orders-min", async (req, res) => {
         o.orderID as id, 
         o.clientId, 
         c.clientName, 
+        c.customerName,
         o.projectName, 
         o.orderedBy, 
         o.orderDate, 
@@ -161,10 +162,11 @@ router.get("/orders", async (req, res) => {
 
     if (search) {
       whereConditions.push(
-        "(o.orderID LIKE ? OR c.clientName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
+        "(o.orderID LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
       );
       const searchParam = `%${search}%`;
       params.push(
+        searchParam,
         searchParam,
         searchParam,
         searchParam,
@@ -200,7 +202,8 @@ router.get("/orders", async (req, res) => {
         o.orderID as id, 
         o.revision,
         o.clientId, 
-        c.clientName, 
+        c.clientName,
+        c.customerName,
         o.projectName, 
         o.orderedBy, 
         o.orderDate, 
@@ -302,6 +305,115 @@ router.get("/order/:id", (req, res) => {
   });
 });
 
+// Search orders by client name
+router.get("/search-orders-by-client", async (req, res) => {
+  try {
+    const clientName = req.query.clientName;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 10;
+    const offset = (page - 1) * limit;
+    const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
+    //    const sales = req.query.sales ? req.query.sales.split(",") : [];
+    let sortBy = req.query.sortBy || "orderID";
+    let sortDirection = req.query.sortDirection || "desc";
+
+    // Build where clause
+    let whereConditions = ["c.clientName LIKE ? OR c.customerName LIKE ?"];
+    let params = [`%${clientName}%`, `%${clientName}%`]; // Match orderID as a string
+
+    if (statuses.length) {
+      whereConditions.push(`o.status IN (?)`);
+      params.push(statuses);
+    }
+
+    // if (sales.length) {
+    //   whereConditions.push(`o.preparedBy IN (?)`);
+    //   params.push(sales);
+    // }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Count query
+    const countSql = `
+      SELECT COUNT(DISTINCT o.orderID) as total
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
+
+    console.log("WHERE CLAUSE", whereClause);
+    // Main data query - using same fields as regular order search
+    const ordersSql = `
+      SELECT 
+        o.orderID as id, 
+        o.revisionNumber,
+        o.clientId, 
+        c.clientName, 
+        c.customerName,
+        o.projectName, 
+        o.orderedBy, 
+        o.orderDate, 
+        o.dueDate, 
+        o.dueTime,
+        o.status, 
+        o.drnum, 
+        o.invoiceNum as invnum, 
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
+        e.name as salesName, 
+        o.orderReference
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
+    `;
+
+    // Execute count query
+    const [countResult] = await new Promise((resolve, reject) => {
+      con.query(countSql, params, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+
+    // Execute orders query
+    const orders = await new Promise((resolve, reject) => {
+      con.query(
+        ordersSql,
+        [...params, Number(limit), Number(offset)],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+    console.log("orders", orders);
+    return res.json({
+      Status: true,
+      Result: {
+        orders,
+        total: countResult.total,
+        page: Number(page),
+        totalPages: Math.ceil(countResult.total / limit),
+      },
+    });
+  } catch (err) {
+    console.error("Error in search-orders-by-client route:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to search orders",
+      Details: err.message,
+    });
+  }
+});
+
 // Get orders marked for production
 router.get("/orders-details-forprod", async (req, res) => {
   try {
@@ -314,6 +426,7 @@ router.get("/orders-details-forprod", async (req, res) => {
         o.dueDate,
         o.dueTime,
         c.clientName,
+        c.customerName,
         od.quantity,
         od.width,
         od.height,
@@ -351,6 +464,7 @@ router.get("/orders-details-artistIncentive", async (req, res) => {
         o.dueDate,
         o.dueTime,
         c.clientName,
+        c.customerName,
         o.productionDate,
         o.status,
         od.Id,
@@ -668,6 +782,7 @@ router.get("/orders-all-DR", async (req, res) => {
         o.clientId,
         o.projectName,
         c.clientName,
+        c.customerName,
         o.deliveryInst,
         o.drnum,
         o.drDate,
@@ -705,6 +820,7 @@ router.get("/orders-all-DR", async (req, res) => {
             dueDate: row.dueDate,
             dueTime: row.dueTime,
             clientName: row.clientName,
+            customerName: row.customerName,
             deliveryInst: row.deliveryInst,
             drnum: row.drnum,
             drDate: row.drDate,
@@ -1173,113 +1289,6 @@ router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
     }
     return res.json({ Status: true });
   });
-});
-
-// Search orders by client name
-router.get("/search-orders-by-client", async (req, res) => {
-  try {
-    const clientName = req.query.clientName;
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 10;
-    const offset = (page - 1) * limit;
-    const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
-    //    const sales = req.query.sales ? req.query.sales.split(",") : [];
-    let sortBy = req.query.sortBy || "orderID";
-    let sortDirection = req.query.sortDirection || "desc";
-
-    // Build where clause
-    let whereConditions = ["c.clientName LIKE ?"]; // Start with client name search
-    let params = [`%${clientName}%`];
-
-    if (statuses.length) {
-      whereConditions.push(`o.status IN (?)`);
-      params.push(statuses);
-    }
-
-    // if (sales.length) {
-    //   whereConditions.push(`o.preparedBy IN (?)`);
-    //   params.push(sales);
-    // }
-
-    const whereClause = whereConditions.join(" AND ");
-
-    // Count query
-    const countSql = `
-      SELECT COUNT(DISTINCT o.orderID) as total
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN employee e ON o.preparedBy = e.id
-      WHERE ${whereClause}
-    `;
-
-    // Main data query - using same fields as regular order search
-    const ordersSql = `
-      SELECT 
-        o.orderID as id, 
-        o.revisionNumber,
-        o.clientId, 
-        c.clientName, 
-        o.projectName, 
-        o.orderedBy, 
-        o.orderDate, 
-        o.dueDate, 
-        o.dueTime,
-        o.status, 
-        o.drnum, 
-        o.invoiceNum as invnum, 
-        o.totalAmount,
-        o.amountDisc,
-        o.percentDisc,
-        o.grandTotal,
-        o.amountPaid,
-        o.datePaid,
-        e.name as salesName, 
-        o.orderReference
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN employee e ON o.preparedBy = e.id
-      WHERE ${whereClause}
-      ORDER BY ${sortBy} ${sortDirection}
-      LIMIT ? OFFSET ?
-    `;
-
-    // Execute count query
-    const [countResult] = await new Promise((resolve, reject) => {
-      con.query(countSql, params, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
-
-    // Execute orders query
-    const orders = await new Promise((resolve, reject) => {
-      con.query(
-        ordersSql,
-        [...params, Number(limit), Number(offset)],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
-    console.log("orders", orders);
-    return res.json({
-      Status: true,
-      Result: {
-        orders,
-        total: countResult.total,
-        page: Number(page),
-        totalPages: Math.ceil(countResult.total / limit),
-      },
-    });
-  } catch (err) {
-    console.error("Error in search-orders-by-client route:", err);
-    return res.json({
-      Status: false,
-      Error: "Failed to search orders",
-      Details: err.message,
-    });
-  }
 });
 
 // Add route to get WTax types

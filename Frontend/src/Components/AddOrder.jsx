@@ -1104,7 +1104,7 @@ function AddOrder() {
     try {
       const token = localStorage.getItem("token");
       const newNoPrintValue = currentNoPrint === 1 ? 0 : 1;
-
+      console.log("New No Print Value", newNoPrintValue);
       // Optimistically update the UI first
       setOrderDetails((prevDetails) =>
         prevDetails.map((detail) =>

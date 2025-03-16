@@ -364,7 +364,12 @@ function Quotes() {
                     }}
                     style={{ cursor: "pointer" }}
                   >
-                    {quote.clientName}
+                    <div>{quote.clientName}</div>
+                    {quote.customerName && (
+                      <div className="small text-muted">
+                        {quote.customerName}
+                      </div>
+                    )}
                   </td>
                   <td>{quote.projectName}</td>
                   <td>{quote.orderedBy}</td>
@@ -374,7 +379,7 @@ function Quotes() {
                       : ""}
                   </td>
                   <td>{quote.dueTime || ""}</td>
-                  <td>
+                  <td className="text-center">
                     <span className={`status-badge ${quote.status}`}>
                       {quote.status}
                     </span>

@@ -32,10 +32,10 @@ function Prod() {
           direction: "desc",
         };
   });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchClientName, setSearchClientName] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
-    const saved = localStorage.getItem("orderStatusFilters");
+    const saved = localStorage.getItem("orderStatusFilter");
     return saved ? JSON.parse(saved) : [];
   });
   const [selectedSales, setSelectedSales] = useState([]);
@@ -48,7 +48,6 @@ function Prod() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
-  const [searchClientName, setSearchClientName] = useState("");
   const [paymentTypes, setPaymentTypes] = useState([]);
   const [paymentInfo, setPaymentInfo] = useState({
     clientName: "",
@@ -82,40 +81,40 @@ function Prod() {
     console.log("fetchOrderData function called");
     setLoading(true);
     try {
-      // Read statuses directly from localStorage like Orders.jsx
-      const activeStatuses = JSON.parse(
-        localStorage.getItem("orderStatusFilter") || "[]"
-      );
-      console.log("Fetching with statuses:", activeStatuses);
-
-      const endpoint = searchClientName.trim()
-        ? `${ServerIP}/auth/search-orders-by-client`
-        : `${ServerIP}/auth/orders`;
+      if (selectedStatuses.length === 0) {
+        setOrders([]);
+        setTotalCount(0);
+        setTotalPages(0);
+        setLoading(false);
+        return;
+      }
 
       const params = {
         page: currentPage,
         limit: recordsPerPage,
         sortBy: sortConfig.key,
         sortDirection: sortConfig.direction,
-        statuses: activeStatuses.join(","), // Use activeStatuses instead of selectedStatuses
+        statuses: selectedStatuses.join(","),
         sales: selectedSales.length ? selectedSales.join(",") : undefined,
-        ...(searchClientName.trim() && { clientName: searchClientName }),
-        ...(searchTerm.trim() && { search: searchTerm.trim() }),
+        ...(searchClientName.trim() && {
+          search: searchClientName.trim(),
+          searchFields: ["id", "clientName", "customerName", "orderedBy"],
+        }),
       };
 
-      console.log("Endpoint:", endpoint);
-      console.log("Params:", params);
-      const response = await axios.get(endpoint, { params });
+      console.log("Search params:", params);
+      const response = await axios.get(`${ServerIP}/auth/orders`, { params });
 
       if (response.data.Status) {
-        setOrders(response.data.Result.orders);
-        setTotalCount(response.data.Result.total);
-        setTotalPages(response.data.Result.totalPages);
+        setOrders(response.data.Result.orders || []);
+        setTotalCount(response.data.Result.total || 0);
+        setTotalPages(response.data.Result.totalPages || 0);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
       setOrders([]);
       setTotalCount(0);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
@@ -149,16 +148,19 @@ function Prod() {
           );
           setStatusOptions(sortedStatuses);
 
-          // Set initial prod statuses
-          const prodStatuses = sortedStatuses
-            .slice(2, 6)
-            .map((s) => s.statusId);
-          setSelectedStatuses(prodStatuses);
-          setIsProdChecked(true);
-          localStorage.setItem(
-            "orderStatusFilters",
-            JSON.stringify(prodStatuses)
-          );
+          // Only set initial prod statuses if no saved filters exist
+          const savedFilters = localStorage.getItem("orderStatusFilter");
+          if (!savedFilters) {
+            const prodStatuses = sortedStatuses
+              .slice(2, 6)
+              .map((s) => s.statusId);
+            setSelectedStatuses(prodStatuses);
+            setIsProdChecked(true);
+            localStorage.setItem(
+              "orderStatusFilter",
+              JSON.stringify(prodStatuses)
+            );
+          }
         }
 
         if (wtaxResponse.data.Status) {
@@ -192,62 +194,14 @@ function Prod() {
     initializeComponent();
   }, []); // Run once on mount
 
-  // Update handleSearch to use current term directly
+  // Update handleSearch to use debounce
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
-    console.log("Search term:", term);
-
-    // Clear client name search when using the search bar
-    setSearchClientName("");
-    setPaymentInfo((prev) => ({
-      ...prev,
-      clientName: "",
-    }));
-
-    // Update search term state
-    setSearchTerm(term);
+    setSearchClientName(term);
     setCurrentPage(1);
-
-    // Call fetchOrderData with the current term directly
-    const fetchWithTerm = async () => {
-      setLoading(true);
-      try {
-        const endpoint = searchClientName.trim()
-          ? `${ServerIP}/auth/search-orders-by-client`
-          : `${ServerIP}/auth/orders`;
-
-        const params = {
-          page: currentPage,
-          limit: recordsPerPage,
-          sortBy: sortConfig.key,
-          sortDirection: sortConfig.direction,
-          statuses: selectedStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined,
-          ...(searchClientName.trim() && { clientName: searchClientName }),
-          search: term, // Use current term directly instead of searchTerm state
-        };
-
-        console.log("Searching with term:", term);
-        const response = await axios.get(endpoint, { params });
-
-        if (response.data.Status) {
-          setOrders(response.data.Result.orders);
-          setTotalCount(response.data.Result.total);
-          setTotalPages(response.data.Result.totalPages);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        setOrders([]);
-        setTotalCount(0);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWithTerm();
   };
 
-  // Add a new useEffect for other changes (not search)
+  // Update useEffect dependencies
   useEffect(() => {
     fetchOrderData();
   }, [
@@ -255,7 +209,7 @@ function Prod() {
     recordsPerPage,
     sortConfig,
     selectedSales,
-    // searchTerm removed from dependencies
+    selectedStatuses,
   ]);
 
   // Sort handler
@@ -290,61 +244,22 @@ function Prod() {
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
-  // Separate the search logic into its own function
+  // Update handleClientSearch to use fetchOrderData
   const handleClientSearch = async (e) => {
-    if (e.type === "keydown" && e.key !== "Enter") return; // Prevent fetch on every key press
-    if (e.type === "blur" && searchClientName.trim() === "") return; // Prevent empty search
+    if (e.type === "keydown" && e.key !== "Enter") return;
+    if (e.type === "blur" && searchClientName.trim() === "") return;
 
-    fetchOrderData();
+    // Update payment info with client name
+    setPaymentInfo((prev) => ({
+      ...prev,
+      clientName: searchClientName,
+    }));
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
+    // Reset to first page when searching
+    setCurrentPage(1);
 
-      if (selectedStatuses.length === 0) {
-        setOrders([]);
-        setTotalCount(0);
-        setTotalPages(0);
-        setLoading(false);
-        return;
-      }
-
-      console.log("Fetching orders by client:", searchClientName);
-      const response = await axios.get(
-        `${ServerIP}/auth/search-orders-by-client`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params: {
-            clientName: searchClientName,
-            page: 1,
-            limit: recordsPerPage,
-            sortBy: sortConfig.key,
-            sortDirection: sortConfig.direction,
-            statuses: selectedStatuses.join(","),
-            sales: selectedSales.length ? selectedSales.join(",") : undefined,
-          },
-        }
-      );
-
-      console.log("RESULT", response);
-      if (response.data.Status) {
-        setOrders(response.data.Result.orders || []);
-        setTotalCount(response.data.Result.total || 0);
-        setTotalPages(response.data.Result.totalPages || 0);
-        setPaymentInfo((prev) => ({
-          ...prev,
-          clientName: searchClientName,
-        }));
-      }
-      console.log("RESULT 2:", response);
-    } catch (error) {
-      console.error("Error searching orders by client:", error);
-      setOrders([]);
-      setTotalCount(0);
-      setTotalPages(0);
-    } finally {
-      setLoading(false);
-    }
+    // Fetch data using main function
+    await fetchOrderData();
   };
 
   // Add useEffect to focus on client name input when component mounts
@@ -718,13 +633,22 @@ function Prod() {
                   id="client"
                   type="text"
                   name="clientName"
-                  className="form-control"
+                  className="form-control form-input"
                   value={searchClientName}
                   onChange={(e) => setSearchClientName(e.target.value)}
                   onKeyDown={handleClientSearch}
                   onBlur={handleClientSearch}
                   placeholder="Enter client name"
+                  list="clientList"
+                  autoComplete="off"
                 />
+                <datalist id="clientList">
+                  {clientList.map((client) => (
+                    <option key={client.id} value={client.clientName}>
+                      {client.customerName}
+                    </option>
+                  ))}
+                </datalist>
               </div>
             </div>
             <div className="col-md-2">
@@ -776,16 +700,8 @@ function Prod() {
           </div>
         </div>
 
-        {/* Add WTax dropdown next to search bar */}
-        <div className="d-flex justify-content-between mb-3">
-          <input
-            id="search-vat"
-            type="text"
-            className="form-control form-control-sm me-3"
-            placeholder="Search by ID, client..."
-            onChange={handleSearch}
-            style={{ width: "400px" }}
-          />
+        {/* Remove the search bar div and keep only WTax dropdown */}
+        <div className="d-flex justify-content-end mb-3">
           <select
             id="vat-select"
             className="form-control form-control-sm"
@@ -838,24 +754,6 @@ function Prod() {
         )}
 
         <div className="table-responsive">
-          <SalesFilter
-            ref={salesFilterRef}
-            salesEmployees={salesEmployees}
-            selectedSales={selectedSales}
-            setSelectedSales={setSelectedSales}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasSalesFilter(isFilterActive)
-            }
-          />
-          <ClientFilter
-            ref={clientFilterRef}
-            clientList={clientList}
-            selectedClients={selectedClients}
-            setSelectedClients={setSelectedClients}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasClientFilter(isFilterActive)
-            }
-          />
           <table className="table table-hover">
             <thead className="table table-head">
               <tr>
@@ -942,7 +840,12 @@ function Prod() {
                     }}
                     style={{ cursor: "pointer" }}
                   >
-                    {order.clientName}
+                    <div>{order.clientName}</div>
+                    {order.customerName && (
+                      <div className="small text-muted">
+                        {order.customerName}
+                      </div>
+                    )}
                   </td>
                   <td>{order.projectName}</td>
                   <td>{order.orderedBy}</td>
@@ -958,7 +861,7 @@ function Prod() {
                   >
                     {order.salesName}
                   </td>
-                  <td>
+                  <td className="text-center">
                     <span className={`status-badge ${order.status}`}>
                       {order.status}
                     </span>

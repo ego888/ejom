@@ -12,7 +12,7 @@ import StatusBadges from "./UI/StatusBadges";
 import "./Orders.css";
 import "./PrintLog.css";
 
-function Prod() {
+function PrintLog() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -73,7 +73,22 @@ function Prod() {
         },
       });
       if (response.data.Status) {
-        setOrders(response.data.Result.orders);
+        console.log("PrintLog orders data:", response.data.Result.orders);
+        // Check if customerName is present in the first order (if any)
+        if (response.data.Result.orders.length > 0) {
+          console.log(
+            "First order contains customerName?",
+            Boolean(response.data.Result.orders[0].customerName)
+          );
+        }
+
+        // Map orders to ensure customerName is included (with fallback to orderedBy)
+        const mappedOrders = response.data.Result.orders.map((order) => ({
+          ...order,
+          customerName: order.customerName || order.orderedBy,
+        }));
+
+        setOrders(mappedOrders);
         setTotalCount(response.data.Result.total);
         setTotalPages(Math.ceil(response.data.Result.total / recordsPerPage));
       }
@@ -409,16 +424,16 @@ function Prod() {
                     {order.id}
                     {order.revision > 0 && `-${order.revision}`}
                   </td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.clientName}
+                  <td>
+                    <div>{order.clientName}</div>
+                    {order.customerName && (
+                      <div className="small text-muted">
+                        {order.customerName}
+                      </div>
+                    )}
+                    {!order.customerName && order.orderedBy && (
+                      <div className="small text-muted">{order.orderedBy}</div>
+                    )}
                   </td>
                   <td>{order.projectName}</td>
                   <td>{order.orderedBy}</td>
@@ -433,7 +448,7 @@ function Prod() {
                       : ""}
                   </td>
                   <td>{order.dueTime || ""}</td>
-                  <td>
+                  <td className="text-center">
                     <span className={`status-badge ${order.status}`}>
                       {order.status}
                     </span>
@@ -507,4 +522,4 @@ function Prod() {
   );
 }
 
-export default Prod;
+export default PrintLog;

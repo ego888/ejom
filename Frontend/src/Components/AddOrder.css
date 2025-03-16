@@ -382,28 +382,6 @@ input[type="number"] {
   white-space: nowrap;
 }
 
-/* No Print Styles */
-.order-table tr.no-print,
-.order-table tr.no-print td {
-  color: #dc3545;
-}
-
-.order-table tr.no-print:hover,
-.order-table tr.no-print:hover td {
-  color: #bb2d3b;
-}
-
-/* Add transition for smooth color change */
-.order-table tr,
-.order-table tr td {
-  transition: color 0.2s ease-in-out;
-}
-
-/* Cursor style for double-click interaction */
-.order-table tr[data-toggleable="true"] {
-  cursor: pointer;
-}
-
 /* Add this to your existing CSS */
 .client-select-option {
   display: grid;

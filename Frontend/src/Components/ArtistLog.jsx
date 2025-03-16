@@ -37,14 +37,14 @@ function ArtistLog() {
 
       if (ordersResponse.data.Status) {
         setOrders(ordersResponse.data.Result);
-        if (!ordersResponse.data.Result.length) {
-          setAlert({
-            show: true,
-            title: "No Prod Orders",
-            message: "There are no orders for Artist logging at this time.",
-            type: "alert",
-          });
-        }
+        // if (!ordersResponse.data.Result.length) {
+        //   setAlert({
+        //     show: true,
+        //     title: "No Prod Orders",
+        //     message: "There are no orders for Artist logging at this time.",
+        //     type: "alert",
+        //   });
+        // }
       }
       console.log("order Response:", ordersResponse.data);
       if (artistsResponse.data.Status) {
@@ -329,8 +329,13 @@ function ArtistLog() {
                     <td className="project-name" id={`project-${index}`}>
                       {index === 0 ? item.projectName : ""}
                     </td>
-                    <td className="client-name" id={`client-${index}`}>
-                      {index === 0 ? item.clientName : ""}
+                    <td className="client-cell">
+                      <div>{item.clientName}</div>
+                      {item.customerName && (
+                        <div className="small text-muted">
+                          {item.customerName}
+                        </div>
+                      )}
                     </td>
                     <td className="due-date" id={`due-datetime-${index}`}>
                       {index === 0 && item.dueDate
@@ -347,7 +352,7 @@ function ArtistLog() {
                         ? formatDateTime(item.productionDate)
                         : ""}
                     </td>
-                    <td className="status-cell" id={`status-${index}`}>
+                    <td className="text-center">
                       {index === 0 && (
                         <span className={`status-badge ${item.status}`}>
                           {item.status}
