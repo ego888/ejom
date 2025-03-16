@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
@@ -14,8 +14,13 @@ const AddMaterial = () => {
     fixWidth: 0,
     fixHeight: 0,
     cost: 0,
+    unitCost: false,
     noIncentive: false,
+    materialType: "",
+    machineType: "",
   });
+  const [materialTypes, setMaterialTypes] = useState([]);
+  const [machineTypes, setMachineTypes] = useState([]);
   const navigate = useNavigate();
   const [alert, setAlert] = useState({
     show: false,
@@ -24,6 +29,38 @@ const AddMaterial = () => {
     type: "alert",
     onConfirm: null,
   });
+
+  useEffect(() => {
+    // Fetch unique material types and machine types when component mounts
+    fetchMaterialTypes();
+    fetchMachineTypes();
+  }, []);
+
+  // Function to fetch unique material types
+  const fetchMaterialTypes = async () => {
+    try {
+      const response = await axios.get(
+        `${ServerIP}/auth/unique-material-types`
+      );
+      if (response.data.Status) {
+        setMaterialTypes(response.data.Result || []);
+      }
+    } catch (error) {
+      console.error("Error fetching material types:", error);
+    }
+  };
+
+  // Function to fetch unique machine types
+  const fetchMachineTypes = async () => {
+    try {
+      const response = await axios.get(`${ServerIP}/auth/unique-machine-types`);
+      if (response.data.Status) {
+        setMachineTypes(response.data.Result || []);
+      }
+    } catch (error) {
+      console.error("Error fetching machine types:", error);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -55,6 +92,10 @@ const AddMaterial = () => {
       fixWidth: material.fixWidth || 0,
       fixHeight: material.fixHeight || 0,
       cost: material.cost || 0,
+      unitCost: material.unitCost || false,
+      noIncentive: material.noIncentive || false,
+      materialType: material.materialType || "",
+      machineType: material.machineType || "",
     };
 
     axios
@@ -197,6 +238,61 @@ const AddMaterial = () => {
                 setMaterial({ ...material, noIncentive: e.target.checked })
               }
             />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="unit-cost" className="me-2">
+              Cost per Unit:
+            </label>
+            <input
+              id="unit-cost"
+              type="checkbox"
+              name="unitCost"
+              onChange={(e) =>
+                setMaterial({ ...material, unitCost: e.target.checked })
+              }
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="material-type">Material Type:</label>
+            <input
+              id="material-type"
+              type="text"
+              name="materialType"
+              list="materialTypeList"
+              placeholder="Enter Material Type"
+              className="form-control"
+              value={material.materialType}
+              onChange={(e) =>
+                setMaterial({ ...material, materialType: e.target.value })
+              }
+              autoComplete="off"
+            />
+            <datalist id="materialTypeList">
+              {materialTypes.map((type, index) => (
+                <option key={index} value={type} />
+              ))}
+            </datalist>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="machine-type">Machine Type:</label>
+            <input
+              id="machine-type"
+              type="text"
+              name="machineType"
+              list="machineTypeList"
+              placeholder="Enter Machine Type"
+              className="form-control"
+              value={material.machineType}
+              onChange={(e) =>
+                setMaterial({ ...material, machineType: e.target.value })
+              }
+              autoComplete="off"
+            />
+            <datalist id="machineTypeList">
+              {machineTypes.map((type, index) => (
+                <option key={index} value={type} />
+              ))}
+            </datalist>
           </div>
           <div className="d-flex justify-content-end gap-2">
             <Button

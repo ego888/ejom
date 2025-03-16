@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
+import { formatPeso } from "../utils/orderUtils";
 import { BiSortAlt2, BiSortUp, BiSortDown, BiSearch } from "react-icons/bi";
+import { BsCheck } from "react-icons/bs";
 
 const Material = () => {
   const [material, setMaterial] = useState([]);
@@ -162,7 +164,7 @@ const Material = () => {
               <th className="text-center">Fix Width</th>
               <th className="text-center">Fix Height</th>
               <th className="text-center">Cost</th>
-              <th className="text-center">Unit Cost</th>
+              <th className="text-center">Cost per Unit</th>
               <th
                 className="text-center cursor-pointer"
                 onClick={() => handleSort("MaterialType")}
@@ -185,11 +187,11 @@ const Material = () => {
                 <td className="text-center">{m.Material}</td>
                 <td className="text-center">{m.Description}</td>
                 <td className="text-center">{m.SqFtPerHour}</td>
-                <td className="text-center">${m.MinimumPrice}</td>
+                <td className="text-center">{formatPeso(m.MinimumPrice)}</td>
                 <td className="text-center">{m.FixWidth}</td>
                 <td className="text-center">{m.FixHeight}</td>
-                <td className="text-center">${m.Cost}</td>
-                <td className="text-center">${m.UnitCost}</td>
+                <td className="text-center">{formatPeso(m.Cost)}</td>
+                <td className="text-center">{m.UnitCost ? "Yes" : "No"}</td>
                 <td className="text-center">{m.MaterialType}</td>
                 <td className="text-center">{m.MachineType}</td>
                 <td className="text-center">{m.NoIncentive ? "Yes" : "No"}</td>

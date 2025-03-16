@@ -110,4 +110,34 @@ router.delete("/material/delete/:id", (req, res) => {
   });
 });
 
+// Get unique material types
+router.get("/unique-material-types", (req, res) => {
+  const sql =
+    "SELECT DISTINCT MaterialType FROM material WHERE MaterialType != '' ORDER BY MaterialType";
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Error fetching material types:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    // Map the result to extract just the MaterialType values
+    const materialTypes = result.map((item) => item.MaterialType);
+    return res.json({ Status: true, Result: materialTypes });
+  });
+});
+
+// Get unique machine types
+router.get("/unique-machine-types", (req, res) => {
+  const sql =
+    "SELECT DISTINCT MachineType FROM material WHERE MachineType != '' ORDER BY MachineType";
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Error fetching machine types:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+    // Map the result to extract just the MachineType values
+    const machineTypes = result.map((item) => item.MachineType);
+    return res.json({ Status: true, Result: machineTypes });
+  });
+});
+
 export { router as MaterialRouter };

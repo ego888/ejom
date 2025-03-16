@@ -129,14 +129,15 @@ router.get("/client-list", (req, res) => {
 router.post("/client/add", (req, res) => {
   const sql = `
         INSERT INTO client 
-        (clientName, contact, telNo, faxNo, celNo, email, 
+        (clientName, customerName, contact, telNo, faxNo, celNo, email, 
          arContact, arTelNo, arFaxNo, tinNumber, notes, 
          terms, salesId, creditLimit) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
   const values = [
     req.body.clientName,
+    req.body.customerName,
     req.body.contact,
     req.body.telNo || "",
     req.body.faxNo || "",
@@ -167,6 +168,7 @@ router.put("/edit_client/:id", (req, res) => {
   const sql = `
         UPDATE client 
         SET clientName = ?, 
+            customerName = ?,
             contact = ?, 
             telNo = ?, 
             faxNo = ?, 
@@ -185,6 +187,7 @@ router.put("/edit_client/:id", (req, res) => {
 
   const values = [
     req.body.clientName,
+    req.body.customerName,
     req.body.contact,
     req.body.telNo,
     req.body.faxNo,
