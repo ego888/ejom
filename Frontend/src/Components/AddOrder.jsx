@@ -1411,6 +1411,28 @@ function AddOrder() {
     }
   };
 
+  // Function to handle Cancel/navigation back to orders list
+  const handleCancel = () => {
+    navigate("/dashboard/orders");
+  };
+
+  // Add ESC key event listener
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        handleCancel();
+      }
+    };
+
+    // Add event listener
+    document.addEventListener("keydown", handleEscKey);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", handleEscKey);
+    };
+  }, [navigate]); // Include navigate in the dependency array
+
   return (
     <div className="orders-page-background">
       <div className="px-4 mt-3">
@@ -1461,10 +1483,7 @@ function AddOrder() {
               <Button variant="save" onClick={handleSubmit}>
                 {isHeaderSaved ? "Finish Edit" : "Save Order"}
               </Button>
-              <Button
-                variant="cancel"
-                onClick={() => navigate("/dashboard/orders")}
-              >
+              <Button variant="cancel" onClick={handleCancel}>
                 Cancel
               </Button>
             </div>
