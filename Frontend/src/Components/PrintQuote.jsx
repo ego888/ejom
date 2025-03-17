@@ -54,15 +54,27 @@ function PrintQuote() {
             }
           }
 
-          const clientResponse = await axios.get(
-            `${ServerIP}/auth/client/${quoteData.clientId}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          // Only fetch client if clientId is not 0
+          if (quoteData.clientId && quoteData.clientId !== 0) {
+            const clientResponse = await axios.get(
+              `${ServerIP}/auth/client/${quoteData.clientId}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
 
-          if (clientResponse.data.Status) {
-            setClient(clientResponse.data.Result);
+            if (clientResponse.data.Status) {
+              setClient(clientResponse.data.Result);
+            }
+          } else {
+            // Set a default client object for clientId=0
+            setClient({
+              clientName: quoteData.clientName || "Walk-in Client",
+              customerName: quoteData.customerName || "",
+              email: quoteData.email || "",
+              phone: quoteData.telNum || "",
+              mobile: quoteData.cellNumber || "",
+            });
           }
 
           const detailsResponse = await axios.get(
@@ -136,7 +148,7 @@ function PrintQuote() {
     }
   }, [loading, quote, logoLoaded, id, navigate]);
 
-  if (loading || !quote || !client || !companyInfo || !logoLoaded) {
+  if (loading || !quote || !companyInfo || !logoLoaded) {
     return <div>Loading...</div>;
   }
 
@@ -181,7 +193,13 @@ function PrintQuote() {
           <div className="info-row">
             <div className="info-item">
               <span className="label">Client:</span>
-              <span className="value">{client.clientName}</span>
+              <span className="value">
+                {client && quote && quote.clientId > 0 && client.customerName
+                  ? client.customerName
+                  : client
+                  ? client.clientName
+                  : "Walk-in Client"}
+              </span>
             </div>
             <div className="info-item">
               <span className="label">Terms:</span>
@@ -211,15 +229,15 @@ function PrintQuote() {
           <div className="info-row">
             <div className="info-item">
               <span className="label">Email:</span>
-              <span className="value">{client.email}</span>
+              <span className="value">{client ? client.email : ""}</span>
             </div>
             <div className="info-item">
               <span className="label">Tel. No.:</span>
-              <span className="value">{client.phone}</span>
+              <span className="value">{client ? client.phone : ""}</span>
             </div>
             <div className="info-item">
               <span className="label">Cell No.:</span>
-              <span className="value">{client.mobile}</span>
+              <span className="value">{client ? client.mobile : ""}</span>
             </div>
           </div>
         </div>
