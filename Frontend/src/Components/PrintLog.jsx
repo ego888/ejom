@@ -424,15 +424,20 @@ function PrintLog() {
                     {order.id}
                     {order.revision > 0 && `-${order.revision}`}
                   </td>
-                  <td>
+                  <td
+                    className="client-cell"
+                    onClick={(e) => {
+                      if (clientFilterRef.current) {
+                        clientFilterRef.current.toggleFilterMenu(e);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <div>{order.clientName}</div>
                     {order.customerName && (
                       <div className="small text-muted">
                         {order.customerName}
                       </div>
-                    )}
-                    {!order.customerName && order.orderedBy && (
-                      <div className="small text-muted">{order.orderedBy}</div>
                     )}
                   </td>
                   <td>{order.projectName}</td>

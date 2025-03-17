@@ -306,12 +306,11 @@ function Quotes() {
                   Quote Date {getSortIndicator("quoteDate")}
                 </th>
                 <th
-                  className="text-center"
+                  className={`text-center ${
+                    hasClientFilter ? "active-filter" : ""
+                  }`}
                   onClick={() => handleSort("clientName")}
-                  style={{
-                    cursor: "pointer",
-                    color: hasClientFilter ? "#0d6efd" : "inherit",
-                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   Client {getSortIndicator("clientName")}
                   {hasClientFilter && (
@@ -331,12 +330,11 @@ function Quotes() {
                 </th>
                 <th className="text-center">Grand Total</th>
                 <th
-                  className="text-center"
+                  className={`text-center ${
+                    hasSalesFilter ? "active-filter" : ""
+                  }`}
                   onClick={() => handleSort("salesName")}
-                  style={{
-                    cursor: "pointer",
-                    color: hasSalesFilter ? "#0d6efd" : "inherit",
-                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   Sales {getSortIndicator("salesName")}
                   {hasSalesFilter && (
