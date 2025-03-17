@@ -1003,7 +1003,7 @@ function AddQuote() {
         amount: editedDetail.amount || 0,
         squareFeet: editedDetail.squareFeet || 0,
         materialUsage: editedDetail.materialUsage || 0,
-        printHours: editedDetail.printHours || 0,
+        printHrs: editedDetail.printHours || 0,
       };
 
       const token = localStorage.getItem("token");
@@ -1451,9 +1451,14 @@ function AddQuote() {
   };
 
   // Requote function to create a new quote from the current quote.
-  // Do not modify this function.
   const handleRequote = () => {
     const token = localStorage.getItem("token");
+    const userName = localStorage.getItem("userName"); // Get userName explicitly
+    const currentDateTime = new Date()
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " ");
+    console.log("Current user name:", userName);
 
     // First, update the current quote's status to 'Requote'
     axios
@@ -1472,7 +1477,7 @@ function AddQuote() {
           projectName: data.projectName.includes(" (Requote)")
             ? data.projectName // Keep it unchanged if already added
             : data.projectName + " (Requote)",
-          preparedBy: data.preparedBy,
+          preparedBy: currentUser.id, // Use the current user's ID instead of the original quote's preparedBy
           quoteDate: new Date().toISOString().split("T")[0], // Set to current date
           orderedBy: data.orderedBy,
           refId: data.orderReference,
@@ -1486,10 +1491,13 @@ function AddQuote() {
           percentDisc: data.percentDisc,
           grandTotal: data.grandTotal,
           totalHrs: data.totalHrs,
-          editedBy: localStorage.getItem("userName"),
+          editedBy: userName,
+          lastEdited: currentDateTime,
           status: "Open",
           terms: data.terms,
         };
+
+        console.log("Creating new quote with editedBy:", userName);
 
         // Create new quote
         axios
@@ -1525,7 +1533,7 @@ function AddQuote() {
                         amount: detail.amount,
                         squareFeet: detail.squareFeet,
                         materialUsage: detail.materialUsage,
-                        printHours: detail.printHours,
+                        printHrs: detail.printHours,
                         displayOrder: detail.displayOrder,
                         remarks: detail.remarks,
                       };

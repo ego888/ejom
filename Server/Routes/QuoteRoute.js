@@ -515,7 +515,6 @@ router.post("/add_quote", verifyUser, (req, res) => {
     }
 
     const decoded = jwt.verify(token, "jwt_secret_key");
-    const editedBy = decoded.id;
 
     const sql = `
       INSERT INTO quotes (
@@ -545,7 +544,7 @@ router.post("/add_quote", verifyUser, (req, res) => {
       req.body.percentDisc || 0,
       req.body.grandTotal || 0,
       req.body.totalHrs || 0,
-      editedBy,
+      req.body.editedBy,
       req.body.terms || null,
     ];
 
