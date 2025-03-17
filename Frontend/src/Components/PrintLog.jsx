@@ -454,25 +454,8 @@ function PrintLog() {
                     </span>
                   </td>
                   <td>{order.drnum || ""}</td>
-                  {/*                   <td>{order.invnum || ""}</td>
-<td>
-                    {order.grandTotal
-                      ? `₱${order.grandTotal.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td>{order.ornum || ""}</td>
-                  <td>
-                    {order.amountPaid
-                      ? `₱${order.amountPaid.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td>
-                    {order.datePaid
-                      ? new Date(order.datePaid).toLocaleDateString()
-                      : ""}
-                  </td> */}
                   <td
-                    className="sales-cell"
+                    className="client-cell"
                     onClick={(e) => {
                       if (salesFilterRef.current) {
                         salesFilterRef.current.toggleFilterMenu(e);

@@ -116,7 +116,7 @@ const SalesFilter = forwardRef(
         {showSalesMenu && (
           <div
             ref={salesMenuRef}
-            className="sales-menu"
+            className="client-menu"
             style={{
               position: "fixed",
               top: menuPosition.y,
@@ -131,22 +131,22 @@ const SalesFilter = forwardRef(
             }}
           >
             {/* Select all checkbox */}
-            <div className="sales-menu-header">
+            <div className="client-menu-header">
               <input
                 type="checkbox"
-                className="sales-menu-checkbox"
+                className="client-menu-checkbox"
                 checked={selectedSales.length === salesEmployees.length}
                 onChange={handleCheckAllSales}
               />
               <span>Select All</span>
             </div>
             {/* Sales list */}
-            <div className="sales-menu-items">
+            <div className="client-menu-items">
               {salesEmployees.map((employee) => (
-                <div key={employee.id} className="sales-menu-item">
+                <div key={employee.id} className="client-menu-item">
                   <input
                     type="checkbox"
-                    className="sales-menu-checkbox"
+                    className="client-menu-checkbox"
                     checked={selectedSales.includes(employee.id)}
                     onChange={() => handleSalesCheckboxChange(employee.id)}
                   />

@@ -398,7 +398,7 @@ function Quotes() {
                       : ""}
                   </td>
                   <td
-                    className="sales-cell"
+                    className="client-cell"
                     onClick={(e) => {
                       if (salesFilterRef.current) {
                         salesFilterRef.current.toggleFilterMenu(e);

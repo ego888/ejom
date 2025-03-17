@@ -14,64 +14,6 @@
   color: var(--orders-text-color);
 }
 
-/* Sales header styles */
-.sales-header {
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
-  user-select: none; /* Standard syntax */
-  -webkit-touch-callout: none; /* iOS Safari */
-}
-
-/* Sales cell styles */
-.sales-cell {
-  cursor: pointer;
-  position: relative;
-}
-
-.sales-cell:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-/* Sales menu styles */
-.sales-menu {
-  position: fixed;
-  background-color: white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  padding: 0.5rem;
-  z-index: 1000;
-  border: 1px solid #dee2e6;
-  min-width: 200px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.sales-menu-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #dee2e6;
-  position: sticky;
-  top: 0;
-  background-color: white;
-  z-index: 1;
-}
-
-.sales-menu-item {
-  display: flex;
-  align-items: center;
-  padding: 0.25rem 0;
-}
-
-.sales-menu-item:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.sales-menu-checkbox {
-  margin-right: 0.5rem;
-}
-
 /* Right panel styles */
 .right-panel {
   width: 400px;
