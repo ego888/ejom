@@ -1945,14 +1945,16 @@ function AddOrder() {
                       <tr
                         key={uniqueId}
                         className={detail.noPrint === 1 ? "no-print" : ""}
-                        data-toggleable="true"
-                        onDoubleClick={() =>
-                          handleNoPrintToggle(
-                            detail.orderId,
-                            detail.displayOrder,
-                            detail.noPrint
-                          )
-                        }
+                        style={{ cursor: canEdit() ? "pointer" : "default" }}
+                        onDoubleClick={() => {
+                          if (canEdit()) {
+                            handleNoPrintToggle(
+                              detail.orderId,
+                              detail.displayOrder,
+                              detail.noPrint
+                            );
+                          }
+                        }}
                       >
                         {editingRowId === uniqueId ? (
                           <>
