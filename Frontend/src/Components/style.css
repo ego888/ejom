@@ -163,9 +163,12 @@ a:hover {
 }
 
 .form-input:disabled,
-.form-input[readonly] {
+.form-input[readonly],
+.form-input.disabled {
   background-color: #e9ecef;
   opacity: 1;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .form-input:focus,

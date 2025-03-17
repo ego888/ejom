@@ -643,15 +643,6 @@ function AddOrder() {
     navigate("/dashboard/orders");
   };
 
-  const inputStyle = {
-    fontSize: "0.9rem",
-  };
-
-  const dateTimeStyle = {
-    ...inputStyle,
-    color: "black", // This will override the browser's default color for date/time inputs
-  };
-
   // Handler for input changes with auto-calculation
   const handleDetailInputChange = (uniqueId, field, value) => {
     setEditedValues((prev) => {
@@ -1521,6 +1512,7 @@ function AddOrder() {
                     Prepared By
                   </label>
                   <Dropdown
+                    className={"form-input"}
                     id="prepared-by"
                     variant="form"
                     value={data.preparedBy}
@@ -1542,7 +1534,6 @@ function AddOrder() {
                     type="text"
                     className="form-input"
                     id="terms"
-                    style={inputStyle}
                     value={data.terms || ""}
                     readOnly
                   />
@@ -1554,6 +1545,7 @@ function AddOrder() {
                     Client <span className="text-danger">*</span>
                   </label>
                   <Dropdown2
+                    className={"form-input"}
                     variant="form"
                     id="clientId"
                     value={data.clientId || ""}
@@ -1581,9 +1573,9 @@ function AddOrder() {
                     type="text"
                     className="form-input"
                     id="customerName"
-                    style={inputStyle}
                     value={data.customerName || ""}
                     readOnly
+                    tabIndex="-1"
                   />
                 </div>
               </div>
@@ -1598,7 +1590,6 @@ function AddOrder() {
                       error.projectName ? "is-invalid" : ""
                     }`}
                     id="projectName"
-                    style={inputStyle}
                     value={data.projectName}
                     onChange={(e) =>
                       setData({ ...data, projectName: e.target.value })
@@ -1621,7 +1612,6 @@ function AddOrder() {
                     type="text"
                     className="form-input"
                     id="orderedBy"
-                    style={inputStyle}
                     value={data.orderedBy || ""}
                     onChange={(e) =>
                       setData({ ...data, orderedBy: e.target.value })
@@ -1639,7 +1629,6 @@ function AddOrder() {
                     type="text"
                     className="form-input"
                     id="orderReference"
-                    style={inputStyle}
                     value={data.orderReference || ""}
                     onChange={(e) =>
                       setData({ ...data, orderReference: e.target.value })
@@ -1657,7 +1646,6 @@ function AddOrder() {
                     type="text"
                     className="form-input"
                     id="cellNumber"
-                    style={inputStyle}
                     value={data.cellNumber || ""}
                     onChange={(e) =>
                       setData({ ...data, cellNumber: e.target.value })
@@ -1675,7 +1663,6 @@ function AddOrder() {
                     type="date"
                     className="form-input"
                     id="dueDate"
-                    style={dateTimeStyle}
                     value={data.dueDate || ""}
                     onChange={(e) =>
                       setData({ ...data, dueDate: e.target.value })
@@ -1693,7 +1680,6 @@ function AddOrder() {
                     type="text"
                     className="form-input"
                     id="dueTime"
-                    style={inputStyle}
                     value={data.dueTime || ""}
                     onChange={(e) =>
                       setData({ ...data, dueTime: e.target.value })
@@ -1708,6 +1694,7 @@ function AddOrder() {
                     Graphics By <span className="text-danger">*</span>
                   </label>
                   <Dropdown
+                    className={"form-input"}
                     variant="form"
                     id="graphicsBy"
                     value={data.graphicsBy}
@@ -1735,7 +1722,6 @@ function AddOrder() {
                   <textarea
                     className="form-input multiline"
                     id="specialInst"
-                    style={inputStyle}
                     value={data.specialInst || ""}
                     onChange={(e) =>
                       setData({ ...data, specialInst: e.target.value })
@@ -1753,7 +1739,6 @@ function AddOrder() {
                   <textarea
                     className="form-input multiline"
                     id="deliveryInst"
-                    style={inputStyle}
                     value={data.deliveryInst || ""}
                     onChange={(e) =>
                       setData({ ...data, deliveryInst: e.target.value })

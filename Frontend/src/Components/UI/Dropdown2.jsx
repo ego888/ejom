@@ -70,18 +70,19 @@ const Dropdown2 = ({
   };
 
   return (
-    <div className={`custom-dropdown ${error ? "is-invalid" : ""}`}>
+    <div>
       {label && (
         <label
           htmlFor={id}
-          className={variant === "table" ? "visually-hidden" : ""}
+          className={variant === "table" ? "visually-hidden" : "form-label"}
         >
           {label}
         </label>
       )}
       <div
-        className="form-input"
+        className={`form-input ${disabled ? "disabled" : ""}`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        aria-disabled={disabled}
       >
         {selectedLabel}
       </div>

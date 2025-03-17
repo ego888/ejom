@@ -833,14 +833,25 @@ function AddQuote() {
     });
   };
 
-  const inputStyle = {
-    fontSize: "0.9rem",
+  // Add handleCancel function and ESC key listener
+  const handleCancel = () => {
+    handleNavigation();
   };
 
-  const dateTimeStyle = {
-    ...inputStyle,
-    color: "black",
-  };
+  // Add ESC key event listener
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        handleCancel();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscKey);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscKey);
+    };
+  }, [navigate]);
 
   const handleDetailInputChange = (uniqueId, field, value) => {
     setEditedValues((prev) => {
@@ -1620,7 +1631,7 @@ function AddQuote() {
                   {isHeaderSaved ? "Finish Edit" : "Save Quote"}
                 </Button>
               )}
-              <Button variant="cancel" onClick={handleNavigation}>
+              <Button variant="cancel" onClick={handleCancel}>
                 Cancel
               </Button>
             </div>
@@ -1643,7 +1654,6 @@ function AddQuote() {
                     type="date"
                     className="form-input"
                     id="quoteDate"
-                    style={dateTimeStyle}
                     value={data.quoteDate || ""}
                     onChange={(e) =>
                       setData({ ...data, quoteDate: e.target.value })
@@ -1658,6 +1668,7 @@ function AddQuote() {
                     Prepared By
                   </label>
                   <Dropdown
+                    className={"form-input"}
                     variant="form"
                     id="preparedBy"
                     value={data.preparedBy}
@@ -1679,7 +1690,6 @@ function AddQuote() {
                     type="text"
                     className="form-input"
                     id="terms"
-                    style={inputStyle}
                     value={data.terms || ""}
                     readOnly
                     tabIndex="-1"
@@ -1697,7 +1707,6 @@ function AddQuote() {
                     className={"form-input"}
                     id="clientId"
                     list="clientList"
-                    style={inputStyle}
                     value={data.clientName || ""}
                     onChange={handleClientChange}
                     disabled={!isEditMode || !canEdit()}
@@ -1723,7 +1732,6 @@ function AddQuote() {
                     type="text"
                     className="form-input"
                     id="customerName"
-                    style={inputStyle}
                     value={data.customerName || ""}
                     readOnly
                     tabIndex="-1"
@@ -1741,7 +1749,6 @@ function AddQuote() {
                       error.projectName ? "is-invalid" : ""
                     }`}
                     id="projectName"
-                    style={inputStyle}
                     value={data.projectName}
                     onChange={(e) =>
                       setData({ ...data, projectName: e.target.value })
@@ -1764,7 +1771,6 @@ function AddQuote() {
                     type="text"
                     className="form-input"
                     id="orderedBy"
-                    style={inputStyle}
                     value={data.orderedBy || ""}
                     onChange={(e) =>
                       setData({ ...data, orderedBy: e.target.value })
@@ -1782,7 +1788,6 @@ function AddQuote() {
                     type="date"
                     className="form-input"
                     id="dueDate"
-                    style={dateTimeStyle}
                     value={data.dueDate || ""}
                     onChange={(e) =>
                       setData({ ...data, dueDate: e.target.value })
@@ -1800,7 +1805,6 @@ function AddQuote() {
                     type="email"
                     className="form-input"
                     id="email"
-                    style={inputStyle}
                     value={data.email || ""}
                     onChange={(e) =>
                       setData({ ...data, email: e.target.value })
@@ -1818,7 +1822,6 @@ function AddQuote() {
                     type="text"
                     className="form-input"
                     id="cellNumber"
-                    style={inputStyle}
                     value={data.cellNumber || ""}
                     onChange={(e) =>
                       setData({ ...data, cellNumber: e.target.value })
@@ -1836,7 +1839,6 @@ function AddQuote() {
                     type="text"
                     className="form-input"
                     id="telNum"
-                    style={inputStyle}
                     value={data.telNum || ""}
                     onChange={(e) =>
                       setData({ ...data, telNum: e.target.value })

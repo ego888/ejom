@@ -21,7 +21,7 @@ const Dropdown = ({
 
     const sizeClass = size === "small" ? "dropdown-sm" : "";
 
-    return `custom-dropdown ${error ? "is-invalid" : ""} ${className}`.trim();
+    return `${error ? "is-invalid" : ""} ${className}`.trim();
   };
 
   return (
