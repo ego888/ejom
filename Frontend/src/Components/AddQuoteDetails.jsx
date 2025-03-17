@@ -335,9 +335,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
             id="quote-quantity"
             type="number"
             step="0.01"
-            className={`form-control form-control-sm ${
-              error.quantity ? "is-invalid" : ""
-            }`}
+            className={`form-input ${error.quantity ? "is-invalid" : ""}`}
             value={detail.quantity}
             onChange={(e) => handleInputChange("quantity", e.target.value)}
             aria-invalid={error.quantity ? "true" : "false"}
@@ -357,9 +355,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
             id="quote-width"
             type="number"
             step="0.01"
-            className={`form-control form-control-sm ${
-              error.width ? "is-invalid" : ""
-            }`}
+            className={`form-input ${error.width ? "is-invalid" : ""}`}
             value={detail.width}
             onChange={(e) => handleInputChange("width", e.target.value)}
             aria-invalid={error.width ? "true" : "false"}
@@ -376,9 +372,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
           <input
             type="number"
             step="0.01"
-            className={`form-control form-control-sm ${
-              error.height ? "is-invalid" : ""
-            }`}
+            className={`form-input ${error.height ? "is-invalid" : ""}`}
             value={detail.height}
             onChange={(e) => handleInputChange("height", e.target.value)}
           />
@@ -389,6 +383,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
         <div className="col-1">
           <label className="form-label">Unit</label>
           <Dropdown
+            className="form-input"
             variant="form-sm"
             value={detail.unit}
             onChange={(e) => handleInputChange("unit", e.target.value)}
@@ -403,6 +398,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
           <label className="form-label">Material</label>
           <Dropdown
             variant="form-sm"
+            className="form-input"
             value={detail.material}
             onChange={(e) => handleInputChange("material", e.target.value)}
             options={materials}
@@ -417,7 +413,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
           <input
             type="number"
             step="0.01"
-            className="form-control form-control-sm"
+            className="form-input"
             value={detail.perSqFt}
             onChange={(e) => handleInputChange("perSqFt", e.target.value)}
           />
@@ -427,7 +423,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
           <input
             type="text"
             maxLength="20"
-            className="form-control form-control-sm"
+            className="form-input"
             value={detail.itemDescription}
             onChange={(e) =>
               handleInputChange("itemDescription", e.target.value)
@@ -439,9 +435,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
           <input
             type="number"
             step="0.01"
-            className={`form-control form-control-sm ${
-              error.unitPrice ? "is-invalid" : ""
-            }`}
+            className={`form-input ${error.unitPrice ? "is-invalid" : ""}`}
             value={detail.unitPrice}
             onChange={(e) => handleInputChange("unitPrice", e.target.value)}
           />
@@ -454,7 +448,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
           <input
             type="number"
             step="0.01"
-            className="form-control form-control-sm"
+            className={`form-input ${error.discount ? "is-invalid" : ""}`}
             value={detail.discount}
             onChange={(e) => handleInputChange("discount", e.target.value)}
           />
@@ -464,7 +458,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
           <input
             type="number"
             step="0.01"
-            className="form-control form-control-sm"
+            className="form-input"
             value={detail.amount}
             readOnly
           />

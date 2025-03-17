@@ -104,6 +104,7 @@ a:hover {
 .form-label {
   text-align: left;
   display: block;
+  padding-left: 0.7rem;
   font-weight: 500;
   color: var(--reports-text-color);
   margin-bottom: 0.01rem;
@@ -113,8 +114,7 @@ a:hover {
 /* Apply similar styles to form-select */
 .form-input,
 .form-textarea,
-.form-select,
-.custom-dropdown {
+.form-select {
   border: 1px solid #ced4da;
   border-radius: 5px;
   padding: 0.375rem 0.75rem;
@@ -124,30 +124,6 @@ a:hover {
   display: flex;
   align-items: center;
   width: 100%;
-}
-
-/* Ensure dropdown has similar behavior */
-.custom-dropdown {
-  appearance: none; /* Removes default browser styles */
-  cursor: pointer;
-}
-
-/* Optional: Add a custom dropdown arrow */
-.custom-dropdown-wrapper {
-  position: relative;
-  display: inline-block;
-  width: 100%;
-}
-
-.custom-dropdown-wrapper::after {
-  content: "▼"; /* Custom dropdown arrow */
-  font-size: 12px;
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: #555;
 }
 
 /* Style for multiline fields */
@@ -176,6 +152,30 @@ a:hover {
 .form-select:focus {
   border-color: var(--primary-color);
   outline: none;
+}
+
+/* Ensure dropdown has similar behavior */
+.custom-dropdown {
+  appearance: none; /* Removes default browser styles */
+  cursor: pointer;
+}
+
+/* Optional: Add a custom dropdown arrow */
+.custom-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.custom-dropdown-wrapper::after {
+  content: "▼"; /* Custom dropdown arrow */
+  font-size: 12px;
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #555;
 }
 
 /* 6. Buttons */
