@@ -359,7 +359,6 @@ function Orders() {
           <table className="table table-striped table-hover">
             <thead>
               <tr>
-                <th className="text-center">Action</th>
                 <th
                   className="text-center"
                   onClick={() => handleSort("id")}
@@ -437,19 +436,12 @@ function Orders() {
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/orders/edit/${order.id}`)
-                        }
-                      />
-                    </div>
-                  </td>
-                  <td>
+                  <td
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      navigate(`/dashboard/orders/edit/${order.id}`)
+                    }
+                  >
                     {order.id}
                     {order.revision > 0 && `-${order.revision}`}
                   </td>

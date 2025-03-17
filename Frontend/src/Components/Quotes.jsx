@@ -290,7 +290,6 @@ function Quotes() {
           <table className="table table-striped table-hover">
             <thead>
               <tr>
-                <th className="text-center">Action</th>
                 <th
                   className="text-center"
                   onClick={() => handleSort("quoteId")}
@@ -347,19 +346,14 @@ function Quotes() {
             <tbody>
               {quotes.map((quote) => (
                 <tr key={quote.id}>
-                  <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/quotes/edit/${quote.id}`)
-                        }
-                      />
-                    </div>
+                  <td
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      navigate(`/dashboard/quotes/edit/${quote.id}`)
+                    }
+                  >
+                    {quote.id}
                   </td>
-                  <td>{quote.id}</td>
                   <td>{quote.quoteDate}</td>
                   <td
                     className="client-cell"

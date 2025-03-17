@@ -340,7 +340,6 @@ function PrintLog() {
           <table className="table">
             <thead>
               <tr>
-                <th className="text-center">Action</th>
                 <th
                   className="text-center"
                   onClick={() => handleSort("id")}
@@ -408,19 +407,12 @@ function PrintLog() {
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="view"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/printlog/view/${order.id}`)
-                        }
-                      />
-                    </div>
-                  </td>
-                  <td>
+                  <td
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      navigate(`/dashboard/printlog/view/${order.id}`)
+                    }
+                  >
                     {order.id}
                     {order.revision > 0 && `-${order.revision}`}
                   </td>

@@ -676,7 +676,6 @@ function Prod() {
           <table className="table">
             <thead>
               <tr>
-                <th className="text-center">Action</th>
                 <th onClick={handleForProdSort} style={{ cursor: "pointer" }}>
                   <div className="d-flex align-items-center">
                     <CheckBoxHeader
@@ -770,18 +769,6 @@ function Prod() {
               {orders.map((order) => (
                 <tr key={order.id}>
                   <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="view"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/prod/view/${order.id}`)
-                        }
-                      />
-                    </div>
-                  </td>
-                  <td>
                     <div className="checkbox-container">
                       <label
                         htmlFor={`prod-check-${order.id}`}
@@ -799,7 +786,10 @@ function Prod() {
                       />
                     </div>
                   </td>
-                  <td>
+                  <td
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/dashboard/prod/view/${order.id}`)}
+                  >
                     {order.id}
                     {order.revision > 0 && `-${order.revision}`}
                   </td>

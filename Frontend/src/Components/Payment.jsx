@@ -776,7 +776,6 @@ function Prod() {
           <table className="table table-hover">
             <thead className="table table-head">
               <tr>
-                <th className="text-center">Action</th>
                 <th
                   className="text-center"
                   onClick={() => handleSort("id")}
@@ -844,19 +843,14 @@ function Prod() {
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td>
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="view"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/payment/view/${order.id}`)
-                        }
-                      />
-                    </div>
+                  <td
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      navigate(`/dashboard/payment/view/${order.id}`)
+                    }
+                  >
+                    {order.id}
                   </td>
-                  <td>{order.id}</td>
                   <td
                     className="client-cell"
                     onClick={(e) => {
