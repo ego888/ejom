@@ -296,7 +296,8 @@ function PrintOrder() {
 
       {/* Page Info and Print DateTime */}
       <div className="page-info">
-        Page {currentPage} of {totalPages} • {new Date().toLocaleString()}
+        JO#{data.orderId} • Page {currentPage} of {totalPages} •{" "}
+        {new Date().toLocaleString()}
       </div>
 
       {/* Print-specific styles */}
@@ -425,7 +426,7 @@ function PrintOrder() {
             }
 
             .page-info {
-              font-size: 8pt;
+              font-size: 9pt;
               position: fixed;
               right: 0.0cm;
               bottom: 0cm;
