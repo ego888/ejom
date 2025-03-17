@@ -706,9 +706,13 @@ function Prod() {
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
+                    color: hasClientFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Client {getSortIndicator("clientName")}
+                  {hasClientFilter && (
+                    <span className="filter-indicator filter-icon"></span>
+                  )}
                 </th>
                 <th className="text-center">Project Name</th>
                 <th className="text-center">Ordered By</th>
@@ -751,9 +755,13 @@ function Prod() {
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
+                    color: hasSalesFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Sales {getSortIndicator("salesName")}
+                  {hasSalesFilter && (
+                    <span className="filter-indicator filter-icon"></span>
+                  )}
                 </th>
                 <th className="text-center">Order Ref</th>
               </tr>

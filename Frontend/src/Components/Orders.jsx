@@ -59,6 +59,7 @@ function Orders() {
       currentPage,
       recordsPerPage,
       sortConfig,
+      sortConfig.direction,
       searchTerm,
       selectedSales,
       selectedClients
@@ -371,13 +372,16 @@ function Orders() {
                   Order ID {getSortIndicator("id")}
                 </th>
                 <th
-                  className="text-center"
+                  className={`text-center ${
+                    hasClientFilter ? "active-filter" : ""
+                  }`}
                   onClick={() => handleSort("clientName")}
-                  style={{
-                    cursor: "pointer",
-                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   Client {getSortIndicator("clientName")}
+                  {hasClientFilter && (
+                    <span className="filter-indicator filter-icon"></span>
+                  )}
                 </th>
                 <th className="text-center">Project Name</th>
                 <th className="text-center">Ordered By</th>
@@ -416,13 +420,16 @@ function Orders() {
                 <th className="text-center">Amount Paid</th>
                 <th className="text-center">Date Paid</th>
                 <th
-                  className="text-center"
+                  className={`text-center ${
+                    hasSalesFilter ? "active-filter" : ""
+                  }`}
                   onClick={() => handleSort("salesName")}
-                  style={{
-                    cursor: "pointer",
-                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   Sales {getSortIndicator("salesName")}
+                  {hasSalesFilter && (
+                    <span className="filter-indicator filter-icon"></span>
+                  )}
                 </th>
                 <th className="text-center">Order Ref</th>
               </tr>

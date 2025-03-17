@@ -142,22 +142,41 @@ const ClientFilter = forwardRef(
     };
 
     /**
-     * Handles "Select All" checkbox logic.
-     */
-    const handleCheckAllClients = () => {
-      if (selectedClients.length === clientList.length) {
-        setSelectedClients([]); // Deselect all
-      } else {
-        setSelectedClients(clientList.map((client) => client.clientName)); // Select all
-      }
-    };
-
-    /**
      * Filters clients based on search term.
      */
     const filteredClients = clientList.filter((client) =>
       client.clientName.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    /**
+     * Handles "Select All" checkbox logic - modified to only select filtered clients.
+     */
+    const handleCheckAllClients = () => {
+      // Get all client names from the filtered list
+      const filteredClientNames = filteredClients.map(
+        (client) => client.clientName
+      );
+
+      // Check if all filtered clients are already selected
+      const allFilteredSelected = filteredClientNames.every((name) =>
+        selectedClients.includes(name)
+      );
+
+      if (allFilteredSelected) {
+        // If all filtered clients are selected, deselect only those filtered clients
+        setSelectedClients(
+          selectedClients.filter((name) => !filteredClientNames.includes(name))
+        );
+      } else {
+        // If not all filtered clients are selected, add all filtered clients to selection
+        // First remove any filtered clients that might already be selected to avoid duplicates
+        const currentlySelected = selectedClients.filter(
+          (name) => !filteredClientNames.includes(name)
+        );
+        // Then add all filtered clients
+        setSelectedClients([...currentlySelected, ...filteredClientNames]);
+      }
+    };
 
     return (
       <>
@@ -190,16 +209,50 @@ const ClientFilter = forwardRef(
               />
             </div>
 
-            {/* Select All Checkbox */}
+            {/* Select All Checkbox - updated to check against filtered clients */}
             <div className="client-menu-header">
               <input
                 type="checkbox"
                 className="client-menu-checkbox"
-                checked={selectedClients.length === clientList.length}
+                checked={
+                  filteredClients.length > 0 &&
+                  filteredClients.every((client) =>
+                    selectedClients.includes(client.clientName)
+                  )
+                }
                 onChange={handleCheckAllClients}
               />
               <span>Select All</span>
             </div>
+
+            {/* Deselect All Checkbox - only appears when clients are selected */}
+            {selectedClients.length > 0 && (
+              <div className="client-menu-header" style={{ marginTop: "4px" }}>
+                <input
+                  type="checkbox"
+                  className="client-menu-checkbox"
+                  checked={true}
+                  onChange={() => setSelectedClients([])}
+                />
+                <span>Deselect All</span>
+              </div>
+            )}
+
+            {/* Selection count indicator */}
+            <div
+              style={{
+                fontSize: "0.8rem",
+                color: "#6c757d",
+                textAlign: "right",
+                paddingRight: "4px",
+                marginTop: "4px",
+              }}
+            >
+              {selectedClients.length} of {clientList.length} selected
+            </div>
+
+            {/* Separator line */}
+            <hr style={{ margin: "8px 0", borderTop: "1px solid #dee2e6" }} />
 
             {/* Client List */}
             <div className="client-menu-items">

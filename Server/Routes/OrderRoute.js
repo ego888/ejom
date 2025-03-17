@@ -190,7 +190,7 @@ router.get("/orders", async (req, res) => {
     }
 
     if (clients.length) {
-      whereConditions.push(`o.clientId IN (?)`);
+      whereConditions.push(`c.clientName IN (?)`);
       params.push(clients);
     }
 

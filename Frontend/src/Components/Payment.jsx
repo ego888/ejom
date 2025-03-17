@@ -96,6 +96,7 @@ function Prod() {
         sortDirection: sortConfig.direction,
         statuses: selectedStatuses.join(","),
         sales: selectedSales.length ? selectedSales.join(",") : undefined,
+        clients: selectedClients.length ? selectedClients.join(",") : undefined,
         ...(searchClientName.trim() && {
           search: searchClientName.trim(),
           searchFields: ["id", "clientName", "customerName", "orderedBy"],
@@ -210,6 +211,7 @@ function Prod() {
     sortConfig,
     selectedSales,
     selectedStatuses,
+    selectedClients,
   ]);
 
   // Sort handler
@@ -752,8 +754,25 @@ function Prod() {
             </div>
           </div>
         )}
-
         <div className="table-responsive">
+          <SalesFilter
+            ref={salesFilterRef}
+            salesEmployees={salesEmployees}
+            selectedSales={selectedSales}
+            setSelectedSales={setSelectedSales}
+            onFilterUpdate={({ isFilterActive }) =>
+              setHasSalesFilter(isFilterActive)
+            }
+          />
+          <ClientFilter
+            ref={clientFilterRef}
+            clientList={clientList}
+            selectedClients={selectedClients}
+            setSelectedClients={setSelectedClients}
+            onFilterUpdate={({ isFilterActive }) =>
+              setHasClientFilter(isFilterActive)
+            }
+          />
           <table className="table table-hover">
             <thead className="table table-head">
               <tr>
@@ -766,24 +785,31 @@ function Prod() {
                   Order ID {getSortIndicator("id")}
                 </th>
                 <th
+                  className={`text-center ${
+                    hasClientFilter ? "active-filter" : ""
+                  }`}
                   onClick={() => handleSort("clientName")}
-                  style={{
-                    cursor: "pointer",
-                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   Client {getSortIndicator("clientName")}
+                  {hasClientFilter && (
+                    <span className="filter-indicator filter-icon"></span>
+                  )}
                 </th>
                 <th className="text-center">Project Name</th>
                 <th className="text-center">Ordered By</th>
                 <th className="text-center">Order Ref</th>
                 <th
-                  className="text-center"
+                  className={`text-center ${
+                    hasSalesFilter ? "active-filter" : ""
+                  }`}
                   onClick={() => handleSort("salesName")}
-                  style={{
-                    cursor: "pointer",
-                  }}
+                  style={{ cursor: "pointer" }}
                 >
                   Sales {getSortIndicator("salesName")}
+                  {hasSalesFilter && (
+                    <span className="filter-indicator filter-icon"></span>
+                  )}
                 </th>
                 <th
                   className="text-center"
@@ -851,7 +877,7 @@ function Prod() {
                   <td>{order.orderedBy}</td>
                   <td>{order.orderReference}</td>
                   <td
-                    className="sales-cell"
+                    className="client-cell"
                     onClick={(e) => {
                       if (salesFilterRef.current) {
                         salesFilterRef.current.toggleFilterMenu(e);
