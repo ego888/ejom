@@ -178,6 +178,14 @@ a:hover {
   color: #555;
 }
 
+.centered-cell {
+  text-align: center;
+}
+/* Numeric Fields */
+.numeric-cell {
+  text-align: right;
+}
+
 /* 6. Buttons */
 /* Define styles for primary and secondary buttons. */
 .button {

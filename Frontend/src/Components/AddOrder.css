@@ -43,18 +43,6 @@
   margin-bottom: 0.3rem;
 }
 
-/* Numeric Fields */
-.numeric-cell {
-  text-align: right;
-  font-family: inherit;
-  font-size: 0.9rem;
-}
-
-.centered-cell {
-  text-align: right; /* Changed from center to right for consistency */
-  font-size: 0.9rem;
-}
-
 .order-table td,
 .order-table th {
   font-size: 0.9rem !important;

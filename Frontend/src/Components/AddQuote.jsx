@@ -1239,11 +1239,6 @@ function AddQuote() {
     }
   };
 
-  // Add a format function for display
-  const formatDisplay = (number) => {
-    return Number(number).toFixed(2);
-  };
-
   // Add these handler functions
   const handleLoss = () => {
     const token = localStorage.getItem("token");
@@ -1905,25 +1900,23 @@ function AddQuote() {
 
           {isHeaderSaved && (
             <div className="mt-4">
-              <div className="quote-details-header">
-                <h5 className="m-0">Quote Details List</h5>
-              </div>
-              <table className="quote-table table table-hover">
+              <h5 className="m-0">Quote Details List</h5>
+              <table className="table detail table-striped">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid lightgrey" }}>
+                  <tr>
                     <th>#</th>
-                    <th className="text-center">Qty</th>
-                    <th className="text-center">Width</th>
-                    <th className="text-center">Height</th>
-                    <th className="text-center">Unit</th>
-                    <th className="text-center">Material</th>
-                    <th className="text-center">Per Sq Ft</th>
+                    <th>Qty</th>
+                    <th>Width</th>
+                    <th>Height</th>
+                    <th>Unit</th>
+                    <th>Material</th>
+                    <th>Per Sq Ft</th>
                     <th>Description</th>
-                    <th className="text-end">Price</th>
-                    <th className="text-end">Disc%</th>
-                    <th className="text-end">Amount</th>
-                    <th className="text-center">Mat Usage</th>
-                    <th className="text-center">Print Hrs</th>
+                    <th>Price</th>
+                    <th>Disc%</th>
+                    <th>Amount</th>
+                    <th>Mat Usage</th>
+                    <th>Print Hrs</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -1935,13 +1928,13 @@ function AddQuote() {
                       {editingRowId ===
                       `${detail.quoteId}_${detail.displayOrder}` ? (
                         <>
-                          <td style={{ width: "40px" }}>
+                          <td className="centered-cell">
                             {detail.displayOrder}
                           </td>
                           <td style={{ width: "60px" }}>
                             <input
                               type="text"
-                              className="form-control form-control-sm text-center"
+                              className="form-input detail text-center"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -1962,7 +1955,7 @@ function AddQuote() {
                           <td style={{ width: "60px" }}>
                             <input
                               type="number"
-                              className="form-control form-control-sm text-center"
+                              className="form-input detail text-center"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -1980,7 +1973,7 @@ function AddQuote() {
                           <td style={{ width: "60px" }}>
                             <input
                               type="number"
-                              className="form-control form-control-sm text-center"
+                              className="form-input detail text-center"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -1998,7 +1991,7 @@ function AddQuote() {
                           <td>
                             <Dropdown
                               variant="table"
-                              className="text-center"
+                              className="form-input detail"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -2022,7 +2015,7 @@ function AddQuote() {
                           <td>
                             <Dropdown
                               variant="table"
-                              className="text-center"
+                              className="form-input detail"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -2046,7 +2039,7 @@ function AddQuote() {
                           <td style={{ width: "70px" }}>
                             <input
                               type="text"
-                              className="form-control form-control-sm text-center"
+                              className="form-input detail text-end"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -2069,7 +2062,7 @@ function AddQuote() {
                           </td>
                           <td>
                             <textarea
-                              className="form-control form-control-sm description-input"
+                              className="form-input detail"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -2091,7 +2084,7 @@ function AddQuote() {
                           <td style={{ width: "100px" }}>
                             <input
                               type="text"
-                              className="form-control form-control-sm price-input"
+                              className="form-input detail text-end"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -2115,7 +2108,7 @@ function AddQuote() {
                           <td style={{ width: "60px" }}>
                             <input
                               type="text"
-                              className="form-control form-control-sm discount-input"
+                              className="form-input detail text-end"
                               value={
                                 editedValues[
                                   `${detail.quoteId}_${detail.displayOrder}`
@@ -2137,17 +2130,17 @@ function AddQuote() {
                             />
                           </td>
                           <td className="numeric-cell">
-                            {formatDisplay(
+                            {formatNumber(
                               editedValues[
                                 `${detail.quoteId}_${detail.displayOrder}`
                               ]?.amount || detail.amount
                             )}
                           </td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.materialUsage)}
+                            {formatNumber(detail.materialUsage)}
                           </td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.printHours)}
+                            {formatNumber(detail.printHours)}
                           </td>
                           <td>
                             <div className="d-flex gap-1">
@@ -2185,7 +2178,7 @@ function AddQuote() {
                             `${detail.quoteId}_${detail.displayOrder}` ? (
                               <input
                                 type="number"
-                                className="form-control form-control-sm display-order-input"
+                                className="form-input detail"
                                 value={tempDisplayOrder || ""}
                                 onChange={(e) => {
                                   const value = e.target.value.replace(
@@ -2214,8 +2207,8 @@ function AddQuote() {
                                 step="1"
                               />
                             ) : (
-                              <span
-                                className="display-order-text"
+                              <div
+                                className="centered-cell"
                                 onDoubleClick={(e) => {
                                   e.stopPropagation();
                                   setEditingDisplayOrder(
@@ -2225,7 +2218,7 @@ function AddQuote() {
                                 }}
                               >
                                 {detail.displayOrder}
-                              </span>
+                              </div>
                             )}
                           </td>
                           <td className="centered-cell">
@@ -2236,23 +2229,23 @@ function AddQuote() {
                           <td className="centered-cell">{detail.unit}</td>
                           <td className="centered-cell">{detail.material}</td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.persqft)}
+                            {formatNumber(detail.persqft)}
                           </td>
                           <td>{detail.itemDescription}</td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.unitPrice)}
+                            {formatNumber(detail.unitPrice)}
                           </td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.discount)}
+                            {formatNumber(detail.discount)}
                           </td>
                           <td className="numeric-cell">
                             {formatPeso(detail.amount)}
                           </td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.materialUsage)}
+                            {formatNumber(detail.materialUsage)}
                           </td>
                           <td className="numeric-cell">
-                            {formatDisplay(detail.printHours)}
+                            {formatNumber(detail.printHours)}
                           </td>
                           <td>
                             <div className="d-flex gap-1">
@@ -2321,7 +2314,7 @@ function AddQuote() {
                     <td className="numeric-cell">
                       <input
                         type="number"
-                        className="form-control form-control-sm text-end"
+                        className="form-input detail text-end"
                         value={data.amountDiscount}
                         onChange={(e) =>
                           handleDiscountChange("amount", e.target.value)
@@ -2348,7 +2341,7 @@ function AddQuote() {
                     <td className="numeric-cell">
                       <input
                         type="number"
-                        className="form-control form-control-sm text-end"
+                        className="form-input detail text-end"
                         value={data.percentDisc}
                         onChange={(e) =>
                           handleDiscountChange("percent", e.target.value)

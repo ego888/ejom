@@ -1944,7 +1944,11 @@ function AddOrder() {
                     return (
                       <tr
                         key={uniqueId}
-                        className={detail.noPrint === 1 ? "no-print" : ""}
+                        className={
+                          detail.noPrint === 1
+                            ? "centered-cell no-print"
+                            : "centered-cell"
+                        }
                         style={{ cursor: canEdit() ? "pointer" : "default" }}
                         onDoubleClick={() => {
                           if (canEdit()) {
@@ -1958,13 +1962,13 @@ function AddOrder() {
                       >
                         {editingRowId === uniqueId ? (
                           <>
-                            <td style={{ width: "40px" }}>
+                            <td className="centered-cell">
                               {detail.displayOrder}
                             </td>
                             <td style={{ width: "60px" }}>
                               <input
                                 type="text"
-                                className="form-input detail"
+                                className="form-input detail text-center"
                                 value={
                                   editedValues[uniqueId]?.quantity
                                     ? Number(
@@ -1990,7 +1994,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="number"
-                                className="form-input detail"
+                                className="form-input detail text-center"
                                 value={
                                   editedValues[uniqueId]?.width || detail.width
                                 }
@@ -2006,7 +2010,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="number"
-                                className="form-input detail"
+                                className="form-input detail text-center"
                                 value={
                                   editedValues[uniqueId]?.height ||
                                   detail.height
@@ -2069,7 +2073,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="text"
-                                className="form-input detail"
+                                className="form-input detail text-center"
                                 value={
                                   editedValues[uniqueId]?.perSqFt
                                     ? editingRowId === uniqueId
@@ -2106,7 +2110,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="text"
-                                className="form-input detail"
+                                className="form-input detail text-end"
                                 value={
                                   editedValues[uniqueId]?.unitPrice
                                     ? editingRowId === uniqueId
@@ -2143,7 +2147,7 @@ function AddOrder() {
                             <td>
                               <input
                                 type="text"
-                                className="form-input detail"
+                                className="form-input detail text-end"
                                 value={
                                   editedValues[uniqueId]?.discount
                                     ? editingRowId === uniqueId
@@ -2434,7 +2438,7 @@ function AddOrder() {
                     <td className="numeric-cell">
                       <input
                         type="number"
-                        className="form-control form-control-sm text-end"
+                        className="form-input detail text-end"
                         value={orderTotals.discAmount}
                         onChange={(e) =>
                           handleDiscountChange("amount", e.target.value)
@@ -2465,7 +2469,7 @@ function AddOrder() {
                     <td className="numeric-cell">
                       <input
                         type="number"
-                        className="form-control form-control-sm text-end"
+                        className="form-input detail text-end"
                         value={orderTotals.percentDisc}
                         onChange={(e) =>
                           handleDiscountChange("percent", e.target.value)
