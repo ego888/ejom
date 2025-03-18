@@ -405,47 +405,6 @@ router.put("/quote_detail_display_order/:quoteId/:detailId", (req, res) => {
   });
 });
 
-// Reorder quote details. Updates multiple details' orders at once
-router.put("/quote_details_reorder/:quoteId", async (req, res) => {
-  const quoteId = req.params.quoteId;
-  const items = req.body.items;
-
-  try {
-    await new Promise((resolve, reject) => {
-      con.beginTransaction((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
-
-    for (const item of items) {
-      await new Promise((resolve, reject) => {
-        const sql =
-          "UPDATE quote_details SET displayOrder = ? WHERE quoteId = ? AND id = ?";
-        con.query(sql, [item.displayOrder, quoteId, item.id], (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        });
-      });
-    }
-
-    await new Promise((resolve, reject) => {
-      con.commit((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
-
-    res.json({ Status: true });
-  } catch (err) {
-    await new Promise((resolve) => {
-      con.rollback(() => resolve());
-    });
-    console.log(err);
-    res.json({ Status: false, Error: "Failed to reorder items" });
-  }
-});
-
 // Update quote details
 router.put("/quote_details/:quoteId/:displayOrder", (req, res) => {
   const data = {
@@ -505,6 +464,145 @@ router.put("/quote/status/:id", (req, res) => {
 });
 
 // ============= POST Routes =============
+
+// Convert quote to job order
+router.post("/quote-makeJO", verifyUser, (req, res) => {
+  const { quoteId, userId, userName } = req.body;
+
+  if (!quoteId || !userId || !userName) {
+    return res.json({
+      Status: false,
+      Error: "Missing required parameters (quoteId, userId, userName)",
+    });
+  }
+
+  // Begin transaction
+  con.beginTransaction(async (err) => {
+    if (err) {
+      console.error("Transaction begin error:", err);
+      return res.json({ Status: false, Error: "Failed to start transaction" });
+    }
+
+    try {
+      // 1. Get quote data
+      const [quoteData] = await new Promise((resolve, reject) => {
+        con.query(
+          "SELECT * FROM quotes WHERE quoteId = ?",
+          [quoteId],
+          (err, result) => {
+            if (err) reject(err);
+            if (!result || result.length === 0) {
+              reject(new Error("Quote not found"));
+            }
+            resolve(result);
+          }
+        );
+      });
+
+      // 2. Insert new order with updated preparedBy and editedBy
+      const orderData = {
+        orderId: quoteData.clientId || 0,
+        projectName: quoteData.projectName,
+        preparedBy: userId,
+        orderDate: new Date().toISOString().split("T")[0],
+        orderedBy: quoteData.orderedBy,
+        cellNumber: quoteData.cellNumber,
+        dueDate: quoteData.dueDate,
+        totalAmount: quoteData.totalAmount,
+        amountDisc: quoteData.amountDiscount,
+        percentDisc: quoteData.percentDisc,
+        grandTotal: quoteData.grandTotal,
+        totalHrs: quoteData.totalHrs,
+        editedBy: userName,
+        status: "Open",
+        terms: quoteData.terms,
+      };
+
+      const orderResult = await new Promise((resolve, reject) => {
+        con.query("INSERT INTO orders SET ?", orderData, (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        });
+      });
+
+      const newOrderId = orderResult.insertId;
+
+      // 3. Get quote details
+      const quoteDetails = await new Promise((resolve, reject) => {
+        con.query(
+          "SELECT * FROM quote_details WHERE quoteId = ?",
+          [quoteId],
+          (err, result) => {
+            if (err) reject(err);
+            resolve(result);
+          }
+        );
+      });
+
+      // 4. Insert new order details
+      if (quoteDetails.length > 0) {
+        const insertPromises = quoteDetails.map((detail) => {
+          const { id, quoteId, printHours, ...filteredDetail } = detail;
+          const newDetail = {
+            ...filteredDetail,
+            orderId: newOrderId,
+            // Ensure printHrs is set correctly
+            printHrs: detail.printHours || 0,
+          };
+
+          return new Promise((resolve, reject) => {
+            con.query(
+              "INSERT INTO order_details SET ?",
+              newDetail,
+              (err, result) => {
+                if (err) reject(err);
+                resolve(result);
+              }
+            );
+          });
+        });
+
+        await Promise.all(insertPromises);
+      }
+
+      // 5. Update original quote status to Closed
+      await new Promise((resolve, reject) => {
+        con.query(
+          "UPDATE quotes SET status = 'Closed' WHERE quoteId = ?",
+          [quoteId],
+          (err, result) => {
+            if (err) reject(err);
+            resolve(result);
+          }
+        );
+      });
+
+      // Commit transaction
+      con.commit((err) => {
+        if (err) {
+          console.error("Transaction commit error:", err);
+          return con.rollback(() => {
+            res.json({ Status: false, Error: "Failed to commit transaction" });
+          });
+        }
+
+        return res.json({
+          Status: true,
+          Result: newOrderId,
+          Message: "Quote successfully converted to job order",
+        });
+      });
+    } catch (error) {
+      console.error("Error in quote-makeJO:", error);
+      con.rollback(() => {
+        res.json({
+          Status: false,
+          Error: error.message || "Failed to convert quote to job order",
+        });
+      });
+    }
+  });
+});
 
 // Add quote
 router.post("/add_quote", verifyUser, (req, res) => {
