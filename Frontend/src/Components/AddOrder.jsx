@@ -387,6 +387,20 @@ function AddOrder() {
 
     if (Object.keys(newError).length > 0) {
       setError(newError);
+
+      // Build error message for modal alert
+      let errorMessage = "Please fill in the following required fields:";
+      if (newError.clientId) errorMessage += "\n• Client";
+      if (newError.projectName) errorMessage += "\n• Project Name";
+      if (newError.graphicsBy) errorMessage += "\n• Graphics By";
+
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: errorMessage,
+        type: "alert",
+      });
+
       return;
     }
 
@@ -1132,126 +1146,62 @@ function AddOrder() {
   };
   const handleReOrder = () => {
     const token = localStorage.getItem("token");
+    const userName = localStorage.getItem("userName");
+    const userId = currentUser.id;
+    const quoteId = orderId || id;
 
-    // Create a new order with copied data
-    const newOrderData = {
-      clientId: data.clientId,
-      projectName: data.projectName.includes(" (Reorder)")
-        ? data.projectName // Keep it unchanged if already added
-        : data.projectName + " (Reorder)",
-      preparedBy: data.preparedBy,
-      orderDate: new Date().toISOString().split("T")[0], // Set to current date
-      orderedBy: data.orderedBy,
-      orderReference: data.orderReference,
-      cellNumber: data.cellNumber,
-      specialInst: data.specialInst,
-      deliveryInst: data.deliveryInst,
-      graphicsBy: data.graphicsBy,
-      dueDate: data.dueDate,
-      dueTime: data.dueTime,
-      sample: data.sample,
-      reprint: data.reprint,
-      totalAmount: data.totalAmount,
-      amountDisc: data.amountDisc,
-      percentDisc: data.percentDisc,
-      grandTotal: data.grandTotal,
-      terms: data.terms,
-      status: "Open",
-      totalHrs: data.totalHrs, // Add totalHrs
-      editedBy: localStorage.getItem("userName"), // Add current employee name
-      //      lastEdited: currentDateTime, // Add current datetime
-    };
-
-    console.log("New order data:", newOrderData);
-    // Create new order
-    axios
-      .post(`${ServerIP}/auth/add_order`, newOrderData, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((result) => {
-        if (result.data.Status) {
-          const newOrderId = result.data.Result;
-
-          // Now copy all order details
-          axios
-            .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
+    setAlert({
+      show: true,
+      title: "Confirmation",
+      message: "Are you sure you want to create a reorder of this order?",
+      type: "confirm",
+      onConfirm: () => {
+        // Call the new backend endpoint that handles the entire reorder process
+        axios
+          .post(
+            `${ServerIP}/auth/order-reorder`,
+            {
+              orderId: quoteId,
+              userId,
+              userName,
+            },
+            {
               headers: { Authorization: `Bearer ${token}` },
-            })
-            .then((detailsResult) => {
-              if (detailsResult.data.Status) {
-                const details = detailsResult.data.Result;
-                const copyPromises = details.map((detail) => {
-                  const newDetail = {
-                    ...detail,
-                    orderId: newOrderId,
-                    quantity: detail.quantity,
-                    width: detail.width,
-                    height: detail.height,
-                    unit: detail.unit,
-                    material: detail.material,
-                    itemDescription: detail.itemDescription,
-                    unitPrice: detail.unitPrice,
-                    perSqFt: detail.perSqFt,
-                    discount: detail.discount,
-                    amount: detail.amount,
-                    squareFeet: detail.squareFeet,
-                    materialUsage: detail.materialUsage,
-                    printHrs: detail.printHrs,
-                    displayOrder: detail.displayOrder,
-                    remarks: detail.remarks,
-                    top: detail.top,
-                    bottom: detail.bottom,
-                    allowanceLeft: detail.allowanceLeft,
-                    allowanceRight: detail.allowanceRight,
-                    noPrint: detail.noPrint,
-                  };
+            }
+          )
+          .then((result) => {
+            if (result.data.Status) {
+              const newOrderId = result.data.Result;
 
-                  return axios.post(
-                    `${ServerIP}/auth/add_order_detail`,
-                    newDetail,
-                    {
-                      headers: { Authorization: `Bearer ${token}` },
-                    }
-                  );
-                });
-
-                // Wait for all details to be copied
-                Promise.all(copyPromises)
-                  .then(() => {
-                    // Navigate to the new order
-                    navigate(`/dashboard/orders/edit/${newOrderId}`);
-                  })
-                  .catch((err) => {
-                    console.error("Error copying order details:", err);
-                    setAlert({
-                      show: true,
-                      title: "Error",
-                      message: "Error copying order details",
-                      type: "alert",
-                    });
-                  });
-              }
-            })
-            .catch((err) => {
-              console.error("Error fetching order details:", err);
+              setAlert({
+                show: true,
+                title: "Success",
+                message: `Order successfully reordered with new Order #${newOrderId}\n\nClick Confirm to view the new order.`,
+                type: "confirm",
+                onConfirm: () => {
+                  navigate(`/dashboard/orders/edit/${newOrderId}`);
+                },
+              });
+            } else {
               setAlert({
                 show: true,
                 title: "Error",
-                message: "Error fetching order details",
+                message: result.data.Error || "Failed to create reorder",
                 type: "alert",
               });
+            }
+          })
+          .catch((err) => {
+            console.error("Error creating reorder:", err);
+            setAlert({
+              show: true,
+              title: "Error",
+              message: "Error creating reorder",
+              type: "alert",
             });
-        }
-      })
-      .catch((err) => {
-        console.error("Error creating new order:", err);
-        setAlert({
-          show: true,
-          title: "Error",
-          message: "Error creating new order",
-          type: "alert",
-        });
-      });
+          });
+      },
+    });
   };
 
   // Add the handler function
@@ -1728,6 +1678,28 @@ function AddOrder() {
                     }
                     rows="3"
                     disabled={!isEditMode || !canEdit()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && e.shiftKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const cursorPosition = e.target.selectionStart;
+                        const currentValue = e.target.value;
+                        const newValue =
+                          currentValue.substring(0, cursorPosition) +
+                          "\n" +
+                          currentValue.substring(cursorPosition);
+
+                        setData({ ...data, specialInst: newValue });
+
+                        // Set cursor position after the inserted newline
+                        setTimeout(() => {
+                          e.target.focus();
+                          e.target.selectionStart = cursorPosition + 1;
+                          e.target.selectionEnd = cursorPosition + 1;
+                        }, 0);
+                        return false;
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -1745,6 +1717,28 @@ function AddOrder() {
                     }
                     rows="3"
                     disabled={!isEditMode || !canEdit()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && e.shiftKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const cursorPosition = e.target.selectionStart;
+                        const currentValue = e.target.value;
+                        const newValue =
+                          currentValue.substring(0, cursorPosition) +
+                          "\n" +
+                          currentValue.substring(cursorPosition);
+
+                        setData({ ...data, deliveryInst: newValue });
+
+                        // Set cursor position after the inserted newline
+                        setTimeout(() => {
+                          e.target.focus();
+                          e.target.selectionStart = cursorPosition + 1;
+                          e.target.selectionEnd = cursorPosition + 1;
+                        }, 0);
+                        return false;
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -2203,6 +2197,42 @@ function AddOrder() {
                                   e.target.style.height =
                                     e.target.scrollHeight + "px";
                                 }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && e.shiftKey) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const cursorPosition =
+                                      e.target.selectionStart;
+                                    const currentValue = e.target.value;
+                                    const newValue =
+                                      currentValue.substring(
+                                        0,
+                                        cursorPosition
+                                      ) +
+                                      "\n" +
+                                      currentValue.substring(cursorPosition);
+
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "itemDescription",
+                                      newValue
+                                    );
+
+                                    // Set cursor position after the inserted newline and ensure focus stays on the textarea
+                                    setTimeout(() => {
+                                      e.target.focus();
+                                      e.target.selectionStart =
+                                        cursorPosition + 1;
+                                      e.target.selectionEnd =
+                                        cursorPosition + 1;
+                                      // Adjust height after adding new line
+                                      e.target.style.height = "auto";
+                                      e.target.style.height =
+                                        e.target.scrollHeight + "px";
+                                    }, 0);
+                                    return false;
+                                  }
+                                }}
                                 rows="1"
                               />
                             </td>
@@ -2222,6 +2252,42 @@ function AddOrder() {
                                   e.target.style.height = "31px";
                                   e.target.style.height =
                                     e.target.scrollHeight + "px";
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && e.shiftKey) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const cursorPosition =
+                                      e.target.selectionStart;
+                                    const currentValue = e.target.value;
+                                    const newValue =
+                                      currentValue.substring(
+                                        0,
+                                        cursorPosition
+                                      ) +
+                                      "\n" +
+                                      currentValue.substring(cursorPosition);
+
+                                    handleDetailInputChange(
+                                      uniqueId,
+                                      "remarks",
+                                      newValue
+                                    );
+
+                                    // Set cursor position after the inserted newline and ensure focus stays on the textarea
+                                    setTimeout(() => {
+                                      e.target.focus();
+                                      e.target.selectionStart =
+                                        cursorPosition + 1;
+                                      e.target.selectionEnd =
+                                        cursorPosition + 1;
+                                      // Adjust height after adding new line
+                                      e.target.style.height = "auto";
+                                      e.target.style.height =
+                                        e.target.scrollHeight + "px";
+                                    }, 0);
+                                    return false;
+                                  }
                                 }}
                                 rows="1"
                               />
@@ -2332,8 +2398,12 @@ function AddOrder() {
                             <td className="numeric-cell">
                               {formatNumber(detail.amount)}
                             </td>
-                            <td>{detail.itemDescription}</td>
-                            <td>{detail.remarks}</td>
+                            <td style={{ whiteSpace: "pre-line" }}>
+                              {detail.itemDescription}
+                            </td>
+                            <td style={{ whiteSpace: "pre-line" }}>
+                              {detail.remarks}
+                            </td>
                             <td>
                               <div className="d-flex gap-1 justify-content-center">
                                 <Button

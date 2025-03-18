@@ -414,94 +414,6 @@ router.get("/search-orders-by-client", async (req, res) => {
   }
 });
 
-// Get orders marked for production
-router.get("/orders-details-forprod", async (req, res) => {
-  try {
-    const sql = `
-      SELECT 
-        o.orderID as id,
-        o.revision,
-        o.clientId,
-        o.projectName,
-        o.dueDate,
-        o.dueTime,
-        c.clientName,
-        c.customerName,
-        od.quantity,
-        od.width,
-        od.height,
-        od.unit,
-        od.material,
-        od.printHrs,
-        od.squareFeet,
-        od.displayOrder
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN order_details od ON o.orderID = od.orderId
-      WHERE o.forProd = 1
-      ORDER BY o.orderID ASC, od.displayOrder ASC`;
-
-    con.query(sql, (err, result) => {
-      if (err) {
-        console.log(err);
-        return res.json({ Status: false, Error: "Query Error" });
-      }
-      return res.json({ Status: true, Result: result });
-    });
-  } catch (error) {
-    return res.json({ Status: false, Error: "Query Error" + error });
-  }
-});
-
-// Get orders with artist incentive details
-router.get("/orders-details-artistIncentive", async (req, res) => {
-  try {
-    const sql = `
-      SELECT 
-        o.orderId,
-        o.revision,
-        o.projectName,
-        o.dueDate,
-        o.dueTime,
-        c.clientName,
-        c.customerName,
-        o.productionDate,
-        o.status,
-        od.Id,
-        od.quantity,
-        od.width,
-        od.height,
-        od.unit,
-        od.material,
-        od.artistIncentive,
-        od.major,
-        od.minor
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.Id
-      LEFT JOIN order_details od ON o.orderID = od.orderId
-      LEFT JOIN material m ON od.material = m.material
-      WHERE o.status = 'Prod' 
-        AND (o.productionDate IS NOT NULL AND o.productionDate + INTERVAL 48 HOUR > NOW())
-        AND (m.noIncentive = 0)
-      ORDER BY o.orderID ASC, od.displayOrder ASC`;
-
-    const result = await new Promise((resolve, reject) => {
-      con.query(sql, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
-
-    return res.json({ Status: true, Result: result });
-  } catch (err) {
-    console.error("Error fetching artist incentive details:", err);
-    return res.json({
-      Status: false,
-      Error: "Failed to fetch artist incentive details",
-    });
-  }
-});
-
 // Add this route to update forProd checkbox
 router.put("/update-forprod/:id", (req, res) => {
   const orderId = req.params.id;
@@ -545,6 +457,44 @@ router.put("/update_orders_to_prod", (req, res) => {
     }
     return res.json({ Status: true, Result: result });
   });
+});
+// Get orders marked for production
+router.get("/orders-details-forprod", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        o.orderID as id,
+        o.revision,
+        o.clientId,
+        o.projectName,
+        o.dueDate,
+        o.dueTime,
+        c.clientName,
+        c.customerName,
+        od.quantity,
+        od.width,
+        od.height,
+        od.unit,
+        od.material,
+        od.printHrs,
+        od.squareFeet,
+        od.displayOrder
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN order_details od ON o.orderID = od.orderId
+      WHERE o.forProd = 1
+      ORDER BY o.orderID ASC, od.displayOrder ASC`;
+
+    con.query(sql, (err, result) => {
+      if (err) {
+        console.log(err);
+        return res.json({ Status: false, Error: "Query Error" });
+      }
+      return res.json({ Status: true, Result: result });
+    });
+  } catch (error) {
+    return res.json({ Status: false, Error: "Query Error" + error });
+  }
 });
 
 // Update orders status with corresponding dates and logging
@@ -1035,7 +985,7 @@ router.put("/orders/:orderId/update_edited_info", (req, res) => {
   );
 });
 
-// Update order detail artist incentives
+// Update order detail artist major and minor
 router.put("/order_details/update_incentives", async (req, res) => {
   try {
     const updates = req.body;
@@ -1077,7 +1027,56 @@ router.put("/order_details/update_incentives", async (req, res) => {
   }
 });
 
-// Update order detail artist incentives
+// Get orders with artist incentive details
+router.get("/orders-details-artistIncentive", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        o.orderId,
+        o.revision,
+        o.projectName,
+        o.dueDate,
+        o.dueTime,
+        c.clientName,
+        c.customerName,
+        o.productionDate,
+        o.status,
+        od.Id,
+        od.quantity,
+        od.width,
+        od.height,
+        od.unit,
+        od.material,
+        od.artistIncentive,
+        od.major,
+        od.minor
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.Id
+      LEFT JOIN order_details od ON o.orderID = od.orderId
+      LEFT JOIN material m ON od.material = m.material
+      WHERE o.status = 'Prod' 
+        AND (o.productionDate IS NOT NULL AND o.productionDate + INTERVAL 48 HOUR > NOW())
+        AND (m.noIncentive = 0)
+      ORDER BY o.orderID ASC, od.displayOrder ASC`;
+
+    const result = await new Promise((resolve, reject) => {
+      con.query(sql, (err, result) => {
+        if (err) reject(err);
+        resolve(result);
+      });
+    });
+
+    return res.json({ Status: true, Result: result });
+  } catch (err) {
+    console.error("Error fetching artist incentive details:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to fetch artist incentive details",
+    });
+  }
+});
+
+// Update order detail calculatertist incentives
 router.put(
   "/order_details/update_incentives_calculation",
   verifyUser,
@@ -1544,6 +1543,211 @@ router.put("/admin-status-update", verifyUser, async (req, res) => {
       Status: false,
       Error: "Failed to update status",
       Details: error.message,
+    });
+  }
+});
+
+// Create a new order based on an existing one (reorder)
+router.post("/order-reorder", verifyUser, async (req, res) => {
+  const { orderId } = req.body;
+  const userName = req.body.userName || req.user.name;
+  const userId = req.body.userId || req.user.id;
+
+  try {
+    // 1. First get all necessary information BEFORE starting the transaction
+
+    // Get the original order
+    const [originalOrder] = await new Promise((resolve, reject) => {
+      con.query(
+        `SELECT * FROM orders WHERE orderID = ?`,
+        [orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    if (!originalOrder) {
+      return res.json({
+        Status: false,
+        Error: "Original order not found",
+      });
+    }
+
+    // Get all details from original order
+    const originalDetails = await new Promise((resolve, reject) => {
+      con.query(
+        `SELECT * FROM order_details WHERE orderId = ?`,
+        [orderId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    // 2. Prepare new order data
+    const currentDate = new Date().toISOString().slice(0, 10);
+    const currentDateTime = new Date();
+    // Check if project name already has "(Reorder)" suffix
+    const projectName = originalOrder.projectName.includes(" (Reorder)")
+      ? originalOrder.projectName
+      : originalOrder.projectName + " (Reorder)";
+
+    // 3. NOW start the transaction after gathering all required data
+    await new Promise((resolve, reject) => {
+      con.beginTransaction((err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+
+    try {
+      // 4. Insert new order
+      const insertOrderResult = await new Promise((resolve, reject) => {
+        const newOrderSql = `
+          INSERT INTO orders (
+            clientId, projectName, preparedBy, orderDate, 
+            orderedBy, orderReference, cellNumber, specialInst, 
+            deliveryInst, graphicsBy, dueDate, dueTime, 
+            sample, reprint, totalAmount, amountDisc, 
+            percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const values = [
+          originalOrder.clientId,
+          projectName,
+          originalOrder.preparedBy,
+          currentDate, // New current date
+          originalOrder.orderedBy,
+          originalOrder.orderReference,
+          originalOrder.cellNumber,
+          originalOrder.specialInst,
+          originalOrder.deliveryInst,
+          originalOrder.graphicsBy,
+          originalOrder.dueDate,
+          originalOrder.dueTime,
+          originalOrder.sample,
+          originalOrder.reprint,
+          originalOrder.totalAmount,
+          originalOrder.amountDisc,
+          originalOrder.percentDisc,
+          originalOrder.grandTotal,
+          originalOrder.terms,
+          "Open", // Always open for new orders
+          originalOrder.totalHrs,
+          userName,
+          currentDateTime,
+        ];
+
+        con.query(newOrderSql, values, (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        });
+      });
+
+      const newOrderId = insertOrderResult.insertId;
+
+      // 5. Copy details to new order if there are any
+      if (originalDetails.length > 0) {
+        // Prepare batch insert for better performance
+        const detailValues = [];
+
+        // Prepare values for each detail
+        originalDetails.forEach((detail) => {
+          detailValues.push([
+            newOrderId,
+            detail.displayOrder,
+            detail.quantity,
+            detail.width,
+            detail.height,
+            detail.unit,
+            detail.material,
+            detail.itemDescription,
+            detail.unitPrice,
+            detail.perSqFt,
+            detail.discount,
+            detail.amount,
+            detail.squareFeet,
+            detail.materialUsage,
+            detail.printHrs,
+            detail.remarks,
+            detail.top,
+            detail.bottom,
+            detail.allowanceLeft,
+            detail.allowanceRight,
+            detail.noPrint,
+          ]);
+        });
+
+        // Insert all details in a single query for efficiency
+        await new Promise((resolve, reject) => {
+          const detailFields = [
+            "orderId",
+            "displayOrder",
+            "quantity",
+            "width",
+            "height",
+            "unit",
+            "material",
+            "itemDescription",
+            "unitPrice",
+            "perSqFt",
+            "discount",
+            "amount",
+            "squareFeet",
+            "materialUsage",
+            "printHrs",
+            "remarks",
+            "top",
+            "bottom",
+            "allowanceLeft",
+            "allowanceRight",
+            "noPrint",
+          ];
+
+          const insertDetailsSql = `
+            INSERT INTO order_details (${detailFields.join(", ")})
+            VALUES ?
+          `;
+
+          con.query(insertDetailsSql, [detailValues], (err, result) => {
+            if (err) reject(err);
+            resolve(result);
+          });
+        });
+      }
+
+      // 6. Commit transaction
+      await new Promise((resolve, reject) => {
+        con.commit((err) => {
+          if (err) {
+            con.rollback(() => reject(err));
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      return res.json({
+        Status: true,
+        Result: newOrderId,
+        Message: "Order reordered successfully",
+      });
+    } catch (transactionError) {
+      // Rollback on error
+      await new Promise((resolve) => {
+        con.rollback(() => resolve());
+      });
+      throw transactionError; // Re-throw for the outer catch block
+    }
+  } catch (error) {
+    console.error("Reorder Error:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to reorder: " + error.message,
     });
   }
 });

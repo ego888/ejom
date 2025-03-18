@@ -1289,7 +1289,6 @@ function AddQuote() {
         const userName = localStorage.getItem("userName");
         const userId = currentUser.id;
         const quoteId = data.orderId;
-
         axios
           .post(
             `${ServerIP}/auth/quote-makeJO`,
@@ -1344,147 +1343,73 @@ function AddQuote() {
   // Requote function to create a new quote from the current quote.
   const handleRequote = () => {
     const token = localStorage.getItem("token");
-    const userName = localStorage.getItem("userName"); // Get userName explicitly
-    const currentDateTime = new Date()
-      .toISOString()
-      .slice(0, 19)
-      .replace("T", " ");
-    console.log("Current user name:", userName);
+    const userName = localStorage.getItem("userName");
+    const userId = currentUser.id;
+    const quoteId = orderId || id;
 
-    // First, update the current quote's status to 'Requote'
-    axios
-      .put(
-        `${ServerIP}/auth/quote/status/${orderId || id}`,
-        { status: "Requote" },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      )
-      .then(() => {
-        // After setting current quote to Requote, create a new quote
-        const newQuoteData = {
-          clientId: data.clientId,
-          clientName: data.clientName,
-          projectName: data.projectName.includes(" (Requote)")
-            ? data.projectName // Keep it unchanged if already added
-            : data.projectName + " (Requote)",
-          preparedBy: currentUser.id, // Use the current user's ID instead of the original quote's preparedBy
-          quoteDate: new Date().toISOString().split("T")[0], // Set to current date
-          orderedBy: data.orderedBy,
-          refId: data.orderReference,
-          email: data.email,
-          cellNumber: data.cellNumber,
-          telNum: data.telNum,
-          statusRem: data.specialInst,
-          dueDate: data.dueDate,
-          totalAmount: data.totalAmount,
-          amountDiscount: data.amountDiscount,
-          percentDisc: data.percentDisc,
-          grandTotal: data.grandTotal,
-          totalHrs: data.totalHrs,
-          editedBy: userName,
-          lastEdited: currentDateTime,
-          status: "Open",
-          terms: data.terms,
-        };
+    if (!quoteId) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Cannot requote: Quote ID not found",
+        type: "alert",
+      });
+      return;
+    }
 
-        console.log("Creating new quote with editedBy:", userName);
-
-        // Create new quote
+    // Show confirmation dialog before proceeding
+    setAlert({
+      show: true,
+      title: "Confirmation",
+      message: "Are you sure you want to create a requote of this quote?",
+      type: "confirm",
+      onConfirm: () => {
+        // Call the new backend endpoint that handles the entire requote process
         axios
-          .post(`${ServerIP}/auth/add_quote`, newQuoteData, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+          .post(
+            `${ServerIP}/auth/quote-requote`,
+            {
+              quoteId,
+              userId,
+              userName,
+            },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          )
           .then((result) => {
             if (result.data.Status) {
-              const newQuoteId = result.data.QuoteID;
+              const newQuoteId = result.data.Result;
 
-              // Now copy all quote details
-              axios
-                .get(`${ServerIP}/auth/quote_details/${orderId || id}`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                })
-                .then((detailsResult) => {
-                  if (detailsResult.data.Status) {
-                    const details = detailsResult.data.Result;
-                    const copyPromises = details.map((detail) => {
-                      const newDetail = {
-                        ...detail,
-                        quoteId: newQuoteId,
-                        // Preserve all the necessary fields
-                        quantity: detail.quantity,
-                        width: detail.width,
-                        height: detail.height,
-                        unit: detail.unit,
-                        material: detail.material,
-                        itemDescription: detail.itemDescription,
-                        unitPrice: detail.unitPrice,
-                        persqft: detail.persqft,
-                        discount: detail.discount,
-                        amount: detail.amount,
-                        squareFeet: detail.squareFeet,
-                        materialUsage: detail.materialUsage,
-                        printHrs: detail.printHours,
-                        displayOrder: detail.displayOrder,
-                        remarks: detail.remarks,
-                      };
-
-                      return axios.post(
-                        `${ServerIP}/auth/add_quote_detail`,
-                        newDetail,
-                        {
-                          headers: { Authorization: `Bearer ${token}` },
-                        }
-                      );
-                    });
-
-                    // Wait for all details to be copied
-                    Promise.all(copyPromises)
-                      .then(() => {
-                        // Navigate to the new quote
-                        navigate(`/dashboard/quotes/edit/${newQuoteId}`);
-                      })
-                      .catch((err) => {
-                        console.error("Error copying quote details:", err);
-                        setAlert({
-                          show: true,
-                          title: "Error",
-                          message: "Error copying quote details",
-                          type: "alert",
-                        });
-                      });
-                  }
-                })
-                .catch((err) => {
-                  console.error("Error fetching quote details:", err);
-                  setAlert({
-                    show: true,
-                    title: "Error",
-                    message: "Error fetching quote details",
-                    type: "alert",
-                  });
-                });
+              setAlert({
+                show: true,
+                title: "Success",
+                message: `Quote successfully requoted with new Quote #${newQuoteId}\n\nClick Confirm to view the new quote.`,
+                type: "confirm",
+                onConfirm: () => {
+                  navigate(`/dashboard/quotes/edit/${newQuoteId}`);
+                },
+              });
+            } else {
+              setAlert({
+                show: true,
+                title: "Error",
+                message: result.data.Error || "Failed to create requote",
+                type: "alert",
+              });
             }
           })
           .catch((err) => {
-            console.error("Error creating new quote:", err);
+            console.error("Error creating requote:", err);
             setAlert({
               show: true,
               title: "Error",
-              message: "Error creating new quote",
+              message: "Error creating requote",
               type: "alert",
             });
           });
-      })
-      .catch((err) => {
-        console.error("Error updating quote status:", err);
-        setAlert({
-          show: true,
-          title: "Error",
-          message: "Error updating quote status",
-          type: "alert",
-        });
-      });
+      },
+    });
   };
 
   // Add this helper function
@@ -1974,6 +1899,38 @@ function AddQuote() {
                                 e.target.style.height =
                                   e.target.scrollHeight + "px";
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && e.shiftKey) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const cursorPosition =
+                                    e.target.selectionStart;
+                                  const currentValue = e.target.value;
+                                  const newValue =
+                                    currentValue.substring(0, cursorPosition) +
+                                    "\n" +
+                                    currentValue.substring(cursorPosition);
+
+                                  handleDetailInputChange(
+                                    `${detail.quoteId}_${detail.displayOrder}`,
+                                    "itemDescription",
+                                    newValue
+                                  );
+
+                                  // Set cursor position after the inserted newline and ensure focus stays on the textarea
+                                  setTimeout(() => {
+                                    e.target.focus();
+                                    e.target.selectionStart =
+                                      cursorPosition + 1;
+                                    e.target.selectionEnd = cursorPosition + 1;
+                                    // Adjust height after adding new line
+                                    e.target.style.height = "auto";
+                                    e.target.style.height =
+                                      e.target.scrollHeight + "px";
+                                  }, 0);
+                                  return false;
+                                }
+                              }}
                               rows="1"
                             />
                           </td>
@@ -2127,7 +2084,9 @@ function AddQuote() {
                           <td className="numeric-cell">
                             {formatNumber(detail.persqft)}
                           </td>
-                          <td>{detail.itemDescription}</td>
+                          <td style={{ whiteSpace: "pre-line" }}>
+                            {detail.itemDescription}
+                          </td>
                           <td className="numeric-cell">
                             {formatNumber(detail.unitPrice)}
                           </td>

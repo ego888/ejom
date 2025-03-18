@@ -287,6 +287,7 @@ function OrderView() {
                   <textarea
                     className="form-input multiline"
                     value={data.specialInst || ""}
+                    readOnly
                   />
                 </div>
               </div>
@@ -298,6 +299,7 @@ function OrderView() {
                   <textarea
                     className="form-input multiline"
                     value={data.deliveryInst || ""}
+                    readOnly
                   />
                 </div>
               </div>

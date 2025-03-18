@@ -465,6 +465,163 @@ router.put("/quote/status/:id", (req, res) => {
 
 // ============= POST Routes =============
 
+// Create requote from existing quote
+router.post("/quote-requote", verifyUser, (req, res) => {
+  const { quoteId, userId, userName } = req.body;
+
+  if (!quoteId || !userId || !userName) {
+    return res.json({
+      Status: false,
+      Error: "Missing required parameters (quoteId, userId, userName)",
+    });
+  }
+
+  // First fetch all needed data
+  const fetchQuoteData = async (quoteId) => {
+    const [quoteData] = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT * FROM quotes WHERE quoteId = ?",
+        [quoteId],
+        (err, result) => {
+          if (err) reject(err);
+          if (!result || result.length === 0) {
+            reject(new Error("Quote not found"));
+          }
+          resolve(result);
+        }
+      );
+    });
+    return quoteData;
+  };
+
+  const fetchQuoteDetails = async (quoteId) => {
+    const quoteDetails = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT * FROM quote_details WHERE quoteId = ?",
+        [quoteId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+    return quoteDetails;
+  };
+
+  // Then start transaction for all write operations
+  con.beginTransaction(async (err) => {
+    try {
+      // 1. Get original quote data
+      const quoteData = await fetchQuoteData(quoteId);
+
+      // 2. Update original quote status to 'Requote'
+      await new Promise((resolve, reject) => {
+        con.query(
+          "UPDATE quotes SET status = 'Requote' WHERE quoteId = ?",
+          [quoteId],
+          (err, result) => {
+            if (err) reject(err);
+            resolve(result);
+          }
+        );
+      });
+
+      // 3. Prepare and insert new quote data
+      const projectName = quoteData.projectName.includes(" (Requote)")
+        ? quoteData.projectName
+        : quoteData.projectName + " (Requote)";
+
+      // Use CURRENT_TIMESTAMP for the database to handle date/time in its timezone
+      const currentDate = new Date().toISOString().split("T")[0];
+
+      const newQuoteData = {
+        clientId: quoteData.clientId || 0,
+        clientName: quoteData.clientName,
+        projectName: projectName,
+        preparedBy: userId, // Use current user ID
+        quoteDate: currentDate,
+        orderedBy: quoteData.orderedBy,
+        refId: quoteId,
+        email: quoteData.email,
+        cellNumber: quoteData.cellNumber,
+        telNum: quoteData.telNum,
+        statusRem: quoteData.statusRem,
+        dueDate: quoteData.dueDate,
+        totalAmount: quoteData.totalAmount,
+        amountDiscount: quoteData.amountDiscount,
+        percentDisc: quoteData.percentDisc,
+        grandTotal: quoteData.grandTotal,
+        totalHrs: quoteData.totalHrs,
+        editedBy: userName, // Use current user name
+        lastEdited: new Date(), // Let MySQL handle the timestamp conversion
+        status: "Open",
+        terms: quoteData.terms,
+      };
+
+      const result = await new Promise((resolve, reject) => {
+        con.query("INSERT INTO quotes SET ?", newQuoteData, (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        });
+      });
+
+      const newQuoteId = result.insertId;
+
+      // 4. Get original quote details
+      const quoteDetails = await fetchQuoteDetails(quoteId);
+
+      // 5. Copy all details to new quote
+      if (quoteDetails.length > 0) {
+        const insertPromises = quoteDetails.map((detail) => {
+          // Remove Id field (capital I) as it's an auto-increment primary key
+          const { Id, quoteId, ...filteredDetail } = detail;
+          const newDetail = {
+            ...filteredDetail,
+            quoteId: newQuoteId,
+          };
+
+          return new Promise((resolve, reject) => {
+            con.query(
+              "INSERT INTO quote_details SET ?",
+              newDetail,
+              (err, result) => {
+                if (err) reject(err);
+                resolve(result);
+              }
+            );
+          });
+        });
+
+        await Promise.all(insertPromises);
+      }
+
+      // Commit transaction
+      con.commit((err) => {
+        if (err) {
+          console.error("Transaction commit error:", err);
+          return con.rollback(() => {
+            res.json({ Status: false, Error: "Failed to commit transaction" });
+          });
+        }
+
+        return res.json({
+          Status: true,
+          Result: newQuoteId,
+          Message: "Quote successfully requoted",
+        });
+      });
+    } catch (error) {
+      console.error("Error in quote-requote:", error);
+      con.rollback(() => {
+        res.json({
+          Status: false,
+          Error: error.message || "Failed to create requote",
+        });
+      });
+    }
+  });
+});
+
 // Convert quote to job order
 router.post("/quote-makeJO", verifyUser, (req, res) => {
   const { quoteId, userId, userName } = req.body;
@@ -476,35 +633,50 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
     });
   }
 
-  // Begin transaction
-  con.beginTransaction(async (err) => {
-    if (err) {
-      console.error("Transaction begin error:", err);
-      return res.json({ Status: false, Error: "Failed to start transaction" });
-    }
+  // First fetch all needed data
+  const fetchQuoteData = async (quoteId) => {
+    const [quoteData] = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT * FROM quotes WHERE quoteId = ?",
+        [quoteId],
+        (err, result) => {
+          if (err) reject(err);
+          if (!result || result.length === 0) {
+            reject(new Error("Quote not found"));
+          }
+          resolve(result);
+        }
+      );
+    });
+    return quoteData;
+  };
 
+  const fetchQuoteDetails = async (quoteId) => {
+    const quoteDetails = await new Promise((resolve, reject) => {
+      con.query(
+        "SELECT * FROM quote_details WHERE quoteId = ?",
+        [quoteId],
+        (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        }
+      );
+    });
+    return quoteDetails;
+  };
+
+  // Then start transaction for all write operations
+  con.beginTransaction(async (err) => {
     try {
       // 1. Get quote data
-      const [quoteData] = await new Promise((resolve, reject) => {
-        con.query(
-          "SELECT * FROM quotes WHERE quoteId = ?",
-          [quoteId],
-          (err, result) => {
-            if (err) reject(err);
-            if (!result || result.length === 0) {
-              reject(new Error("Quote not found"));
-            }
-            resolve(result);
-          }
-        );
-      });
+      const quoteData = await fetchQuoteData(quoteId);
 
       // 2. Insert new order with updated preparedBy and editedBy
       const orderData = {
-        orderId: quoteData.clientId || 0,
+        clientId: quoteData.clientId || 0,
         projectName: quoteData.projectName,
         preparedBy: userId,
-        orderDate: new Date().toISOString().split("T")[0],
+        orderDate: new Date(),
         orderedBy: quoteData.orderedBy,
         cellNumber: quoteData.cellNumber,
         dueDate: quoteData.dueDate,
@@ -516,6 +688,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
         editedBy: userName,
         status: "Open",
         terms: quoteData.terms,
+        lastEdited: new Date(), // Let MySQL handle the timestamp conversion
       };
 
       const orderResult = await new Promise((resolve, reject) => {
@@ -524,25 +697,16 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
           resolve(result);
         });
       });
-
       const newOrderId = orderResult.insertId;
 
       // 3. Get quote details
-      const quoteDetails = await new Promise((resolve, reject) => {
-        con.query(
-          "SELECT * FROM quote_details WHERE quoteId = ?",
-          [quoteId],
-          (err, result) => {
-            if (err) reject(err);
-            resolve(result);
-          }
-        );
-      });
+      const quoteDetails = await fetchQuoteDetails(quoteId);
 
       // 4. Insert new order details
       if (quoteDetails.length > 0) {
         const insertPromises = quoteDetails.map((detail) => {
-          const { id, quoteId, printHours, ...filteredDetail } = detail;
+          // Remove Id field (capital I) as it's an auto-increment primary key
+          const { Id, quoteId, printHours, ...filteredDetail } = detail;
           const newDetail = {
             ...filteredDetail,
             orderId: newOrderId,
