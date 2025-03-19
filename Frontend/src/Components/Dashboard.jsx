@@ -236,7 +236,7 @@ const Dashboard = () => {
     let visibleItems = [];
 
     // Common items for all active users
-    visibleItems.push(PROFILE);
+    //visibleItems.push(PROFILE);
 
     // Add role-specific items
     if (permissions.isSales) {
