@@ -14,7 +14,7 @@
   text-align: right;
 }
 
-.custom-dropdown {
+.dropdown2 {
   position: relative;
   width: 100%;
   height: 27px;
@@ -23,6 +23,8 @@
 }
 
 .dropdown2-options {
+  position: absolute;
+  width: 100%;
   background: #ffffff;
   border: 1px solid #ced4da;
   border-top: none;
@@ -49,7 +51,7 @@
   font-weight: bold;
 }
 
-.custom-dropdown.is-invalid {
+.dropdown2.is-invalid {
   border-color: #dc3545;
 }
 

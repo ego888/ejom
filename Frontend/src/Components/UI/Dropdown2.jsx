@@ -70,7 +70,7 @@ const Dropdown2 = ({
   };
 
   return (
-    <div>
+    <div className="dropdown2" ref={dropdownRef}>
       {label && (
         <label
           htmlFor={id}

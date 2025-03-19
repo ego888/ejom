@@ -154,30 +154,6 @@ a:hover {
   outline: none;
 }
 
-/* Ensure dropdown has similar behavior */
-.custom-dropdown {
-  appearance: none; /* Removes default browser styles */
-  cursor: pointer;
-}
-
-/* Optional: Add a custom dropdown arrow */
-.custom-dropdown-wrapper {
-  position: relative;
-  display: inline-block;
-  width: 100%;
-}
-
-.custom-dropdown-wrapper::after {
-  content: "▼"; /* Custom dropdown arrow */
-  font-size: 12px;
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: #555;
-}
-
 .centered-cell {
   text-align: center;
 }

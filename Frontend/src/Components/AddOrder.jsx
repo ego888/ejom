@@ -997,6 +997,7 @@ function AddOrder() {
             ...prev,
             clientId: id,
             terms: clientData.terms,
+            customerName: clientData.customerName, // Add this line to update the customer name
           }));
         }
       })
