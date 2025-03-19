@@ -960,7 +960,11 @@ router.put("/orders/:orderId/update_edited_info", (req, res) => {
     UPDATE orders 
     SET lastEdited = ?,
         editedBy = ?,
-        totalHrs = ?
+        totalHrs = ?,
+        totalAmount = ?,
+        amountDisc = ?,
+        percentDisc = ?,
+        grandTotal = ?
     WHERE orderID = ?
   `;
 
@@ -970,6 +974,10 @@ router.put("/orders/:orderId/update_edited_info", (req, res) => {
       req.body.lastEdited,
       req.body.editedBy,
       req.body.totalHrs,
+      req.body.totalAmount,
+      req.body.amountDisc,
+      req.body.percentDisc,
+      req.body.grandTotal,
       req.params.orderId,
     ],
     (err, result) => {
@@ -1159,31 +1167,55 @@ router.put(
   }
 );
 
-// Update order detail
-router.put("/order_details/:orderId/:displayOrder", (req, res) => {
+// Update order detail ##
+// router.put("/order_details/:orderId/:displayOrder", (req, res) => {
+//   const { printHrs, ...otherData } = req.body;
+//   const data = {
+//     ...otherData,
+//     printHrs: Number(printHrs || 0),
+//   };
+
+//   const sql =
+//     "UPDATE order_details SET ? WHERE orderId = ? AND displayOrder = ?";
+
+//   con.query(
+//     sql,
+//     [data, req.params.orderId, req.params.displayOrder],
+//     (err, result) => {
+//       if (err) {
+//         console.log("Update Error:", err);
+//         return res.json({
+//           Status: false,
+//           Error: "Failed to update order detail",
+//         });
+//       }
+//       return res.json({ Status: true, Result: result });
+//     }
+//   );
+// });
+
+// Add new route to update order detail by ID
+router.put("/order_detail/:id", (req, res) => {
+  const { id } = req.params;
   const { printHrs, ...otherData } = req.body;
   const data = {
     ...otherData,
     printHrs: Number(printHrs || 0),
   };
+  console.log("Data being updated:", data);
+  console.log("ID:", id);
+  const sql = "UPDATE order_details SET ? WHERE Id = ?";
 
-  const sql =
-    "UPDATE order_details SET ? WHERE orderId = ? AND displayOrder = ?";
-
-  con.query(
-    sql,
-    [data, req.params.orderId, req.params.displayOrder],
-    (err, result) => {
-      if (err) {
-        console.log("Update Error:", err);
-        return res.json({
-          Status: false,
-          Error: "Failed to update order detail",
-        });
-      }
-      return res.json({ Status: true, Result: result });
+  con.query(sql, [data, id], (err, result) => {
+    if (err) {
+      console.log("Update Error:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to update order detail",
+      });
     }
-  );
+    return res.json({ Status: true, Result: result });
+  });
 });
 
 // Update display order by detail ID
@@ -1223,18 +1255,41 @@ router.put("/order_details-displayOrder/:detailId", (req, res) => {
   });
 });
 
-// Update noPrint status
-router.put("/order_detail_noprint/:orderId/:displayOrder", (req, res) => {
-  const { orderId, displayOrder } = req.params;
+// Update noPrint status ##
+// router.put("/order_detail_noprint/:orderId/:displayOrder", (req, res) => {
+//   const { orderId, displayOrder } = req.params;
+//   const { noPrint } = req.body;
+
+//   const sql = `
+//     UPDATE order_details
+//     SET noPrint = ?
+//     WHERE orderId = ? AND displayOrder = ?
+//   `;
+
+//   con.query(sql, [noPrint, orderId, displayOrder], (err, result) => {
+//     if (err) {
+//       console.log("Update Error:", err);
+//       return res.json({
+//         Status: false,
+//         Error: "Failed to update noPrint status",
+//       });
+//     }
+//     return res.json({ Status: true, Result: result });
+//   });
+// });
+
+// Add new route to update noPrint status by detail ID
+router.put("/order_detail_noprint/:id", (req, res) => {
+  const { id } = req.params;
   const { noPrint } = req.body;
 
   const sql = `
     UPDATE order_details 
     SET noPrint = ? 
-    WHERE orderId = ? AND displayOrder = ?
+    WHERE Id = ?
   `;
 
-  con.query(sql, [noPrint, orderId, displayOrder], (err, result) => {
+  con.query(sql, [noPrint, id], (err, result) => {
     if (err) {
       console.log("Update Error:", err);
       return res.json({
@@ -1273,19 +1328,42 @@ router.post("/add_order_detail", (req, res) => {
   });
 });
 
-// Delete order detail
-router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
-  const orderId = req.params.orderId;
-  const displayOrder = req.params.displayOrder;
+// Delete order detail ##
+// router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
+//   const orderId = req.params.orderId;
+//   const displayOrder = req.params.displayOrder;
 
-  const sql =
-    "DELETE FROM order_details WHERE orderId = ? AND displayOrder = ?";
+//   const sql =
+//     "DELETE FROM order_details WHERE orderId = ? AND displayOrder = ?";
 
-  con.query(sql, [orderId, displayOrder], (err, result) => {
+//   con.query(sql, [orderId, displayOrder], (err, result) => {
+//     if (err) {
+//       console.log(err);
+//       return res.json({ Status: false, Error: "Query Error" });
+//     }
+//     return res.json({ Status: true });
+//   });
+// });
+
+// Add new route to delete order detail by ID
+router.delete("/order_detail/:id", (req, res) => {
+  const { id } = req.params;
+
+  const sql = "DELETE FROM order_details WHERE Id = ?";
+
+  con.query(sql, [id], (err, result) => {
     if (err) {
       console.log(err);
       return res.json({ Status: false, Error: "Query Error" });
     }
+
+    if (result.affectedRows === 0) {
+      return res.json({
+        Status: false,
+        Error: "Order detail not found",
+      });
+    }
+
     return res.json({ Status: true });
   });
 });

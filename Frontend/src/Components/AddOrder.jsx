@@ -558,15 +558,10 @@ function AddOrder() {
           .toISOString()
           .slice(0, 19)
           .replace("T", " ");
-        const [orderId, displayOrder] = uniqueId.split("_");
 
         // Update orderDetails by removing the deleted detail first to calculate new totals
         const updatedDetails = orderDetails.filter(
-          (detail) =>
-            !(
-              detail.orderId === parseInt(orderId) &&
-              detail.displayOrder === parseInt(displayOrder)
-            )
+          (detail) => !(detail.Id === parseInt(uniqueId))
         );
 
         // Calculate new totals
@@ -590,12 +585,9 @@ function AddOrder() {
             }
           ),
           // Delete the detail
-          axios.delete(
-            `${ServerIP}/auth/order_detail/${orderId}/${displayOrder}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
+          axios.delete(`${ServerIP}/auth/order_detail/${uniqueId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ])
           .then(([orderResult, detailResult]) => {
             if (detailResult.data.Status) {
@@ -610,7 +602,7 @@ function AddOrder() {
               setAlert({
                 show: true,
                 title: "Error",
-                message: detailResult.data.Error,
+                message: "Detail not found",
                 type: "alert",
               });
             }
@@ -621,35 +613,38 @@ function AddOrder() {
   };
 
   const handleEditClick = (uniqueId, detail) => {
-    console.log("Edit clicked for unique ID:", uniqueId);
-    console.log("Detail data:", detail);
-    console.log("Material value:", detail.material);
+    // Change this line to match the uniqueId format used in the table
+    setEditingRowId(`${detail.Id}`);
 
     if (!dropdownsLoaded) {
       fetchDropdownData();
     }
-    setEditingRowId(uniqueId);
 
-    // Initialize edited values with current detail, preserving all fields
+    // Initialize edited values with current detail
     const editedDetail = {
-      ...detail, // Spread all existing properties
+      ...detail,
       quantity: detail.quantity || "",
       width: detail.width || "",
       height: detail.height || "",
+      discount: detail.discount || 0,
       unit: detail.unit || "",
-      material: detail.material || "", // Preserve material
-      perSqFt: detail.perSqFt || "",
-      unitPrice: detail.unitPrice || "",
-      discount: detail.discount || "",
-      amount: detail.amount || "",
-      remarks: detail.remarks || "",
+      material: detail.material || "",
+      unitPrice: detail.unitPrice || 0,
+      perSqFt: detail.perSqFt || 0,
+      printHrs: detail.printHrs || "",
       itemDescription: detail.itemDescription || "",
+      remarks: detail.remarks || "",
+      squareFeet: detail.squareFeet || 0,
+      amount: detail.amount || 0,
+      top: detail.top || 0,
+      bottom: detail.bottom || 0,
+      allowanceLeft: detail.allowanceLeft || 0,
+      allowanceRight: detail.allowanceRight || 0,
     };
 
-    console.log("Edited detail being set:", editedDetail); // Debug log
-
+    // Use detail.Id as the key in the format used by the table
     setEditedValues({
-      [uniqueId]: editedDetail,
+      [`${detail.Id}`]: editedDetail,
     });
   };
 
@@ -658,17 +653,17 @@ function AddOrder() {
   };
 
   // Handler for input changes with auto-calculation
-  const handleDetailInputChange = (uniqueId, field, value) => {
+  const handleDetailInputChange = (detailId, field, value) => {
     setEditedValues((prev) => {
       const updatedValues = {
         ...prev,
-        [uniqueId]: {
-          ...(prev[uniqueId] || {}),
+        [detailId]: {
+          ...(prev[detailId] || {}),
           [field]: value,
         },
       };
 
-      const currentDetail = updatedValues[uniqueId];
+      const currentDetail = updatedValues[detailId];
 
       // Recalculate area when dimensions or unit changes
       if (["width", "height", "unit", "quantity", "material"].includes(field)) {
@@ -696,14 +691,19 @@ function AddOrder() {
 
         // Calculate price based on new area
         const perSqFt = parseFloat(currentDetail.perSqFt) || 0;
-        const price = calculatePrice(squareFeet, perSqFt);
+        let price = 0;
+        if (perSqFt === 0) {
+          price = currentDetail.unitPrice;
+        } else {
+          price = calculatePrice(squareFeet, perSqFt);
+        }
         const amount = calculateAmount(
           price,
           currentDetail.discount || 0,
           currentDetail.quantity || 0
         );
 
-        updatedValues[uniqueId] = {
+        updatedValues[detailId] = {
           ...currentDetail,
           [field]: value,
           squareFeet: squareFeet,
@@ -722,7 +722,7 @@ function AddOrder() {
           currentDetail.quantity || 0
         );
 
-        updatedValues[uniqueId] = {
+        updatedValues[detailId] = {
           ...currentDetail,
           [field]: value,
           perSqFt: perSqFt,
@@ -741,7 +741,7 @@ function AddOrder() {
           currentDetail.quantity || 0
         );
 
-        updatedValues[uniqueId] = {
+        updatedValues[detailId] = {
           ...currentDetail,
           [field]: value,
           unitPrice: price,
@@ -749,7 +749,7 @@ function AddOrder() {
         };
       } else {
         // For other fields, just update the value
-        updatedValues[uniqueId] = {
+        updatedValues[detailId] = {
           ...currentDetail,
           [field]: value,
         };
@@ -759,23 +759,22 @@ function AddOrder() {
     });
 
     // Clear error for this field if it exists
-    if (editErrors[uniqueId]?.[field]) {
+    if (editErrors[detailId]?.[field]) {
       setEditErrors((prev) => ({
         ...prev,
-        [uniqueId]: {
-          ...(prev[uniqueId] || {}),
+        [detailId]: {
+          ...(prev[detailId] || {}),
           [field]: null,
         },
       }));
     }
   };
-
-  const handleSaveDetail = (uniqueId) => {
-    const updatedDetail = editedValues[uniqueId];
+  const handleSaveDetail = (detailId) => {
+    const updatedDetail = editedValues[detailId];
     const errors = validateDetail(updatedDetail);
 
     if (Object.keys(errors).length > 0) {
-      setEditErrors({ ...editErrors, [uniqueId]: errors });
+      setEditErrors({ ...editErrors, [detailId]: errors });
       return;
     }
 
@@ -808,16 +807,14 @@ function AddOrder() {
 
     console.log("Sanitized detail being sent:", sanitizedDetail);
 
-    const [orderId, displayOrder] = uniqueId.split("_");
-
     // Update the detail in orderDetails first to calculate new totals
     const updatedDetails = orderDetails.map((detail) =>
-      detail.orderId === parseInt(orderId) &&
-      detail.displayOrder === parseInt(displayOrder)
+      detail.Id === parseInt(detailId)
         ? { ...detail, ...sanitizedDetail }
         : detail
     );
 
+    console.log("Updated details:", updatedDetails);
     // Calculate new totals
     const totals = calculateTotals(updatedDetails);
 
@@ -826,8 +823,14 @@ function AddOrder() {
       lastEdited: currentDateTime,
       editedBy: localStorage.getItem("userName"),
       totalHrs: totals.totalHrs,
+      totalAmount: totals.subtotal || 0,
+      amountDisc: totals.amountDisc || 0,
+      percentDisc: totals.percentDisc || 0,
+      grandTotal: totals.grandTotal || 0,
     };
 
+    console.log("Order update data:", orderUpdateData);
+    console.log("Sanitized detail being sent:", sanitizedDetail);
     // Save both updates
     Promise.all([
       // Update order with only the three fields using new endpoint
@@ -838,12 +841,11 @@ function AddOrder() {
           headers: { Authorization: `Bearer ${token}` },
         }
       ),
+
       // Update order detail
-      axios.put(
-        `${ServerIP}/auth/order_details/${orderId}/${displayOrder}`,
-        sanitizedDetail,
-        { headers: { Authorization: `Bearer ${token}` } }
-      ),
+      axios.put(`${ServerIP}/auth/order_detail/${detailId}`, sanitizedDetail, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     ])
       .then(([orderResult, detailResult]) => {
         if (detailResult.data.Status) {
@@ -1105,24 +1107,24 @@ function AddOrder() {
   };
 
   // Add this new function to handle noPrint toggle
-  const handleNoPrintToggle = async (orderId, displayOrder, currentNoPrint) => {
+  const handleNoPrintToggle = async (orderId, currentNoPrint) => {
     try {
       const token = localStorage.getItem("token");
       const newNoPrintValue = currentNoPrint === 1 ? 0 : 1;
       console.log("New No Print Value", newNoPrintValue);
-      // Optimistically update the UI first
+
+      // If detailId is provided, use it (new way)
       setOrderDetails((prevDetails) =>
         prevDetails.map((detail) =>
-          detail.orderId === parseInt(orderId) &&
-          detail.displayOrder === parseInt(displayOrder)
+          detail.Id === orderId
             ? { ...detail, noPrint: newNoPrintValue }
             : detail
         )
       );
 
-      // Then make the API call
+      // Then make the API call with the ID-based endpoint
       const response = await axios.put(
-        `${ServerIP}/auth/order_detail_noprint/${orderId}/${displayOrder}`,
+        `${ServerIP}/auth/order_detail_noprint/${orderId}`,
         { noPrint: newNoPrintValue },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1131,8 +1133,7 @@ function AddOrder() {
         // If the API call fails, revert the optimistic update
         setOrderDetails((prevDetails) =>
           prevDetails.map((detail) =>
-            detail.orderId === parseInt(orderId) &&
-            detail.displayOrder === parseInt(displayOrder)
+            detail.Id === orderId
               ? { ...detail, noPrint: currentNoPrint }
               : detail
           )
@@ -1934,10 +1935,10 @@ function AddOrder() {
                 </thead>
                 <tbody>
                   {orderDetails.map((detail, index) => {
-                    const uniqueId = `${detail.orderId}_${detail.displayOrder}`;
+                    const uniqueId = `${detail.Id}`;
                     return (
                       <tr
-                        key={uniqueId}
+                        key={uniqueId} // Change the key
                         className={
                           detail.noPrint === 1
                             ? "centered-cell no-print"
@@ -1946,15 +1947,11 @@ function AddOrder() {
                         style={{ cursor: canEdit() ? "pointer" : "default" }}
                         onDoubleClick={() => {
                           if (canEdit()) {
-                            handleNoPrintToggle(
-                              detail.orderId,
-                              detail.displayOrder,
-                              detail.noPrint
-                            );
+                            handleNoPrintToggle(detail.Id, detail.noPrint);
                           }
                         }}
                       >
-                        {editingRowId === uniqueId ? (
+                        {editingRowId === detail.Id.toString() ? (
                           <>
                             <td className="centered-cell">
                               {detail.displayOrder}
@@ -2333,8 +2330,7 @@ function AddOrder() {
                         ) : (
                           <>
                             <td>
-                              {editingDisplayOrder ===
-                              `${detail.orderId}_${detail.displayOrder}` ? (
+                              {editingDisplayOrder === `${detail.id}` ? (
                                 <input
                                   type="number"
                                   className="form-input detail"
@@ -2371,9 +2367,7 @@ function AddOrder() {
                                   className="display-order-text"
                                   onDoubleClick={(e) => {
                                     e.stopPropagation();
-                                    setEditingDisplayOrder(
-                                      `${detail.orderId}_${detail.displayOrder}`
-                                    );
+                                    setEditingDisplayOrder(`${detail.Id}`);
                                     setTempDisplayOrder(detail.displayOrder);
                                   }}
                                 >
@@ -2454,7 +2448,7 @@ function AddOrder() {
                                   hidden={!canEdit()}
                                   iconOnly
                                   size="sm"
-                                  onClick={() => handleDeleteDetail(uniqueId)}
+                                  onClick={() => handleDeleteDetail(detail.Id)}
                                   title="Delete record"
                                 />
                                 <Button
