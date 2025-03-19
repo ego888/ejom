@@ -59,14 +59,10 @@
   align-items: center;
   padding: 0.2rem 0;
   width: 140px;
-}
-
-.sidebar-nav-link i {
-  font-size: 1.75rem;
+  font-size: 16px;
 }
 
 .sidebar-nav-link span {
-  font-size: 1.5rem;
   margin-left: 0.25rem;
 }
 

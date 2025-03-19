@@ -66,7 +66,7 @@ const Dropdown2 = ({
   };
 
   const handleSearchClick = (e) => {
-    e.stopPropagation(); // Prevent dropdown from closing
+    e.stopPropagation(); // Prevent dropdown2 from closing
   };
 
   return (
@@ -87,8 +87,8 @@ const Dropdown2 = ({
         {selectedLabel}
       </div>
       {isOpen && !disabled && (
-        <div className="dropdown-options">
-          <div className="dropdown-search" onClick={handleSearchClick}>
+        <div className="dropdown2-options">
+          <div className="dropdown2-search" onClick={handleSearchClick}>
             <input
               ref={inputRef}
               type="text"
@@ -98,24 +98,17 @@ const Dropdown2 = ({
               autoFocus
             />
           </div>
-          {required && (
-            <div
-              className="dropdown-option placeholder"
-              onClick={() => handleSelect({ [valueKey]: "" })}
-            >
-              {placeholder}
-            </div>
-          )}
+
           {filteredOptions.map((option) => (
             <div
               key={option[valueKey]}
-              className={`dropdown-option ${
+              className={`dropdown2-option ${
                 option[valueKey] === value ? "selected" : ""
               }`}
               onClick={() => handleSelect(option)}
             >
-              <span className="option-col1">{option[column1Key]}</span>
-              <span className="option-col2">{option[column2Key]}</span>
+              <span className="dropdown2-col1">{option[column1Key]}</span>
+              <span className="dropdown2-col2">{option[column2Key]}</span>
             </div>
           ))}
         </div>

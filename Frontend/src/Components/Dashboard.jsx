@@ -15,6 +15,94 @@ import "./Dashboard.css";
 import { ServerIP } from "../config";
 import logo from "../assets/Go Large logo 2009C2 small.jpg";
 
+// Menu item constants
+const DASHBOARD = { path: "", icon: "bi-speedometer2", text: "Dashboard" };
+const QUOTES = {
+  path: "quotes",
+  icon: "bi-file-earmark-text",
+  text: "Quotes",
+};
+const ORDERS = { path: "orders", icon: "bi-cart", text: "Orders" };
+const CLIENT = { path: "client", icon: "bi-building", text: "Clients" };
+const PROD = { path: "prod", icon: "bi-gear", text: "Prod" };
+const WIPLOG = {
+  path: "wiplog",
+  icon: "bi-clipboard-check",
+  text: "WIP Log",
+};
+const ARTISTLOG = {
+  path: "artistlog",
+  icon: "bi-palette",
+  text: "Artist Log",
+};
+const PRINTLOG = {
+  path: "printlog",
+  icon: "bi-printer",
+  text: "Print Log",
+};
+const PAYMENT = { path: "payment", icon: "bi-cash", text: "Payments" };
+const PROFILE = { path: "profile", icon: "bi-person", text: "Profile" };
+
+// Submenu items constants
+const SALES_REPORT = {
+  path: "sales-report",
+  icon: "bi-file-earmark-bar-graph",
+  text: "Sales Report",
+};
+const SOA = {
+  path: "soa",
+  icon: "bi-file-text",
+  text: "Statement of Account",
+};
+const ARTIST_INCENTIVES = {
+  path: "artist-incentives",
+  icon: "bi-file-easel",
+  text: "Artist Incentives",
+};
+const SALES_INCENTIVES = {
+  path: "sales-incentives",
+  icon: "bi-file-plus",
+  text: "Sales Incentives",
+};
+
+// Submenu for Reports
+const REPORTS = {
+  path: "reports",
+  icon: "bi-file-earmark-ruled",
+  text: "Reports",
+  subItems: [SALES_REPORT, SOA, ARTIST_INCENTIVES, SALES_INCENTIVES],
+};
+
+// Submenu for Masterfiles
+const MATERIAL = {
+  path: "material",
+  icon: "bi-box-seam",
+  text: "Materials",
+};
+const EMPLOYEE = {
+  path: "employee",
+  icon: "bi-people",
+  text: "Employee",
+};
+const CATEGORY = {
+  path: "category",
+  icon: "bi-list",
+  text: "Category",
+};
+
+const MASTERFILES = {
+  path: "masterfiles",
+  icon: "bi-folder",
+  text: "Masterfiles",
+  subItems: [CLIENT, MATERIAL, EMPLOYEE, CATEGORY],
+};
+
+// Reports submenus for different roles
+const REPORTS_SALES = {
+  ...REPORTS,
+  subItems: [SALES_REPORT, SOA],
+};
+
 const Dashboard = () => {
   const [permissions, setPermissions] = useState({
     isAdmin: false,
@@ -116,95 +204,59 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  // Helper function to check route access
-  const canAccessRoute = (route) => {
+  // Get visible menu items based on user permissions
+  const getVisibleMenuItems = () => {
+    // All menu items
+    const allNavItems = [
+      DASHBOARD,
+      QUOTES,
+      ORDERS,
+      CLIENT,
+      PROD,
+      WIPLOG,
+      ARTISTLOG,
+      PRINTLOG,
+      PAYMENT,
+      REPORTS,
+      MASTERFILES,
+      PROFILE,
+    ];
+
+    // Admin can access everything
     if (permissions.categoryId === 1) {
-      return true;
+      return allNavItems;
     }
 
+    // Non-active users can't access anything
     if (!permissions.isActive) {
-      return false;
+      return [];
     }
 
-    let hasAccess = false;
-    switch (route) {
-      case "quotes":
-      case "client":
-      case "orders":
-        hasAccess = permissions.isSales;
-        break;
-      case "prod":
-      case "payment":
-        hasAccess = permissions.isAccounting;
-        break;
-      case "artistlog":
-        hasAccess = permissions.isArtist;
-        break;
-      case "printlog":
-        hasAccess = permissions.isOperator;
-        break;
-      case "dashboard":
-      case "profile":
-        hasAccess = true;
-        break;
-      default:
-        hasAccess = false;
+    // Filter items based on user role using switch cases
+    let visibleItems = [];
+
+    // Common items for all active users
+    visibleItems.push(PROFILE);
+
+    // Add role-specific items
+    if (permissions.isSales) {
+      visibleItems.push(QUOTES, ORDERS, CLIENT, SALES_REPORT, SOA);
     }
 
-    return hasAccess;
+    if (permissions.isAccounting) {
+      visibleItems.push(PROD, PAYMENT);
+    }
+
+    if (permissions.isArtist) {
+      visibleItems.push(ARTISTLOG);
+    }
+
+    if (permissions.isOperator) {
+      visibleItems.push(PRINTLOG);
+    }
+
+    return visibleItems;
   };
-
-  // Navigation items configuration
-  const navItems = [
-    { path: "", icon: "bi-speedometer2", text: "Dashboard", adminOnly: true },
-    { path: "quotes", icon: "bi-file-earmark-text", text: "Quotes" },
-    { path: "orders", icon: "bi-cart", text: "Orders" },
-    { path: "prod", icon: "bi-gear", text: "Prod" },
-    { path: "wiplog", icon: "bi-clipboard-check", text: "WIP Log" },
-    { path: "artistlog", icon: "bi-palette", text: "Artist Log" },
-    { path: "printlog", icon: "bi-printer", text: "Print Log" },
-    { path: "payment", icon: "bi-cash", text: "Payments" },
-    {
-      path: "reports",
-      icon: "bi-file-earmark-ruled",
-      text: "Reports",
-      subItems: [
-        {
-          path: "sales-report",
-          icon: "bi-file-earmark-bar-graph",
-          text: "Sales Report",
-        },
-        {
-          path: "soa",
-          icon: "bi-file-text",
-          text: "Statement of Account",
-        },
-        {
-          path: "artist-incentives",
-          icon: "bi-file-easel",
-          text: "Artist Incentives",
-        },
-        {
-          path: "sales-incentives",
-          icon: "bi-file-plus",
-          text: "Sales Incentives",
-        },
-      ],
-    },
-    {
-      path: "masterfiles",
-      icon: "bi-folder",
-      text: "Masterfiles",
-      adminOnly: true,
-      subItems: [
-        { path: "client", icon: "bi-building", text: "Clients" },
-        { path: "material", icon: "bi-box-seam", text: "Materials" },
-        { path: "employee", icon: "bi-people", text: "Employee" },
-        { path: "category", icon: "bi-list", text: "Category" },
-      ],
-    },
-    { path: "profile", icon: "bi-person", text: "Profile", adminOnly: true },
-  ];
 
   // Add function to determine initial route
   const getInitialRoute = (permissions) => {
@@ -220,6 +272,9 @@ const Dashboard = () => {
   const toggleSubmenu = (path) => {
     setOpenSubmenu(openSubmenu === path ? "" : path);
   };
+
+  // Get the filtered navigation items based on permissions
+  const visibleNavItems = getVisibleMenuItems();
 
   return (
     <div className="container-fluid">
@@ -241,15 +296,7 @@ const Dashboard = () => {
                 className="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start"
                 id="menu"
               >
-                {navItems.map((item) => {
-                  const hasAccess =
-                    (item.adminOnly && permissions.categoryId === 1) ||
-                    (!item.adminOnly && canAccessRoute(item.path));
-
-                  if (!hasAccess) {
-                    return null;
-                  }
-
+                {visibleNavItems.map((item) => {
                   if (item.subItems) {
                     return (
                       <li key={item.path} className="w-100">
@@ -268,7 +315,7 @@ const Dashboard = () => {
                           <i
                             className={`bi ${
                               openSubmenu === item.path
-                                ? "bi-chevron-up"
+                                ? "bi-chevron-down"
                                 : "bi-chevron-right"
                             } ms-2`}
                           ></i>
