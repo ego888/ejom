@@ -1763,4 +1763,134 @@ router.post("/order-reorder", verifyUser, async (req, res) => {
   }
 });
 
+// Add dashboard statistics routes
+router.get("/order_stats", (req, res) => {
+  const sql = `
+    SELECT 
+      COUNT(CASE WHEN status = 'Open' THEN 1 END) as open,
+      COUNT(CASE WHEN status = 'Printed' THEN 1 END) as printed,
+      COUNT(CASE WHEN status = 'Prod' THEN 1 END) as prod,
+      COUNT(CASE WHEN status = 'Ready' THEN 1 END) as finished,
+      COUNT(CASE WHEN status = 'Delivered' THEN 1 END) as delivered,
+      COUNT(CASE WHEN status = 'Billed' THEN 1 END) as billed
+    FROM orders
+  `;
+
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Query Error:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to fetch order statistics",
+      });
+    }
+    return res.json({ Status: true, Result: result[0] });
+  });
+});
+
+// Route to get monthly sales data for user and total
+router.get("/monthly_sales", verifyUser, (req, res) => {
+  const userId = req.user.id;
+  const currentDate = new Date();
+  const firstDayOfMonth = new Date(
+    currentDate.getFullYear(),
+    currentDate.getMonth(),
+    1
+  );
+  const lastDayOfMonth = new Date(
+    currentDate.getFullYear(),
+    currentDate.getMonth() + 1,
+    0
+  );
+
+  const formattedFirstDay = firstDayOfMonth.toISOString().split("T")[0];
+  const formattedLastDay = lastDayOfMonth.toISOString().split("T")[0];
+
+  const sql = `
+    SELECT 
+      (SELECT COALESCE(SUM(grandTotal), 0) 
+       FROM orders 
+       WHERE preparedBy = ? 
+         AND orderDate BETWEEN ? AND ?) as userMonthlySales,
+      (SELECT COALESCE(SUM(grandTotal), 0) 
+       FROM orders 
+       WHERE orderDate BETWEEN ? AND ?) as totalMonthlySales
+  `;
+
+  con.query(
+    sql,
+    [
+      userId,
+      formattedFirstDay,
+      formattedLastDay,
+      formattedFirstDay,
+      formattedLastDay,
+    ],
+    (err, result) => {
+      if (err) {
+        console.log("Query Error:", err);
+        return res.json({
+          Status: false,
+          Error: "Failed to fetch monthly sales data",
+        });
+      }
+      return res.json({ Status: true, Result: result[0] });
+    }
+  );
+});
+
+router.get("/recent_orders", (req, res) => {
+  const sql = `
+    SELECT 
+      o.orderID, 
+      c.clientName, 
+      o.projectName, 
+      o.status, 
+      DATE_FORMAT(o.orderDate, '%Y-%m-%d') as orderDate
+    FROM orders o
+    LEFT JOIN client c ON o.clientId = c.id
+    ORDER BY o.orderDate DESC
+    LIMIT 10
+  `;
+
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Query Error:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to fetch recent orders",
+      });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
+
+router.get("/overdue_orders", (req, res) => {
+  const sql = `
+    SELECT 
+      o.orderID, 
+      c.clientName, 
+      o.projectName,
+      o.status,
+      DATE_FORMAT(o.dueDate, '%Y-%m-%d') as dueDate,
+      DATEDIFF(CURDATE(), o.dueDate) as daysLate
+    FROM orders o
+    LEFT JOIN client c ON o.clientId = c.id
+    WHERE o.dueDate < CURDATE() AND o.status IN ('Prod', 'Finished')
+    ORDER BY o.dueDate ASC
+    LIMIT 10
+  `;
+
+  con.query(sql, (err, result) => {
+    if (err) {
+      console.log("Query Error:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to fetch overdue orders",
+      });
+    }
+    return res.json({ Status: true, Result: result });
+  });
+});
+
 export { router as OrderRouter };

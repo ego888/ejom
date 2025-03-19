@@ -17,6 +17,11 @@ import logo from "../assets/Go Large logo 2009C2 small.jpg";
 
 // Menu item constants
 const DASHBOARD = { path: "", icon: "bi-speedometer2", text: "Dashboard" };
+const DASHSALES = {
+  path: "dashsales",
+  icon: "bi-speedometer2",
+  text: "Dashboard",
+};
 const QUOTES = {
   path: "quotes",
   icon: "bi-file-earmark-text",
@@ -209,6 +214,7 @@ const Dashboard = () => {
     // All menu items
     const allNavItems = [
       DASHBOARD,
+      DASHSALES,
       QUOTES,
       ORDERS,
       CLIENT,
@@ -240,7 +246,7 @@ const Dashboard = () => {
 
     // Add role-specific items
     if (permissions.isSales) {
-      visibleItems.push(QUOTES, ORDERS, CLIENT, SALES_REPORT, SOA);
+      visibleItems.push(DASHSALES, QUOTES, ORDERS, CLIENT, SALES_REPORT, SOA);
     }
 
     if (permissions.isAccounting) {

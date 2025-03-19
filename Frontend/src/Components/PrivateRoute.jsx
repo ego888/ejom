@@ -46,6 +46,7 @@ const checkRouteAccess = (route, permissions) => {
   if (!permissions.isActive) return false;
 
   switch (route) {
+    case "dashsales":
     case "quotes":
     case "orders":
     case "client":
