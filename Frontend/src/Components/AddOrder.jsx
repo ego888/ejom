@@ -197,25 +197,6 @@ function AddOrder() {
       .catch((err) => console.log(err));
   };
 
-  // const fetchClients = async () => {
-  //   try {
-  //     const response = await axios.get(`${ServerIP}/auth/client-customer`);
-  //     if (response.data.Status) {
-  //       const result = response.data.Result || [];
-  //       setClients(result);
-  //     } else {
-  //       setAlert({
-  //         show: true,
-  //         title: "Error",
-  //         message: response.data.Error,
-  //         type: "alert",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     handleApiError(error, setAlert);
-  //   }
-  // };
-
   useEffect(() => {
     const token = localStorage.getItem("token");
     const config = {
@@ -481,31 +462,6 @@ function AddOrder() {
         });
     }
   };
-
-  // Helper function for error handling
-  // const handleError = (err) => {
-  //   if (
-  //     err.response?.status === 401 ||
-  //     err.response?.data?.Error?.includes("jwt expired") ||
-  //     err.response?.data?.Error?.includes("invalid token")
-  //   ) {
-  //     setAlert({
-  //       show: true,
-  //       title: "Error",
-  //       message: "Your session has expired. Please log out and log in again.",
-  //       type: "alert",
-  //     });
-  //     localStorage.removeItem("token");
-  //     navigate("/");
-  //   } else {
-  //     setAlert({
-  //       show: true,
-  //       title: "Error",
-  //       message: err.response?.data?.Error || "An error occurred",
-  //       type: "alert",
-  //     });
-  //   }
-  // };
 
   const handleDetailAdded = () => {
     fetchOrderDetails();

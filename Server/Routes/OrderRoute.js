@@ -1167,33 +1167,6 @@ router.put(
   }
 );
 
-// Update order detail ##
-// router.put("/order_details/:orderId/:displayOrder", (req, res) => {
-//   const { printHrs, ...otherData } = req.body;
-//   const data = {
-//     ...otherData,
-//     printHrs: Number(printHrs || 0),
-//   };
-
-//   const sql =
-//     "UPDATE order_details SET ? WHERE orderId = ? AND displayOrder = ?";
-
-//   con.query(
-//     sql,
-//     [data, req.params.orderId, req.params.displayOrder],
-//     (err, result) => {
-//       if (err) {
-//         console.log("Update Error:", err);
-//         return res.json({
-//           Status: false,
-//           Error: "Failed to update order detail",
-//         });
-//       }
-//       return res.json({ Status: true, Result: result });
-//     }
-//   );
-// });
-
 // Add new route to update order detail by ID
 router.put("/order_detail/:id", (req, res) => {
   const { id } = req.params;
@@ -1255,29 +1228,6 @@ router.put("/order_details-displayOrder/:detailId", (req, res) => {
   });
 });
 
-// Update noPrint status ##
-// router.put("/order_detail_noprint/:orderId/:displayOrder", (req, res) => {
-//   const { orderId, displayOrder } = req.params;
-//   const { noPrint } = req.body;
-
-//   const sql = `
-//     UPDATE order_details
-//     SET noPrint = ?
-//     WHERE orderId = ? AND displayOrder = ?
-//   `;
-
-//   con.query(sql, [noPrint, orderId, displayOrder], (err, result) => {
-//     if (err) {
-//       console.log("Update Error:", err);
-//       return res.json({
-//         Status: false,
-//         Error: "Failed to update noPrint status",
-//       });
-//     }
-//     return res.json({ Status: true, Result: result });
-//   });
-// });
-
 // Add new route to update noPrint status by detail ID
 router.put("/order_detail_noprint/:id", (req, res) => {
   const { id } = req.params;
@@ -1327,23 +1277,6 @@ router.post("/add_order_detail", (req, res) => {
     return res.json({ Status: true, Result: result });
   });
 });
-
-// Delete order detail ##
-// router.delete("/order_detail/:orderId/:displayOrder", (req, res) => {
-//   const orderId = req.params.orderId;
-//   const displayOrder = req.params.displayOrder;
-
-//   const sql =
-//     "DELETE FROM order_details WHERE orderId = ? AND displayOrder = ?";
-
-//   con.query(sql, [orderId, displayOrder], (err, result) => {
-//     if (err) {
-//       console.log(err);
-//       return res.json({ Status: false, Error: "Query Error" });
-//     }
-//     return res.json({ Status: true });
-//   });
-// });
 
 // Add new route to delete order detail by ID
 router.delete("/order_detail/:id", (req, res) => {
