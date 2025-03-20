@@ -48,14 +48,22 @@ const checkRouteAccess = (route, permissions) => {
   switch (route) {
     case "dashsales":
     case "quotes":
+    case "print_quote":
     case "orders":
+    case "print_order":
     case "client":
     case "sales-report":
     case "soa":
+    case "print_soa":
     case "reports":
       return permissions.isSales;
     case "prod":
     case "payment":
+    case "print_production":
+    case "prod_print_dr":
+    case "prod_print_one_dr":
+    case "soa":
+    case "print_soa":
       return permissions.isAccounting;
     case "artistlog":
       return permissions.isArtist;

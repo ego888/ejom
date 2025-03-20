@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 
 const SalesGauge = ({
@@ -9,8 +9,68 @@ const SalesGauge = ({
   size = 200,
   segments = 8,
 }) => {
+  // Add animation state
+  const [animatedValue, setAnimatedValue] = useState(1); // Start from almost zero
+  const [isAnimating, setIsAnimating] = useState(false);
+  const requestRef = useRef(null);
+  const startTimeRef = useRef(null);
+  const animationDuration = 4000; // Animation duration in ms
+  const prevValueRef = useRef(value);
+
+  // Reset animation when value changes
+  useEffect(() => {
+    // Only start animation if the value has changed or component just mounted
+    if (value !== prevValueRef.current) {
+      // Cancel any existing animation
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+      }
+
+      // Reset to starting position
+      setAnimatedValue(1);
+      setIsAnimating(true);
+
+      // Start new animation with slight delay
+      const timer = setTimeout(() => {
+        startTimeRef.current = performance.now();
+        requestRef.current = requestAnimationFrame(animateNeedle);
+      }, 400);
+
+      // Update previous value
+      prevValueRef.current = value;
+
+      return () => {
+        clearTimeout(timer);
+        cancelAnimationFrame(requestRef.current);
+      };
+    }
+  }, [value]); // Depend on value to retrigger animation when it changes
+
+  // Animation function
+  const animateNeedle = (timestamp) => {
+    if (!startTimeRef.current) startTimeRef.current = timestamp;
+    const elapsed = timestamp - startTimeRef.current;
+    const progress = Math.min(elapsed / animationDuration, 1);
+
+    // Ease-out function for smoother finish
+    const easeOutProgress = 1 - Math.pow(1 - progress, 3);
+
+    // Calculate intermediate value
+    const newValue = 1 + (value - 1) * easeOutProgress;
+    setAnimatedValue(newValue);
+
+    if (progress < 1) {
+      requestRef.current = requestAnimationFrame(animateNeedle);
+    } else {
+      setIsAnimating(false);
+    }
+  };
+
   // Calculate the percentage and angle for the needle
-  const percentage = Math.min(Math.max((value / maxValue) * 100, 0), 100);
+  const percentage = Math.min(
+    Math.max((animatedValue / maxValue) * 100, 0),
+    100
+  );
   const angle = percentage * 1.8 - 90; // Convert percentage to angle (-90 to 90 degrees)
 
   // Size calculations - adjust positioning to move gauge up
@@ -152,7 +212,7 @@ const SalesGauge = ({
   const formattedValue = `₱${formatValueWithUnit(value)}`;
 
   // Calculate percentage for display
-  const percentageText = `${Math.round(percentage)}% of target`;
+  const percentageText = `${Math.round((value / maxValue) * 100)}% of target`;
 
   return (
     <div
@@ -232,6 +292,7 @@ const SalesGauge = ({
 SalesGauge.propTypes = {
   value: PropTypes.number.isRequired,
   maxValue: PropTypes.number.isRequired,
+  targetValue: PropTypes.number,
   title: PropTypes.string,
   size: PropTypes.number,
   segments: PropTypes.number,
