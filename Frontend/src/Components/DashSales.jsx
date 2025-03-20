@@ -4,6 +4,7 @@ import { ServerIP } from "../config";
 import { jwtDecode } from "jwt-decode";
 import { Link } from "react-router-dom";
 import { formatPeso } from "../utils/orderUtils";
+import SalesGauge from "./UI/SalesGauge";
 import "./Dashboard.css";
 
 const DashSales = () => {
@@ -214,96 +215,31 @@ const DashSales = () => {
 
         {/* User Monthly Sales Chart */}
         <div className="col-md-6">
-          <div className="dashboard-section p-4">
+          <div className="dashboard-section p-4" style={{ minHeight: "250px" }}>
             <h5 className="text-center mb-3">Your Monthly Sales</h5>
-            <div className="speedometer-container">
-              <div className="speedometer-gauge">
-                <div
-                  className="speedometer-fill"
-                  style={{
-                    width: `${calculatePercentage(
-                      monthlySales.userMonthlySales,
-                      800000
-                    )}%`,
-                    backgroundColor:
-                      monthlySales.userMonthlySales >= 800000
-                        ? "#28a745"
-                        : monthlySales.userMonthlySales >= 600000
-                        ? "#5cb85c"
-                        : monthlySales.userMonthlySales >= 400000
-                        ? "#ffc107"
-                        : monthlySales.userMonthlySales >= 200000
-                        ? "#fd7e14"
-                        : "#dc3545",
-                  }}
-                ></div>
-              </div>
-              <div className="speedometer-markers">
-                <span>0</span>
-                <span>200k</span>
-                <span>400k</span>
-                <span>600k</span>
-                <span>800k</span>
-              </div>
-              <div className="speedometer-value mt-3 text-center">
-                <h3>{formatPeso(monthlySales.userMonthlySales)}</h3>
-                <p>Target: ₱800,000</p>
-                <p className="small text-muted">
-                  {Math.round(
-                    calculatePercentage(monthlySales.userMonthlySales, 800000)
-                  )}
-                  % of monthly target
-                </p>
-              </div>
-            </div>
+            <SalesGauge
+              value={monthlySales.userMonthlySales}
+              maxValue={800000}
+              targetValue={465000}
+              title="Target: ₱800K"
+              size={250}
+              segments={8}
+            />
           </div>
         </div>
 
         {/* Total Monthly Sales Chart */}
         <div className="col-md-6">
-          <div className="dashboard-section p-4">
+          <div className="dashboard-section p-4" style={{ minHeight: "250px" }}>
             <h5 className="text-center mb-3">Total Monthly Sales</h5>
-            <div className="speedometer-container">
-              <div className="speedometer-gauge">
-                <div
-                  className="speedometer-fill"
-                  style={{
-                    width: `${calculatePercentage(
-                      monthlySales.totalMonthlySales,
-                      2500000
-                    )}%`,
-                    backgroundColor:
-                      monthlySales.totalMonthlySales >= 2500000
-                        ? "#28a745"
-                        : monthlySales.totalMonthlySales >= 2000000
-                        ? "#5cb85c"
-                        : monthlySales.totalMonthlySales >= 1500000
-                        ? "#ffc107"
-                        : monthlySales.totalMonthlySales >= 1000000
-                        ? "#fd7e14"
-                        : "#dc3545",
-                  }}
-                ></div>
-              </div>
-              <div className="speedometer-markers">
-                <span>0</span>
-                <span>0.5M</span>
-                <span>1.0M</span>
-                <span>1.5M</span>
-                <span>2.0M</span>
-                <span>2.5M</span>
-              </div>
-              <div className="speedometer-value mt-3 text-center">
-                <h3>{formatCurrency(monthlySales.totalMonthlySales)}</h3>
-                <p>Target: ₱2,500,000</p>
-                <p className="small text-muted">
-                  {Math.round(
-                    calculatePercentage(monthlySales.totalMonthlySales, 2500000)
-                  )}
-                  % of monthly target
-                </p>
-              </div>
-            </div>
+            <SalesGauge
+              value={monthlySales.totalMonthlySales}
+              maxValue={2500000}
+              targetValue={2200000}
+              title="Target: ₱2.5M"
+              size={250}
+              segments={10}
+            />
           </div>
         </div>
       </div>
