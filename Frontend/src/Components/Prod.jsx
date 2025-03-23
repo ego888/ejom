@@ -350,7 +350,7 @@ function Prod() {
         show: true,
         title: "Invalid Status",
         message:
-          "Only orders with 'Open' or 'Printed' status can be marked for production.",
+          "Only 'Open' or 'Printed' status can be marked for production.",
         type: "alert",
       });
       return;
@@ -618,7 +618,7 @@ function Prod() {
               placeholder="Enter Order ID"
               value={orderIdInput}
               onChange={(e) => setOrderIdInput(e.target.value)}
-              onKeyPress={handleOrderIdSubmit}
+              onClick={handleOrderIdSubmit}
               style={{ width: "150px" }}
             />
             <Button
@@ -633,7 +633,7 @@ function Prod() {
               onClick={handlePrintDRClick}
               aria-label="Print DR"
             >
-              Print DR
+              Print All DR
             </Button>
           </div>
           <input
@@ -673,7 +673,7 @@ function Prod() {
               setHasClientFilter(isFilterActive)
             }
           />
-          <table className="table">
+          <table className="table table-striped table-hover">
             <thead>
               <tr>
                 <th onClick={handleForProdSort} style={{ cursor: "pointer" }}>
@@ -684,9 +684,9 @@ function Prod() {
                       indeterminate={forProdSort === "desc"}
                     />
                     {forProdSort === "desc"
-                      ? " ↑"
-                      : forProdSort === "asc"
                       ? " ↓"
+                      : forProdSort === "asc"
+                      ? " ↑"
                       : ""}
                   </div>
                 </th>
@@ -701,11 +701,12 @@ function Prod() {
                   Order ID {getSortIndicator("id")}
                 </th>
                 <th
-                  className="text-center"
+                  className={`text-center ${
+                    hasClientFilter ? "active-filter" : ""
+                  }`}
                   onClick={() => handleSort("clientName")}
                   style={{
                     cursor: "pointer",
-                    color: hasClientFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Client {getSortIndicator("clientName")}
@@ -754,7 +755,6 @@ function Prod() {
                   onClick={() => handleSort("salesName")}
                   style={{
                     cursor: "pointer",
-                    color: hasSalesFilter ? "#0d6efd" : "inherit",
                   }}
                 >
                   Sales {getSortIndicator("salesName")}
@@ -782,6 +782,12 @@ function Prod() {
                         checked={order.forProd || false}
                         onChange={(e) =>
                           handleForProdChange(order.id, e.target.checked)
+                        }
+                        hidden={
+                          !(
+                            order.status === "Open" ||
+                            order.status === "Printed"
+                          )
                         }
                       />
                     </div>

@@ -219,7 +219,9 @@ router.get("/orders", async (req, res) => {
         o.amountPaid,
         o.datePaid,
         e.name as salesName, 
-        o.orderReference
+        o.orderReference,
+        o.forProd,
+        o.forBill
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
