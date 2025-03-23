@@ -34,6 +34,7 @@ const Home = () => {
         isAdmin: decoded.categoryId === 1,
         isSales: decoded.sales === 1,
         isAccounting: decoded.accounting === 1,
+        isProduction: decoded.production === 1,
         isArtist: decoded.artist === 1,
         isOperator: decoded.operator === 1,
       });

@@ -15,6 +15,7 @@ const PrivateRoute = ({ children }) => {
       isAdmin: decoded.categoryId === 1,
       isSales: decoded.sales === 1,
       isAccounting: decoded.accounting === 1,
+      isProduction: decoded.production === 1,
       isArtist: decoded.artist === 1,
       isOperator: decoded.operator === 1,
       isActive: decoded.active === 1,
@@ -57,12 +58,17 @@ const checkRouteAccess = (route, permissions) => {
       return permissions.isSales;
     case "soa":
     case "print_soa":
-      return permissions.isSales || permissions.isAccounting;
+      return (
+        permissions.isSales ||
+        permissions.isAccounting ||
+        permissions.isProduction
+      );
     case "prod":
-    case "payment":
     case "print_production":
     case "prod_print_dr":
     case "prod_print_one_dr":
+      return permissions.isProduction;
+    case "payment":
       return permissions.isAccounting;
     case "artistlog":
       return permissions.isArtist;
@@ -83,7 +89,8 @@ const checkRouteAccess = (route, permissions) => {
 const getDefaultRoute = (permissions) => {
   if (permissions.categoryId === 1) return "/dashboard";
   if (permissions.isSales) return "/dashboard/dashsales";
-  if (permissions.isAccounting) return "/dashboard/prod";
+  if (permissions.isAccounting) return "/dashboard/payment";
+  if (permissions.isProduction) return "/dashboard/prod";
   if (permissions.isArtist) return "/dashboard/artistlog";
   if (permissions.isOperator) return "/dashboard/printlog";
   return "/"; // fallback to login

@@ -345,6 +345,7 @@ router.post("/login", (req, res) => {
               active: employee.active,
               sales: employee.sales,
               accounting: employee.accounting,
+              production: employee.production,
               artist: employee.artist,
               operator: employee.operator,
             },
