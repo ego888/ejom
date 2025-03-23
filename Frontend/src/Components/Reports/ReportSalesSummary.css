@@ -12,7 +12,6 @@
 
 .report-summary-container th {
   background-color: var(--reports-hover-bg);
-  color: var(--reports-text-color);
   font-weight: 600;
   border-bottom: 2px solid var(--reports-border-color);
 }

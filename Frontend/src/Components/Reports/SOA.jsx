@@ -137,7 +137,7 @@ const SOA = () => {
               <thead className="table-active">
                 <tr>
                   <th
-                    className="clickable"
+                    className="text-center"
                     onClick={() => handleSort("clientName")}
                     style={{ cursor: "pointer" }}
                   >
@@ -300,7 +300,7 @@ const SOA = () => {
                         : ""}
                     </td>
                     <td
-                      className={`text-end ${
+                      className={`text-end fw-bold ${
                         row.total_ar > 0 ? "clickable" : ""
                       }`}
                       onClick={() =>
