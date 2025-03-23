@@ -16,6 +16,7 @@ const ProfileUpdateModal = ({ show, onClose, userId, onUpdate }) => {
   });
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({});
+  const [isNewUser, setIsNewUser] = useState(false);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -35,10 +36,16 @@ const ProfileUpdateModal = ({ show, onClose, userId, onUpdate }) => {
       const response = await axios.get(
         `${ServerIP}/auth/get_employee/${userId}`
       );
+      console.log("RESPONSE:", response.data.Status);
       if (response.data.Status) {
         const userData = response.data.Result[0];
+        const userFullName = userData.fullName || "";
+
+        // Check if user is new (empty fullName) when data is first loaded
+        setIsNewUser(!userFullName.trim());
+
         setData({
-          fullName: userData.fullName || "",
+          fullName: userFullName,
           email: userData.email || "",
           cellNumber: userData.cellNumber || "",
           password: "",
@@ -71,11 +78,17 @@ const ProfileUpdateModal = ({ show, onClose, userId, onUpdate }) => {
       newErrors.email = "Email is invalid";
     }
 
-    if (data.password && data.password.length < 6) {
+    // Require password if user was originally a new user (had empty fullName when loaded)
+    if (isNewUser && !data.password) {
+      newErrors.password = "Password is required for new users";
+    } else if (data.password && data.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    if (data.password && data.password !== data.confirmPassword) {
+    if (
+      (isNewUser || data.password) &&
+      data.password !== data.confirmPassword
+    ) {
       newErrors.confirmPassword = "Passwords don't match";
     }
 
@@ -239,7 +252,9 @@ const ProfileUpdateModal = ({ show, onClose, userId, onUpdate }) => {
 
             <div className="mb-3">
               <label htmlFor="password" className="form-label">
-                New Password (leave blank to keep current)
+                {isNewUser
+                  ? "New Password (required for first-time setup)"
+                  : "New Password (leave blank to keep current)"}
               </label>
               <input
                 type="password"
@@ -248,6 +263,7 @@ const ProfileUpdateModal = ({ show, onClose, userId, onUpdate }) => {
                 name="password"
                 value={data.password}
                 onChange={handleChange}
+                required={isNewUser}
               />
               {errors.password && (
                 <div className="invalid-feedback d-block">
