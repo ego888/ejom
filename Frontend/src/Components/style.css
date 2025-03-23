@@ -270,7 +270,7 @@ a:hover {
   height: 100%;
 }
 
-/* Status badge styles */
+/* Status badge styles A 
 .status-badge {
   padding: 0.35em 0.65em;
   font-size: 0.75rem;
@@ -280,38 +280,127 @@ a:hover {
 }
 
 .status-badge.Open {
-  background-color: #0066ff; /* bg-primary */
+  background-color: #0066ff;
 }
 .status-badge.Printed {
-  background-color: #0d9dfd; /* bg-primary */
+  background-color: #0d9dfd;
 }
 .status-badge.Prod,
 .status-badge.Requote {
-  background-color: #52b084; /* bg-warning */
+  background-color: #52b084;
 }
 
 .status-badge.Finished {
-  background-color: #3aae78; /* bg-success */
+  background-color: #3aae78;
 }
 .status-badge.Delivered {
-  background-color: #27b171; /* bg-success */
+  background-color: #27b171;
 }
 .status-badge.Billed {
-  background-color: #00924e; /* bg-success */
+  background-color: #00924e;
 }
 .status-badge.Close,
 .status-badge.Closed {
-  background-color: #198754; /* bg-success */
+  background-color: #198754;
 }
 .status-badge.Loss,
 .status-badge.Cancel {
-  background-color: #dc3545; /* bg-danger */
+  background-color: #dc3545;
 }
-.status-badge.default {
-  background-color: #6c757d; /* bg-secondary */
+*/
+
+/* Status badges style B 
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
+
+.status-badge.Open {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.Printed {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.status-badge.Prod {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.status-badge.Finished {
+  background-color: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.status-badge.Delivered {
+  background-color: #e8eaf6;
+  color: #283593;
+}
+
+.status-badge.Billed,
+.status-badge.Requote {
+  background-color: #e0f2f1;
+  color: #00695c;
+}
+
+.status-badge.Closed {
+  background-color: #e1eed7;
+  color: #198754;
+}
+
+.status-badge.Cancel {
+  background-color: #ffebee;
+  color: #b71c1c;
+}
+*/
+
+/* Status badge styles A */
+.status-badge {
+  padding: 0.35em 0.65em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 0.25rem;
+  color: white;
+}
+
+.status-badge.Open {
+  background-color: #4caf50;
+}
+.status-badge.Printed {
+  background-color: #2196f3;
+}
+.status-badge.Prod,
+.status-badge.Requote {
+  background-color: #ff9800;
+}
+
+.status-badge.Finished {
+  background-color: #9c27b0;
+}
+.status-badge.Delivered {
+  background-color: #3f51b5;
+}
+.status-badge.Billed {
+  background-color: #ff00aa;
+}
+.status-badge.Close,
+.status-badge.Closed {
+  background-color: #198754;
+}
+.status-badge.Loss,
+.status-badge.Cancel {
+  background-color: #dc3545;
+}
+
 .status-badge.default {
-  background-color: #0d6efd; /* bg-primary */
+  background-color: #0d6efd;
 }
 
 .client-cell {

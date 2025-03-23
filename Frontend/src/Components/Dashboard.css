@@ -189,7 +189,7 @@
 }
 
 .dashboard-total {
-  background-color: #607d8b;
+  background-color: #ff00aa;
 }
 
 .card-value {
@@ -216,56 +216,6 @@
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #eee;
-}
-
-/* Status badges */
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.status-badge.Open {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-badge.Printed {
-  background-color: #e3f2fd;
-  color: #1565c0;
-}
-
-.status-badge.Prod {
-  background-color: #fff3e0;
-  color: #e65100;
-}
-
-.status-badge.Finished {
-  background-color: #f3e5f5;
-  color: #6a1b9a;
-}
-
-.status-badge.Delivered {
-  background-color: #e8eaf6;
-  color: #283593;
-}
-
-.status-badge.Billed {
-  background-color: #e0f2f1;
-  color: #00695c;
-}
-
-.status-badge.Closed {
-  background-color: #eeeeee;
-  color: #424242;
-}
-
-.status-badge.Cancel {
-  background-color: #ffebee;
-  color: #b71c1c;
 }
 
 /* Speedometer Gauge Styles */
