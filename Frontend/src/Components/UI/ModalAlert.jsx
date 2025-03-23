@@ -107,7 +107,9 @@ const ModalAlert = ({
               )}
             </div>
             <div className="modal-body">
-              <p id="alert-message">{message}</p>
+              <p id="alert-message" style={{ whiteSpace: "pre-line" }}>
+                {message}
+              </p>
             </div>
             <div className="modal-footer">
               {type === "confirm" && (

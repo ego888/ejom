@@ -1895,4 +1895,38 @@ router.get("/overdue_orders", (req, res) => {
   });
 });
 
+// Check if invoice number already exists
+router.get(
+  "/check-invoice-exists/:invoiceNum",
+  verifyUser,
+  async (req, res) => {
+    const invoiceNum = req.params.invoiceNum;
+
+    try {
+      const sql =
+        "SELECT orderID, clientId, projectName FROM orders WHERE invoiceNum = ?";
+
+      const existingOrders = await new Promise((resolve, reject) => {
+        con.query(sql, [invoiceNum], (err, result) => {
+          if (err) reject(err);
+          resolve(result);
+        });
+      });
+
+      return res.json({
+        Status: true,
+        exists: existingOrders.length > 0,
+        orders: existingOrders,
+      });
+    } catch (error) {
+      console.error("Error checking invoice number:", error);
+      return res.json({
+        Status: false,
+        Error: "Failed to check invoice number",
+        Details: error.message,
+      });
+    }
+  }
+);
+
 export { router as OrderRouter };

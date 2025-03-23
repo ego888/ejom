@@ -571,6 +571,44 @@ function Prod() {
     }
 
     try {
+      // First check if the invoice number already exists
+      const checkResponse = await axios.get(
+        `${ServerIP}/auth/check-invoice-exists/${invNumber.trim()}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      if (checkResponse.data.Status && checkResponse.data.exists) {
+        // Invoice number already exists, show confirmation dialog
+        const existingOrders = checkResponse.data.orders;
+        let orderInfo = "";
+
+        // Format existing order information
+        existingOrders.forEach((order) => {
+          orderInfo += `Order ID: ${order.orderID}, Project: ${order.projectName}\n`;
+        });
+
+        setAlert({
+          show: true,
+          title: "Warning",
+          message: `Invoice number ${invNumber.trim()} already exists for:\n${orderInfo}\nDo you want to continue?`,
+          type: "confirm",
+          onConfirm: () => updateInvoiceNumber(),
+        });
+        return;
+      }
+
+      // If it doesn't exist or user confirmed, proceed with update
+      updateInvoiceNumber();
+    } catch (error) {
+      handleApiError(error, setAlert);
+    }
+  };
+
+  // Function to update invoice number
+  const updateInvoiceNumber = async () => {
+    try {
       const response = await axios.put(
         `${ServerIP}/auth/update_order_invoice`,
         {
