@@ -409,7 +409,9 @@ function Prod() {
   };
 
   const handleOrderIdSubmit = async (e) => {
+    console.log("handleOrderIdSubmit", e);
     if (e.key === "Enter") {
+      console.log("handleOrderIdSubmit enter key", e.target.value);
       const orderId = e.target.value.trim();
       if (orderId) {
         try {
@@ -618,7 +620,7 @@ function Prod() {
               placeholder="Enter Order ID"
               value={orderIdInput}
               onChange={(e) => setOrderIdInput(e.target.value)}
-              onClick={handleOrderIdSubmit}
+              onKeyDown={handleOrderIdSubmit}
               style={{ width: "150px" }}
             />
             <Button
