@@ -14,6 +14,7 @@ import AddOrder from "./AddOrder";
 import "./Dashboard.css";
 import { ServerIP } from "../config";
 import logo from "../assets/Go Large logo 2009C2 small.jpg";
+import ProfileUpdateModal from "./UI/ProfileUpdateModal";
 
 // Menu item constants
 const DASHBOARD = { path: "", icon: "bi-speedometer2", text: "Dashboard" };
@@ -122,6 +123,8 @@ const Dashboard = () => {
     localStorage.getItem("userName") || ""
   );
   const [openSubmenu, setOpenSubmenu] = useState("");
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -157,6 +160,7 @@ const Dashboard = () => {
       };
 
       setPermissions(newPermissions);
+      setCurrentUserId(decoded.id);
 
       // Set employee name from decoded token and save to localStorage
       setEmployeeName(decoded.name);
@@ -207,6 +211,16 @@ const Dashboard = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userName"); // ✅ Remove stored name
     navigate("/");
+  };
+
+  const handleProfileClick = (e) => {
+    e.preventDefault();
+    setShowProfileModal(true);
+  };
+
+  const handleProfileUpdate = (updatedName) => {
+    setEmployeeName(updatedName);
+    localStorage.setItem("userName", updatedName);
   };
 
   // Get visible menu items based on user permissions
@@ -290,12 +304,12 @@ const Dashboard = () => {
             <div className="sidebar-header position-sticky top-0 bg-white">
               <img src={logo} alt="Company Logo" className="img-fluid mb-2" />
               <span className="fw-bolder">Job Order Monitoring System</span>
-              <Link to="/dashboard" className="sidebar-user">
+              <a href="#" className="sidebar-user" onClick={handleProfileClick}>
                 <i className="sidebar-user-icon bi bi-person-circle me-2"></i>
                 <span className="fw-bolder d-none d-sm-inline">
                   {employeeName}
                 </span>
-              </Link>
+              </a>
             </div>
             <div className="sidebar-nav-scroll">
               <ul
@@ -386,6 +400,15 @@ const Dashboard = () => {
           <Outlet />
         </div>
       </div>
+
+      {showProfileModal && currentUserId && (
+        <ProfileUpdateModal
+          show={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          userId={currentUserId}
+          onUpdate={handleProfileUpdate}
+        />
+      )}
     </div>
   );
 };

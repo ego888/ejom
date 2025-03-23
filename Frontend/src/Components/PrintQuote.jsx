@@ -27,30 +27,39 @@ function PrintQuote() {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        const [quoteResponse, employeesResponse, companyResponse] =
-          await Promise.all([
-            axios.get(`${ServerIP}/auth/quote/${id}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-            axios.get(`${ServerIP}/auth/sales_employees`, {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-            axios.get(`${ServerIP}/auth/jomcontrol`, {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-          ]);
+        const [quoteResponse, companyResponse] = await Promise.all([
+          axios.get(`${ServerIP}/auth/quote/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`${ServerIP}/auth/jomcontrol`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
         if (quoteResponse.data.Status) {
           const quoteData = quoteResponse.data.Result;
           setQuote(quoteData);
 
-          // Find employee name
-          if (employeesResponse.data.Status) {
-            const employee = employeesResponse.data.Result.find(
-              (emp) => emp.id === quoteData.preparedBy
-            );
-            if (employee) {
-              quoteData.preparedByName = employee.name;
+          console.log("quote.preparedby", quoteData.preparedBy);
+          // Fetch complete employee data if preparedBy exists
+          if (quoteData.preparedBy) {
+            try {
+              const employeeResponse = await axios.get(
+                `${ServerIP}/employee/detail/${quoteData.preparedBy}`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                }
+              );
+
+              if (employeeResponse.data && employeeResponse.data.length > 0) {
+                const employeeData = employeeResponse.data[0];
+                quoteData.preparedByName =
+                  employeeData.fullName || employeeData.name;
+                quoteData.preparedByEmail = employeeData.email || "";
+                quoteData.preparedByCellNumber = employeeData.cellNumber || "";
+              }
+            } catch (empErr) {
+              console.error("Error fetching employee details:", empErr);
             }
           }
 
@@ -291,8 +300,10 @@ function PrintQuote() {
         <div className="quote-footer-section">
           <div className="prepared-by">
             <div className="signature-line">
-              <span>Prepared By: </span>
-              <span className="line">{quote.preparedByName}</span>
+              <div className="underline">_________________</div>
+              <div>Prepared By: {quote.preparedByName}</div>
+              <div>Cellphone: {quote.preparedByCellNumber}</div>
+              <div>Email: {quote.preparedByEmail}</div>
             </div>
             <div className="terms-delivery">
               <div>Delivery: {companyInfo?.quoteDelivery}</div>

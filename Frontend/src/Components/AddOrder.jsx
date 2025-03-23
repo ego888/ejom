@@ -1879,7 +1879,7 @@ function AddOrder() {
                     <th>Qty</th>
                     <th>Width</th>
                     <th>Height</th>
-                    <th>Unit</th>
+                    <th>Unit Measure</th>
                     <th>Material</th>
                     <th>Per Sq Ft</th>
                     <th>Price</th>

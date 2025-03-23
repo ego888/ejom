@@ -378,7 +378,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                 <th scope="col">W</th>
                 <th scope="col">H</th>
                 <th scope="col" style={{ width: "45px" }}>
-                  Unit
+                  Unit Measure
                 </th>
                 <th scope="col">Material</th>
                 <th scope="col">Description</th>

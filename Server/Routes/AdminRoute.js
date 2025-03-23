@@ -460,6 +460,77 @@ router.get("/payment-types", async (req, res) => {
   }
 });
 
+// Add a new route for user profile updates
+router.put("/employee/update_profile/:id", verifyUser, (req, res) => {
+  const id = req.params.id;
+  const userId = req.user.id;
+
+  // Check if the user is updating their own profile or if they are an admin
+  if (Number(id) !== userId && req.user.categoryId !== 1) {
+    return res.status(403).json({
+      Status: false,
+      Error: "You can only update your own profile",
+    });
+  }
+
+  // If password is included, hash it
+  if (req.body.password && req.body.password.trim() !== "") {
+    bcrypt.hash(req.body.password, 10, (err, hash) => {
+      if (err) {
+        console.log("Hashing error:", err);
+        return res.json({ Status: false, Error: "Password hashing error" });
+      }
+
+      const sql = `
+        UPDATE employee 
+        SET fullName = ?, email = ?, cellNumber = ?, password = ?
+        WHERE id = ?
+      `;
+
+      const values = [
+        req.body.fullName,
+        req.body.email,
+        req.body.cellNumber || null,
+        hash,
+        id,
+      ];
+
+      con.query(sql, values, (err, result) => {
+        if (err) {
+          console.log("Profile update error:", err);
+          return res.json({ Status: false, Error: "Failed to update profile" });
+        }
+        return res.json({
+          Status: true,
+          Result: "Profile updated successfully",
+        });
+      });
+    });
+  } else {
+    // Update without changing password
+    const sql = `
+      UPDATE employee 
+      SET fullName = ?, email = ?, cellNumber = ?
+      WHERE id = ?
+    `;
+
+    const values = [
+      req.body.fullName,
+      req.body.email,
+      req.body.cellNumber || null,
+      id,
+    ];
+
+    con.query(sql, values, (err, result) => {
+      if (err) {
+        console.log("Profile update error:", err);
+        return res.json({ Status: false, Error: "Failed to update profile" });
+      }
+      return res.json({ Status: true, Result: "Profile updated successfully" });
+    });
+  }
+});
+
 // Add this error handling middleware after all your routes
 router.use((err, req, res, next) => {
   console.error("Router Error:", err);

@@ -82,7 +82,7 @@ const checkRouteAccess = (route, permissions) => {
 // Helper function to get default route based on permissions
 const getDefaultRoute = (permissions) => {
   if (permissions.categoryId === 1) return "/dashboard";
-  if (permissions.isSales) return "/dashboard/quotes";
+  if (permissions.isSales) return "/dashboard/dashsales";
   if (permissions.isAccounting) return "/dashboard/prod";
   if (permissions.isArtist) return "/dashboard/artistlog";
   if (permissions.isOperator) return "/dashboard/printlog";

@@ -142,14 +142,17 @@
 }
 
 .signature-line {
-  margin: 15px 0;
+  margin-bottom: 10px;
 }
 
-.signature-line .line {
-  border-bottom: 1px solid #000;
-  display: inline-block;
-  min-width: 200px;
-  margin-left: 10px;
+.signature-line .underline {
+  margin-bottom: 5px;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.signature-line div {
+  margin-bottom: 3px;
 }
 
 .terms-delivery {
