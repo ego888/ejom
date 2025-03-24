@@ -1895,18 +1895,12 @@ function AddOrder() {
                     const uniqueId = `${detail.Id}`;
                     return (
                       <tr
-                        key={uniqueId} // Change the key
+                        key={uniqueId}
                         className={
                           detail.noPrint === 1
                             ? "centered-cell no-print"
                             : "centered-cell"
                         }
-                        style={{ cursor: canEdit() ? "pointer" : "default" }}
-                        onDoubleClick={() => {
-                          if (canEdit()) {
-                            handleNoPrintToggle(detail.Id, detail.noPrint);
-                          }
-                        }}
                       >
                         {editingRowId === detail.Id.toString() ? (
                           <>
@@ -2287,7 +2281,7 @@ function AddOrder() {
                         ) : (
                           <>
                             <td>
-                              {editingDisplayOrder === `${detail.id}` ? (
+                              {editingDisplayOrder === `${detail.Id}` ? (
                                 <input
                                   type="number"
                                   className="form-input detail"
@@ -2327,6 +2321,9 @@ function AddOrder() {
                                     setEditingDisplayOrder(`${detail.Id}`);
                                     setTempDisplayOrder(detail.displayOrder);
                                   }}
+                                  style={{
+                                    cursor: canEdit() ? "pointer" : "default",
+                                  }}
                                 >
                                   {detail.displayOrder}
                                 </span>
@@ -2339,20 +2336,100 @@ function AddOrder() {
                             <td className="centered-cell">{detail.height}</td>
                             <td className="centered-cell">{detail.unit}</td>
                             <td className="centered-cell">{detail.material}</td>
-                            <td className="centered-cell">{detail.perSqFt}</td>
-                            <td className="numeric-cell">
+                            <td
+                              className="centered-cell"
+                              style={{
+                                cursor: canEdit() ? "pointer" : "default",
+                              }}
+                              onDoubleClick={() => {
+                                if (canEdit()) {
+                                  handleNoPrintToggle(
+                                    detail.Id,
+                                    detail.noPrint
+                                  );
+                                }
+                              }}
+                            >
+                              {detail.perSqFt}
+                            </td>
+                            <td
+                              className="numeric-cell"
+                              style={{
+                                cursor: canEdit() ? "pointer" : "default",
+                              }}
+                              onDoubleClick={() => {
+                                if (canEdit()) {
+                                  handleNoPrintToggle(
+                                    detail.Id,
+                                    detail.noPrint
+                                  );
+                                }
+                              }}
+                            >
                               {formatNumber(detail.unitPrice)}
                             </td>
-                            <td className="numeric-cell">
+                            <td
+                              className="numeric-cell"
+                              style={{
+                                cursor: canEdit() ? "pointer" : "default",
+                              }}
+                              onDoubleClick={() => {
+                                if (canEdit()) {
+                                  handleNoPrintToggle(
+                                    detail.Id,
+                                    detail.noPrint
+                                  );
+                                }
+                              }}
+                            >
                               {formatNumber(detail.discount)}
                             </td>
-                            <td className="numeric-cell">
+                            <td
+                              className="numeric-cell"
+                              style={{
+                                cursor: canEdit() ? "pointer" : "default",
+                              }}
+                              onDoubleClick={() => {
+                                if (canEdit()) {
+                                  handleNoPrintToggle(
+                                    detail.Id,
+                                    detail.noPrint
+                                  );
+                                }
+                              }}
+                            >
                               {formatNumber(detail.amount)}
                             </td>
-                            <td style={{ whiteSpace: "pre-line" }}>
+                            <td
+                              style={{ whiteSpace: "pre-line" }}
+                              style={{
+                                cursor: canEdit() ? "pointer" : "default",
+                              }}
+                              onDoubleClick={() => {
+                                if (canEdit()) {
+                                  handleNoPrintToggle(
+                                    detail.Id,
+                                    detail.noPrint
+                                  );
+                                }
+                              }}
+                            >
                               {detail.itemDescription}
                             </td>
-                            <td style={{ whiteSpace: "pre-line" }}>
+                            <td
+                              style={{ whiteSpace: "pre-line" }}
+                              style={{
+                                cursor: canEdit() ? "pointer" : "default",
+                              }}
+                              onDoubleClick={() => {
+                                if (canEdit()) {
+                                  handleNoPrintToggle(
+                                    detail.Id,
+                                    detail.noPrint
+                                  );
+                                }
+                              }}
+                            >
                               {detail.remarks}
                             </td>
                             <td>
