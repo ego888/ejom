@@ -73,7 +73,7 @@ router.get("/quotes", verifyUser, async (req, res) => {
       WHERE ${whereClause}
     `;
 
-    // Main data query
+    // Main data query with DATE_FORMAT for dates
     const dataSql = `
       SELECT 
         q.quoteId as id,
@@ -82,8 +82,8 @@ router.get("/quotes", verifyUser, async (req, res) => {
         q.projectName,
         q.preparedBy,
         q.orderedBy,
-        q.quoteDate,
-        q.dueDate,
+        DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
+        DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
         q.status,
         q.refId as quoteReference,
         q.totalAmount,
@@ -92,15 +92,14 @@ router.get("/quotes", verifyUser, async (req, res) => {
         q.grandTotal,
         q.totalHrs,
         q.terms,
-        q.lastEdited,
+        DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastEdited,
         q.editedBy,
         q.statusRem,
         q.email,
         q.cellNumber,
         q.telNum,
         q.status,
-        e.name as salesName,
-        q.lastEdited
+        e.name as salesName
       FROM quotes q
       LEFT JOIN client c ON q.clientId = c.id
       LEFT JOIN employee e ON q.preparedBy = e.id
@@ -145,14 +144,14 @@ router.get("/quote/:id", async (req, res) => {
     const sql = `
       SELECT 
         q.*,
-        DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as QuoteDate,
-        DATE_FORMAT(q.dueDate, '%Y-%m-%d') as DueDate,
-        DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as LastEdited,
+        DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
+        DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
+        DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastEdited,
         c.clientName,
         e.name as PreparedBy
       FROM quotes q
-      LEFT JOIN clients c ON q.clientId = c.clientId
-      LEFT JOIN users u ON q.preparedBy = u.id
+      LEFT JOIN client c ON q.clientId = c.id
+      LEFT JOIN employee e ON q.preparedBy = e.id
       WHERE q.quoteId = ?
     `;
 
@@ -162,10 +161,11 @@ router.get("/quote/:id", async (req, res) => {
       return res.json({ Status: false, Error: "Quote not found" });
     }
 
-    // Convert decimal fields to float
+    // Convert decimal fields to float and ensure preparedBy is a number
     const quote = results[0];
     const parsedQuote = {
       ...quote,
+      preparedBy: Number(quote.preparedBy) || 0,
       totalAmount: parseFloat(quote.totalAmount) || 0,
       amountDiscount: parseFloat(quote.amountDiscount) || 0,
       percentDisc: parseFloat(quote.percentDisc) || 0,
@@ -265,7 +265,7 @@ router.get("/quote-detail/:id", verifyUser, async (req, res) => {
 
     // Get client name
     const [clientResults] = await pool.query(
-      "SELECT clientName FROM clients WHERE clientId = ?",
+      "SELECT clientName FROM client WHERE clientId = ?",
       [quotes[0].clientId]
     );
 
