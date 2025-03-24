@@ -100,7 +100,7 @@ router.get("/quotes", verifyUser, async (req, res) => {
         q.telNum,
         q.status,
         e.name as salesName,
-        q.lastEdited,
+        q.lastEdited
       FROM quotes q
       LEFT JOIN client c ON q.clientId = c.id
       LEFT JOIN employee e ON q.preparedBy = e.id
@@ -140,34 +140,30 @@ router.get("/quotes", verifyUser, async (req, res) => {
 });
 
 // Get single quote
-router.get("/quote/:id", (req, res) => {
-  const sql = `
-    SELECT 
-      q.*,
-      DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
-      DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
-      DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited,
-      q.clientName,
-      c.customerName,
-      e.id as preparedBy
-    FROM quotes q
-    LEFT JOIN client c ON q.clientId = c.id
-    LEFT JOIN employee e ON q.preparedBy = e.id
-    WHERE q.quoteId = ?
-  `;
+router.get("/quote/:id", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        q.*,
+        DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as QuoteDate,
+        DATE_FORMAT(q.dueDate, '%Y-%m-%d') as DueDate,
+        DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as LastEdited,
+        c.clientName,
+        e.name as PreparedBy
+      FROM quotes q
+      LEFT JOIN clients c ON q.clientId = c.clientId
+      LEFT JOIN users u ON q.preparedBy = u.id
+      WHERE q.quoteId = ?
+    `;
 
-  pool.query(sql, [req.params.id], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+    const [results] = await pool.query(sql, [req.params.id]);
 
-    if (result.length === 0) {
+    if (results.length === 0) {
       return res.json({ Status: false, Error: "Quote not found" });
     }
 
     // Convert decimal fields to float
-    const quote = result[0];
+    const quote = results[0];
     const parsedQuote = {
       ...quote,
       totalAmount: parseFloat(quote.totalAmount) || 0,
@@ -180,68 +176,72 @@ router.get("/quote/:id", (req, res) => {
     console.log("Processed Quote:", parsedQuote); // Debug log
 
     return res.json({ Status: true, Result: parsedQuote });
-  });
+  } catch (error) {
+    console.error("Error fetching quote:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
 });
 
 // Get next display order for quote details
-router.get("/next_display_quote/:quoteId", (req, res) => {
-  const { quoteId } = req.params;
-  const sql =
-    "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM quote_details WHERE quoteId = ?";
+router.get("/next_display_quote/:quoteId", async (req, res) => {
+  try {
+    const { quoteId } = req.params;
+    const sql =
+      "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM quote_details WHERE quoteId = ?";
 
-  pool.query(sql, [quoteId], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    const maxOrder = result[0].maxOrder;
+    const [results] = await pool.query(sql, [quoteId]);
+    const maxOrder = results[0].maxOrder;
     const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
+
     return res.json({ Status: true, Result: nextDisplayOrder });
-  });
+  } catch (error) {
+    console.error("Error getting next display order:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
 });
 
 // Get quote details
-router.get("/quote_details/:quoteId", (req, res) => {
-  const sql = `
-    SELECT 
-      qd.*,
-      q.clientName,
-      c.customerName,
-      e.name as preparedByName
-    FROM quote_details qd
-    LEFT JOIN quotes q ON qd.quoteId = q.quoteId
-    LEFT JOIN client c ON q.clientId = c.id
-    LEFT JOIN employee e ON q.preparedBy = e.id
-    WHERE qd.quoteId = ?
-    ORDER BY qd.displayOrder
-  `;
+router.get("/quote_details/:quoteId", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        qd.*,
+        q.clientName,
+        c.customerName,
+        e.name as PreparedByName
+      FROM quote_details qd
+      LEFT JOIN quotes q ON qd.quoteId = q.quoteId
+      LEFT JOIN client c ON q.clientId = c.id
+      LEFT JOIN employee e ON q.preparedBy = e.id
+      WHERE qd.quoteId = ?
+      ORDER BY qd.displayOrder
+    `;
 
-  pool.query(sql, [req.params.quoteId], (err, result) => {
-    if (err) {
-      console.log("Select Error:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
+    const [results] = await pool.query(sql, [req.params.quoteId]);
+    return res.json({ Status: true, Result: results });
+  } catch (error) {
+    console.error("Error fetching quote details:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
 });
 
 // Get quote statuses
-router.get("/quote-statuses", (req, res) => {
-  const sql = `
-    SELECT 
-      statusId,
-      step
-    FROM quoteStatus 
-    ORDER BY step ASC
-  `;
+router.get("/quote-statuses", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        statusId,
+        step
+      FROM quoteStatus 
+      ORDER BY step ASC
+    `;
 
-  pool.query(sql, (err, result) => {
-    if (err) {
-      console.error("Error fetching status options:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true, Result: result });
-  });
+    const [results] = await pool.query(sql);
+    return res.json({ Status: true, Result: results });
+  } catch (error) {
+    console.error("Error fetching status options:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
 });
 
 // Get quote detail
@@ -299,214 +299,223 @@ router.get("/quote-detail/:id", verifyUser, async (req, res) => {
 // ============= PUT Routes =============
 
 // Update quote's last edited info and total hours
-router.put("/quotes/:quoteId/update_edited_info", (req, res) => {
-  const sql = `
-    UPDATE quotes 
-    SET last_edited = ?,
-        edited_by = ?,
-        total_hrs = ?
-    WHERE quote_id = ?
-  `;
+router.put("/quotes/:quoteId/update_edited_info", async (req, res) => {
+  try {
+    const sql = `
+      UPDATE quotes 
+      SET lastEdited = ?,
+          editedBy = ?,
+          totalHrs = ?
+      WHERE quoteId = ?
+    `;
 
-  pool.query(
-    sql,
-    [
+    const [result] = await pool.query(sql, [
       req.body.lastEdited,
       req.body.editedBy,
       req.body.totalHrs,
       req.params.quoteId,
-    ],
-    (err, result) => {
-      if (err) {
-        console.log("Error updating quote edited info:", err);
-        return res.json({
-          Status: false,
-          Error: "Failed to update quote edited info",
-        });
-      }
-      return res.json({ Status: true });
-    }
-  );
+    ]);
+
+    return res.json({ Status: true, Result: result });
+  } catch (error) {
+    console.error("Error updating quote edited info:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update quote edited info: " + error.message,
+    });
+  }
 });
 
 // Update quote all fields
-router.put("/update_quote/:id", (req, res) => {
-  const sql = `
-    UPDATE quotes 
-    SET 
-        clientId = ?,
-        clientName = ?, 
-        projectName = ?,
-        preparedBy = ?,
-        quoteDate = ?,
-        orderedBy = ?,
-        refId = ?,
-        email = ?,
-        cellNumber = ?,
-        telNum = ?,
-        statusRem = ?,
-        dueDate = ?,
-        totalAmount = ?,
-        amountDiscount = ?,
-        percentDisc = ?,
-        grandTotal = ?,
-        totalHrs = ?,
-        editedBy = ?,
-        terms = ?,
-        lastEdited = CURRENT_TIMESTAMP
-    WHERE quoteId = ?
-  `;
+router.put("/update_quote/:id", async (req, res) => {
+  try {
+    const sql = `
+      UPDATE quotes 
+      SET 
+          clientId = ?,
+          clientName = ?, 
+          projectName = ?,
+          preparedBy = ?,
+          quoteDate = ?,
+          orderedBy = ?,
+          refId = ?,
+          email = ?,
+          cellNumber = ?,
+          telNum = ?,
+          statusRem = ?,
+          dueDate = ?,
+          totalAmount = ?,
+          amountDiscount = ?,
+          percentDisc = ?,
+          grandTotal = ?,
+          totalHrs = ?,
+          editedBy = ?,
+          terms = ?,
+          lastEdited = CURRENT_TIMESTAMP
+      WHERE quoteId = ?
+    `;
 
-  const values = [
-    req.body.clientId || 0,
-    req.body.clientName ? req.body.clientName.toUpperCase() : null,
-    req.body.projectName,
-    req.body.preparedBy,
-    req.body.quoteDate || null,
-    req.body.orderedBy || null,
-    req.body.refId || null,
-    req.body.email || null,
-    req.body.cellNumber || null,
-    req.body.telNum || null,
-    req.body.statusRem || null,
-    req.body.dueDate || null,
-    req.body.totalAmount || 0,
-    req.body.amountDiscount || 0,
-    req.body.percentDisc || 0,
-    req.body.grandTotal || 0,
-    req.body.totalHrs || 0,
-    req.body.editedBy,
-    req.body.terms || null,
-    req.params.id,
-  ];
+    const values = [
+      req.body.clientId || 0,
+      req.body.clientName ? req.body.clientName.toUpperCase() : null,
+      req.body.projectName,
+      req.body.preparedBy,
+      req.body.quoteDate || null,
+      req.body.orderedBy || null,
+      req.body.refId || null,
+      req.body.email || null,
+      req.body.cellNumber || null,
+      req.body.telNum || null,
+      req.body.statusRem || null,
+      req.body.dueDate || null,
+      req.body.totalAmount || 0,
+      req.body.amountDiscount || 0,
+      req.body.percentDisc || 0,
+      req.body.grandTotal || 0,
+      req.body.totalHrs || 0,
+      req.body.editedBy,
+      req.body.terms || null,
+      req.params.id,
+    ];
 
-  pool.query(sql, values, (err, result) => {
-    if (err) {
-      console.log("Update Error:", err);
-      return res.json({ Status: false, Error: "Failed to update quote" });
-    }
+    const [result] = await pool.query(sql, values);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (error) {
+    console.error("Update Error:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update quote: " + error.message,
+    });
+  }
 });
 
 // Update quote totals
-router.put("/quotes/update_totals/:id", (req, res) => {
-  const sql = `
-    UPDATE quotes 
-    SET 
-        totalAmount = ?,
-        amountDiscount = ?,
-        percentDisc = ?,
-        grandTotal = ?,
-        totalHrs = ?,
-        editedBy = ?,
-        lastEdited = CURRENT_TIMESTAMP
-    WHERE quoteId = ?
-  `;
+router.put("/quotes/update_totals/:id", async (req, res) => {
+  try {
+    const sql = `
+      UPDATE quotes 
+      SET 
+          totalAmount = ?,
+          amountDiscount = ?,
+          percentDisc = ?,
+          grandTotal = ?,
+          totalHrs = ?,
+          editedBy = ?,
+          lastEdited = CURRENT_TIMESTAMP
+      WHERE quoteId = ?
+    `;
 
-  const values = [
-    req.body.totalAmount || 0,
-    req.body.amountDiscount || 0,
-    req.body.percentDisc || 0,
-    req.body.grandTotal || 0,
-    req.body.totalHrs || 0,
-    req.body.editedBy,
-    req.params.id,
-  ];
+    const values = [
+      req.body.totalAmount || 0,
+      req.body.amountDiscount || 0,
+      req.body.percentDisc || 0,
+      req.body.grandTotal || 0,
+      req.body.totalHrs || 0,
+      req.body.editedBy,
+      req.params.id,
+    ];
 
-  pool.query(sql, values, (err, result) => {
-    if (err) {
-      console.log("Update Totals Error:", err);
-      return res.json({
-        Status: false,
-        Error: "Failed to update quote totals",
-      });
-    }
+    const [result] = await pool.query(sql, values);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (error) {
+    console.error("Update Totals Error:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update quote totals: " + error.message,
+    });
+  }
 });
 
 // Update quote detail display order. Updates a single detail's order
-router.put("/quote_detail_display_order/:quoteId/:detailId", (req, res) => {
-  const { quoteId, detailId } = req.params;
-  const { displayOrder } = req.body;
+router.put(
+  "/quote_detail_display_order/:quoteId/:detailId",
+  async (req, res) => {
+    try {
+      const { quoteId, detailId } = req.params;
+      const { displayOrder } = req.body;
 
-  if (!quoteId || !displayOrder || !detailId) {
-    return res.json({ Status: false, Error: "Missing required parameters" });
-  }
-
-  const sql = `
-    UPDATE quote_details 
-    SET displayOrder = ? 
-    WHERE quoteId = ? 
-    AND id = ?
-  `;
-
-  pool.query(sql, [displayOrder, quoteId, detailId], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    return res.json({ Status: true });
-  });
-});
-
-// Update quote details
-router.put("/quote_details/:quoteId/:displayOrder", (req, res) => {
-  const data = {
-    Id: req.body.Id,
-    quoteId: req.body.quoteId,
-    displayOrder: req.body.displayOrder,
-    quantity: req.body.quantity,
-    width: req.body.width,
-    height: req.body.height,
-    unit: req.body.unit,
-    material: req.body.material,
-    unitPrice: req.body.unitPrice,
-    discount: req.body.discount,
-    amount: req.body.amount,
-    persqft: req.body.persqft,
-    itemDescription: req.body.itemDescription,
-    squareFeet: req.body.squareFeet,
-    materialUsage: req.body.materialUsage,
-    printHours: req.body.printHours,
-  };
-
-  const sql = `
-    UPDATE quote_details 
-    SET ? 
-    WHERE quoteId = ? AND displayOrder = ?
-  `;
-
-  pool.query(
-    sql,
-    [data, req.params.quoteId, req.params.displayOrder],
-    (err, result) => {
-      if (err) {
-        console.log("Error updating quote detail:", err);
+      if (!quoteId || !displayOrder || !detailId) {
         return res.json({
           Status: false,
-          Error: "Failed to update quote detail",
+          Error: "Missing required parameters",
         });
       }
-      return res.json({ Status: true });
+
+      const sql = `
+      UPDATE quote_details 
+      SET displayOrder = ? 
+      WHERE quoteId = ? 
+      AND id = ?
+    `;
+
+      const [result] = await pool.query(sql, [displayOrder, quoteId, detailId]);
+      return res.json({ Status: true, Result: result });
+    } catch (error) {
+      console.error("Error updating display order:", error);
+      return res.json({ Status: false, Error: error.message });
     }
-  );
+  }
+);
+
+// Update quote details
+router.put("/quote_details/:quoteId/:displayOrder", async (req, res) => {
+  try {
+    const data = {
+      Id: req.body.Id,
+      quoteId: req.body.quoteId,
+      displayOrder: req.body.displayOrder,
+      quantity: req.body.quantity,
+      width: req.body.width,
+      height: req.body.height,
+      unit: req.body.unit,
+      material: req.body.material,
+      unitPrice: req.body.unitPrice,
+      discount: req.body.discount,
+      amount: req.body.amount,
+      persqft: req.body.persqft,
+      itemDescription: req.body.itemDescription,
+      squareFeet: req.body.squareFeet,
+      materialUsage: req.body.materialUsage,
+      printHours: req.body.printHours,
+    };
+
+    const sql = `
+      UPDATE quote_details 
+      SET ? 
+      WHERE quoteId = ? AND displayOrder = ?
+    `;
+
+    const [result] = await pool.query(sql, [
+      data,
+      req.params.quoteId,
+      req.params.displayOrder,
+    ]);
+    return res.json({ Status: true, Result: result });
+  } catch (error) {
+    console.error("Error updating quote detail:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update quote detail: " + error.message,
+    });
+  }
 });
 
 // Update quote status
-router.put("/quote/status/:id", (req, res) => {
-  const id = req.params.id;
-  const { status } = req.body;
-  console.log("quoteId:", id, "Status:", status);
-  const sql = "UPDATE quotes SET status = ? WHERE quoteId = ?";
-  pool.query(sql, [status, id], (err, result) => {
-    if (err) {
-      console.error("Error updating quote status:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+router.put("/quote/status/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+
+    console.log("quoteId:", id, "Status:", status);
+
+    const sql = "UPDATE quotes SET status = ? WHERE quoteId = ?";
+    const [result] = await pool.query(sql, [status, id]);
+
     return res.json({ Status: true, Result: result });
-  });
+  } catch (error) {
+    console.error("Error updating quote status:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
 });
 
 // ============= POST Routes =============
