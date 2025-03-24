@@ -1,19 +1,16 @@
 #!/bin/bash
 
 # Prompt user for confirmation
-read -p "⚠️ This will overwrite your local changes. Are you sure? (y/N): " confirm
+read -p "📥 This will pull the latest changes. Your local files (including .gitignored ones) will NOT be touched. Continue? (y/N): " confirm
 
 # Convert input to lowercase
 confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
 
 if [[ "$confirm" == "y" || "$confirm" == "yes" ]]; then
-  echo "🔄 Fetching latest changes..."
-  git fetch --all
-  echo "⚠️ Resetting local changes to match remote..."
-  git reset --hard origin/main  # Replace 'main' with your branch name
-  echo "📥 Pulling latest changes..."
-  git pull origin main
-  echo "✅ Update complete!"
+  echo "🔄 Fetching and pulling latest changes..."
+  git pull origin main  # Replace 'main' with your branch name if different
+  echo "✅ Update complete! Your local setup files were not affected."
 else
   echo "❌ Operation canceled."
 fi
+
