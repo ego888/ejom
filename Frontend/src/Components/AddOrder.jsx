@@ -505,34 +505,76 @@ function AddOrder() {
     }
   };
 
+  // const handleDetailAdded = () => {
+  //   if (!isHeaderSaved) {
+  //     setAlert({
+  //       show: true,
+  //       title: "Error",
+  //       message: "Please save the order first",
+  //       type: "alert",
+  //     });
+  //     return;
+  //   }
+
+  //   // Check if we have enough data to add a detail
+  //   // if (!selectedDetailData.material || !selectedDetailData.quantity) {
+  //   //   setAlert({
+  //   //     show: true,
+  //   //     title: "Error",
+  //   //     message: "Material and Quantity are required",
+  //   //     type: "alert",
+  //   //   });
+  //   //   return;
+  //   // }
+
+  //   const token = localStorage.getItem("token");
+  //   // const formData = { ...selectedDetailData, orderId };
+  //   const formData = { ..., orderId };
+
+  //   axios
+  //     .post(`${ServerIP}/auth/add_order_detail`, formData, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     })
+  //     .then((result) => {
+  //       if (result.data.Status) {
+  //         setOrderDetails(result.data.Result);
+  //         const totals = calculateTotals(result.data.Result);
+  //         setTotals(totals);
+  //         setData((prev) => ({
+  //           ...prev,
+  //           totalHrs: totals.totalHrs,
+  //         }));
+
+  //         // Update order with new totalHrs
+  //         const orderUpdateData = {
+  //           lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
+  //           editedBy: localStorage.getItem("userName"),
+  //           totalHrs: totals.totalHrs,
+  //         };
+  //         fetchOrderDetails();
+  //         // setSelectedDetailData(initialDetailData);
+  //         setShowDetailForm(false);
+  //       } else {
+  //         setAlert({
+  //           show: true,
+  //           title: "Error",
+  //           message: result.data.Error || "Failed to add detail",
+  //           type: "alert",
+  //         });
+  //       }
+  //     })
+  //     .catch((err) => {
+  //       handleApiError(err, "Add Detail");
+  //     });
+  // };
   const handleDetailAdded = () => {
-    if (!isHeaderSaved) {
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Please save the order first",
-        type: "alert",
-      });
-      return;
-    }
-
-    // Check if we have enough data to add a detail
-    if (!selectedDetailData.material || !selectedDetailData.quantity) {
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Material and Quantity are required",
-        type: "alert",
-      });
-      return;
-    }
-
+    fetchOrderDetails();
     const token = localStorage.getItem("token");
-    const formData = { ...selectedDetailData, orderId };
-
     axios
-      .post(`${ServerIP}/auth/add_order_detail`, formData, {
-        headers: { Authorization: `Bearer ${token}` },
+      .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       })
       .then((result) => {
         if (result.data.Status) {
@@ -550,21 +592,17 @@ function AddOrder() {
             editedBy: localStorage.getItem("userName"),
             totalHrs: totals.totalHrs,
           };
-          fetchOrderDetails();
-          setSelectedDetailData(initialDetailData);
-          setShowDetailForm(false);
-        } else {
-          setAlert({
-            show: true,
-            title: "Error",
-            message: result.data.Error || "Failed to add detail",
-            type: "alert",
-          });
+
+          axios.put(
+            `${ServerIP}/auth/orders/${orderId || id}/update_edited_info`,
+            orderUpdateData,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
         }
       })
-      .catch((err) => {
-        handleApiError(err, "Add Detail");
-      });
+      .catch((err) => console.log(err));
   };
 
   const handleDeleteDetail = (uniqueId) => {
@@ -865,7 +903,7 @@ function AddOrder() {
       ),
 
       // Update order detail
-      axios.put(`${ServerIP}/auth/order_detail/${detailId}`, sanitizedDetail, {
+      axios.put(`${ServerIP}/auth/order_details/${detailId}`, sanitizedDetail, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     ])
@@ -2770,8 +2808,10 @@ function AddOrder() {
                       d.displayOrder === parseInt(displayOrder)
                   );
 
-                  const { squareFeet, materialUsage, printHrs } =
-                    calculateValues(currentDetail, allowanceValues);
+                  const { squareFeet, materialUsage, printHrs } = calculateArea(
+                    currentDetail,
+                    allowanceValues
+                  );
 
                   const updatedDetail = {
                     ...currentDetail,
@@ -2788,7 +2828,7 @@ function AddOrder() {
                   const token = localStorage.getItem("token");
                   try {
                     await axios.put(
-                      `${ServerIP}/auth/order_details/${orderId}/${displayOrder}`,
+                      `${ServerIP}/auth/order_details/${orderId}`,
                       updatedDetail,
                       { headers: { Authorization: `Bearer ${token}` } }
                     );

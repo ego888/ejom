@@ -1154,7 +1154,7 @@ router.put(
 );
 
 // Add new route to update order detail by ID
-router.put("/order_detail/:id", async (req, res) => {
+router.put("/order_details/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { printHrs, ...otherData } = req.body;
