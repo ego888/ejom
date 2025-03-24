@@ -13,52 +13,39 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    // ✅ Define valid group options
+    // Define valid group options
     const validGroupOptions = {
       sales: "e.name", // Group by sales rep
       client: "c.clientName", // Group by client
       month: "DATE_FORMAT(o.productionDate, '%Y-%m')", // Group by month
     };
 
-    // ✅ Check if groupBy parameter is valid
-    const groupByField = validGroupOptions[groupBy] || validGroupOptions.sales;
+    // Validate groupBy parameter
+    const groupByColumn = validGroupOptions[groupBy] || validGroupOptions.sales;
+    const groupNameAlias = groupBy === "month" ? "month" : "name";
 
-    // ✅ Prepare SQL Query
-    const query = `
+    const sql = `
       SELECT 
-        ${groupByField} as groupName,
-        SUM(IFNULL(o.totalAmount, 0)) as totalAmount,
-        SUM(IFNULL(o.amountDiscount, 0)) as totalDiscount,
-        SUM(IFNULL(o.grandTotal, 0)) as grandTotal,
-        COUNT(DISTINCT o.orderId) as orderCount
-      FROM 
-        orders o
-        LEFT JOIN employee e ON o.preparedBy = e.username
-        LEFT JOIN client c ON o.clientId = c.id
-      WHERE 
-        o.productionDate BETWEEN ? AND ?
-      GROUP BY 
-        ${groupByField}
-      ORDER BY 
-        grandTotal DESC
+        ${groupByColumn} as ${groupNameAlias},
+        SUM(o.grandTotal) as totalSales,
+        COUNT(o.orderId) as orderCount
+      FROM orders o
+      LEFT JOIN users e ON o.preparedBy = e.id
+      LEFT JOIN clients c ON o.clientId = c.clientId
+      WHERE o.status IN ('Prod','Finished','Delivered','Billed','Closed')
+        AND o.productionDate BETWEEN ? AND ?
+      GROUP BY ${groupByColumn}
+      ORDER BY totalSales DESC
     `;
 
-    // ✅ Execute SQL Query
-    const [results] = await pool.query(query, [dateFrom, dateTo]);
-
-    if (!results.length) {
-      return res.json({
-        Status: false,
-        Error: "No sales data found for the selected period",
-      });
-    }
+    const [results] = await pool.query(sql, [dateFrom, dateTo]);
 
     return res.json({
       Status: true,
       Result: results,
     });
   } catch (error) {
-    console.error("Error in /sales-summary route:", error);
+    console.error("Error in sales-summary:", error);
     return res.json({ Status: false, Error: error.message });
   }
 });
@@ -72,9 +59,9 @@ router.get("/sales-material-summary", verifyUser, async (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    const query = `
+    const sql = `
       SELECT 
-        od.material AS category,
+        od.material AS materialName,
         COUNT(DISTINCT o.orderId) AS orderCount,
         SUM(od.amount) AS totalAmount,
         SUM(o.amountPaid * (od.amount / o.grandTotal)) AS amountPaid
@@ -86,18 +73,15 @@ router.get("/sales-material-summary", verifyUser, async (req, res) => {
       ORDER BY od.material ASC
     `;
 
-    const result = await pool.query(query, [dateFrom, dateTo]);
+    const [results] = await pool.query(sql, [dateFrom, dateTo]);
 
     return res.json({
       Status: true,
-      Result: result,
+      Result: results,
     });
   } catch (error) {
-    console.error("Error in material sales summary:", error.message);
-    return res.json({
-      Status: false,
-      Error: "Failed to generate material sales summary: " + error.message,
-    });
+    console.error("Error in sales-material-summary:", error);
+    return res.json({ Status: false, Error: error.message });
   }
 });
 
@@ -110,33 +94,30 @@ router.get("/sales-machine-summary", verifyUser, async (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    const query = `
+    const sql = `
       SELECT 
-        m.machineType AS category,
+        m.machineType AS machineType,
         COUNT(DISTINCT o.orderId) AS orderCount,
         SUM(od.amount) AS totalAmount,
         SUM(o.amountPaid * (od.amount / NULLIF(o.grandTotal, 0))) AS amountPaid
       FROM orders o
       JOIN order_details od ON o.orderId = od.orderId
-      JOIN material m ON od.material = m.Material  -- ✅ Fixed JOIN
+      JOIN material m ON od.material = m.Material
       WHERE o.productionDate BETWEEN ? AND ? 
       AND o.status != 'Cancel'
       GROUP BY m.machineType
       ORDER BY m.machineType ASC
-`;
+    `;
 
-    const result = await pool.query(query, [dateFrom, dateTo]);
+    const [results] = await pool.query(sql, [dateFrom, dateTo]);
 
     return res.json({
       Status: true,
-      Result: result,
+      Result: results,
     });
   } catch (error) {
-    console.error("Error in machine sales summary:", error.message);
-    return res.json({
-      Status: false,
-      Error: "Failed to generate machine sales summary: " + error.message,
-    });
+    console.error("Error in sales-machine-summary:", error);
+    return res.json({ Status: false, Error: error.message });
   }
 });
 
@@ -149,7 +130,8 @@ router.get("/artist-incentive", verifyUser, async (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    const query = `
+    // Calculate incentives per order
+    const sql = `
       SELECT 
         o.orderId,
         o.productionDate,
@@ -181,7 +163,7 @@ router.get("/artist-incentive", verifyUser, async (req, res) => {
       Result: results,
     });
   } catch (error) {
-    console.error("Error in /artist-incentive route:", error);
+    console.error("Error in artist-incentive:", error);
     return res.json({ Status: false, Error: error.message });
   }
 });
@@ -266,53 +248,10 @@ router.get("/sales-incentive", verifyUser, async (req, res) => {
       Result: results,
     });
   } catch (error) {
-    console.error("Error in /sales-incentive route:", error);
+    console.error("Error in sales-incentive:", error);
     return res.json({ Status: false, Error: error.message });
   }
 });
-
-// // Detailed sales incentive route
-// router.get("/sales-incentive", verifyUser, async (req, res) => {
-//   try {
-//     const { dateFrom, dateTo } = req.query;
-
-//     if (!dateFrom || !dateTo) {
-//       return res.json({ Status: false, Error: "Date range is required" });
-//     }
-
-//     const sql = `
-//       SELECT
-//         o.orderId,
-//         o.productionDate,
-//         e.name as salesName,
-//         c.clientName,
-//         o.projectName,
-//         o.totalAmount,
-//         o.grandTotal,
-//         o.salesIncentivePerc,
-//         o.salesIncentiveAmount
-//       FROM
-//         orders o
-//         LEFT JOIN employee e ON o.preparedBy = e.username
-//         LEFT JOIN client c ON o.clientId = c.id
-//       WHERE
-//         o.productionDate BETWEEN ? AND ?
-//         AND o.salesIncentiveAmount > 0
-//       ORDER BY
-//         e.name, o.productionDate
-//     `;
-
-//     const [results] = await pool.query(sql, [dateFrom, dateTo]);
-
-//     return res.json({
-//       Status: true,
-//       Result: results,
-//     });
-//   } catch (error) {
-//     console.error("Error in /sales-incentive route:", error);
-//     return res.json({ Status: false, Error: error.message });
-//   }
-// });
 
 // Statement of Account Report
 router.get("/statement-of-account", verifyUser, async (req, res) => {
@@ -328,27 +267,27 @@ router.get("/statement-of-account", verifyUser, async (req, res) => {
         END) as production,
         SUM(CASE 
           WHEN o.status IN ('Delivered', 'Billed') 
-          AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 30 
+            AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 30 
           THEN o.grandTotal - o.amountPaid 
           ELSE 0 
         END) as days_0_30,
         SUM(CASE 
           WHEN o.status IN ('Delivered', 'Billed') 
-          AND DATEDIFF(CURRENT_DATE, o.productionDate) > 30 
-          AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 60 
+            AND DATEDIFF(CURRENT_DATE, o.productionDate) > 30 
+            AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 60 
           THEN o.grandTotal - o.amountPaid 
           ELSE 0 
         END) as days_31_60,
         SUM(CASE 
           WHEN o.status IN ('Delivered', 'Billed') 
-          AND DATEDIFF(CURRENT_DATE, o.productionDate) > 60 
-          AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 90 
+            AND DATEDIFF(CURRENT_DATE, o.productionDate) > 60 
+            AND DATEDIFF(CURRENT_DATE, o.productionDate) <= 90 
           THEN o.grandTotal - o.amountPaid 
           ELSE 0 
         END) as days_61_90,
         SUM(CASE 
           WHEN o.status IN ('Delivered', 'Billed') 
-          AND DATEDIFF(CURRENT_DATE, o.productionDate) > 90 
+            AND DATEDIFF(CURRENT_DATE, o.productionDate) > 90 
           THEN o.grandTotal - o.amountPaid 
           ELSE 0 
         END) as days_over_90,
@@ -359,7 +298,7 @@ router.get("/statement-of-account", verifyUser, async (req, res) => {
         END) as total_ar
       FROM client c
       LEFT JOIN orders o ON c.id = o.clientId 
-        AND o.status != 'Cancel'
+        AND o.status != 'Open','Printed','Prod','Finished','Closed','Cancel'
         AND (o.grandTotal - o.amountPaid) > 0
       GROUP BY c.id, c.clientName
       HAVING production > 0 OR total_ar > 0
@@ -368,14 +307,12 @@ router.get("/statement-of-account", verifyUser, async (req, res) => {
 
     const [results] = await pool.query(sql);
 
-    console.log("SOA:", results);
-
     return res.json({
       Status: true,
       Result: results,
     });
   } catch (error) {
-    console.error("Error in /statement-of-account route:", error);
+    console.error("Error in statement-of-account:", error);
     return res.json({ Status: false, Error: error.message });
   }
 });
@@ -384,6 +321,13 @@ router.get("/statement-of-account", verifyUser, async (req, res) => {
 router.get("/soa-details", verifyUser, async (req, res) => {
   try {
     const { clientId, category } = req.query;
+
+    if (!clientId || !category) {
+      return res.json({
+        Status: false,
+        Error: "Client ID and category are required",
+      });
+    }
 
     let statusCondition = "";
     let dateCondition = "";
@@ -410,9 +354,8 @@ router.get("/soa-details", verifyUser, async (req, res) => {
         statusCondition = "o.status IN ('Delivered', 'Billed')";
         dateCondition = "DATEDIFF(CURRENT_DATE, o.productionDate) > 90";
         break;
-      case "total":
-        statusCondition = "o.status IN ('Delivered', 'Billed')";
-        break;
+      default:
+        return res.json({ Status: false, Error: "Invalid category" });
     }
 
     const sql = `
@@ -450,7 +393,7 @@ router.get("/soa-details", verifyUser, async (req, res) => {
       Result: results,
     });
   } catch (error) {
-    console.error("Error in /soa-details route:", error);
+    console.error("Error in soa-details:", error);
     return res.json({ Status: false, Error: error.message });
   }
 });
