@@ -1083,6 +1083,7 @@ function AddOrder() {
   }, []);
 
   const handlePrintOrder = async () => {
+    console.log("orderDetails.length", orderDetails.length);
     if (orderDetails.length === 0) {
       setAlert({
         show: true,
@@ -1095,6 +1096,7 @@ function AddOrder() {
     }
 
     try {
+      console.log("updating order status to Printed");
       // First update the status to "Printed"
       const response = await axios.put(
         `${ServerIP}/auth/update_order_status`,
@@ -1107,6 +1109,7 @@ function AddOrder() {
         }
       );
 
+      console.log("response.data.Status", response.data.Status);
       if (response.data.Status) {
         // Update local state
         setData((prev) => ({

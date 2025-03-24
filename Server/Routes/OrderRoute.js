@@ -389,19 +389,13 @@ router.get("/search-orders-by-client", async (req, res) => {
 });
 
 // Add this route to update forProd checkbox
-router.put("/update-forprod/:id", (req, res) => {
-  const orderId = req.params.id;
-  const { forProd } = req.body;
+router.put("/update-forprod/:id", async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const { forProd } = req.body;
 
-  const sql = "UPDATE Orders SET forProd = ? WHERE orderID = ?";
-  pool.query(sql, [forProd, orderId], (err, result) => {
-    if (err) {
-      console.error("Error updating forProd status:", err);
-      return res.json({
-        Status: false,
-        Error: "Error updating forProd status",
-      });
-    }
+    const sql = "UPDATE orders SET forProd = ? WHERE orderID = ?";
+    const [result] = await pool.query(sql, [forProd, orderId]);
 
     if (result.affectedRows > 0) {
       return res.json({
@@ -411,27 +405,34 @@ router.put("/update-forprod/:id", (req, res) => {
     } else {
       return res.json({ Status: false, Message: "Order not found" });
     }
-  });
+  } catch (err) {
+    console.error("Error updating forProd status:", err);
+    return res.json({
+      Status: false,
+      Error: "Error updating forProd status",
+    });
+  }
 });
 
 // Update orders to change status to 'Prod' and productionDate to NOW() where forProd is 1 and status is 'Open'
-router.put("/update_orders_to_prod", (req, res) => {
-  const sql = `
-    UPDATE orders
-    SET status = 'Prod',
-        productionDate = NOW(),
-        forProd = 0
-    WHERE forProd = 1
-      AND (status = 'Open' OR status = 'Printed');
-  `;
-  pool.query(sql, (err, result) => {
-    if (err) {
-      console.log("Update Error:", err);
-      return res.json({ Status: false, Error: "Failed to update orders" });
-    }
+router.put("/update_orders_to_prod", async (req, res) => {
+  try {
+    const sql = `
+      UPDATE orders
+      SET status = 'Prod',
+          productionDate = NOW(),
+          forProd = 0
+      WHERE forProd = 1
+        AND (status = 'Open' OR status = 'Printed');
+    `;
+    const [result] = await pool.query(sql);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.log("Update Error:", err);
+    return res.json({ Status: false, Error: "Failed to update orders" });
+  }
 });
+
 // Get orders marked for production
 router.get("/orders-details-forprod", async (req, res) => {
   try {
@@ -459,14 +460,10 @@ router.get("/orders-details-forprod", async (req, res) => {
       WHERE o.forProd = 1
       ORDER BY o.orderID ASC, od.displayOrder ASC`;
 
-    pool.query(sql, (err, result) => {
-      if (err) {
-        console.log(err);
-        return res.json({ Status: false, Error: "Query Error" });
-      }
-      return res.json({ Status: true, Result: result });
-    });
+    const [result] = await pool.query(sql);
+    return res.json({ Status: true, Result: result });
   } catch (error) {
+    console.log(error);
     return res.json({ Status: false, Error: "Query Error" + error });
   }
 });
@@ -478,16 +475,12 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
 
   try {
     // First check current status
-    const [currentOrder] = await new Promise((resolve, reject) => {
-      pool.query(
-        "SELECT status, log FROM orders WHERE orderID = ?",
-        [orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
+    const [currentOrderResults] = await pool.query(
+      "SELECT status, log FROM orders WHERE orderID = ?",
+      [orderId]
+    );
+
+    const currentOrder = currentOrderResults[0];
 
     if (!currentOrder) {
       return res.json({
@@ -501,6 +494,7 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     let logMessage = "";
     let statusToSet = newStatus;
     let isRestricted = false;
+    console.log("statusToSet", statusToSet);
 
     // Handle status change rules
     if (currentOrder.status === "Billed" || currentOrder.status === "Closed") {
@@ -519,20 +513,15 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
       isRestricted = true;
     }
 
-    // Start transaction
-    await new Promise((resolve, reject) => {
-      pool.beginTransaction((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    // Prepare update query
+    const values = [];
+    const updateFields = [];
 
     // Build update query
     let sql = `
-      UPDATE orders 
-      SET status = ?
+      UPDATE orders SET status = ?
     `;
-    const params = [statusToSet];
+    values.push(statusToSet);
 
     // Only add date updates if not restricted
     if (!isRestricted) {
@@ -548,66 +537,39 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     // Add log update if needed
     if (logMessage) {
       sql += `, log = RIGHT(CONCAT(IFNULL(log, ''), ?), 255)`;
-      params.push(logMessage);
+      values.push(logMessage);
     }
 
-    sql += ` WHERE orderID = ?`;
-    params.push(orderId);
+    // Finalize SQL
+    sql += " WHERE orderID = ?";
+    values.push(orderId);
 
-    // Execute update
-    await new Promise((resolve, reject) => {
-      pool.query(sql, params, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
-
-    // Commit transaction
-    await new Promise((resolve, reject) => {
-      pool.commit((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    // Execute the update
+    await pool.query(sql, values);
 
     return res.json({
       Status: true,
-      Result: {
-        updated: true,
-        logged: !!logMessage,
-        statusChanged: statusToSet === newStatus,
-        finalStatus: statusToSet,
-        datesUpdated: !isRestricted,
-      },
-      Message: `Order ${
-        statusToSet === newStatus
-          ? `status updated to ${statusToSet}`
-          : `remains ${statusToSet}`
-      }${logMessage ? " (with logging)" : ""}`,
+      Result: { status: newStatus },
+      Message: "Status updated successfully",
     });
-  } catch (error) {
-    // Rollback on error
-    await new Promise((resolve) => {
-      pool.rollback(() => resolve());
-    });
-
-    console.error("Update Error:", error);
+  } catch (err) {
+    console.error("Error updating order status:", err);
     return res.json({
       Status: false,
       Error: "Failed to update order status",
-      Details: error.message,
     });
   }
 });
 
 // Update orders with DR number, update jomcontrol with lastDR number, with transaction rollback feature.
-router.put("/update_orders_drnum", (req, res) => {
+router.put("/update_orders_drnum", async (req, res) => {
   const updates = req.body; // Expecting an array of { orderID, drnum, drDate }
 
   if (!Array.isArray(updates) || updates.length === 0) {
     return res.json({ Status: false, Error: "Invalid input data" });
   }
 
+  // Prepare data outside of transaction
   const lastDRNumber = updates[updates.length - 1].drnum;
   const cases = updates
     .map((order) => `WHEN orderID = ${order.orderID} THEN '${order.drnum}'`)
@@ -616,85 +578,63 @@ router.put("/update_orders_drnum", (req, res) => {
     .map((order) => `WHEN orderID = ${order.orderID} THEN '${order.drDate}'`)
     .join(" ");
   const orderIDs = updates.map((order) => order.orderID).join(", ");
+
   console.log("lastDRNumber", lastDRNumber);
   console.log("orderIDs", orderIDs);
 
-  // First get the current lastDRNumber from jomcontrol
-  const sqlSelectLastDRNumber = `
-    SELECT lastDRNumber FROM jomcontrol WHERE controlId = 1;
-  `;
+  const connection = await pool.getConnection();
 
-  pool.query(sqlSelectLastDRNumber, (err, result) => {
-    if (err) {
-      console.error("Error getting lastDRNumber:", err);
-      return res.json({ Status: false, Error: "Failed to get lastDRNumber" });
-    }
+  try {
+    // 1. First get the current lastDRNumber from jomcontrol
+    const [currentDRResult] = await connection.query(
+      "SELECT lastDRNumber FROM jomcontrol WHERE controlId = 1"
+    );
 
-    let currentLastDRNumber = result[0].lastDRNumber;
-    let finalDRNumber = Math.max(lastDRNumber, currentLastDRNumber);
+    const currentLastDRNumber = currentDRResult[0].lastDRNumber;
+    const finalDRNumber = Math.max(lastDRNumber, currentLastDRNumber);
 
     console.log("dateCases", dateCases);
     const sqlUpdateOrders = `
       UPDATE orders
       SET drnum = CASE ${cases} END,
           drDate = CASE ${dateCases} END
-      WHERE orderID IN (${orderIDs});
+      WHERE orderID IN (${orderIDs})
     `;
 
     const sqlUpdateJomControl = `
       UPDATE jomcontrol
       SET lastDRNumber = ${finalDRNumber}
-      WHERE controlId = 1;
+      WHERE controlId = 1
     `;
 
     // Start MySQL transaction
-    pool.beginTransaction((err) => {
-      if (err) {
-        console.error("Transaction Error:", err);
-        return res.json({
-          Status: false,
-          Error: "Failed to start transaction",
-        });
-      }
+    await connection.beginTransaction();
 
-      // 1️⃣ Step 1: Update `orders` table
-      pool.query(sqlUpdateOrders, (err, result) => {
-        if (err) {
-          console.error("Update Orders Error:", err);
-          return pool.rollback(() => {
-            res.json({ Status: false, Error: "Failed to update orders" });
-          });
-        }
+    // 2. Update `orders` table
+    await connection.query(sqlUpdateOrders);
 
-        // 2️⃣ Step 2: Update `jomcontrol` table with last DR number
-        pool.query(sqlUpdateJomControl, [finalDRNumber], (err, result) => {
-          if (err) {
-            console.error("Update JomControl Error:", err);
-            return pool.rollback(() => {
-              res.json({ Status: false, Error: "Failed to update jomcontrol" });
-            });
-          }
+    // 3. Update `jomcontrol` table with last DR number
+    await connection.query(sqlUpdateJomControl);
 
-          // 3️⃣ Step 3: If both updates succeed, commit the transaction
-          pool.commit((err) => {
-            if (err) {
-              console.error("Commit Error:", err);
-              return pool.rollback(() => {
-                res.json({
-                  Status: false,
-                  Error: "Failed to commit transaction",
-                });
-              });
-            }
-            res.json({
-              Status: true,
-              Message: "Orders and JomControl updated successfully",
-            });
-          });
-        });
-      });
+    // 4. Commit the transaction
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Message: "Orders and JomControl updated successfully",
     });
-  });
+  } catch (error) {
+    // Rollback on error
+    await connection.rollback();
+    console.error("Transaction Error:", error);
+    return res.json({
+      Status: false,
+      Error: "Failed to update DR numbers: " + error.message,
+    });
+  } finally {
+    // Always release connection
+    connection.release();
+  }
 });
 
 // Get all orders without DR number and status is Prod, Finish or Delivered
@@ -982,22 +922,21 @@ router.put(
 );
 
 // Update order's edited info and total hours
-router.put("/orders/:orderId/update_edited_info", (req, res) => {
-  const sql = `
-    UPDATE orders 
-    SET lastEdited = ?,
-        editedBy = ?,
-        totalHrs = ?,
-        totalAmount = ?,
-        amountDisc = ?,
-        percentDisc = ?,
-        grandTotal = ?
-    WHERE orderID = ?
-  `;
+router.put("/orders/:orderId/update_edited_info", async (req, res) => {
+  try {
+    const sql = `
+      UPDATE orders 
+      SET lastEdited = ?,
+          editedBy = ?,
+          totalHrs = ?,
+          totalAmount = ?,
+          amountDisc = ?,
+          percentDisc = ?,
+          grandTotal = ?
+      WHERE orderID = ?
+    `;
 
-  pool.query(
-    sql,
-    [
+    const [result] = await pool.query(sql, [
       req.body.lastEdited,
       req.body.editedBy,
       req.body.totalHrs,
@@ -1006,18 +945,16 @@ router.put("/orders/:orderId/update_edited_info", (req, res) => {
       req.body.percentDisc,
       req.body.grandTotal,
       req.params.orderId,
-    ],
-    (err, result) => {
-      if (err) {
-        console.log("Error updating order edited info:", err);
-        return res.json({
-          Status: false,
-          Error: "Failed to update order edited info",
-        });
-      }
-      return res.json({ Status: true });
-    }
-  );
+    ]);
+
+    return res.json({ Status: true });
+  } catch (err) {
+    console.log("Error updating order edited info:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update order edited info",
+    });
+  }
 });
 
 // Update order detail artist major and minor
@@ -1026,33 +963,43 @@ router.put("/order_details/update_incentives", async (req, res) => {
     const updates = req.body;
     console.log("Received updates:", updates);
 
-    // Process each update
-    for (const update of updates) {
-      const sql = `
-        UPDATE order_details 
-        SET 
-          artistIncentive = ?,
-          major = ?,
-          minor = ?
-        WHERE Id = ?
-      `;
+    // Process each update with a single connection
+    const connection = await pool.getConnection();
 
-      await new Promise((resolve, reject) => {
-        pool.query(
-          sql,
-          [update.artistIncentive, update.major, update.minor, update.Id],
-          (err, result) => {
-            if (err) reject(err);
-            resolve(result);
-          }
-        );
+    try {
+      await connection.beginTransaction();
+
+      // Process all updates
+      for (const update of updates) {
+        const sql = `
+          UPDATE order_details 
+          SET 
+            artistIncentive = ?,
+            major = ?,
+            minor = ?
+          WHERE Id = ?
+        `;
+
+        await connection.query(sql, [
+          update.artistIncentive,
+          update.major,
+          update.minor,
+          update.Id,
+        ]);
+      }
+
+      await connection.commit();
+
+      return res.json({
+        Status: true,
+        Message: "Updates completed successfully",
       });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
-
-    return res.json({
-      Status: true,
-      Message: "Updates completed successfully",
-    });
   } catch (err) {
     console.error("Error updating artist incentives:", err);
     return res.json({
@@ -1094,14 +1041,8 @@ router.get("/orders-details-artistIncentive", async (req, res) => {
         AND (m.noIncentive = 0)
       ORDER BY o.orderID ASC, od.displayOrder ASC`;
 
-    const result = await new Promise((resolve, reject) => {
-      pool.query(sql, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
-
-    return res.json({ Status: true, Result: result });
+    const [results] = await pool.query(sql);
+    return res.json({ Status: true, Result: results });
   } catch (err) {
     console.error("Error fetching artist incentive details:", err);
     return res.json({
@@ -1120,30 +1061,35 @@ router.put(
       const updates = req.body;
       console.log("Received updates:", updates);
 
-      // Process each update
-      for (const update of updates) {
-        const sql = `
-        UPDATE order_details 
-        SET artistIncentiveAmount = ?
-        WHERE Id = ?
-      `;
+      // Use a single connection for all updates
+      const connection = await pool.getConnection();
 
-        await new Promise((resolve, reject) => {
-          pool.query(
-            sql,
-            [update.artistIncentive, update.Id],
-            (err, result) => {
-              if (err) reject(err);
-              resolve(result);
-            }
-          );
+      try {
+        await connection.beginTransaction();
+
+        // Process each update
+        for (const update of updates) {
+          const sql = `
+            UPDATE order_details 
+            SET artistIncentiveAmount = ?
+            WHERE Id = ?
+          `;
+
+          await connection.query(sql, [update.artistIncentive, update.Id]);
+        }
+
+        await connection.commit();
+
+        return res.json({
+          Status: true,
+          Message: "Updates completed successfully",
         });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
       }
-
-      return res.json({
-        Status: true,
-        Message: "Updates completed successfully",
-      });
     } catch (err) {
       console.error("Error updating artist incentives:", err);
       return res.json({
@@ -1163,31 +1109,40 @@ router.put(
       const updates = req.body;
       console.log("Received updates:", updates);
 
-      // Process each update
-      for (const update of updates) {
-        const sql = `
-        UPDATE order_details 
-        SET salesIncentive = ?,
-            overideIncentive = ?
-        WHERE Id = ?
-      `;
+      // Use a single connection for all updates
+      const connection = await pool.getConnection();
 
-        await new Promise((resolve, reject) => {
-          pool.query(
-            sql,
-            [update.salesIncentive, update.overideIncentive, update.Id],
-            (err, result) => {
-              if (err) reject(err);
-              resolve(result);
-            }
-          );
+      try {
+        await connection.beginTransaction();
+
+        // Process each update
+        for (const update of updates) {
+          const sql = `
+            UPDATE order_details 
+            SET salesIncentive = ?,
+                overideIncentive = ?
+            WHERE Id = ?
+          `;
+
+          await connection.query(sql, [
+            update.salesIncentive,
+            update.overideIncentive,
+            update.Id,
+          ]);
+        }
+
+        await connection.commit();
+
+        return res.json({
+          Status: true,
+          Message: "Updates completed successfully",
         });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
       }
-
-      return res.json({
-        Status: true,
-        Message: "Updates completed successfully",
-      });
     } catch (err) {
       console.error("Error updating sales incentives:", err);
       return res.json({
@@ -1199,51 +1154,44 @@ router.put(
 );
 
 // Add new route to update order detail by ID
-router.put("/order_detail/:id", (req, res) => {
-  const { id } = req.params;
-  const { printHrs, ...otherData } = req.body;
-  const data = {
-    ...otherData,
-    printHrs: Number(printHrs || 0),
-  };
-  console.log("Data being updated:", data);
-  console.log("ID:", id);
-  const sql = "UPDATE order_details SET ? WHERE Id = ?";
+router.put("/order_detail/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { printHrs, ...otherData } = req.body;
+    const data = {
+      ...otherData,
+      printHrs: Number(printHrs || 0),
+    };
+    console.log("Data being updated:", data);
+    console.log("ID:", id);
+    const sql = "UPDATE order_details SET ? WHERE Id = ?";
 
-  pool.query(sql, [data, id], (err, result) => {
-    if (err) {
-      console.log("Update Error:", err);
-      return res.json({
-        Status: false,
-        Error: "Failed to update order detail",
-      });
-    }
+    const [result] = await pool.query(sql, [data, id]);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.log("Update Error:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update order detail",
+    });
+  }
 });
 
 // Update display order by detail ID
-router.put("/order_details-displayOrder/:detailId", (req, res) => {
-  const { detailId } = req.params;
-  const { displayOrder } = req.body;
+router.put("/order_details-displayOrder/:detailId", async (req, res) => {
+  try {
+    const { detailId } = req.params;
+    const { displayOrder } = req.body;
 
-  if (!displayOrder || isNaN(displayOrder)) {
-    return res.json({
-      Status: false,
-      Error: "Invalid display order value",
-    });
-  }
-
-  const sql = "UPDATE order_details SET displayOrder = ? WHERE Id = ?";
-
-  pool.query(sql, [displayOrder, detailId], (err, result) => {
-    if (err) {
-      console.log("Update Error:", err);
+    if (!displayOrder || isNaN(displayOrder)) {
       return res.json({
         Status: false,
-        Error: "Failed to update display order",
+        Error: "Invalid display order value",
       });
     }
+
+    const sql = "UPDATE order_details SET displayOrder = ? WHERE Id = ?";
+    const [result] = await pool.query(sql, [displayOrder, detailId]);
 
     if (result.affectedRows === 0) {
       return res.json({
@@ -1256,30 +1204,36 @@ router.put("/order_details-displayOrder/:detailId", (req, res) => {
       Status: true,
       Result: result,
     });
-  });
+  } catch (err) {
+    console.log("Update Error:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update display order",
+    });
+  }
 });
 
 // Add new route to update noPrint status by detail ID
-router.put("/order_detail_noprint/:id", (req, res) => {
-  const { id } = req.params;
-  const { noPrint } = req.body;
+router.put("/order_detail_noprint/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { noPrint } = req.body;
 
-  const sql = `
-    UPDATE order_details 
-    SET noPrint = ? 
-    WHERE Id = ?
-  `;
+    const sql = `
+      UPDATE order_details 
+      SET noPrint = ? 
+      WHERE Id = ?
+    `;
 
-  pool.query(sql, [noPrint, id], (err, result) => {
-    if (err) {
-      console.log("Update Error:", err);
-      return res.json({
-        Status: false,
-        Error: "Failed to update noPrint status",
-      });
-    }
+    const [result] = await pool.query(sql, [noPrint, id]);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.log("Update Error:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update noPrint status",
+    });
+  }
 });
 
 // Add order detail
@@ -1339,16 +1293,11 @@ router.post(
 );
 
 // Add new route to delete order detail by ID
-router.delete("/order_detail/:id", (req, res) => {
-  const { id } = req.params;
-
-  const sql = "DELETE FROM order_details WHERE Id = ?";
-
-  pool.query(sql, [id], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+router.delete("/order_detail/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const sql = "DELETE FROM order_details WHERE Id = ?";
+    const [result] = await pool.query(sql, [id]);
 
     if (result.affectedRows === 0) {
       return res.json({
@@ -1358,19 +1307,17 @@ router.delete("/order_detail/:id", (req, res) => {
     }
 
     return res.json({ Status: true });
-  });
+  } catch (err) {
+    console.log(err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Add route to get WTax types
 router.get("/wtax-types", async (req, res) => {
   try {
     const sql = "SELECT * FROM WTax";
-    const wtaxTypes = await new Promise((resolve, reject) => {
-      pool.query(sql, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
+    const [wtaxTypes] = await pool.query(sql);
 
     return res.json({
       Status: true,
@@ -1390,59 +1337,49 @@ router.get("/order/ReviseNumber/:id", verifyUser, async (req, res) => {
   const orderId = req.params.id;
 
   try {
-    // Start a transaction
-    await new Promise((resolve, reject) => {
-      pool.beginTransaction((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    const connection = await pool.getConnection();
 
-    // Get current revision number
-    const [orderResult] = await new Promise((resolve, reject) => {
-      pool.query(
+    try {
+      // Start a transaction
+      await connection.beginTransaction();
+
+      // Get current revision number
+      const [orderResults] = await connection.query(
         "SELECT revision FROM orders WHERE orderId = ?",
-        [orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
+        [orderId]
       );
-    });
 
-    const currentRevision = orderResult.revision || 0;
-    const newRevision = currentRevision + 1;
+      if (orderResults.length === 0) {
+        return res.json({
+          Status: false,
+          Error: "Order not found",
+        });
+      }
 
-    // Update order with new revision number and status
-    await new Promise((resolve, reject) => {
-      pool.query(
+      const currentRevision = orderResults[0].revision || 0;
+      const newRevision = currentRevision + 1;
+
+      // Update order with new revision number and status
+      await connection.query(
         "UPDATE orders SET revision = ?, status = 'Open' WHERE orderId = ?",
-        [newRevision, orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
+        [newRevision, orderId]
       );
-    });
 
-    // Commit the transaction
-    await new Promise((resolve, reject) => {
-      pool.commit((err) => {
-        if (err) reject(err);
-        resolve();
+      // Commit the transaction
+      await connection.commit();
+
+      return res.json({
+        Status: true,
+        revision: newRevision,
       });
-    });
-
-    return res.json({
-      Status: true,
-      revision: newRevision,
-    });
+    } catch (error) {
+      // Rollback on error
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error) {
-    // Rollback on error
-    await new Promise((resolve) => {
-      pool.rollback(() => resolve());
-    });
-
     console.error("Error revising order:", error);
     return res.json({
       Status: false,
@@ -1454,26 +1391,23 @@ router.get("/order/ReviseNumber/:id", verifyUser, async (req, res) => {
 // Update order with invoice number and set to billed
 router.put("/update_order_invoice", verifyUser, async (req, res) => {
   const { orderId, invNumber } = req.body;
+  const connection = await pool.getConnection();
 
   try {
     // First check current status
-    const [currentOrder] = await new Promise((resolve, reject) => {
-      pool.query(
-        "SELECT status FROM orders WHERE orderID = ?",
-        [orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
+    const [currentOrderResults] = await connection.query(
+      "SELECT status FROM orders WHERE orderID = ?",
+      [orderId]
+    );
 
-    if (!currentOrder) {
+    if (!currentOrderResults.length) {
       return res.json({
         Status: false,
         Error: "Order not found",
       });
     }
+
+    const currentOrder = currentOrderResults[0];
 
     const billableStatuses = [
       "Open",
@@ -1490,36 +1424,20 @@ router.put("/update_order_invoice", verifyUser, async (req, res) => {
     }
 
     // Start transaction
-    await new Promise((resolve, reject) => {
-      pool.beginTransaction((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    await connection.beginTransaction();
 
     // Update order
-    await new Promise((resolve, reject) => {
-      pool.query(
-        `UPDATE orders 
-         SET status = 'Billed',
-             invoiceNum = ?,
-             billDate = NOW()
-         WHERE orderID = ?`,
-        [invNumber, orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
+    await connection.query(
+      `UPDATE orders 
+       SET status = 'Billed',
+           invoiceNum = ?,
+           billDate = NOW()
+       WHERE orderID = ?`,
+      [invNumber, orderId]
+    );
 
     // Commit transaction
-    await new Promise((resolve, reject) => {
-      pool.commit((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    await connection.commit();
 
     return res.json({
       Status: true,
@@ -1527,16 +1445,15 @@ router.put("/update_order_invoice", verifyUser, async (req, res) => {
     });
   } catch (error) {
     // Rollback on error
-    await new Promise((resolve) => {
-      pool.rollback(() => resolve());
-    });
-
+    if (connection) await connection.rollback();
     console.error("Update Error:", error);
     return res.json({
       Status: false,
       Error: "Failed to update invoice",
       Details: error.message,
     });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -1547,16 +1464,12 @@ router.put("/admin-status-update", verifyUser, async (req, res) => {
 
   try {
     // First check current status
-    const [currentOrder] = await new Promise((resolve, reject) => {
-      pool.query(
-        "SELECT status, log FROM orders WHERE orderID = ?",
-        [orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
+    const [currentOrderResults] = await pool.query(
+      "SELECT status, log FROM orders WHERE orderID = ?",
+      [orderId]
+    );
+
+    const currentOrder = currentOrderResults[0];
 
     if (!currentOrder) {
       return res.json({
@@ -1565,163 +1478,130 @@ router.put("/admin-status-update", verifyUser, async (req, res) => {
       });
     }
 
-    // Start transaction
-    await new Promise((resolve, reject) => {
-      pool.beginTransaction((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    const connection = await pool.getConnection();
 
-    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-    const logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+    try {
+      // Start transaction
+      await connection.beginTransaction();
 
-    // Update order with new status and log
-    await new Promise((resolve, reject) => {
-      pool.query(
+      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+      const logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+
+      // Update order with new status and log
+      await connection.query(
         `UPDATE orders 
          SET status = ?,
              log = RIGHT(CONCAT(IFNULL(log, ''), ?), 255)
          WHERE orderID = ?`,
-        [newStatus, logMessage, orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
+        [newStatus, logMessage, orderId]
       );
-    });
 
-    // Commit transaction
-    await new Promise((resolve, reject) => {
-      pool.commit((err) => {
-        if (err) reject(err);
-        resolve();
+      // Commit transaction
+      await connection.commit();
+
+      return res.json({
+        Status: true,
+        Message: "Status updated successfully",
       });
-    });
-
-    return res.json({
-      Status: true,
-      Message: "Status updated successfully",
-    });
+    } catch (error) {
+      // Rollback on error
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error) {
-    // Rollback on error
-    await new Promise((resolve) => {
-      pool.rollback(() => resolve());
-    });
-
     console.error("Update Error:", error);
     return res.json({
       Status: false,
       Error: "Failed to update status",
-      Details: error.message,
     });
   }
 });
 
 // Create a new order based on an existing one (reorder)
 router.post("/order-reorder", verifyUser, async (req, res) => {
+  console.log("REORDER: req.body", req.body);
   const { orderId } = req.body;
   const userName = req.body.userName || req.user.name;
   const userId = req.body.userId || req.user.id;
 
   try {
-    // 1. First get all necessary information BEFORE starting the transaction
-
-    // Get the original order
-    const [originalOrder] = await new Promise((resolve, reject) => {
-      pool.query(
-        `SELECT * FROM orders WHERE orderID = ?`,
-        [orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
-
-    if (!originalOrder) {
-      return res.json({
-        Status: false,
-        Error: "Original order not found",
-      });
-    }
-
-    // Get all details from original order
-    const originalDetails = await new Promise((resolve, reject) => {
-      pool.query(
-        `SELECT * FROM order_details WHERE orderId = ?`,
-        [orderId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
-
-    // 2. Prepare new order data
-    const currentDate = new Date().toISOString().slice(0, 10);
-    const currentDateTime = new Date();
-    // Check if project name already has "(Reorder)" suffix
-    const projectName = originalOrder.projectName.includes(" (Reorder)")
-      ? originalOrder.projectName
-      : originalOrder.projectName + " (Reorder)";
-
-    // 3. NOW start the transaction after gathering all required data
-    await new Promise((resolve, reject) => {
-      pool.beginTransaction((err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    const connection = await pool.getConnection();
 
     try {
-      // 4. Insert new order
-      const insertOrderResult = await new Promise((resolve, reject) => {
-        const newOrderSql = `
-          INSERT INTO orders (
-            clientId, projectName, preparedBy, orderDate, 
-            orderedBy, orderReference, cellNumber, specialInst, 
-            deliveryInst, graphicsBy, dueDate, dueTime, 
-            sample, reprint, totalAmount, amountDisc, 
-            percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+      // 1. Get the original order
+      const [originalOrders] = await connection.query(
+        `SELECT * FROM orders WHERE orderID = ?`,
+        [orderId]
+      );
 
-        const values = [
-          originalOrder.clientId,
-          projectName,
-          originalOrder.preparedBy,
-          currentDate, // New current date
-          originalOrder.orderedBy,
-          originalOrder.orderReference,
-          originalOrder.cellNumber,
-          originalOrder.specialInst,
-          originalOrder.deliveryInst,
-          originalOrder.graphicsBy,
-          originalOrder.dueDate,
-          originalOrder.dueTime,
-          originalOrder.sample,
-          originalOrder.reprint,
-          originalOrder.totalAmount,
-          originalOrder.amountDisc,
-          originalOrder.percentDisc,
-          originalOrder.grandTotal,
-          originalOrder.terms,
-          "Open", // Always open for new orders
-          originalOrder.totalHrs,
-          userName,
-          currentDateTime,
-        ];
-
-        pool.query(newOrderSql, values, (err, result) => {
-          if (err) reject(err);
-          resolve(result);
+      if (!originalOrders.length) {
+        return res.json({
+          Status: false,
+          Error: "Original order not found",
         });
-      });
+      }
+      const originalOrder = originalOrders[0];
 
+      // 2. Get all details from original order
+      const [originalDetails] = await connection.query(
+        `SELECT * FROM order_details WHERE orderId = ?`,
+        [orderId]
+      );
+
+      // 3. Prepare new order data
+      const currentDate = new Date().toISOString().slice(0, 10);
+      const currentDateTime = new Date();
+      // Check if project name already has "(Reorder)" suffix
+      const projectName = originalOrder.projectName.includes(" (Reorder)")
+        ? originalOrder.projectName
+        : originalOrder.projectName + " (Reorder)";
+
+      // 4. Start transaction
+      await connection.beginTransaction();
+
+      // 5. Insert new order
+      const newOrderSql = `
+        INSERT INTO orders (
+          clientId, projectName, preparedBy, orderDate, 
+          orderedBy, orderReference, cellNumber, specialInst, 
+          deliveryInst, graphicsBy, dueDate, dueTime, 
+          sample, reprint, totalAmount, amountDisc, 
+          percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const values = [
+        originalOrder.clientId,
+        projectName,
+        originalOrder.preparedBy,
+        currentDate, // New current date
+        originalOrder.orderedBy,
+        originalOrder.orderReference,
+        originalOrder.cellNumber,
+        originalOrder.specialInst,
+        originalOrder.deliveryInst,
+        originalOrder.graphicsBy,
+        originalOrder.dueDate,
+        originalOrder.dueTime,
+        originalOrder.sample,
+        originalOrder.reprint,
+        originalOrder.totalAmount,
+        originalOrder.amountDisc,
+        originalOrder.percentDisc,
+        originalOrder.grandTotal,
+        originalOrder.terms,
+        "Open", // Always open for new orders
+        originalOrder.totalHrs,
+        userName,
+        currentDateTime,
+      ];
+
+      const [insertOrderResult] = await connection.query(newOrderSql, values);
       const newOrderId = insertOrderResult.insertId;
 
-      // 5. Copy details to new order if there are any
+      // 6. Copy details to new order if there are any
       if (originalDetails.length > 0) {
         // Prepare batch insert for better performance
         const detailValues = [];
@@ -1754,65 +1634,52 @@ router.post("/order-reorder", verifyUser, async (req, res) => {
         });
 
         // Insert all details in a single query for efficiency
-        await new Promise((resolve, reject) => {
-          const detailFields = [
-            "orderId",
-            "displayOrder",
-            "quantity",
-            "width",
-            "height",
-            "unit",
-            "material",
-            "itemDescription",
-            "unitPrice",
-            "perSqFt",
-            "discount",
-            "amount",
-            "squareFeet",
-            "materialUsage",
-            "printHrs",
-            "remarks",
-            "top",
-            "bottom",
-            "allowanceLeft",
-            "allowanceRight",
-            "noPrint",
-          ];
+        const detailFields = [
+          "orderId",
+          "displayOrder",
+          "quantity",
+          "width",
+          "height",
+          "unit",
+          "material",
+          "itemDescription",
+          "unitPrice",
+          "perSqFt",
+          "discount",
+          "amount",
+          "squareFeet",
+          "materialUsage",
+          "printHrs",
+          "remarks",
+          "top",
+          "bottom",
+          "allowanceLeft",
+          "allowanceRight",
+          "noPrint",
+        ];
 
-          const insertDetailsSql = `
-            INSERT INTO order_details (${detailFields.join(", ")})
-            VALUES ?
-          `;
+        const insertDetailsSql = `
+          INSERT INTO order_details (${detailFields.join(", ")})
+          VALUES ?
+        `;
 
-          pool.query(insertDetailsSql, [detailValues], (err, result) => {
-            if (err) reject(err);
-            resolve(result);
-          });
-        });
+        await connection.query(insertDetailsSql, [detailValues]);
       }
 
-      // 6. Commit transaction
-      await new Promise((resolve, reject) => {
-        pool.commit((err) => {
-          if (err) {
-            pool.rollback(() => reject(err));
-          } else {
-            resolve();
-          }
-        });
-      });
+      // 7. Commit transaction
+      await connection.commit();
 
       return res.json({
         Status: true,
         Result: newOrderId,
         Message: "Order reordered successfully",
       });
-    } catch (transactionError) {
+    } catch (error) {
       // Rollback on error
-      await new Promise((resolve) => {
-        pool.rollback(() => resolve());
-      });
-      throw transactionError; // Re-throw for the outer catch block
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
   } catch (error) {
     console.error("Reorder Error:", error);
