@@ -47,7 +47,7 @@ function AddOrder() {
     clientId: "",
     projectName: "",
     preparedBy: "",
-    orderDate: new Date().toISOString().split("T")[0],
+    orderDate: new Date().toISOString().slice(0, 10), // Today's date
     orderedBy: "",
     orderReference: "",
     cellNumber: "",
@@ -178,8 +178,6 @@ function AddOrder() {
   };
 
   const fetchOrderDetails = () => {
-    if (!orderId && !id) return; // Check for both orderId and route id
-
     const token = localStorage.getItem("token");
     axios
       .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
@@ -192,9 +190,37 @@ function AddOrder() {
           setOrderDetails(result.data.Result);
           const totals = calculateTotals(result.data.Result);
           setTotals(totals);
+          setData((prev) => ({
+            ...prev,
+            totalHrs: totals.totalHrs,
+          }));
+
+          // Update order with new totalHrs
+          const orderUpdateData = {
+            lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
+            editedBy: localStorage.getItem("userName"),
+            totalHrs: totals.totalHrs,
+          };
+
+          axios
+            .put(
+              `${ServerIP}/auth/orders/${orderId || id}/update_edited_info`,
+              orderUpdateData,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            )
+            .catch((err) => handleApiError(err, "Update Order Info"));
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error || "Failed to load order details",
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => handleApiError(err, "Fetch Order Details"));
   };
 
   useEffect(() => {
@@ -387,9 +413,25 @@ function AddOrder() {
 
     const token = localStorage.getItem("token");
 
-    // Update data object to include totalAmount from orderTotals
+    // Get current user from token
+    let userId, userName;
+    try {
+      // Try to decode the token to get the current user's ID
+      const decodedToken = JSON.parse(atob(token.split(".")[1]));
+      userId = decodedToken.id;
+      userName = decodedToken.name;
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      // Fallback to current data if token can't be decoded
+      userId = data.preparedBy;
+      userName = data.editedBy;
+    }
+
+    // Update data object to include totalAmount from orderTotals and ensure user info
     const updatedData = {
       ...data,
+      preparedBy: data.preparedBy, // Always use the logged-in user
+      editedBy: userName, // Always use the logged-in user's name
       totalAmount: orderTotals.subtotal, // Set totalAmount from subtotal
       amountDisc: orderTotals.discAmount,
       percentDisc: orderTotals.percentDisc,
@@ -464,13 +506,33 @@ function AddOrder() {
   };
 
   const handleDetailAdded = () => {
-    fetchOrderDetails();
+    if (!isHeaderSaved) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Please save the order first",
+        type: "alert",
+      });
+      return;
+    }
+
+    // Check if we have enough data to add a detail
+    if (!selectedDetailData.material || !selectedDetailData.quantity) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Material and Quantity are required",
+        type: "alert",
+      });
+      return;
+    }
+
     const token = localStorage.getItem("token");
+    const formData = { ...selectedDetailData, orderId };
+
     axios
-      .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      .post(`${ServerIP}/auth/add_order_detail`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
       })
       .then((result) => {
         if (result.data.Status) {
@@ -488,17 +550,21 @@ function AddOrder() {
             editedBy: localStorage.getItem("userName"),
             totalHrs: totals.totalHrs,
           };
-
-          axios.put(
-            `${ServerIP}/auth/orders/${orderId || id}/update_edited_info`,
-            orderUpdateData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          fetchOrderDetails();
+          setSelectedDetailData(initialDetailData);
+          setShowDetailForm(false);
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error || "Failed to add detail",
+            type: "alert",
+          });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        handleApiError(err, "Add Detail");
+      });
   };
 
   const handleDeleteDetail = (uniqueId) => {
@@ -1331,6 +1397,38 @@ function AddOrder() {
       document.removeEventListener("keydown", handleEscKey);
     };
   }, [navigate]); // Include navigate in the dependency array
+
+  // Add utility function to handle API errors with proper error messages
+  const handleApiError = (error, context) => {
+    console.error(`${context} Error:`, error);
+
+    let errorMessage = "An unexpected error occurred. Please try again.";
+
+    // Check for specific error responses from the server
+    if (error.response) {
+      if (error.response.data && error.response.data.Error) {
+        errorMessage = error.response.data.Error;
+      } else if (error.response.status === 401) {
+        errorMessage = "Your session has expired. Please log in again.";
+        // Force logout on authentication errors
+        localStorage.removeItem("token");
+        navigate("/");
+        return;
+      } else if (error.response.status === 403) {
+        errorMessage = "You don't have permission to perform this action.";
+      }
+    } else if (error.request) {
+      errorMessage =
+        "Cannot connect to the server. Please check your connection.";
+    }
+
+    setAlert({
+      show: true,
+      title: "Error",
+      message: errorMessage,
+      type: "alert",
+    });
+  };
 
   return (
     <div className="orders-page-background">
@@ -2401,8 +2499,8 @@ function AddOrder() {
                               {formatNumber(detail.amount)}
                             </td>
                             <td
-                              style={{ whiteSpace: "pre-line" }}
                               style={{
+                                whiteSpace: "pre-line",
                                 cursor: canEdit() ? "pointer" : "default",
                               }}
                               onDoubleClick={() => {
@@ -2417,8 +2515,8 @@ function AddOrder() {
                               {detail.itemDescription}
                             </td>
                             <td
-                              style={{ whiteSpace: "pre-line" }}
                               style={{
+                                whiteSpace: "pre-line",
                                 cursor: canEdit() ? "pointer" : "default",
                               }}
                               onDoubleClick={() => {

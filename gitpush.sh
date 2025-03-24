@@ -7,9 +7,11 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+# Get current branch name
+branch=$(git rev-parse --abbrev-ref HEAD)
+
 # Git commands
 git add .
 git commit -m "$1"
-git push origin main
-
+git push origin "$branch"
 

@@ -1,5 +1,5 @@
 import express from "express";
-import con from "../utils/db.js";
+import pool from "../utils/db.js";
 import { verifyUser } from "../middleware.js";
 
 const router = express.Router();
@@ -20,56 +20,46 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
       month: "DATE_FORMAT(o.productionDate, '%Y-%m')", // Group by month
     };
 
-    // ✅ Determine grouping column
-    const groupColumn = validGroupOptions[groupBy] || null;
+    // ✅ Check if groupBy parameter is valid
+    const groupByField = validGroupOptions[groupBy] || validGroupOptions.sales;
 
-    // ✅ Base SQL Query
-    let query = `
+    // ✅ Prepare SQL Query
+    const query = `
       SELECT 
-        ${groupColumn ? `${groupColumn} AS category,` : ""}
-        COUNT(DISTINCT o.orderId) AS orderCount,
-        SUM(o.grandTotal) AS totalSales,
-        SUM(o.amountPaid) AS amountPaid
-      FROM orders o
-      LEFT JOIN employee e ON o.preparedBy = e.id
-      LEFT JOIN client c ON o.clientId = c.id
-      WHERE o.productionDate BETWEEN ? AND ? AND o.status != 'Cancel'
+        ${groupByField} as groupName,
+        SUM(IFNULL(o.totalAmount, 0)) as totalAmount,
+        SUM(IFNULL(o.amountDiscount, 0)) as totalDiscount,
+        SUM(IFNULL(o.grandTotal, 0)) as grandTotal,
+        COUNT(DISTINCT o.orderId) as orderCount
+      FROM 
+        orders o
+        LEFT JOIN employee e ON o.preparedBy = e.username
+        LEFT JOIN client c ON o.clientId = c.id
+      WHERE 
+        o.productionDate BETWEEN ? AND ?
+      GROUP BY 
+        ${groupByField}
+      ORDER BY 
+        grandTotal DESC
     `;
 
-    // ✅ Apply GROUP BY only if a valid group option is selected
-    if (groupColumn) {
-      query += ` GROUP BY ${groupColumn}`;
-      query += ` ORDER BY ${groupColumn} ASC`; // Default sorting
+    // ✅ Execute SQL Query
+    const [results] = await pool.query(query, [dateFrom, dateTo]);
+
+    if (!results.length) {
+      return res.json({
+        Status: false,
+        Error: "No sales data found for the selected period",
+      });
     }
 
-    // ✅ Execute SQL Query
-    con.query(query, [dateFrom, dateTo], (err, result) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.json({
-          Status: false,
-          Error: "Database error: " + err.message,
-        });
-      }
-
-      if (!result.length) {
-        return res.json({
-          Status: false,
-          Error: "No sales data found for the selected period",
-        });
-      }
-
-      return res.json({
-        Status: true,
-        Result: result,
-      });
+    return res.json({
+      Status: true,
+      Result: results,
     });
   } catch (error) {
-    console.error("Error in sales summary:", error.message);
-    return res.json({
-      Status: false,
-      Error: "Failed to generate sales summary: " + error.message,
-    });
+    console.error("Error in /sales-summary route:", error);
+    return res.json({ Status: false, Error: error.message });
   }
 });
 
@@ -96,19 +86,11 @@ router.get("/sales-material-summary", verifyUser, async (req, res) => {
       ORDER BY od.material ASC
     `;
 
-    con.query(query, [dateFrom, dateTo], (err, result) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.json({
-          Status: false,
-          Error: "Database error: " + err.message,
-        });
-      }
+    const result = await pool.query(query, [dateFrom, dateTo]);
 
-      return res.json({
-        Status: true,
-        Result: result,
-      });
+    return res.json({
+      Status: true,
+      Result: result,
     });
   } catch (error) {
     console.error("Error in material sales summary:", error.message);
@@ -143,19 +125,11 @@ router.get("/sales-machine-summary", verifyUser, async (req, res) => {
       ORDER BY m.machineType ASC
 `;
 
-    con.query(query, [dateFrom, dateTo], (err, result) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.json({
-          Status: false,
-          Error: "Database error: " + err.message,
-        });
-      }
+    const result = await pool.query(query, [dateFrom, dateTo]);
 
-      return res.json({
-        Status: true,
-        Result: result,
-      });
+    return res.json({
+      Status: true,
+      Result: result,
     });
   } catch (error) {
     console.error("Error in machine sales summary:", error.message);
@@ -167,7 +141,7 @@ router.get("/sales-machine-summary", verifyUser, async (req, res) => {
 });
 
 // Detailed artist incentive route
-router.get("/artist-incentive", verifyUser, (req, res) => {
+router.get("/artist-incentive", verifyUser, async (req, res) => {
   try {
     const { dateFrom, dateTo } = req.query;
 
@@ -175,8 +149,7 @@ router.get("/artist-incentive", verifyUser, (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    // Simplified query to get raw data
-    const sql = `
+    const query = `
       SELECT 
         o.orderId,
         o.productionDate,
@@ -201,31 +174,20 @@ router.get("/artist-incentive", verifyUser, (req, res) => {
       ORDER BY o.orderId
     `;
 
-    con.query(sql, [dateFrom, dateTo], (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.json({
-          Status: false,
-          Error: "Database error: " + err.message,
-        });
-      }
+    const [results] = await pool.query(query, [dateFrom, dateTo]);
 
-      return res.json({
-        Status: true,
-        Result: results,
-      });
+    return res.json({
+      Status: true,
+      Result: results,
     });
   } catch (error) {
-    console.error("Error in artist incentive details:", error);
-    return res.json({
-      Status: false,
-      Error: "Failed to generate artist incentive details: " + error.message,
-    });
+    console.error("Error in /artist-incentive route:", error);
+    return res.json({ Status: false, Error: error.message });
   }
 });
 
-// Detailed artist incentive route
-router.get("/sales-incentive", verifyUser, (req, res) => {
+// Get Sales by Type
+router.get("/sales-by-type", verifyUser, async (req, res) => {
   try {
     const { dateFrom, dateTo } = req.query;
 
@@ -233,7 +195,43 @@ router.get("/sales-incentive", verifyUser, (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    // Simplified query to get raw data
+    const query = `
+      SELECT 
+        od.category,
+        COUNT(DISTINCT o.orderId) as orderCount,
+        SUM(od.totalAmount) as totalSales
+      FROM 
+        orders o
+        JOIN order_details od ON o.orderId = od.orderId
+      WHERE 
+        o.productionDate BETWEEN ? AND ?
+      GROUP BY 
+        od.category
+      ORDER BY 
+        totalSales DESC
+    `;
+
+    const [results] = await pool.query(query, [dateFrom, dateTo]);
+
+    return res.json({
+      Status: true,
+      Result: results,
+    });
+  } catch (error) {
+    console.error("Error in /sales-by-type route:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
+});
+
+// Detailed sales incentive route
+router.get("/sales-incentive", verifyUser, async (req, res) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      return res.json({ Status: false, Error: "Date range is required" });
+    }
+
     const sql = `
       SELECT 
         o.orderId,
@@ -261,35 +259,67 @@ router.get("/sales-incentive", verifyUser, (req, res) => {
       ORDER BY o.orderId
     `;
 
-    con.query(sql, [dateFrom, dateTo], (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.json({
-          Status: false,
-          Error: "Database error: " + err.message,
-        });
-      }
+    const [results] = await pool.query(sql, [dateFrom, dateTo]);
 
-      return res.json({
-        Status: true,
-        Result: results,
-      });
+    return res.json({
+      Status: true,
+      Result: results,
     });
   } catch (error) {
-    console.error("Error in artist incentive details:", error);
-    return res.json({
-      Status: false,
-      Error: "Failed to generate artist incentive details: " + error.message,
-    });
+    console.error("Error in /sales-incentive route:", error);
+    return res.json({ Status: false, Error: error.message });
   }
 });
 
+// // Detailed sales incentive route
+// router.get("/sales-incentive", verifyUser, async (req, res) => {
+//   try {
+//     const { dateFrom, dateTo } = req.query;
+
+//     if (!dateFrom || !dateTo) {
+//       return res.json({ Status: false, Error: "Date range is required" });
+//     }
+
+//     const sql = `
+//       SELECT
+//         o.orderId,
+//         o.productionDate,
+//         e.name as salesName,
+//         c.clientName,
+//         o.projectName,
+//         o.totalAmount,
+//         o.grandTotal,
+//         o.salesIncentivePerc,
+//         o.salesIncentiveAmount
+//       FROM
+//         orders o
+//         LEFT JOIN employee e ON o.preparedBy = e.username
+//         LEFT JOIN client c ON o.clientId = c.id
+//       WHERE
+//         o.productionDate BETWEEN ? AND ?
+//         AND o.salesIncentiveAmount > 0
+//       ORDER BY
+//         e.name, o.productionDate
+//     `;
+
+//     const [results] = await pool.query(sql, [dateFrom, dateTo]);
+
+//     return res.json({
+//       Status: true,
+//       Result: results,
+//     });
+//   } catch (error) {
+//     console.error("Error in /sales-incentive route:", error);
+//     return res.json({ Status: false, Error: error.message });
+//   }
+// });
+
 // Statement of Account Report
-router.get("/statement-of-account", verifyUser, (req, res) => {
+router.get("/statement-of-account", verifyUser, async (req, res) => {
   try {
     const sql = `
       SELECT 
-        c.id as clientId,
+        c.id AS clientId,
         c.clientName,
         SUM(CASE 
           WHEN o.status IN ('Prod', 'Finished') 
@@ -336,32 +366,22 @@ router.get("/statement-of-account", verifyUser, (req, res) => {
       ORDER BY c.clientName
     `;
 
-    con.query(sql, (err, results) => {
-      console.log("SOA:", results);
-      if (err) {
-        console.error("Database error:", err);
-        return res.json({
-          Status: false,
-          Error: "Database error: " + err.message,
-        });
-      }
+    const [results] = await pool.query(sql);
 
-      return res.json({
-        Status: true,
-        Result: results,
-      });
+    console.log("SOA:", results);
+
+    return res.json({
+      Status: true,
+      Result: results,
     });
   } catch (error) {
-    console.error("Error in statement of account:", error);
-    return res.json({
-      Status: false,
-      Error: "Failed to generate statement of account: " + error.message,
-    });
+    console.error("Error in /statement-of-account route:", error);
+    return res.json({ Status: false, Error: error.message });
   }
 });
 
 // SOA Details
-router.get("/soa-details", verifyUser, (req, res) => {
+router.get("/soa-details", verifyUser, async (req, res) => {
   try {
     const { clientId, category } = req.query;
 
@@ -423,26 +443,15 @@ router.get("/soa-details", verifyUser, (req, res) => {
       ORDER BY o.productionDate
     `;
 
-    con.query(sql, [clientId], (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.json({
-          Status: false,
-          Error: "Database error: " + err.message,
-        });
-      }
+    const [results] = await pool.query(sql, [clientId]);
 
-      return res.json({
-        Status: true,
-        Result: results,
-      });
+    return res.json({
+      Status: true,
+      Result: results,
     });
   } catch (error) {
-    console.error("Error in SOA details:", error);
-    return res.json({
-      Status: false,
-      Error: "Failed to get SOA details: " + error.message,
-    });
+    console.error("Error in /soa-details route:", error);
+    return res.json({ Status: false, Error: error.message });
   }
 });
 

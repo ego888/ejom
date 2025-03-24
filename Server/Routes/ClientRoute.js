@@ -1,5 +1,5 @@
 import express from "express";
-import con from "../utils/db.js";
+import pool from "../utils/db.js";
 import { verifyUser } from "../middleware.js";
 
 const router = express.Router();
@@ -10,7 +10,7 @@ router.get("/clients/search", verifyUser, (req, res) => {
   const sql =
     "SELECT DISTINCT clientName, customerName FROM client WHERE clientName LIKE ? ORDER BY clientName LIMIT 10";
 
-  con.query(sql, [`%${query}%`], (err, result) => {
+  pool.query(sql, [`%${query}%`], (err, result) => {
     if (err) {
       console.error("Error searching clients:", err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -29,26 +29,29 @@ router.get("/client", (req, res) => {
         FROM client c 
         LEFT JOIN employee e ON c.salesId = e.id
     `;
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
   });
 });
 
 // Get clients id, clientName, terms
-router.get("/clients", (req, res) => {
-  const sql = "SELECT id, clientName, customerName, terms FROM client";
-  con.query(sql, (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.get("/clients", async (req, res) => {
+  try {
+    const sql = "SELECT id, clientName, customerName, terms FROM client";
+    const [result] = await pool.query(sql);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.log(err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Get single client
 router.get("/client/:id", (req, res) => {
   const id = req.params.id;
   const sql = "SELECT * FROM client WHERE id = ?";
-  con.query(sql, [id], (err, result) => {
+  pool.query(sql, [id], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result[0] });
   });
@@ -84,7 +87,7 @@ router.get("/client-list", (req, res) => {
     ];
   }
 
-  con.query(countSql, countParams, (err, countResult) => {
+  pool.query(countSql, countParams, (err, countResult) => {
     if (err) return res.json({ Status: false, Error: "Count Query Error" });
 
     // Then get paginated data
@@ -114,7 +117,7 @@ router.get("/client-list", (req, res) => {
     sql += " ORDER BY c.clientName LIMIT ? OFFSET ?";
     params.push(limit, offset);
 
-    con.query(sql, params, (err, result) => {
+    pool.query(sql, params, (err, result) => {
       if (err) return res.json({ Status: false, Error: "Query Error" });
       return res.json({
         Status: true,
@@ -153,7 +156,7 @@ router.post("/client/add", (req, res) => {
     req.body.creditLimit || 0,
   ];
 
-  con.query(sql, values, (err, result) => {
+  pool.query(sql, values, (err, result) => {
     if (err) {
       console.log(err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -204,7 +207,7 @@ router.put("/edit_client/:id", (req, res) => {
     id,
   ];
 
-  con.query(sql, values, (err, result) => {
+  pool.query(sql, values, (err, result) => {
     if (err) {
       console.log(err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -217,7 +220,7 @@ router.put("/edit_client/:id", (req, res) => {
 router.delete("/client/delete/:id", (req, res) => {
   const id = req.params.id;
   const sql = "DELETE FROM client WHERE id = ?";
-  con.query(sql, [id], (err, result) => {
+  pool.query(sql, [id], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true });
   });
@@ -231,7 +234,7 @@ router.get("/client-customer", (req, res) => {
     FROM client c 
     LEFT JOIN employee e ON c.salesId = e.id
   `;
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
   });

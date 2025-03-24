@@ -1,143 +1,155 @@
 import express from "express";
-import con from "../utils/db.js";
+import pool from "../utils/db.js";
 
 const router = express.Router();
 
 // Get materials
-router.get("/materials", (req, res) => {
-  const sql = "SELECT * FROM material ORDER BY Material";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Error fetching materials:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+router.get("/materials", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM material ORDER BY Material";
+    const [result] = await pool.query(sql);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.log("Error fetching materials:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Material Routes
-router.get("/material", (req, res) => {
-  const sql = "SELECT * FROM material";
-  con.query(sql, (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.get("/material", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM material";
+    const [result] = await pool.query(sql);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.log(err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-router.get("/material/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "SELECT * FROM material WHERE id = ?";
-  con.query(sql, [id], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.get("/material/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sql = "SELECT * FROM material WHERE id = ?";
+    const [result] = await pool.query(sql, [id]);
     return res.json({ Status: true, Result: result[0] });
-  });
+  } catch (err) {
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-router.post("/material/add", (req, res) => {
-  const sql = `INSERT INTO material 
-          (Material, Description, SqFtPerHour, MinimumPrice, FixWidth, FixHeight, Cost, UnitCost, MaterialType, MachineType, NoIncentive) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+router.post("/material/add", async (req, res) => {
+  try {
+    const sql = `
+      INSERT INTO material 
+      (material, materialType, machineType, costPerYard, costPerSqFt, roll, unitSqFt, 
+       vendorId, comments, noIncentive) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
-  const values = [
-    req.body.material,
-    req.body.description,
-    req.body.sqFtPerHour,
-    req.body.minimumPrice,
-    req.body.fixWidth,
-    req.body.fixHeight,
-    req.body.cost,
-    req.body.unitCost,
-    req.body.materialType,
-    req.body.machineType,
-    req.body.noIncentive ? 1 : 0,
-  ];
+    const values = [
+      req.body.material,
+      req.body.materialType,
+      req.body.machineType,
+      req.body.costPerYard,
+      req.body.costPerSqFt,
+      req.body.roll,
+      req.body.unitSqFt,
+      req.body.vendorId,
+      req.body.comments,
+      req.body.noIncentive ? 1 : 0,
+    ];
 
-  con.query(sql, values, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+    const [result] = await pool.query(sql, values);
     return res.json({ Status: true });
-  });
+  } catch (err) {
+    console.log(err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-router.put("/material/edit/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = `UPDATE material 
-          SET Material = ?, 
-              Description = ?, 
-              SqFtPerHour = ?, 
-              MinimumPrice = ?, 
-              FixWidth = ?, 
-              FixHeight = ?, 
-              Cost = ?, 
-              unitCost = ?,
-              materialType = ?,
-              machineType = ?,
-              NoIncentive = ?
-          WHERE id = ?`;
+router.put("/material/edit/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sql = `
+      UPDATE material 
+      SET 
+        material = ?,
+        materialType = ?,
+        machineType = ?,
+        costPerYard = ?,
+        costPerSqFt = ?,
+        roll = ?,
+        unitSqFt = ?,
+        vendorId = ?,
+        comments = ?,
+        noIncentive = ?
+      WHERE id = ?
+    `;
 
-  const values = [
-    req.body.material,
-    req.body.description,
-    req.body.sqFtPerHour,
-    req.body.minimumPrice,
-    req.body.fixWidth,
-    req.body.fixHeight,
-    req.body.cost,
-    req.body.unitCost,
-    req.body.materialType,
-    req.body.machineType,
-    req.body.noIncentive ? 1 : 0,
-    id,
-  ];
+    const values = [
+      req.body.material,
+      req.body.materialType,
+      req.body.machineType,
+      req.body.costPerYard,
+      req.body.costPerSqFt,
+      req.body.roll,
+      req.body.unitSqFt,
+      req.body.vendorId,
+      req.body.comments,
+      req.body.noIncentive ? 1 : 0,
+      id,
+    ];
 
-  con.query(sql, values, (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+    const [result] = await pool.query(sql, values);
     return res.json({ Status: true });
-  });
+  } catch (err) {
+    console.log(err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-router.delete("/material/delete/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "DELETE FROM material WHERE id = ?";
-  con.query(sql, [id], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.delete("/material/delete/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sql = "DELETE FROM material WHERE id = ?";
+    const [result] = await pool.query(sql, [id]);
     return res.json({ Status: true });
-  });
+  } catch (err) {
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-// Get unique material types
-router.get("/unique-material-types", (req, res) => {
-  const sql =
-    "SELECT DISTINCT MaterialType FROM material WHERE MaterialType != '' ORDER BY MaterialType";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Error fetching material types:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    // Map the result to extract just the MaterialType values
-    const materialTypes = result.map((item) => item.MaterialType);
-    return res.json({ Status: true, Result: materialTypes });
-  });
+// Get distinct material types
+router.get("/material-types", async (req, res) => {
+  try {
+    const sql =
+      "SELECT DISTINCT MaterialType FROM material WHERE MaterialType != '' ORDER BY MaterialType";
+    const [result] = await pool.query(sql);
+    return res.json({
+      Status: true,
+      Result: result.map((item) => item.MaterialType),
+    });
+  } catch (err) {
+    console.log("Error fetching material types:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-// Get unique machine types
-router.get("/unique-machine-types", (req, res) => {
-  const sql =
-    "SELECT DISTINCT MachineType FROM material WHERE MachineType != '' ORDER BY MachineType";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.log("Error fetching machine types:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    // Map the result to extract just the MachineType values
-    const machineTypes = result.map((item) => item.MachineType);
-    return res.json({ Status: true, Result: machineTypes });
-  });
+// Get distinct machine types
+router.get("/machine-types", async (req, res) => {
+  try {
+    const sql =
+      "SELECT DISTINCT MachineType FROM material WHERE MachineType != '' ORDER BY MachineType";
+    const [result] = await pool.query(sql);
+    return res.json({
+      Status: true,
+      Result: result.map((item) => item.MachineType),
+    });
+  } catch (err) {
+    console.log("Error fetching machine types:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 export { router as MaterialRouter };

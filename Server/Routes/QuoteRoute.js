@@ -1,5 +1,5 @@
 import express from "express";
-import con from "../utils/db.js";
+import pool from "../utils/db.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -12,119 +12,113 @@ const router = express.Router();
 
 // Get all quotes with pagination, sorting, filtering and search
 router.get("/quotes", async (req, res) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "quoteId",
-    sortDirection = "DESC",
-    search = "",
-    statuses = "",
-    clients = "",
-    sales = "",
-  } = req.query;
-
-  const offset = (page - 1) * limit;
-  const statusArray = statuses ? statuses.split(",") : [];
-  const clientArray = clients ? clients.split(",") : [];
-  const salesArray = sales ? sales.split(",") : [];
-
   try {
-    let whereClause = "1 = 1";
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "quoteId",
+      sortDirection = "DESC",
+      search = "",
+      statuses = "",
+      clients = "",
+      sales = "",
+    } = req.query;
+
+    const offset = (Number(page) - 1) * Number(limit);
+    const statusArray = statuses ? statuses.split(",") : [];
+    const clientArray = clients ? clients.split(",") : [];
+    const salesArray = sales ? sales.split(",") : [];
+
+    // Build where clause
+    let whereConditions = ["1=1"]; // Always true condition to start
     let params = [];
 
     if (search) {
-      whereClause += ` AND (
-                q.quoteId LIKE ? OR 
-                c.clientName LIKE ? OR 
-                q.projectName LIKE ? OR 
-                q.preparedBy LIKE ? OR 
-                q.status LIKE ? OR 
-                q.refId LIKE ? OR
-                e.name LIKE ?
-            )`;
-      const searchTerm = `%${search}%`;
-      params = [...params, ...Array(7).fill(searchTerm)];
+      whereConditions.push(
+        "(q.quoteId LIKE ? OR q.clientName LIKE ? OR q.projectName LIKE ? OR q.quoteReference LIKE ?)"
+      );
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam);
     }
 
     if (statusArray.length > 0) {
-      whereClause += ` AND q.status IN (${statusArray
-        .map(() => "?")
-        .join(",")})`;
-      params = [...params, ...statusArray];
+      whereConditions.push(
+        `q.status IN (${statusArray.map(() => "?").join(",")})`
+      );
+      params.push(...statusArray);
     }
 
     if (clientArray.length > 0) {
-      whereClause += ` AND c.clientName IN (${clientArray
-        .map(() => "?")
-        .join(",")})`;
-      params = [...params, ...clientArray];
+      whereConditions.push(
+        `c.clientName IN (${clientArray.map(() => "?").join(",")})`
+      );
+      params.push(...clientArray);
     }
 
     if (salesArray.length > 0) {
-      whereClause += ` AND q.preparedBy IN (${salesArray
-        .map(() => "?")
-        .join(",")})`;
-      params = [...params, ...salesArray];
+      whereConditions.push(
+        `q.preparedBy IN (${salesArray.map(() => "?").join(",")})`
+      );
+      params.push(...salesArray);
     }
 
+    const whereClause = whereConditions.join(" AND ");
+
+    // Count query
     const countSql = `
-            SELECT COUNT(DISTINCT q.quoteId) as total
-            FROM quotes q
-            LEFT JOIN client c ON q.clientId = c.id
-            LEFT JOIN employee e ON q.preparedBy = e.id
-            WHERE ${whereClause}
-        `;
+      SELECT COUNT(*) as total
+      FROM quotes q
+      LEFT JOIN client c ON q.clientId = c.id
+      LEFT JOIN employee e ON q.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
 
+    // Main data query
     const dataSql = `
-            SELECT 
-                q.quoteId as id, 
-                q.clientId, 
-                q.clientName, 
-                q.projectName, 
-                q.preparedBy, 
-                q.orderedBy,
-                DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
-                DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
-                q.status, 
-                q.totalAmount,
-                q.amountDiscount,
-                q.percentDisc,
-                q.grandTotal,
-                q.totalHrs,
-                q.telNum,
-                q.email,
-                q.cellNumber,
-                q.statusRem,
-                q.refId as quoteReference,
-                q.editedBy,
-                q.terms,
-                e.name as salesName,
-                DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited
-            FROM quotes q
-            LEFT JOIN client c ON q.clientId = c.id
-            LEFT JOIN employee e ON q.preparedBy = e.id
-            WHERE ${whereClause}
-            ORDER BY ${sortBy} ${sortDirection}
-            LIMIT ? OFFSET ?
-        `;
+      SELECT 
+        q.quoteId as id,
+        q.clientId,
+        q.clientName, 
+        q.projectName,
+        q.preparedBy,
+        q.orderedBy,
+        q.quoteDate,
+        q.dueDate,
+        q.status,
+        q.refId as quoteReference,
+        q.totalAmount,
+        q.amountDiscount,
+        q.percentDisc,
+        q.grandTotal,
+        q.totalHrs,
+        q.terms,
+        q.lastEdited,
+        q.editedBy,
+        q.statusRem,
+        q.email,
+        q.cellNumber,
+        q.telNum,
+        q.status,
+        e.name as salesName,
+        q.lastEdited,
+      FROM quotes q
+      LEFT JOIN client c ON q.clientId = c.id
+      LEFT JOIN employee e ON q.preparedBy = e.id
+      WHERE ${whereClause}
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
+    `;
 
-    const [countResult] = await new Promise((resolve, reject) => {
-      con.query(countSql, params, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
+    // Execute count query
+    const [countResults] = await pool.query(countSql, params);
+    const countResult = countResults[0];
 
-    const quotes = await new Promise((resolve, reject) => {
-      con.query(
-        dataSql,
-        [...params, Number(limit), Number(offset)],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
+    // Execute data query with proper parameter order
+    const [quotes] = await pool.query(dataSql, [
+      ...params,
+      Number(limit),
+      Number(offset),
+    ]);
 
     return res.json({
       Status: true,
@@ -132,7 +126,7 @@ router.get("/quotes", async (req, res) => {
         quotes,
         total: countResult.total,
         page: Number(page),
-        totalPages: Math.ceil(countResult.total / limit),
+        totalPages: Math.ceil(countResult.total / Number(limit)),
       },
     });
   } catch (err) {
@@ -162,7 +156,7 @@ router.get("/quote/:id", (req, res) => {
     WHERE q.quoteId = ?
   `;
 
-  con.query(sql, [req.params.id], (err, result) => {
+  pool.query(sql, [req.params.id], (err, result) => {
     if (err) {
       console.log(err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -195,7 +189,7 @@ router.get("/next_display_quote/:quoteId", (req, res) => {
   const sql =
     "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM quote_details WHERE quoteId = ?";
 
-  con.query(sql, [quoteId], (err, result) => {
+  pool.query(sql, [quoteId], (err, result) => {
     if (err) {
       console.log(err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -222,7 +216,7 @@ router.get("/quote_details/:quoteId", (req, res) => {
     ORDER BY qd.displayOrder
   `;
 
-  con.query(sql, [req.params.quoteId], (err, result) => {
+  pool.query(sql, [req.params.quoteId], (err, result) => {
     if (err) {
       console.log("Select Error:", err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -241,7 +235,7 @@ router.get("/quote-statuses", (req, res) => {
     ORDER BY step ASC
   `;
 
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) {
       console.error("Error fetching status options:", err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -262,7 +256,7 @@ router.put("/quotes/:quoteId/update_edited_info", (req, res) => {
     WHERE quote_id = ?
   `;
 
-  con.query(
+  pool.query(
     sql,
     [
       req.body.lastEdited,
@@ -334,7 +328,7 @@ router.put("/update_quote/:id", (req, res) => {
     req.params.id,
   ];
 
-  con.query(sql, values, (err, result) => {
+  pool.query(sql, values, (err, result) => {
     if (err) {
       console.log("Update Error:", err);
       return res.json({ Status: false, Error: "Failed to update quote" });
@@ -368,7 +362,7 @@ router.put("/quotes/update_totals/:id", (req, res) => {
     req.params.id,
   ];
 
-  con.query(sql, values, (err, result) => {
+  pool.query(sql, values, (err, result) => {
     if (err) {
       console.log("Update Totals Error:", err);
       return res.json({
@@ -396,7 +390,7 @@ router.put("/quote_detail_display_order/:quoteId/:detailId", (req, res) => {
     AND id = ?
   `;
 
-  con.query(sql, [displayOrder, quoteId, detailId], (err, result) => {
+  pool.query(sql, [displayOrder, quoteId, detailId], (err, result) => {
     if (err) {
       console.log(err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -432,7 +426,7 @@ router.put("/quote_details/:quoteId/:displayOrder", (req, res) => {
     WHERE quoteId = ? AND displayOrder = ?
   `;
 
-  con.query(
+  pool.query(
     sql,
     [data, req.params.quoteId, req.params.displayOrder],
     (err, result) => {
@@ -454,7 +448,7 @@ router.put("/quote/status/:id", (req, res) => {
   const { status } = req.body;
   console.log("quoteId:", id, "Status:", status);
   const sql = "UPDATE quotes SET status = ? WHERE quoteId = ?";
-  con.query(sql, [status, id], (err, result) => {
+  pool.query(sql, [status, id], (err, result) => {
     if (err) {
       console.error("Error updating quote status:", err);
       return res.json({ Status: false, Error: "Query Error" });
@@ -479,7 +473,7 @@ router.post("/quote-requote", verifyUser, (req, res) => {
   // First fetch all needed data
   const fetchQuoteData = async (quoteId) => {
     const [quoteData] = await new Promise((resolve, reject) => {
-      con.query(
+      pool.query(
         "SELECT * FROM quotes WHERE quoteId = ?",
         [quoteId],
         (err, result) => {
@@ -496,7 +490,7 @@ router.post("/quote-requote", verifyUser, (req, res) => {
 
   const fetchQuoteDetails = async (quoteId) => {
     const quoteDetails = await new Promise((resolve, reject) => {
-      con.query(
+      pool.query(
         "SELECT * FROM quote_details WHERE quoteId = ?",
         [quoteId],
         (err, result) => {
@@ -509,14 +503,14 @@ router.post("/quote-requote", verifyUser, (req, res) => {
   };
 
   // Then start transaction for all write operations
-  con.beginTransaction(async (err) => {
+  pool.beginTransaction(async (err) => {
     try {
       // 1. Get original quote data
       const quoteData = await fetchQuoteData(quoteId);
 
       // 2. Update original quote status to 'Requote'
       await new Promise((resolve, reject) => {
-        con.query(
+        pool.query(
           "UPDATE quotes SET status = 'Requote' WHERE quoteId = ?",
           [quoteId],
           (err, result) => {
@@ -559,7 +553,7 @@ router.post("/quote-requote", verifyUser, (req, res) => {
       };
 
       const result = await new Promise((resolve, reject) => {
-        con.query("INSERT INTO quotes SET ?", newQuoteData, (err, result) => {
+        pool.query("INSERT INTO quotes SET ?", newQuoteData, (err, result) => {
           if (err) reject(err);
           resolve(result);
         });
@@ -581,7 +575,7 @@ router.post("/quote-requote", verifyUser, (req, res) => {
           };
 
           return new Promise((resolve, reject) => {
-            con.query(
+            pool.query(
               "INSERT INTO quote_details SET ?",
               newDetail,
               (err, result) => {
@@ -596,10 +590,10 @@ router.post("/quote-requote", verifyUser, (req, res) => {
       }
 
       // Commit transaction
-      con.commit((err) => {
+      pool.commit((err) => {
         if (err) {
           console.error("Transaction commit error:", err);
-          return con.rollback(() => {
+          return pool.rollback(() => {
             res.json({ Status: false, Error: "Failed to commit transaction" });
           });
         }
@@ -612,7 +606,7 @@ router.post("/quote-requote", verifyUser, (req, res) => {
       });
     } catch (error) {
       console.error("Error in quote-requote:", error);
-      con.rollback(() => {
+      pool.rollback(() => {
         res.json({
           Status: false,
           Error: error.message || "Failed to create requote",
@@ -636,7 +630,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
   // First fetch all needed data
   const fetchQuoteData = async (quoteId) => {
     const [quoteData] = await new Promise((resolve, reject) => {
-      con.query(
+      pool.query(
         "SELECT * FROM quotes WHERE quoteId = ?",
         [quoteId],
         (err, result) => {
@@ -653,7 +647,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
 
   const fetchQuoteDetails = async (quoteId) => {
     const quoteDetails = await new Promise((resolve, reject) => {
-      con.query(
+      pool.query(
         "SELECT * FROM quote_details WHERE quoteId = ?",
         [quoteId],
         (err, result) => {
@@ -666,7 +660,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
   };
 
   // Then start transaction for all write operations
-  con.beginTransaction(async (err) => {
+  pool.beginTransaction(async (err) => {
     try {
       // 1. Get quote data
       const quoteData = await fetchQuoteData(quoteId);
@@ -692,7 +686,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
       };
 
       const orderResult = await new Promise((resolve, reject) => {
-        con.query("INSERT INTO orders SET ?", orderData, (err, result) => {
+        pool.query("INSERT INTO orders SET ?", orderData, (err, result) => {
           if (err) reject(err);
           resolve(result);
         });
@@ -715,7 +709,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
           };
 
           return new Promise((resolve, reject) => {
-            con.query(
+            pool.query(
               "INSERT INTO order_details SET ?",
               newDetail,
               (err, result) => {
@@ -731,7 +725,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
 
       // 5. Update original quote status to Closed
       await new Promise((resolve, reject) => {
-        con.query(
+        pool.query(
           "UPDATE quotes SET status = 'Closed' WHERE quoteId = ?",
           [quoteId],
           (err, result) => {
@@ -742,10 +736,10 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
       });
 
       // Commit transaction
-      con.commit((err) => {
+      pool.commit((err) => {
         if (err) {
           console.error("Transaction commit error:", err);
-          return con.rollback(() => {
+          return pool.rollback(() => {
             res.json({ Status: false, Error: "Failed to commit transaction" });
           });
         }
@@ -758,7 +752,7 @@ router.post("/quote-makeJO", verifyUser, (req, res) => {
       });
     } catch (error) {
       console.error("Error in quote-makeJO:", error);
-      con.rollback(() => {
+      pool.rollback(() => {
         res.json({
           Status: false,
           Error: error.message || "Failed to convert quote to job order",
@@ -810,7 +804,7 @@ router.post("/add_quote", verifyUser, (req, res) => {
       req.body.terms || null,
     ];
 
-    con.query(sql, values, (err, result) => {
+    pool.query(sql, values, (err, result) => {
       if (err) {
         console.log(err);
         return res.json({ Status: false, Error: "Query Error" });
@@ -848,7 +842,7 @@ router.post("/add_quote_detail", (req, res) => {
   };
 
   const sql = "INSERT INTO quote_details SET ?";
-  con.query(sql, data, (err, result) => {
+  pool.query(sql, data, (err, result) => {
     if (err) {
       console.error("Error adding quote detail:", err);
       return res.json({ Status: false, Error: "Failed to add quote detail" });
@@ -864,7 +858,7 @@ router.delete("/quote_detail/:quoteId/:displayOrder", (req, res) => {
   const sql =
     "DELETE FROM quote_details WHERE quoteId = ? AND displayOrder = ?";
 
-  con.query(
+  pool.query(
     sql,
     [req.params.quoteId, req.params.displayOrder],
     (err, result) => {

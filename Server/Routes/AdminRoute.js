@@ -1,128 +1,128 @@
 import express from "express";
-import con from "../utils/db.js";
+import pool from "../utils/db.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
-import { verifyUser } from "../middleware.js";
+import { verifyUser, authorize, logUserAction } from "../middleware.js";
 
 const router = express.Router();
 
 // Function to check if admin exists and insert a default one if not
-const checkAndInsertAdmin = () => {
-  const sql = "SELECT COUNT(*) AS adminCount FROM employee";
-  con.query(sql, (err, result) => {
-    if (err) {
-      console.error("Error checking admin count:", err);
-      return;
-    }
+const checkAndInsertAdmin = async () => {
+  try {
+    const sql = "SELECT COUNT(*) AS adminCount FROM employee";
+    const [rows] = await pool.query(sql);
 
-    const adminCount = result[0].adminCount;
+    const adminCount = rows[0].adminCount;
 
     // If no admin exists, insert one
     if (adminCount === 0) {
       const defaultEmail = "ergo888@yahoo.com";
       const defaultPassword = "admin"; // Default password for admin
-      bcrypt.hash(defaultPassword, 10, (err, hashedPassword) => {
-        if (err) {
-          console.error("Error hashing password:", err);
-          return;
-        }
+
+      try {
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         const insertSql =
-          //        "INSERT INTO employee (name, email, password, category_id, active, admin) VALUES ('erwin', ?, ?, 1,  1, 1)";
-          //          "UPDATE employee SET name = 'erwin', email = ?, password = ?, category_id = 1, active = 1, admin = 1 WHERE id = 1";
-          con.query(
-            insertSql,
-            [defaultEmail, hashedPassword],
-            (err, result) => {
-              if (err) {
-                console.error("Error inserting default admin:", err);
-                return;
-              }
-              console.log("Default ejom admin inserted!");
-            }
-          );
-      });
+          "INSERT INTO employee (name, email, password, category_id, active, admin) VALUES ('erwin', ?, ?, 1, 1, 1)";
+        await pool.query(insertSql, [defaultEmail, hashedPassword]);
+
+        console.log("Default ejom admin inserted!");
+      } catch (err) {
+        console.error("Error inserting default admin:", err);
+      }
     }
-  });
+  } catch (err) {
+    console.error("Error checking admin count:", err);
+  }
 };
 
 // Call the function to check and insert admin if needed
 checkAndInsertAdmin();
 
-router.post("/adminlogin", (req, res) => {
-  const sql = "SELECT * from admin WHERE email = ?";
-  con.query(sql, [req.body.email], (err, result) => {
-    if (err) return res.json({ loginStatus: false, Error: "Query error" });
-    if (result.length > 0) {
-      // Compare the hashed password with the entered password
-      bcrypt.compare(req.body.password, result[0].password, (err, match) => {
-        if (err)
-          return res.json({
-            loginStatus: false,
-            Error: "Password comparison error",
-          });
+router.post("/adminlogin", async (req, res) => {
+  try {
+    const sql = "SELECT * from admin WHERE email = ?";
+    const [results] = await pool.query(sql, [req.body.email]);
 
-        if (match) {
-          const email = result[0].email;
-          const token = jwt.sign(
-            { role: "admin", email: email, id: result[0].id },
-            "jwt_secret_key",
-            { expiresIn: "1d" }
-          );
-          res.cookie("token", token);
-          return res.json({ loginStatus: true });
-        } else {
-          return res.json({
-            loginStatus: false,
-            Error: "Wrong email or password",
-          });
-        }
-      });
-    } else {
+    if (results.length === 0) {
       return res.json({ loginStatus: false, Error: "Wrong email or password" });
     }
-  });
+
+    const match = await bcrypt.compare(req.body.password, results[0].password);
+
+    if (match) {
+      const email = results[0].email;
+      const token = jwt.sign(
+        { role: "admin", email: email, id: results[0].id },
+        "jwt_secret_key",
+        { expiresIn: "1d" }
+      );
+      res.cookie("token", token);
+      return res.json({ loginStatus: true });
+    } else {
+      return res.json({
+        loginStatus: false,
+        Error: "Wrong email or password",
+      });
+    }
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.json({ loginStatus: false, Error: "Query error" });
+  }
 });
 
-router.get("/category", (req, res) => {
-  const sql = "SELECT * FROM category";
-  con.query(sql, (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
-    return res.json({ Status: true, Result: result });
-  });
+router.get("/category", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM category";
+    const [results] = await pool.query(sql);
+    return res.json({ Status: true, Result: results });
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
+
 // Route to get a specific category by ID
-router.get("/category/:id", (req, res) => {
-  const id = req.params.id; // Get the ID from the URL
-  const sql = "SELECT * FROM category WHERE id = ?";
-  con.query(sql, [id], (err, result) => {
-    if (err) {
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    if (result.length === 0) {
+router.get("/category/:id", async (req, res) => {
+  try {
+    const id = req.params.id; // Get the ID from the URL
+    const sql = "SELECT * FROM category WHERE id = ?";
+    const [results] = await pool.query(sql, [id]);
+
+    if (results.length === 0) {
       return res.json({ Status: false, Error: "Category not found" });
     }
-    return res.json({ Status: true, Result: result });
-  });
+
+    return res.json({ Status: true, Result: results });
+  } catch (err) {
+    console.error("Error fetching category:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-router.put("/category/edit/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "UPDATE category SET name = ? WHERE id = ?";
-  con.query(sql, [req.body.name, id], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.put("/category/edit/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sql = "UPDATE category SET name = ? WHERE id = ?";
+    await pool.query(sql, [req.body.name, id]);
     return res.json({ Status: true });
-  });
+  } catch (err) {
+    console.error("Error updating category:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-router.post("/category/add", (req, res) => {
-  const sql = "INSERT INTO category (`name`) VALUES (?)";
-  con.query(sql, [req.body.category], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.post("/category/add", async (req, res) => {
+  try {
+    const sql = "INSERT INTO category (`name`) VALUES (?)";
+    await pool.query(sql, [req.body.category]);
     return res.json({ Status: true });
-  });
+  } catch (err) {
+    console.error("Error adding category:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // image upload
@@ -176,7 +176,7 @@ router.post("/employee/add", upload.single("image"), (req, res) => {
       req.file ? req.file.filename : null,
     ];
 
-    con.query(sql, values, (err, result) => {
+    pool.query(sql, values, (err, result) => {
       if (err) {
         console.log("Insert Error:", err);
         return res.json({ Status: false, Error: "Failed to add employee" });
@@ -188,7 +188,7 @@ router.post("/employee/add", upload.single("image"), (req, res) => {
 
 router.get("/employee", (req, res) => {
   const sql = "SELECT * FROM employee";
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
   });
@@ -197,7 +197,7 @@ router.get("/employee", (req, res) => {
 router.get("/employee/:id", (req, res) => {
   const id = req.params.id;
   const sql = "SELECT * FROM employee WHERE id = ?";
-  con.query(sql, [id], (err, result) => {
+  pool.query(sql, [id], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
   });
@@ -237,7 +237,7 @@ router.put("/employee/edit/:id", (req, res) => {
         id,
       ];
 
-      con.query(sql, values, (err, result) => {
+      pool.query(sql, values, (err, result) => {
         if (err) {
           console.log("Query error:", err);
           return res.json({ Status: false, Error: "Query Error" });
@@ -267,7 +267,7 @@ router.put("/employee/edit/:id", (req, res) => {
       id,
     ];
 
-    con.query(sql, values, (err, result) => {
+    pool.query(sql, values, (err, result) => {
       if (err) {
         console.log("Query error:", err);
         return res.json({ Status: false, Error: "Query Error" });
@@ -280,7 +280,7 @@ router.put("/employee/edit/:id", (req, res) => {
 router.delete("/employee/delete/:id", (req, res) => {
   const id = req.params.id;
   const sql = "delete from employee where id = ?";
-  con.query(sql, [id], (err, result) => {
+  pool.query(sql, [id], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" + err });
     return res.json({ Status: true, Result: result });
   });
@@ -288,7 +288,7 @@ router.delete("/employee/delete/:id", (req, res) => {
 
 router.get("/admin_count", (req, res) => {
   const sql = "SELECT COUNT(id) as admin FROM employee WHERE admin = true";
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
   });
@@ -296,7 +296,7 @@ router.get("/admin_count", (req, res) => {
 
 router.get("/employee_count", (req, res) => {
   const sql = "SELECT COUNT(id) as employee FROM employee WHERE admin = false";
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
   });
@@ -304,7 +304,7 @@ router.get("/employee_count", (req, res) => {
 
 router.get("/salary_count", (req, res) => {
   const sql = "SELECT SUM(salary) as sumOfSalary FROM employee";
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     return res.json({ Status: true, Result: result });
   });
@@ -312,7 +312,7 @@ router.get("/salary_count", (req, res) => {
 
 router.get("/admin_records", (req, res) => {
   const sql = "select * from employee where admin = true";
-  con.query(sql, (err, result) => {
+  pool.query(sql, (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" + err });
     return res.json({ Status: true, Result: result });
   });
@@ -323,65 +323,69 @@ router.get("/logout", (req, res) => {
   return res.json({ Status: true });
 });
 
-router.post("/login", (req, res) => {
-  const sql = "SELECT * FROM employee WHERE name = ? AND active = true";
-  con.query(sql, [req.body.name], (err, result) => {
-    if (err) {
-      console.log("Query Error:", err);
-      return res.json({ loginStatus: false, Error: "Query Error" });
-    }
-    console.log("Result 2:", result);
+router.post("/login", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM employee WHERE name = ? AND active = true";
+    const [result] = await pool.query(sql, [req.body.name]);
+
     if (result.length > 0) {
-      bcrypt.compare(req.body.password, result[0].password, (err, response) => {
-        if (response) {
-          const employee = result[0];
-          console.log("Employee data for token:", employee); // Debug log
+      const employee = result[0];
+      console.log("Result 2:", result);
 
-          const token = jwt.sign(
-            {
-              name: employee.name,
-              id: employee.id,
-              categoryId: employee.category_id,
-              active: employee.active,
-              sales: employee.sales,
-              accounting: employee.accounting,
-              production: employee.production,
-              artist: employee.artist,
-              operator: employee.operator,
-            },
-            "jwt_secret_key",
-            { expiresIn: "1d" }
-          );
+      const response = await bcrypt.compare(
+        req.body.password,
+        employee.password
+      );
 
-          console.log("Generated token payload:", jwt.decode(token)); // Debug log
+      if (response) {
+        console.log("Employee data for token:", employee); // Debug log
 
-          return res.json({
-            loginStatus: true,
-            isAdmin: employee.category_id === 1,
-            token: token,
-          });
-        }
-        return res.json({ loginStatus: false, Error: "Wrong Password" });
-      });
+        const token = jwt.sign(
+          {
+            name: employee.name,
+            id: employee.id,
+            categoryId: employee.category_id,
+            active: employee.active,
+            sales: employee.sales,
+            accounting: employee.accounting,
+            production: employee.production,
+            artist: employee.artist,
+            operator: employee.operator,
+          },
+          "jwt_secret_key",
+          { expiresIn: "1d" }
+        );
+
+        console.log("Generated token payload:", jwt.decode(token)); // Debug log
+
+        return res.json({
+          loginStatus: true,
+          isAdmin: employee.category_id === 1,
+          token: token,
+        });
+      }
+
+      return res.json({ loginStatus: false, Error: "Wrong Password" });
     } else {
       return res.json({
         loginStatus: false,
         Error: "Wrong Username or inactive account",
       });
     }
-  });
+  } catch (err) {
+    console.log("Login Error:", err);
+    return res.json({ loginStatus: false, Error: "Query Error" });
+  }
 });
 
-router.get("/get_employee/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "SELECT * FROM employee WHERE id = ?";
-  con.query(sql, [id], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
-    // Convert numeric boolean values to actual booleans
+router.get("/get_employee/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sql = "SELECT * FROM employee WHERE id = ?";
+    const [result] = await pool.query(sql, [id]);
+
     if (result.length > 0) {
+      // Convert numeric boolean values to actual booleans
       const employee = {
         ...result[0],
         active: result[0].active === 1,
@@ -395,14 +399,17 @@ router.get("/get_employee/:id", (req, res) => {
       return res.json({ Status: true, Result: [employee] });
     }
     return res.json({ Status: false, Error: "Employee not found" });
-  });
+  } catch (err) {
+    console.log("Error fetching employee:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Add name check for AddEmployee
 router.post("/add_employee", (req, res) => {
   // First check if name already exists
   const checkSql = "SELECT * FROM employee WHERE name = ?";
-  con.query(checkSql, [req.body.name], (err, result) => {
+  pool.query(checkSql, [req.body.name], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     if (result.length > 0) {
       return res.json({ Status: false, Error: "Username already exists" });
@@ -417,7 +424,7 @@ router.put("/edit_employee/:id", (req, res) => {
   const id = req.params.id;
   // First check if name already exists for different employee
   const checkSql = "SELECT * FROM employee WHERE name = ? AND id != ?";
-  con.query(checkSql, [req.body.name, id], (err, result) => {
+  pool.query(checkSql, [req.body.name, id], (err, result) => {
     if (err) return res.json({ Status: false, Error: "Query Error" });
     if (result.length > 0) {
       return res.json({ Status: false, Error: "Username already exists" });
@@ -427,25 +434,22 @@ router.put("/edit_employee/:id", (req, res) => {
   });
 });
 
-router.get("/payment_terms", (req, res) => {
-  const sql = "SELECT * FROM paymentTerms ORDER BY days ASC";
-  con.query(sql, (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.get("/payment_terms", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM paymentTerms ORDER BY days ASC";
+    const [result] = await pool.query(sql);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.error("Error fetching payment terms:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Get payment types
 router.get("/payment-types", async (req, res) => {
   try {
     const sql = "SELECT payType FROM paymentType ORDER BY payType";
-
-    const result = await new Promise((resolve, reject) => {
-      con.query(sql, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
+    const [result] = await pool.query(sql);
 
     return res.json({
       Status: true,
@@ -456,31 +460,27 @@ router.get("/payment-types", async (req, res) => {
     return res.json({
       Status: false,
       Error: "Failed to fetch payment types",
-      Details: err.message,
     });
   }
 });
 
 // Add a new route for user profile updates
-router.put("/employee/update_profile/:id", verifyUser, (req, res) => {
-  const id = req.params.id;
-  const userId = req.user.id;
+router.put("/employee/update_profile/:id", verifyUser, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.user.id;
 
-  // Check if the user is updating their own profile or if they are an admin
-  if (Number(id) !== userId && req.user.categoryId !== 1) {
-    return res.status(403).json({
-      Status: false,
-      Error: "You can only update your own profile",
-    });
-  }
+    // Check if the user is updating their own profile or if they are an admin
+    if (Number(id) !== userId && req.user.categoryId !== 1) {
+      return res.status(403).json({
+        Status: false,
+        Error: "You can only update your own profile",
+      });
+    }
 
-  // If password is included, hash it
-  if (req.body.password && req.body.password.trim() !== "") {
-    bcrypt.hash(req.body.password, 10, (err, hash) => {
-      if (err) {
-        console.log("Hashing error:", err);
-        return res.json({ Status: false, Error: "Password hashing error" });
-      }
+    // If password is included, hash it
+    if (req.body.password && req.body.password.trim() !== "") {
+      const hash = await bcrypt.hash(req.body.password, 10);
 
       const sql = `
         UPDATE employee 
@@ -496,39 +496,32 @@ router.put("/employee/update_profile/:id", verifyUser, (req, res) => {
         id,
       ];
 
-      con.query(sql, values, (err, result) => {
-        if (err) {
-          console.log("Profile update error:", err);
-          return res.json({ Status: false, Error: "Failed to update profile" });
-        }
-        return res.json({
-          Status: true,
-          Result: "Profile updated successfully",
-        });
+      await pool.query(sql, values);
+      return res.json({
+        Status: true,
+        Result: "Profile updated successfully",
       });
-    });
-  } else {
-    // Update without changing password
-    const sql = `
-      UPDATE employee 
-      SET fullName = ?, email = ?, cellNumber = ?
-      WHERE id = ?
-    `;
+    } else {
+      // Update without changing password
+      const sql = `
+        UPDATE employee 
+        SET fullName = ?, email = ?, cellNumber = ?
+        WHERE id = ?
+      `;
 
-    const values = [
-      req.body.fullName,
-      req.body.email,
-      req.body.cellNumber || null,
-      id,
-    ];
+      const values = [
+        req.body.fullName,
+        req.body.email,
+        req.body.cellNumber || null,
+        id,
+      ];
 
-    con.query(sql, values, (err, result) => {
-      if (err) {
-        console.log("Profile update error:", err);
-        return res.json({ Status: false, Error: "Failed to update profile" });
-      }
+      await pool.query(sql, values);
       return res.json({ Status: true, Result: "Profile updated successfully" });
-    });
+    }
+  } catch (err) {
+    console.log("Profile update error:", err);
+    return res.json({ Status: false, Error: "Failed to update profile" });
   }
 });
 
