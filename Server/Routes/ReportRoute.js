@@ -14,27 +14,53 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
     }
 
     // Define valid group options
+    // const validGroupOptions = {
+    //   sales: "e.name", // Group by sales rep
+    //   client: "c.clientName", // Group by client
+    //   month: "DATE_FORMAT(o.productionDate, '%Y-%m')", // Group by month
+    // };
+
+    // // Validate groupBy parameter
+    // const groupByColumn = validGroupOptions[groupBy] || null;
+    // const groupNameAlias = groupBy === "month" ? "month" : "name";
+
+    // const sql = `
+    //   SELECT
+    //     ${groupByColumn} as ${groupNameAlias},
+    //     SUM(o.grandTotal) as totalSales,
+    //     COUNT(o.orderId) as orderCount
+    //   FROM orders o
+    //   LEFT JOIN employee e ON o.preparedBy = e.id
+    //   LEFT JOIN client c ON o.clientId = c.id
+    //   WHERE o.status IN ('Prod','Finished','Delivered','Billed','Closed')
+    //     AND o.productionDate BETWEEN ? AND ?
+    //   GROUP BY ${groupByColumn}
+    //   ORDER BY totalSales DESC
+    // `;
+    // ✅ Define valid group options
     const validGroupOptions = {
       sales: "e.name", // Group by sales rep
       client: "c.clientName", // Group by client
       month: "DATE_FORMAT(o.productionDate, '%Y-%m')", // Group by month
     };
 
-    // Validate groupBy parameter
-    const groupByColumn = validGroupOptions[groupBy] || validGroupOptions.sales;
+    // ✅ Validate groupBy parameter
+    const groupByColumn = validGroupOptions[groupBy] || null;
     const groupNameAlias = groupBy === "month" ? "month" : "name";
 
+    // ✅ Construct SQL only if grouping is valid
     const sql = `
       SELECT 
-        ${groupByColumn} as ${groupNameAlias},
-        SUM(o.grandTotal) as totalSales,
-        COUNT(o.orderId) as orderCount
+        COUNT(DISTINCT o.orderId) AS orderCount,
+        ${groupByColumn ? `${groupByColumn} AS ${groupNameAlias},` : ""}
+        SUM(o.grandTotal) AS totalSales,
+        SUM(o.amountPaid) AS amountPaid
       FROM orders o
-      LEFT JOIN users e ON o.preparedBy = e.id
-      LEFT JOIN clients c ON o.clientId = c.clientId
-      WHERE o.status IN ('Prod','Finished','Delivered','Billed','Closed')
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN client c ON o.clientId = c.id
+      WHERE o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
         AND o.productionDate BETWEEN ? AND ?
-      GROUP BY ${groupByColumn}
+      ${groupByColumn ? `GROUP BY ${groupByColumn}` : ""}
       ORDER BY totalSales DESC
     `;
 
@@ -61,13 +87,14 @@ router.get("/sales-material-summary", verifyUser, async (req, res) => {
 
     const sql = `
       SELECT 
-        od.material AS materialName,
         COUNT(DISTINCT o.orderId) AS orderCount,
+        od.material AS materialName,
         SUM(od.amount) AS totalAmount,
-        SUM(o.amountPaid * (od.amount / o.grandTotal)) AS amountPaid
+        SUM(o.amountPaid * (od.amount / o.grandTotal)) AS totalPaid
       FROM orders o
       JOIN order_details od ON o.orderId = od.orderId
-      WHERE o.productionDate BETWEEN ? AND ? 
+      WHERE  o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
+        AND o.productionDate BETWEEN ? AND ? 
       AND o.status != 'Cancel'
       GROUP BY od.material
       ORDER BY od.material ASC
@@ -96,14 +123,15 @@ router.get("/sales-machine-summary", verifyUser, async (req, res) => {
 
     const sql = `
       SELECT 
-        m.machineType AS machineType,
         COUNT(DISTINCT o.orderId) AS orderCount,
+        m.machineType AS machineType,
         SUM(od.amount) AS totalAmount,
-        SUM(o.amountPaid * (od.amount / NULLIF(o.grandTotal, 0))) AS amountPaid
+        SUM(o.amountPaid * (od.amount / NULLIF(o.grandTotal, 0))) AS totalPaid
       FROM orders o
       JOIN order_details od ON o.orderId = od.orderId
       JOIN material m ON od.material = m.Material
-      WHERE o.productionDate BETWEEN ? AND ? 
+      WHERE  o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
+        AND o.productionDate BETWEEN ? AND ? 
       AND o.status != 'Cancel'
       GROUP BY m.machineType
       ORDER BY m.machineType ASC

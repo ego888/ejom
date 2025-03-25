@@ -15,6 +15,7 @@ const ReportSalesSummary = ({ data, groupBy }) => {
     }
   }, [data, groupBy]);
 
+  console.log("lastFetchedGroupBy:", lastFetchedGroupBy.current);
   // ✅ Define Dynamic Headers Based on `lastFetchedGroupBy`
   const renderHeader = () => {
     switch (lastFetchedGroupBy.current) {
@@ -29,7 +30,7 @@ const ReportSalesSummary = ({ data, groupBy }) => {
       case "machine":
         return ["Order Count", "Machine Type", "Total Amount", "Amount Paid"];
       default:
-        return ["Total Orders", "", "Total Sales", "Amount Paid"]; // No Grouping
+        return ["Total Orders", "Total Sales", "Amount Paid"]; // No Grouping
     }
   };
 
@@ -69,12 +70,14 @@ const ReportSalesSummary = ({ data, groupBy }) => {
   // ✅ Calculate Totals
   const totals = displayData.reduce(
     (acc, curr) => ({
-      totalOrders: acc.totalOrders + (curr.orderCount || 0),
-      totalAmount: acc.totalAmount + (curr.totalSales || curr.totalAmount || 0),
-      totalPaid: acc.totalPaid + (curr.amountPaid || 0),
+      totalOrders: acc.totalOrders + Number(curr.orderCount || 0),
+      totalAmount:
+        acc.totalAmount + Number(curr.totalSales || curr.totalAmount || 0),
+      totalPaid: acc.totalPaid + Number(curr.amountPaid || 0),
     }),
     { totalAmount: 0, totalOrders: 0, totalPaid: 0 }
   );
+  console.log("totals:", totals);
 
   const isMaterialOrMachine = ["material", "machine"].includes(
     lastFetchedGroupBy.current
@@ -128,12 +131,12 @@ const ReportSalesSummary = ({ data, groupBy }) => {
                 })
                 .map((item, index) => (
                   <tr key={index}>
-                    {renderRow(item).map((cell, cellIndex) => (
+                    {Object.values(item).map((value, cellIndex) => (
                       <td
                         key={cellIndex}
-                        className={cellIndex >= 2 ? "text-end" : "text-center"}
+                        className={cellIndex > 1 ? "text-end" : "text-center"}
                       >
-                        {cell}
+                        {cellIndex > 1 ? formatNumber(value) : value}
                       </td>
                     ))}
                   </tr>
@@ -148,7 +151,7 @@ const ReportSalesSummary = ({ data, groupBy }) => {
           </tbody>
           <tfoot>
             <tr className="table-active">
-              <td colSpan={lastFetchedGroupBy.current ? 2 : 1}>
+              <td colSpan={lastFetchedGroupBy.current === "none" ? 1 : 2}>
                 Total Orders: {totals.totalOrders}
               </td>
               <td className="text-end">

@@ -37,6 +37,7 @@ const ReportSales = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log("response:", response.data);
       if (response.data.Status) {
         setReportData(response.data.Result);
       } else {
