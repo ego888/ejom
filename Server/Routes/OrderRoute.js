@@ -961,7 +961,6 @@ router.put("/orders/:orderId/update_edited_info", async (req, res) => {
 router.put("/order_details/update_incentives", async (req, res) => {
   try {
     const updates = req.body;
-    console.log("Received updates:", updates);
 
     // Process each update with a single connection
     const connection = await pool.getConnection();
@@ -1059,7 +1058,6 @@ router.put(
   async (req, res) => {
     try {
       const updates = req.body;
-      console.log("Received updates:", updates);
 
       // Use a single connection for all updates
       const connection = await pool.getConnection();
@@ -1107,7 +1105,6 @@ router.put(
   async (req, res) => {
     try {
       const updates = req.body;
-      console.log("Received updates:", updates);
 
       // Use a single connection for all updates
       const connection = await pool.getConnection();

@@ -9,14 +9,17 @@ export const calculateArtistIncentive = (orders, settings) => {
     if (currentOrderId !== order.orderId) {
       currentOrderId = order.orderId;
       maxOrderIncentive =
-        (order.grandTotal / (1 + settings.vatPercent / 100)) *
-        (settings.ArtistMaxPercent / 100);
+        (Number(order.grandTotal) / (1 + Number(settings.vatPercent) / 100)) *
+        (Number(settings.ArtistMaxPercent) / 100);
       remainingMaxIncentive = maxOrderIncentive;
     }
     remarks = "";
 
     // Skip incentive if no incentive or below minimum
-    if (order.noIncentive || order.grandTotal < settings.ArtistMinAmount) {
+    if (
+      order.noIncentive ||
+      Number(order.grandTotal) < Number(settings.ArtistMinAmount)
+    ) {
       return {
         ...order,
         originalMajor: order.major,
@@ -34,32 +37,36 @@ export const calculateArtistIncentive = (orders, settings) => {
     }
 
     // Store original values
-    const originalMajor = order.major;
-    const originalMinor = order.minor;
+    const originalMajor = Number(order.major);
+    const originalMinor = Number(order.minor);
 
     // Calculate adjusted quantities for overflow
-    let adjustedMajor = order.major;
-    let adjustedMinor = order.minor;
+    let adjustedMajor = Number(order.major);
+    let adjustedMinor = Number(order.minor);
 
-    const overflow = order.minor + order.major - order.quantity;
+    const overflow =
+      Number(order.minor) + Number(order.major) - Number(order.quantity);
     if (overflow > 0) {
-      adjustedMajor = Math.min(order.major, order.quantity);
-      adjustedMinor = Math.min(order.minor, order.quantity - adjustedMajor);
+      adjustedMajor = Math.min(Number(order.major), Number(order.quantity));
+      adjustedMinor = Math.min(
+        Number(order.minor),
+        Number(order.quantity) - adjustedMajor
+      );
       remarks = "Overflow";
     }
 
     // Calculate amounts
-    const halfRate = order.perSqFt < settings.HalfIncentiveSqFt;
+    const halfRate = Number(order.perSqFt) < Number(settings.HalfIncentiveSqFt);
     const rateMultiplier = halfRate ? 0.5 : 1;
     if (halfRate) {
       remarks = remarks ? remarks + ", Half rate" : "Half rate";
     }
 
-    const majorAmount = adjustedMajor * settings.major * rateMultiplier;
-    const minorAmount = adjustedMinor * settings.minor * rateMultiplier;
+    const majorAmount = adjustedMajor * Number(settings.major) * rateMultiplier;
+    const minorAmount = adjustedMinor * Number(settings.minor) * rateMultiplier;
 
     // Calculate total incentive (capped by remaining max incentive)
-    const rawIncentive = majorAmount + minorAmount;
+    const rawIncentive = Number(majorAmount) + Number(minorAmount);
     const totalIncentive = Math.min(rawIncentive, remainingMaxIncentive);
 
     // Update remaining max incentive for next item in same order

@@ -19,10 +19,13 @@ export const calculateSalesIncentive = (orders, settings) => {
     let overideIncentive = 0;
 
     // Calculate base incentives
-    if (order.amount > 0) {
-      salesIncentive = (order.amount / VATDivider) * salesIncentiveMultiplier;
+    if (Number(order.amount) > 0) {
+      salesIncentive =
+        (Number(order.amount) / Number(VATDivider)) *
+        Number(salesIncentiveMultiplier);
       overideIncentive =
-        (order.amount / VATDivider) * overrideIncentiveMultiplier;
+        (Number(order.amount) / Number(VATDivider)) *
+        Number(overrideIncentiveMultiplier);
     } else {
       return {
         ...order,
@@ -33,24 +36,25 @@ export const calculateSalesIncentive = (orders, settings) => {
     }
 
     // Apply half rate if applicable
-    if (order.perSqFt < settings.HalfIncentiveSqFt && order.width > 0) {
+    if (
+      Number(order.perSqFt) < Number(settings.HalfIncentiveSqFt) &&
+      Number(order.width) > 0
+    ) {
       salesIncentive *= 0.5;
       overideIncentive *= 0.5;
       remarks = "Half rate";
     }
 
     // Apply discount reduction if applicable
-    if (order.percentDisc) {
-      const discountMultiplier = 1 - order.percentDisc / 100;
-      console.log("Order", order);
-      console.log("Percent Discount", order.percentDisc);
-      console.log("Discount Multiplier", discountMultiplier);
-      console.log("Sales Incentive", salesIncentive);
+    if (Number(order.percentDisc) > 0) {
+      const discountMultiplier = 1 - Number(order.percentDisc) / 100;
       salesIncentive *= discountMultiplier;
       overideIncentive *= discountMultiplier;
-      remarks = remarks
-        ? `${remarks}, ${order.percentDisc}% discount`
-        : `${order.percentDisc}% discount`;
+      if (Number(order.percentDisc) > 0) {
+        remarks = remarks
+          ? `${remarks}, ${order.percentDisc}% discount`
+          : `${order.percentDisc}% discount`;
+      }
     }
 
     return {

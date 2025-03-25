@@ -14,18 +14,49 @@ const ReportSalesIncentiveSummary = ({ data }) => {
         totalAmount: 0,
         salesIncentive: 0,
         overideIncentive: 0,
+        processedOrderIds: new Set(), // Track which orders we've counted
       };
     }
 
-    acc[preparedBy].orderCount++;
-    acc[preparedBy].totalAmount += order.amount || 0;
-    acc[preparedBy].salesIncentive += order.salesIncentive || 0;
-    acc[preparedBy].overideIncentive += order.overideIncentive || 0;
+    // Only count order and totalAmount once per orderId
+    if (!acc[preparedBy].processedOrderIds.has(order.orderId)) {
+      acc[preparedBy].orderCount++;
+      acc[preparedBy].totalAmount += parseFloat(order.grandTotal) || 0;
+      acc[preparedBy].processedOrderIds.add(order.orderId);
+    }
+
+    // These should be summed for all items
+    acc[preparedBy].salesIncentive += parseFloat(order.salesIncentive) || 0;
+    acc[preparedBy].overideIncentive += parseFloat(order.overideIncentive) || 0;
 
     return acc;
   }, {});
 
-  const summaryArray = Object.values(summarizedData);
+  // Clean up the processed order IDs before converting to array
+  const summaryArray = Object.values(summarizedData).map(
+    ({ processedOrderIds, ...rest }) => rest
+  );
+
+  // Calculate grand totals using the same logic
+  const grandTotals = data.orders.reduce(
+    (totals, order) => {
+      if (!totals.processedOrderIds.has(order.orderId)) {
+        totals.orderCount++;
+        totals.totalAmount += parseFloat(order.grandTotal) || 0;
+        totals.processedOrderIds.add(order.orderId);
+      }
+      totals.salesIncentive += parseFloat(order.salesIncentive) || 0;
+      totals.overideIncentive += parseFloat(order.overideIncentive) || 0;
+      return totals;
+    },
+    {
+      orderCount: 0,
+      totalAmount: 0,
+      salesIncentive: 0,
+      overideIncentive: 0,
+      processedOrderIds: new Set(),
+    }
+  );
 
   return (
     <div className="report-summary-container">
@@ -35,19 +66,11 @@ const ReportSalesIncentiveSummary = ({ data }) => {
           <thead className="table-active">
             <tr>
               <th className="text-center">Prepared By</th>
-              <th className="text-center">Orders</th>
-              <th className="text-center">Total</th>
-              <th className="text-center">Sales</th>
-              <th className="text-center">Override</th>
-              <th className="text-center">Total</th>
-            </tr>
-            <tr>
-              <th className="text-center">Name</th>
-              <th className="text-center">Count</th>
-              <th className="text-center">Amount</th>
-              <th className="text-center">Incentive</th>
-              <th className="text-center">Incentive</th>
-              <th className="text-center">Incentives</th>
+              <th className="text-center">Order Count</th>
+              <th className="text-center">Total Amount</th>
+              <th className="text-center">Sales Incentive</th>
+              <th className="text-center">Override Incentive</th>
+              <th className="text-center">Total Incentive</th>
             </tr>
           </thead>
           <tbody>
@@ -72,17 +95,9 @@ const ReportSalesIncentiveSummary = ({ data }) => {
             <tfoot className="table-active">
               <tr>
                 <td className="text-end">Total:</td>
-                <td className="text-center">
-                  {summaryArray.reduce((sum, item) => sum + item.orderCount, 0)}
-                </td>
+                <td className="text-center">{grandTotals.orderCount}</td>
                 <td className="text-end">
-                  ₱
-                  {formatNumber(
-                    summaryArray.reduce(
-                      (sum, item) => sum + item.totalAmount,
-                      0
-                    )
-                  )}
+                  ₱{formatNumber(grandTotals.totalAmount)}
                 </td>
                 <td className="text-end border-start">
                   ₱

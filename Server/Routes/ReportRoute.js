@@ -59,7 +59,7 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
       LEFT JOIN employee e ON o.preparedBy = e.id
       LEFT JOIN client c ON o.clientId = c.id
       WHERE o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
-        AND o.productionDate BETWEEN ? AND ?
+        AND o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
       ${groupByColumn ? `GROUP BY ${groupByColumn}` : ""}
       ORDER BY totalSales DESC
     `;
@@ -94,8 +94,7 @@ router.get("/sales-material-summary", verifyUser, async (req, res) => {
       FROM orders o
       JOIN order_details od ON o.orderId = od.orderId
       WHERE  o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
-        AND o.productionDate BETWEEN ? AND ? 
-      AND o.status != 'Cancel'
+        AND o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY od.material
       ORDER BY od.material ASC
     `;
@@ -131,8 +130,7 @@ router.get("/sales-machine-summary", verifyUser, async (req, res) => {
       JOIN order_details od ON o.orderId = od.orderId
       JOIN material m ON od.material = m.Material
       WHERE  o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
-        AND o.productionDate BETWEEN ? AND ? 
-      AND o.status != 'Cancel'
+        AND o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY m.machineType
       ORDER BY m.machineType ASC
     `;
@@ -178,7 +176,7 @@ router.get("/artist-incentive", verifyUser, async (req, res) => {
       JOIN order_details od ON o.orderId = od.orderId
       JOIN material m ON od.material = m.Material
       JOIN client c ON o.clientId = c.id
-      WHERE o.productionDate BETWEEN ? AND ?
+      WHERE o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
         AND TRIM(o.status) IN ('Delivered', 'Billed', 'Closed')
         AND m.noIncentive = 0 AND od.perSqFt > 0
       ORDER BY o.orderId
@@ -214,7 +212,7 @@ router.get("/sales-by-type", verifyUser, async (req, res) => {
         orders o
         JOIN order_details od ON o.orderId = od.orderId
       WHERE 
-        o.productionDate BETWEEN ? AND ?
+        o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
       GROUP BY 
         od.category
       ORDER BY 
@@ -238,6 +236,8 @@ router.get("/sales-incentive", verifyUser, async (req, res) => {
   try {
     const { dateFrom, dateTo } = req.query;
 
+    console.log("Date From", dateFrom);
+    console.log("Date To", dateTo);
     if (!dateFrom || !dateTo) {
       return res.json({ Status: false, Error: "Date range is required" });
     }
@@ -263,7 +263,7 @@ router.get("/sales-incentive", verifyUser, async (req, res) => {
       JOIN material m ON od.material = m.Material
       JOIN client c ON o.clientId = c.id
       JOIN employee e ON o.preparedBy = e.id
-      WHERE o.productionDate BETWEEN ? AND ?
+      WHERE o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
         AND TRIM(o.status) IN ('Delivered', 'Billed', 'Closed')
         AND m.noIncentive = 0 AND od.amount > 0
       ORDER BY o.orderId

@@ -45,6 +45,7 @@ const ReportSalesIncentives = () => {
         }
       );
 
+      console.log("Orders Response", ordersResponse.data);
       if (ordersResponse.data.Status) {
         // Calculate incentives right after fetching data
         const calculatedOrders = calculateSalesIncentive(

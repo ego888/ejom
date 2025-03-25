@@ -1,9 +1,119 @@
-import React from "react";
+import React, { useState } from "react";
 import { formatNumber, formatPeso } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 
 const ReportSalesIncentiveDetails = ({ data }) => {
-  const calculatedData = data.orders;
+  const [sortField, setSortField] = useState("orderId");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [groupBy, setGroupBy] = useState(null); // null, "preparedBy", or "clientName"
+
+  // Sort and group the data
+  let calculatedData = [...data.orders];
+
+  // Sort the data
+  calculatedData.sort((a, b) => {
+    let aValue = a[sortField];
+    let bValue = b[sortField];
+
+    // Handle dates
+    if (sortField === "productionDate") {
+      aValue = new Date(aValue);
+      bValue = new Date(bValue);
+    }
+
+    // Handle numbers
+    if (typeof aValue === "number") {
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    // Handle strings and dates
+    if (sortDirection === "asc") {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return bValue > aValue ? 1 : -1;
+    }
+  });
+
+  // Group the data if grouping is enabled
+  let groupedData = [];
+  if (groupBy) {
+    const groups = {};
+    calculatedData.forEach((item) => {
+      const groupValue = item[groupBy] || "Unknown";
+      if (!groups[groupValue]) {
+        groups[groupValue] = {
+          items: [],
+          subtotals: {
+            grandTotal: 0,
+            amount: 0,
+            salesIncentive: 0,
+            overideIncentive: 0,
+            orderCount: 0,
+            uniqueOrders: new Set(),
+            processedOrderIds: new Set(), // Track which orders we've counted
+          },
+        };
+      }
+      groups[groupValue].items.push(item);
+
+      // Only add grandTotal if we haven't processed this order yet
+      if (!groups[groupValue].subtotals.processedOrderIds.has(item.orderId)) {
+        groups[groupValue].subtotals.grandTotal +=
+          parseFloat(item.grandTotal) || 0;
+        groups[groupValue].subtotals.processedOrderIds.add(item.orderId);
+      }
+
+      // These should be summed for all items
+      groups[groupValue].subtotals.amount += parseFloat(item.amount) || 0;
+      groups[groupValue].subtotals.salesIncentive +=
+        parseFloat(item.salesIncentive) || 0;
+      groups[groupValue].subtotals.overideIncentive +=
+        parseFloat(item.overideIncentive) || 0;
+      groups[groupValue].subtotals.uniqueOrders.add(item.orderId);
+    });
+
+    // Convert groups to array format and sort by group value
+    Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([groupValue, group]) => {
+        // Calculate final order count from unique orders
+        group.subtotals.orderCount = group.subtotals.uniqueOrders.size;
+        delete group.subtotals.uniqueOrders; // Clean up Set before adding to groupedData
+        delete group.subtotals.processedOrderIds; // Clean up processed orders tracking
+
+        groupedData.push({ type: "groupHeader", value: groupValue });
+        group.items.forEach((item) =>
+          groupedData.push({ type: "item", ...item })
+        );
+        groupedData.push({
+          type: "subtotal",
+          ...group.subtotals,
+          groupValue,
+        });
+      });
+  }
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const handleGroup = (field) => {
+    setGroupBy(groupBy === field ? null : field);
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return "";
+    return sortDirection === "asc" ? "↑" : "↓";
+  };
+
+  const getGroupIcon = (field) => {
+    return groupBy === field ? "⊟" : "⊞";
+  };
 
   // Track previous row for comparison
   let previousOrderId = null;
@@ -15,28 +125,148 @@ const ReportSalesIncentiveDetails = ({ data }) => {
         <table className="table table-hover report-table">
           <thead className="table-active">
             <tr>
-              <th className="text-center">Order ID</th>
-              <th className="text-center">Date</th>
-              <th className="text-center">Prepared By</th>
-              <th className="text-center">Client</th>
-              <th className="text-center">Grand Total</th>
-              <th className="text-center">Material</th>
-              <th className="text-center">Amount</th>
-              <th className="text-center">Per SqFt</th>
-              <th className="text-center">Disc %</th>
-              <th className="text-center">Sales</th>
-              <th className="text-center">Override</th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("orderId")}
+              >
+                Order ID {getSortIcon("orderId")}
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("productionDate")}
+              >
+                Date {getSortIcon("productionDate")}
+              </th>
+              <th className="text-center">
+                <div className="d-flex justify-content-center align-items-center gap-2">
+                  <span
+                    className="cursor-pointer"
+                    onClick={() => handleSort("preparedBy")}
+                  >
+                    Prepared By {getSortIcon("preparedBy")}
+                  </span>
+                  <span
+                    className="cursor-pointer"
+                    onClick={() => handleGroup("preparedBy")}
+                  >
+                    {getGroupIcon("preparedBy")}
+                  </span>
+                </div>
+              </th>
+              <th className="text-center">
+                <div className="d-flex justify-content-center align-items-center gap-2">
+                  <span
+                    className="cursor-pointer"
+                    onClick={() => handleSort("clientName")}
+                  >
+                    Client {getSortIcon("clientName")}
+                  </span>
+                  <span
+                    className="cursor-pointer"
+                    onClick={() => handleGroup("clientName")}
+                  >
+                    {getGroupIcon("clientName")}
+                  </span>
+                </div>
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("grandTotal")}
+              >
+                Grand Total {getSortIcon("grandTotal")}
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("materialName")}
+              >
+                Material {getSortIcon("materialName")}
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("amount")}
+              >
+                Amount {getSortIcon("amount")}
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("perSqFt")}
+              >
+                Per SqFt {getSortIcon("perSqFt")}
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("percentDisc")}
+              >
+                Disc % {getSortIcon("percentDisc")}
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("salesIncentive")}
+              >
+                Sales {getSortIcon("salesIncentive")}
+              </th>
+              <th
+                className="text-center cursor-pointer"
+                onClick={() => handleSort("overideIncentive")}
+              >
+                Override {getSortIcon("overideIncentive")}
+              </th>
               <th className="text-center">Remarks</th>
             </tr>
           </thead>
           <tbody>
-            {calculatedData && calculatedData.length > 0 ? (
-              calculatedData.map((item, index) => {
+            {(groupBy ? groupedData : calculatedData).length > 0 ? (
+              (groupBy ? groupedData : calculatedData).map((item, index) => {
+                if (groupBy) {
+                  if (item.type === "groupHeader") {
+                    return (
+                      <tr key={`header-${index}`} className="table-primary">
+                        <td colSpan={12} className="fw-bold ps-2">
+                          {groupBy === "preparedBy"
+                            ? "Prepared By: "
+                            : "Client: "}
+                          {item.value}
+                        </td>
+                      </tr>
+                    );
+                  }
+                  if (item.type === "subtotal") {
+                    return (
+                      <tr key={`subtotal-${index}`} className="table-secondary">
+                        <td colSpan={2} className="text-end fw-bold">
+                          Subtotal for {item.groupValue}:
+                        </td>
+                        <td className="text-center fw-bold">
+                          {item.orderCount} orders
+                        </td>
+                        <td></td>
+                        <td className="text-end fw-bold">
+                          ₱{formatNumber(item.grandTotal)}
+                        </td>
+                        <td></td>
+                        <td className="text-end fw-bold">
+                          ₱{formatNumber(item.amount)}
+                        </td>
+                        <td colSpan={2}></td>
+                        <td className="text-end border-start fw-bold">
+                          ₱{formatNumber(item.salesIncentive)}
+                        </td>
+                        <td className="text-end fw-bold">
+                          ₱{formatNumber(item.overideIncentive)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    );
+                  }
+                  item = item;
+                }
+
                 // Check if this row has the same order as previous
                 const sameOrder = item.orderId === previousOrderId;
                 previousOrderId = item.orderId;
+
                 return (
-                  <tr key={index}>
+                  <tr key={`item-${index}`}>
                     <td>{!sameOrder ? item.orderId : ""}</td>
                     <td>
                       {!sameOrder
@@ -82,7 +312,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
               </tr>
             )}
           </tbody>
-          {calculatedData && calculatedData.length > 0 && (
+          {calculatedData.length > 0 && (
             <tfoot
               className="table-active"
               style={{
@@ -94,22 +324,34 @@ const ReportSalesIncentiveDetails = ({ data }) => {
             >
               <tr>
                 <td colSpan="4" className="text-end">
-                  Total:
+                  Grand Total:
                 </td>
                 <td className="text-end">
                   ₱
                   {formatNumber(
-                    calculatedData.reduce(
-                      (sum, item) => sum + item.grandTotal,
-                      0
+                    Array.from(
+                      new Set(calculatedData.map((item) => item.orderId))
                     )
+                      .map(
+                        (orderId) =>
+                          calculatedData.find(
+                            (item) => item.orderId === orderId
+                          )?.grandTotal || 0
+                      )
+                      .reduce(
+                        (sum, grandTotal) => sum + parseFloat(grandTotal),
+                        0
+                      )
                   )}
                 </td>
                 <td></td>
                 <td className="text-end">
                   ₱
                   {formatNumber(
-                    calculatedData.reduce((sum, item) => sum + item.amount, 0)
+                    calculatedData.reduce(
+                      (sum, item) => sum + parseFloat(item.amount || 0),
+                      0
+                    )
                   )}
                 </td>
                 <td></td>
@@ -118,7 +360,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                   ₱
                   {formatNumber(
                     calculatedData.reduce(
-                      (sum, item) => sum + item.salesIncentive,
+                      (sum, item) => sum + parseFloat(item.salesIncentive || 0),
                       0
                     )
                   )}
@@ -127,7 +369,8 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                   ₱
                   {formatNumber(
                     calculatedData.reduce(
-                      (sum, item) => sum + item.overideIncentive,
+                      (sum, item) =>
+                        sum + parseFloat(item.overideIncentive || 0),
                       0
                     )
                   )}
