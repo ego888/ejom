@@ -274,11 +274,11 @@ function ArtistLog() {
                 <th aria-label="order-id" className="text-center">
                   Order ID
                 </th>
-                <th aria-label="project" className="text-center">
-                  Project
-                </th>
                 <th aria-label="client" className="text-center">
                   Client
+                </th>
+                <th aria-label="project" className="text-center">
+                  Project
                 </th>
                 <th aria-label="due-date" className="text-center">
                   Due Date
@@ -288,6 +288,9 @@ function ArtistLog() {
                 </th>
                 <th aria-label="status" className="text-center">
                   Status
+                </th>
+                <th aria-label="width" className="text-center">
+                  Quantity
                 </th>
                 <th aria-label="width" className="text-center">
                   Width
@@ -300,6 +303,9 @@ function ArtistLog() {
                 </th>
                 <th aria-label="material" className="text-center">
                   Material
+                </th>
+                <th aria-label="width" className="text-center">
+                  Artist
                 </th>
                 <th aria-label="major" className="text-center">
                   Major
@@ -326,9 +332,6 @@ function ArtistLog() {
                           (item.revision ? `-${item.revision}` : "")
                         : ""}
                     </td>
-                    <td className="project-name" id={`project-${index}`}>
-                      {index === 0 ? item.projectName : ""}
-                    </td>
                     <td className="client-cell">
                       <div>{item.clientName}</div>
                       {item.customerName && (
@@ -336,6 +339,9 @@ function ArtistLog() {
                           {item.customerName}
                         </div>
                       )}
+                    </td>
+                    <td className="project-name" id={`project-${index}`}>
+                      {index === 0 ? item.projectName : ""}
                     </td>
                     <td className="due-date" id={`due-datetime-${index}`}>
                       {index === 0 && item.dueDate
@@ -399,7 +405,7 @@ function ArtistLog() {
                           )
                         }
                       >
-                        <option value="">Select Artist</option>
+                        <option value="">Select</option>
                         {artists.map((artist) => (
                           <option key={artist.id} value={artist.name}>
                             {artist.name}

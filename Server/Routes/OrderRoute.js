@@ -1034,7 +1034,7 @@ router.get("/orders-details-artistIncentive", async (req, res) => {
         od.minor
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.Id
-      LEFT JOIN order_details od ON o.orderID = od.orderId
+      LEFT JOIN order_details od ON o.orderID = od.orderId AND od.amount > 0
       LEFT JOIN material m ON od.material = m.material
       WHERE o.status = 'Prod' 
         AND (o.productionDate IS NOT NULL AND o.productionDate + INTERVAL 48 HOUR > NOW())

@@ -432,7 +432,7 @@ router.get("/payment_terms", async (req, res) => {
 
 router.get("/payment-types", async (req, res) => {
   try {
-    const sql = "SELECT * FROM payment_types ORDER BY payType ASC";
+    const sql = "SELECT * FROM paymentTypes ORDER BY payType ASC";
     const [result] = await pool.query(sql);
     return res.json({ Status: true, Result: result });
   } catch (err) {
