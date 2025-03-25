@@ -67,7 +67,10 @@ export const calculateArtistIncentive = (orders, settings) => {
 
     // Calculate total incentive (capped by remaining max incentive)
     const rawIncentive = Number(majorAmount) + Number(minorAmount);
-    const totalIncentive = Math.min(rawIncentive, remainingMaxIncentive);
+    const totalIncentive = Math.min(
+      rawIncentive,
+      remainingMaxIncentive
+    ).toFixed(2);
 
     // Update remaining max incentive for next item in same order
     remainingMaxIncentive -= totalIncentive;

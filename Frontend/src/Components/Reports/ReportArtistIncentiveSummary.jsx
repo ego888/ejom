@@ -8,7 +8,6 @@ const ReportArtistIncentiveSummary = ({ data }) => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log("Token:", token);
 
     if (token) {
       const decoded = jwtDecode(token);
@@ -39,25 +38,27 @@ const ReportArtistIncentiveSummary = ({ data }) => {
       };
     }
 
-    acc[artist].totalQuantity += order.quantity;
+    // Convert quantity to number before adding
+    acc[artist].totalQuantity += Number(order.quantity) || 0;
     acc[artist].majorOriginal += order.originalMajor;
     acc[artist].majorAdjusted += order.adjustedMajor;
     acc[artist].majorAmount += order.majorAmount;
     acc[artist].minorOriginal += order.originalMinor;
-    acc[artist].minorAdjusted += order.adjustedMinor;
-    acc[artist].minorAmount += order.minorAmount;
-    acc[artist].totalIncentive += order.totalIncentive;
+    acc[artist].minorAdjusted += Number(order.adjustedMinor) || 0;
+    acc[artist].minorAmount += Number(order.minorAmount) || 0;
+    acc[artist].totalIncentive += Number(order.totalIncentive) || 0;
 
     // Only add these once per order
     if (!acc[artist].processedOrders.has(order.orderId)) {
       acc[artist].orderCount++;
-      acc[artist].totalGrand += order.grandTotal;
-      acc[artist].maxIncentive += order.maxOrderIncentive;
+      acc[artist].totalGrand += Number(order.grandTotal);
+      acc[artist].maxIncentive += Number(order.maxOrderIncentive);
       acc[artist].processedOrders.add(order.orderId);
     }
 
     return acc;
   }, {});
+  console.log("Summarized Data", summarizedData);
 
   // Clean up by removing the processedOrders Set before rendering
   const summaryArray = Object.values(summarizedData).map(
@@ -85,7 +86,7 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                 Minor
               </th>
               <th className="text-center">Total</th>
-              {isAdmin && <th className="text-center">Max</th>}
+              {isAdmin && <th className="text-center">Cap</th>}
             </tr>
             <tr>
               <th className="text-center">Name</th>
@@ -116,21 +117,39 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                     </td>
                     <td className="text-center">{item.totalQuantity}</td>
                     <td className="text-center border-start">
-                      {item.majorOriginal}
+                      {Number(item.majorOriginal)
+                        ? formatNumber(item.majorOriginal)
+                        : ""}
                     </td>
-                    <td className="text-center">{item.majorAdjusted}</td>
                     <td className="text-center">
-                      {formatNumber(item.majorAmount)}
+                      {Number(item.majorAdjusted)
+                        ? formatNumber(item.majorAdjusted)
+                        : ""}
+                    </td>
+                    <td className="text-center">
+                      {Number(item.majorAmount)
+                        ? formatNumber(item.majorAmount)
+                        : ""}
                     </td>
                     <td className="text-center border-start">
-                      {item.minorOriginal}
+                      {Number(item.minorOriginal)
+                        ? formatNumber(item.minorOriginal)
+                        : ""}
                     </td>
-                    <td className="text-center">{item.minorAdjusted}</td>
                     <td className="text-center">
-                      {formatNumber(item.minorAmount)}
+                      {Number(item.minorAdjusted)
+                        ? formatNumber(item.minorAdjusted)
+                        : ""}
+                    </td>
+                    <td className="text-center">
+                      {Number(item.minorAmount)
+                        ? formatNumber(item.minorAmount)
+                        : ""}
                     </td>
                     <td className="text-end border-start">
-                      ₱{formatNumber(item.totalIncentive)}
+                      {Number(item.totalIncentive)
+                        ? `₱${formatNumber(item.totalIncentive)}`
+                        : ""}
                     </td>
                     {isAdmin && (
                       <td className="text-end">

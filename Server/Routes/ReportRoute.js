@@ -61,9 +61,10 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
       WHERE o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
         AND o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
       ${groupByColumn ? `GROUP BY ${groupByColumn}` : ""}
-      ORDER BY totalSales DESC
+      ORDER BY ${groupByColumn} ASC
     `;
 
+    console.log("SQL", sql);
     const [results] = await pool.query(sql, [dateFrom, dateTo]);
 
     return res.json({
@@ -178,11 +179,11 @@ router.get("/artist-incentive", verifyUser, async (req, res) => {
       JOIN client c ON o.clientId = c.id
       WHERE o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
         AND TRIM(o.status) IN ('Delivered', 'Billed', 'Closed')
-        AND m.noIncentive = 0 AND od.perSqFt > 0
+        AND m.noIncentive = 0 AND od.amount > 0
       ORDER BY o.orderId
     `;
 
-    const [results] = await pool.query(query, [dateFrom, dateTo]);
+    const [results] = await pool.query(sql, [dateFrom, dateTo]);
 
     return res.json({
       Status: true,

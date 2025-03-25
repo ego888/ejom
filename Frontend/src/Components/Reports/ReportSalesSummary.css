@@ -41,3 +41,45 @@
   font-weight: 600;
   text-align: center;
 }
+
+/* Fixed header and footer styles */
+.report-table-wrapper {
+  position: relative;
+  height: calc(100vh - 250px);
+  overflow: hidden;
+}
+
+.report-table-container {
+  height: 100%;
+  overflow: auto;
+}
+
+.report-table {
+  margin-bottom: 0 !important;
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--reports-hover-bg);
+}
+
+.sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background-color: var(--reports-hover-bg);
+}
+
+.table-info {
+  --bs-table-bg: #cfe2ff;
+  --bs-table-striped-bg: #c5d7f2;
+  --bs-table-striped-color: #000;
+  --bs-table-active-bg: #bacbe6;
+  --bs-table-active-color: #000;
+  --bs-table-hover-bg: #bfd1ec;
+  --bs-table-hover-color: #000;
+  color: #000;
+  border-color: #bacbe6;
+}

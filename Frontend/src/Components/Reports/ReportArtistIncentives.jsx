@@ -36,15 +36,19 @@ const ReportArtistIncentives = () => {
       ]);
 
       if (!artistIncentiveResponse.data.Status) {
-        throw new Error(artistIncentiveResponse.data.Error);
+        throw new Error(
+          artistIncentiveResponse.data.Error ||
+            "Failed to fetch artist incentive settings"
+        );
       }
 
       if (!ordersResponse.data.Status) {
         throw new Error(
-          ordersResponse.data.Error || "Failed to fetch artist incentives"
+          ordersResponse.data.Error || "Failed to fetch artist incentive orders"
         );
       }
 
+      console.log("Orders Response", ordersResponse.data.Result);
       // Calculate incentives
       const calculatedOrders = calculateArtistIncentive(
         ordersResponse.data.Result,
@@ -56,6 +60,7 @@ const ReportArtistIncentives = () => {
         Id: order.id,
         artistIncentive: order.totalIncentive,
       }));
+      console.log("Updates", updates);
 
       const saveResponse = await axios.put(
         `${ServerIP}/auth/order_details/update_incentives_calculation`,
@@ -71,6 +76,8 @@ const ReportArtistIncentives = () => {
         orders: calculatedOrders,
         settings: artistIncentiveResponse.data.Result,
       });
+
+      setAlert(null); // Clear any previous errors
     } catch (error) {
       console.error("Error generating artist incentive report:", error);
       setAlert({
@@ -116,6 +123,13 @@ const ReportArtistIncentives = () => {
           </div>
         </div>
       </div>
+
+      {alert && (
+        <div className={`alert alert-${alert.type}`} role="alert">
+          <strong>{alert.title}: </strong>
+          {alert.message}
+        </div>
+      )}
 
       {reportData && (
         <div className="report-container">
