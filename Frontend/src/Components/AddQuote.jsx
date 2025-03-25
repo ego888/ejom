@@ -1034,45 +1034,20 @@ function AddQuote() {
           const updatedDetails = updatedDetailsResponse.data.Result;
           setQuoteDetails(updatedDetails);
 
-          // Calculate new totals using the new function
-          const totals = calculateQuoteTotals(updatedDetails);
+          // Update local state with the totals returned from the backend
+          const { totalAmount, amountDiscount, grandTotal, totalHrs } =
+            response.data.Result;
+          setData((prev) => ({
+            ...prev,
+            totalAmount,
+            amountDiscount,
+            grandTotal,
+            totalHrs,
+          }));
 
-          // Update quote totals in the database
-          const quoteUpdateResponse = await axios.put(
-            `${ServerIP}/auth/update_quote/${quoteId}`,
-            {
-              ...data,
-              totalAmount: totals.subtotal,
-              amountDiscount: totals.amountDiscount,
-              percentDisc: totals.percentDisc,
-              grandTotal: totals.grandTotal,
-              totalHrs: totals.totalHrs,
-              editedBy: localStorage.getItem("userName"),
-              lastEdited: new Date()
-                .toISOString()
-                .slice(0, 19)
-                .replace("T", " "),
-            },
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-
-          if (quoteUpdateResponse.data.Status) {
-            // Update local state
-            setData((prev) => ({
-              ...prev,
-              totalAmount: totals.subtotal,
-              amountDiscount: totals.amountDiscount,
-              percentDisc: totals.percentDisc,
-              grandTotal: totals.grandTotal,
-              totalHrs: totals.totalHrs,
-            }));
-          }
+          setEditingRowId(null);
+          setEditedValues({});
         }
-
-        setEditingRowId(null);
-        setEditedValues({});
       }
     } catch (error) {
       console.error("Error updating quote detail:", error);
