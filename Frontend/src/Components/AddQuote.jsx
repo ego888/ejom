@@ -687,7 +687,7 @@ function AddQuote() {
     }
   };
 
-  const handleDeleteDetail = (uniqueId) => {
+  const handleDeleteDetail = (detailId) => {
     if (!canEdit()) {
       setAlert({
         show: true,
@@ -705,27 +705,33 @@ function AddQuote() {
       type: "confirm",
       onConfirm: () => {
         const token = localStorage.getItem("token");
-        const [quoteId, displayOrder] = uniqueId.split("_");
 
+        // Find the detail to be deleted
+        // const detailToDelete = quoteDetails.find(
+        //   (detail) => detail.id === parseInt(detailId)
+        // );
+        // if (!detailToDelete) {
+        //   setAlert({
+        //     show: true,
+        //     title: "Error",
+        //     message: "Detail not found",
+        //     type: "alert",
+        //   });
+        //   return;
+        // }
+
+        // Filter out the deleted detail
         const updatedDetails = quoteDetails.filter(
-          (detail) =>
-            !(
-              detail.quoteId === parseInt(quoteId) &&
-              detail.displayOrder === parseInt(displayOrder)
-            )
+          (detail) => detail.Id !== parseInt(detailId)
         );
-
         const totals = calculateQuoteTotals(updatedDetails);
 
-        Promise.all([
-          axios.delete(
-            `${ServerIP}/auth/quote_detail/${quoteId}/${displayOrder}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
-        ])
-          .then(([detailResult]) => {
+        console.log("Detail ID:", detailId);
+        axios
+          .delete(`${ServerIP}/auth/quote-detail-delete/${detailId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          .then((detailResult) => {
             if (detailResult.data.Status) {
               setQuoteDetails(updatedDetails);
 
@@ -757,7 +763,7 @@ function AddQuote() {
               });
             }
           })
-          .catch((err) => handleApiError(err, navigate));
+          .catch((err) => handleApiError(err, navigate, setAlert));
       },
     });
   };
@@ -1303,7 +1309,8 @@ function AddQuote() {
           )
           .then((result) => {
             if (result.data.Status) {
-              const newOrderId = result.data.Result;
+              const newOrderId =
+                result.data.Result.orderId || result.data.Result;
 
               setAlert({
                 show: true,
@@ -1731,8 +1738,8 @@ function AddQuote() {
                     <th>Height</th>
                     <th>Unit</th>
                     <th>Material</th>
-                    <th>Per Sq Ft</th>
                     <th>Description</th>
+                    <th>Per Sq Ft</th>
                     <th>Price</th>
                     <th>Disc%</th>
                     <th>Amount</th>
@@ -1857,30 +1864,6 @@ function AddQuote() {
                               valueKey="Material"
                             />
                           </td>
-                          <td style={{ width: "70px" }}>
-                            <input
-                              type="text"
-                              className="form-input detail text-end"
-                              value={
-                                editedValues[
-                                  `${detail.quoteId}_${detail.displayOrder}`
-                                ]?.persqft || detail.persqft
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[^\d.-]/g,
-                                  ""
-                                );
-                                if (!isNaN(value)) {
-                                  handleDetailInputChange(
-                                    `${detail.quoteId}_${detail.displayOrder}`,
-                                    "persqft",
-                                    value
-                                  );
-                                }
-                              }}
-                            />
-                          </td>
                           <td>
                             <textarea
                               className="form-input detail"
@@ -1932,6 +1915,30 @@ function AddQuote() {
                                 }
                               }}
                               rows="1"
+                            />
+                          </td>
+                          <td style={{ width: "70px" }}>
+                            <input
+                              type="text"
+                              className="form-input detail text-end"
+                              value={
+                                editedValues[
+                                  `${detail.quoteId}_${detail.displayOrder}`
+                                ]?.persqft || detail.persqft
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value.replace(
+                                  /[^\d.-]/g,
+                                  ""
+                                );
+                                if (!isNaN(value)) {
+                                  handleDetailInputChange(
+                                    `${detail.quoteId}_${detail.displayOrder}`,
+                                    "persqft",
+                                    value
+                                  );
+                                }
+                              }}
                             />
                           </td>
                           <td style={{ width: "100px" }}>
@@ -2081,11 +2088,11 @@ function AddQuote() {
                           <td className="centered-cell">{detail.height}</td>
                           <td className="centered-cell">{detail.unit}</td>
                           <td className="centered-cell">{detail.material}</td>
-                          <td className="numeric-cell">
-                            {formatNumber(detail.persqft)}
-                          </td>
                           <td style={{ whiteSpace: "pre-line" }}>
                             {detail.itemDescription}
+                          </td>
+                          <td className="numeric-cell">
+                            {formatNumber(detail.persqft)}
                           </td>
                           <td className="numeric-cell">
                             {formatNumber(detail.unitPrice)}
@@ -2121,11 +2128,13 @@ function AddQuote() {
                                     variant="delete"
                                     iconOnly
                                     size="sm"
-                                    onClick={() =>
-                                      handleDeleteDetail(
-                                        `${detail.quoteId}_${detail.displayOrder}`
-                                      )
-                                    }
+                                    onClick={() => {
+                                      console.log(
+                                        "Detail click ID:",
+                                        detail.Id
+                                      );
+                                      handleDeleteDetail(detail.Id);
+                                    }}
                                   />
                                 </>
                               )}

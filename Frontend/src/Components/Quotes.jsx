@@ -46,12 +46,7 @@ function Quotes() {
   const clientFilterRef = useRef(null);
 
   const fetchQuotes = async () => {
-    if (selectedStatuses.length === 0) {
-      setQuotes([]);
-      setTotalCount(0);
-      return;
-    }
-    console.log("FETCHING QUOTES");
+    console.log("FETCHING QUOTES with statuses:", selectedStatuses);
     setLoading(true);
     try {
       const params = {
@@ -60,17 +55,25 @@ function Quotes() {
         sortBy: sortConfig.key,
         sortDirection: sortConfig.direction,
         search: searchTerm,
-        statuses: selectedStatuses.join(","),
+        statuses: selectedStatuses.length
+          ? selectedStatuses.join(",")
+          : undefined,
         sales: selectedSales.length ? selectedSales.join(",") : undefined,
         clients: selectedClients.length ? selectedClients.join(",") : undefined,
       };
 
+      console.log("Fetching with params:", params);
       const response = await axios.get(`${ServerIP}/auth/quotes`, { params });
-      console.log("RESPONSE", response.data);
+      console.log("QUOTES RESPONSE:", response.data);
+
       if (response.data.Status) {
-        setQuotes(response.data.Result.quotes);
-        setTotalCount(response.data.Result.total);
-        setTotalPages(response.data.Result.totalPages);
+        setQuotes(response.data.Result.quotes || []);
+        setTotalCount(response.data.Result.total || 0);
+        setTotalPages(response.data.Result.totalPages || 0);
+      } else {
+        console.warn("Failed to fetch quotes:", response.data.Error);
+        setQuotes([]);
+        setTotalCount(0);
       }
     } catch (error) {
       console.error("Error fetching quotes:", error);
@@ -94,36 +97,89 @@ function Quotes() {
           ]);
 
         // Handle status options
-        if (statusResponse.data.Status) {
-          const sortedStatuses = statusResponse.data.Result.sort(
-            (a, b) => a.step - b.step
-          );
-          setStatusOptions(sortedStatuses);
+        console.log("Status Response:", statusResponse.data);
+        if (
+          statusResponse.data.Status &&
+          Array.isArray(statusResponse.data.Result) &&
+          statusResponse.data.Result.length > 0
+        ) {
+          const statusData = statusResponse.data.Result;
+          console.log("Status Data:", statusData);
+          setStatusOptions(statusData);
 
           // Get saved filters or default to first two statuses
           const saved = localStorage.getItem("quoteStatusFilters");
           if (saved) {
-            const savedStatuses = JSON.parse(saved);
-            setSelectedStatuses(savedStatuses);
-            setIsAllChecked(savedStatuses.length === sortedStatuses.length);
+            try {
+              const savedStatuses = JSON.parse(saved);
+              if (Array.isArray(savedStatuses) && savedStatuses.length > 0) {
+                setSelectedStatuses(savedStatuses);
+                setIsAllChecked(savedStatuses.length === statusData.length);
+              } else {
+                // If saved data is invalid, set defaults
+                const defaultStatuses = statusData
+                  .slice(0, 2)
+                  .map((s) => s.statusId);
+                setSelectedStatuses(defaultStatuses);
+                localStorage.setItem(
+                  "quoteStatusFilters",
+                  JSON.stringify(defaultStatuses)
+                );
+              }
+            } catch (e) {
+              console.warn("Error parsing saved status filters:", e);
+              const defaultStatuses = statusData
+                .slice(0, 2)
+                .map((s) => s.statusId);
+              setSelectedStatuses(defaultStatuses);
+              localStorage.setItem(
+                "quoteStatusFilters",
+                JSON.stringify(defaultStatuses)
+              );
+            }
           } else {
-            const firstTwoStatuses = sortedStatuses
+            // No saved filters, set defaults
+            const defaultStatuses = statusData
               .slice(0, 2)
               .map((s) => s.statusId);
-            setSelectedStatuses(firstTwoStatuses);
+            setSelectedStatuses(defaultStatuses);
             localStorage.setItem(
               "quoteStatusFilters",
-              JSON.stringify(firstTwoStatuses)
+              JSON.stringify(defaultStatuses)
             );
-            setIsAllChecked(firstTwoStatuses.length === sortedStatuses.length);
           }
+        } else {
+          console.warn(
+            "No status options received from server, using defaults"
+          );
+          // Set some default statuses if the server returns none
+          const defaultStatusOptions = [
+            { statusId: "Open", step: 1 },
+            { statusId: "Pending", step: 2 },
+          ];
+          setStatusOptions(defaultStatusOptions);
+          setSelectedStatuses(["Open"]);
+          localStorage.setItem("quoteStatusFilters", JSON.stringify(["Open"]));
         }
 
         // Handle other responses
-        if (salesResponse.data.Status)
+        if (
+          salesResponse.data.Status &&
+          Array.isArray(salesResponse.data.Result)
+        ) {
           setSalesEmployees(salesResponse.data.Result);
-        if (clientsResponse.data.Status)
+        } else {
+          setSalesEmployees([]);
+        }
+
+        if (
+          clientsResponse.data.Status &&
+          Array.isArray(clientsResponse.data.Result)
+        ) {
           setClientList(clientsResponse.data.Result);
+        } else {
+          setClientList([]);
+        }
       } catch (error) {
         console.error("Error in initialization:", error);
       }
@@ -400,7 +456,7 @@ function Quotes() {
                   >
                     {quote.salesName}
                   </td>
-                  <td>{quote.quoteReference}</td>
+                  <td>{quote.refId}</td>
                 </tr>
               ))}
             </tbody>

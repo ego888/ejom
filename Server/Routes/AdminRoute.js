@@ -12,9 +12,18 @@ const router = express.Router();
 const checkAndInsertAdmin = async () => {
   try {
     const sql = "SELECT COUNT(*) AS adminCount FROM employee";
-    const [rows] = await pool.query(sql);
+    const result = await pool.query(sql);
+
+    // Access the result correctly - in mysql2/promise, the result is [rows, fields]
+    const rows = result[0];
+
+    if (!rows || !rows[0]) {
+      console.error("Query returned no data");
+      return;
+    }
 
     const adminCount = rows[0].adminCount;
+    console.log("Admin count:", adminCount);
 
     // If no admin exists, insert one
     if (adminCount === 0) {
@@ -142,19 +151,18 @@ const upload = multer({
 });
 // end imag eupload
 
-router.post("/employee/add", upload.single("image"), (req, res) => {
-  const { name, email, password, address, category_id } = req.body;
-  const salary = req.body.salary || 0; // Use 0 if salary is empty
-  const sales = req.body.sales === "true" ? 1 : 0;
-  const accounting = req.body.accounting === "true" ? 1 : 0;
-  const artist = req.body.artist === "true" ? 1 : 0;
-  const production = req.body.production === "true" ? 1 : 0;
-  const operator = req.body.operator === "true" ? 1 : 0;
+router.post("/employee/add", upload.single("image"), async (req, res) => {
+  try {
+    const { name, email, password, address, category_id } = req.body;
+    const salary = req.body.salary || 0; // Use 0 if salary is empty
+    const sales = req.body.sales === "true" ? 1 : 0;
+    const accounting = req.body.accounting === "true" ? 1 : 0;
+    const artist = req.body.artist === "true" ? 1 : 0;
+    const production = req.body.production === "true" ? 1 : 0;
+    const operator = req.body.operator === "true" ? 1 : 0;
 
-  bcrypt.hash(password, 10, (err, hash) => {
-    if (err) {
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+    // Hash password
+    const hash = await bcrypt.hash(password, 10);
 
     const sql = `
     INSERT INTO employee 
@@ -176,31 +184,40 @@ router.post("/employee/add", upload.single("image"), (req, res) => {
       req.file ? req.file.filename : null,
     ];
 
-    pool.query(sql, values, (err, result) => {
-      if (err) {
-        console.log("Insert Error:", err);
-        return res.json({ Status: false, Error: "Failed to add employee" });
-      }
-      return res.json({ Status: true, Result: result });
-    });
-  });
+    const [result] = await pool.query(sql, values);
+    return res.json({ Status: true, Result: result });
+  } catch (err) {
+    console.log("Insert Error:", err);
+    return res.json({ Status: false, Error: "Failed to add employee" });
+  }
 });
 
-router.get("/employee", (req, res) => {
-  const sql = "SELECT * FROM employee";
-  pool.query(sql, (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.get("/employee", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM employee";
+    const [result] = await pool.query(sql);
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.error("Error fetching employees:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
-router.get("/employee/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "SELECT * FROM employee WHERE id = ?";
-  pool.query(sql, [id], (err, result) => {
-    if (err) return res.json({ Status: false, Error: "Query Error" });
+router.get("/employee/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const sql = "SELECT * FROM employee WHERE id = ?";
+    const [result] = await pool.query(sql, [id]);
+
+    if (result.length === 0) {
+      return res.json({ Status: false, Error: "Employee not found" });
+    }
+
     return res.json({ Status: true, Result: result });
-  });
+  } catch (err) {
+    console.error("Error fetching employee:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 router.put("/employee/edit/:id", (req, res) => {
@@ -445,22 +462,25 @@ router.get("/payment_terms", async (req, res) => {
   }
 });
 
-// Get payment types
 router.get("/payment-types", async (req, res) => {
   try {
-    const sql = "SELECT payType FROM paymentType ORDER BY payType";
+    const sql = "SELECT * FROM payment_types ORDER BY payType ASC";
     const [result] = await pool.query(sql);
-
-    return res.json({
-      Status: true,
-      Result: result,
-    });
+    return res.json({ Status: true, Result: result });
   } catch (err) {
     console.error("Error fetching payment types:", err);
-    return res.json({
-      Status: false,
-      Error: "Failed to fetch payment types",
-    });
+    return res.json({ Status: false, Error: "Query Error" });
+  }
+});
+
+router.get("/shipping-types", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM shipping_types";
+    const [result] = await pool.query(sql);
+    return res.json({ Status: true, Result: result });
+  } catch (err) {
+    console.error("Error fetching shipping types:", err);
+    return res.json({ Status: false, Error: "Query Error" });
   }
 });
 

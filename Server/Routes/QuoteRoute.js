@@ -35,10 +35,16 @@ router.get("/quotes", verifyUser, async (req, res) => {
 
     if (search) {
       whereConditions.push(
-        "(q.quoteId LIKE ? OR q.clientName LIKE ? OR q.projectName LIKE ? OR q.quoteReference LIKE ?)"
+        "(q.quoteId LIKE ? OR q.clientName LIKE ? OR q.projectName LIKE ? OR q.refId LIKE ? OR q.orderedBy LIKE ?)"
       );
       const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
+      params.push(
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam
+      );
     }
 
     if (statusArray.length > 0) {
@@ -109,23 +115,46 @@ router.get("/quotes", verifyUser, async (req, res) => {
     `;
 
     // Execute count query
-    const [countResults] = await pool.query(countSql, params);
-    const countResult = countResults[0];
+    const countResult = await pool.query(countSql, params);
+    // Add extra defensive checks
+    if (!countResult) {
+      console.warn("WARNING: countResult is undefined or null");
+    }
+
+    // Handle empty results gracefully with proper null checks
+    const countData =
+      countResult &&
+      Array.isArray(countResult) &&
+      countResult[0] &&
+      Array.isArray(countResult[0]) &&
+      countResult[0][0]
+        ? countResult[0][0]
+        : { total: 0 };
 
     // Execute data query with proper parameter order
-    const [quotes] = await pool.query(dataSql, [
+    const quotesResult = await pool.query(dataSql, [
       ...params,
       Number(limit),
       Number(offset),
     ]);
 
+    // Add extra defensive checks
+    if (!quotesResult) {
+      console.warn("WARNING: quotesResult is undefined or null");
+    }
+
+    const quotes =
+      quotesResult && Array.isArray(quotesResult) && quotesResult[0]
+        ? quotesResult[0]
+        : [];
+
     return res.json({
       Status: true,
       Result: {
         quotes,
-        total: countResult.total,
+        total: countData.total,
         page: Number(page),
-        totalPages: Math.ceil(countResult.total / Number(limit)),
+        totalPages: Math.ceil(countData.total / Number(limit)),
       },
     });
   } catch (err) {
@@ -155,7 +184,8 @@ router.get("/quote/:id", async (req, res) => {
       WHERE q.quoteId = ?
     `;
 
-    const [results] = await pool.query(sql, [req.params.id]);
+    const result = await pool.query(sql, [req.params.id]);
+    const results = result[0];
 
     if (results.length === 0) {
       return res.json({ Status: false, Error: "Quote not found" });
@@ -189,8 +219,9 @@ router.get("/next_display_quote/:quoteId", async (req, res) => {
     const sql =
       "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM quote_details WHERE quoteId = ?";
 
-    const [results] = await pool.query(sql, [quoteId]);
-    const maxOrder = results[0].maxOrder;
+    const result = await pool.query(sql, [quoteId]);
+    const rows = result[0];
+    const maxOrder = rows[0].maxOrder;
     const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
 
     return res.json({ Status: true, Result: nextDisplayOrder });
@@ -217,7 +248,8 @@ router.get("/quote_details/:quoteId", async (req, res) => {
       ORDER BY qd.displayOrder
     `;
 
-    const [results] = await pool.query(sql, [req.params.quoteId]);
+    const result = await pool.query(sql, [req.params.quoteId]);
+    const results = result[0];
     return res.json({ Status: true, Result: results });
   } catch (error) {
     console.error("Error fetching quote details:", error);
@@ -236,7 +268,9 @@ router.get("/quote-statuses", async (req, res) => {
       ORDER BY step ASC
     `;
 
-    const [results] = await pool.query(sql);
+    const result = await pool.query(sql);
+    const results = result[0]; // Extract the rows from the result
+
     return res.json({ Status: true, Result: results });
   } catch (error) {
     console.error("Error fetching status options:", error);
@@ -249,37 +283,41 @@ router.get("/quote-detail/:id", verifyUser, async (req, res) => {
   try {
     const quoteId = req.params.id;
 
-    const [quotes] = await pool.query(
+    const quoteResult = await pool.query(
       "SELECT * FROM quotes WHERE quoteId = ?",
       [quoteId]
     );
+    const quotes = quoteResult[0];
 
     if (quotes.length === 0) {
       return res.json({ Status: false, Error: "Quote not found" });
     }
 
-    const [quoteDetails] = await pool.query(
+    const quoteDetailsResult = await pool.query(
       "SELECT * FROM quote_details WHERE quoteId = ?",
       [quoteId]
     );
+    const quoteDetails = quoteDetailsResult[0];
 
     // Get client name
-    const [clientResults] = await pool.query(
+    const clientResult = await pool.query(
       "SELECT clientName FROM client WHERE clientId = ?",
       [quotes[0].clientId]
     );
+    const clientRows = clientResult[0];
 
     const clientName =
-      clientResults.length > 0 ? clientResults[0].clientName : "Unknown";
+      clientRows.length > 0 ? clientRows[0].clientName : "Unknown";
 
     // Get employee name who prepared the quote
-    const [employeeResults] = await pool.query(
+    const employeeResult = await pool.query(
       "SELECT name FROM users WHERE id = ?",
       [quotes[0].preparedBy]
     );
+    const employeeRows = employeeResult[0];
 
     const employeeName =
-      employeeResults.length > 0 ? employeeResults[0].name : "Unknown";
+      employeeRows.length > 0 ? employeeRows[0].name : "Unknown";
 
     return res.json({
       Status: true,
@@ -309,14 +347,14 @@ router.put("/quotes/:quoteId/update_edited_info", async (req, res) => {
       WHERE quoteId = ?
     `;
 
-    const [result] = await pool.query(sql, [
+    const result = await pool.query(sql, [
       req.body.lastEdited,
       req.body.editedBy,
       req.body.totalHrs,
       req.params.quoteId,
     ]);
 
-    return res.json({ Status: true, Result: result });
+    return res.json({ Status: true, Result: result[0] });
   } catch (error) {
     console.error("Error updating quote edited info:", error);
     return res.json({
@@ -378,8 +416,8 @@ router.put("/update_quote/:id", async (req, res) => {
       req.params.id,
     ];
 
-    const [result] = await pool.query(sql, values);
-    return res.json({ Status: true, Result: result });
+    const result = await pool.query(sql, values);
+    return res.json({ Status: true, Result: result[0] });
   } catch (error) {
     console.error("Update Error:", error);
     return res.json({
@@ -415,8 +453,8 @@ router.put("/quotes/update_totals/:id", async (req, res) => {
       req.params.id,
     ];
 
-    const [result] = await pool.query(sql, values);
-    return res.json({ Status: true, Result: result });
+    const result = await pool.query(sql, values);
+    return res.json({ Status: true, Result: result[0] });
   } catch (error) {
     console.error("Update Totals Error:", error);
     return res.json({
@@ -448,8 +486,8 @@ router.put(
       AND id = ?
     `;
 
-      const [result] = await pool.query(sql, [displayOrder, quoteId, detailId]);
-      return res.json({ Status: true, Result: result });
+      const result = await pool.query(sql, [displayOrder, quoteId, detailId]);
+      return res.json({ Status: true, Result: result[0] });
     } catch (error) {
       console.error("Error updating display order:", error);
       return res.json({ Status: false, Error: error.message });
@@ -485,12 +523,12 @@ router.put("/quote_details/:quoteId/:displayOrder", async (req, res) => {
       WHERE quoteId = ? AND displayOrder = ?
     `;
 
-    const [result] = await pool.query(sql, [
+    const result = await pool.query(sql, [
       data,
       req.params.quoteId,
       req.params.displayOrder,
     ]);
-    return res.json({ Status: true, Result: result });
+    return res.json({ Status: true, Result: result[0] });
   } catch (error) {
     console.error("Error updating quote detail:", error);
     return res.json({
@@ -509,9 +547,9 @@ router.put("/quote/status/:id", async (req, res) => {
     console.log("quoteId:", id, "Status:", status);
 
     const sql = "UPDATE quotes SET status = ? WHERE quoteId = ?";
-    const [result] = await pool.query(sql, [status, id]);
+    const result = await pool.query(sql, [status, id]);
 
-    return res.json({ Status: true, Result: result });
+    return res.json({ Status: true, Result: result[0] });
   } catch (error) {
     console.error("Error updating quote status:", error);
     return res.json({ Status: false, Error: error.message });
@@ -521,7 +559,7 @@ router.put("/quote/status/:id", async (req, res) => {
 // ============= POST Routes =============
 
 // Create requote from existing quote
-router.post("/quote-requote", verifyUser, (req, res) => {
+router.post("/quote-requote", verifyUser, async (req, res) => {
   const { quoteId, userId, userName } = req.body;
 
   if (!quoteId || !userId || !userName) {
@@ -531,150 +569,120 @@ router.post("/quote-requote", verifyUser, (req, res) => {
     });
   }
 
-  // First fetch all needed data
-  const fetchQuoteData = async (quoteId) => {
-    const [quoteData] = await new Promise((resolve, reject) => {
-      pool.query(
-        "SELECT * FROM quotes WHERE quoteId = ?",
-        [quoteId],
-        (err, result) => {
-          if (err) reject(err);
-          if (!result || result.length === 0) {
-            reject(new Error("Quote not found"));
-          }
-          resolve(result);
-        }
-      );
-    });
-    return quoteData;
-  };
+  let connection;
+  try {
+    // Get a connection from the pool
+    connection = await pool.getConnection();
 
-  const fetchQuoteDetails = async (quoteId) => {
-    const quoteDetails = await new Promise((resolve, reject) => {
-      pool.query(
-        "SELECT * FROM quote_details WHERE quoteId = ?",
-        [quoteId],
-        (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        }
-      );
-    });
-    return quoteDetails;
-  };
+    // Start transaction
+    await connection.beginTransaction();
 
-  // Then start transaction for all write operations
-  pool.beginTransaction(async (err) => {
-    try {
-      // 1. Get original quote data
-      const quoteData = await fetchQuoteData(quoteId);
+    // 1. Get original quote data
+    const quoteResult = await connection.query(
+      "SELECT * FROM quotes WHERE quoteId = ?",
+      [quoteId]
+    );
+    const quoteResults = quoteResult[0];
 
-      // 2. Update original quote status to 'Requote'
-      await new Promise((resolve, reject) => {
-        pool.query(
-          "UPDATE quotes SET status = 'Requote' WHERE quoteId = ?",
-          [quoteId],
-          (err, result) => {
-            if (err) reject(err);
-            resolve(result);
-          }
-        );
-      });
-
-      // 3. Prepare and insert new quote data
-      const projectName = quoteData.projectName.includes(" (Requote)")
-        ? quoteData.projectName
-        : quoteData.projectName + " (Requote)";
-
-      // Use CURRENT_TIMESTAMP for the database to handle date/time in its timezone
-      const currentDate = new Date().toISOString().split("T")[0];
-
-      const newQuoteData = {
-        clientId: quoteData.clientId || 0,
-        clientName: quoteData.clientName,
-        projectName: projectName,
-        preparedBy: userId, // Use current user ID
-        quoteDate: currentDate,
-        orderedBy: quoteData.orderedBy,
-        refId: quoteId,
-        email: quoteData.email,
-        cellNumber: quoteData.cellNumber,
-        telNum: quoteData.telNum,
-        statusRem: quoteData.statusRem,
-        dueDate: quoteData.dueDate,
-        totalAmount: quoteData.totalAmount,
-        amountDiscount: quoteData.amountDiscount,
-        percentDisc: quoteData.percentDisc,
-        grandTotal: quoteData.grandTotal,
-        totalHrs: quoteData.totalHrs,
-        editedBy: userName, // Use current user name
-        lastEdited: new Date(), // Let MySQL handle the timestamp conversion
-        status: "Open",
-        terms: quoteData.terms,
-      };
-
-      const result = await new Promise((resolve, reject) => {
-        pool.query("INSERT INTO quotes SET ?", newQuoteData, (err, result) => {
-          if (err) reject(err);
-          resolve(result);
-        });
-      });
-
-      const newQuoteId = result.insertId;
-
-      // 4. Get original quote details
-      const quoteDetails = await fetchQuoteDetails(quoteId);
-
-      // 5. Copy all details to new quote
-      if (quoteDetails.length > 0) {
-        const insertPromises = quoteDetails.map((detail) => {
-          // Remove Id field (capital I) as it's an auto-increment primary key
-          const { Id, quoteId, ...filteredDetail } = detail;
-          const newDetail = {
-            ...filteredDetail,
-            quoteId: newQuoteId,
-          };
-
-          return new Promise((resolve, reject) => {
-            pool.query(
-              "INSERT INTO quote_details SET ?",
-              newDetail,
-              (err, result) => {
-                if (err) reject(err);
-                resolve(result);
-              }
-            );
-          });
-        });
-
-        await Promise.all(insertPromises);
-      }
-
-      // Commit transaction
-      pool.commit((err) => {
-        if (err) {
-          console.error("Transaction commit error:", err);
-          return pool.rollback(() => {
-            res.json({ Status: false, Error: "Failed to commit transaction" });
-          });
-        }
-
-        return res.json({
-          Status: true,
-          Result: newQuoteId,
-          Message: "Quote successfully requoted",
-        });
-      });
-    } catch (error) {
-      console.error("Error in quote-requote:", error);
-      pool.rollback(() => {
-        res.json({
-          Status: false,
-          Error: error.message || "Failed to create requote",
-        });
-      });
+    if (!quoteResults.length) {
+      throw new Error("Quote not found");
     }
-  });
+    const originalQuoteData = quoteResults[0];
+
+    // 2. Update original quote status to 'Requote'
+    await connection.query(
+      "UPDATE quotes SET status = 'Requote' WHERE quoteId = ?",
+      [quoteId]
+    );
+
+    // 3. Prepare and insert new quote data
+    const projectName = originalQuoteData.projectName.includes(" (Requote)")
+      ? originalQuoteData.projectName
+      : originalQuoteData.projectName + " (Requote)";
+
+    // Use CURRENT_TIMESTAMP for the database to handle date/time in its timezone
+    const currentDate = new Date().toISOString().split("T")[0];
+
+    const newQuoteData = {
+      clientId: originalQuoteData.clientId || 0,
+      clientName: originalQuoteData.clientName,
+      projectName: projectName,
+      preparedBy: userId, // Use current user ID
+      quoteDate: currentDate,
+      orderedBy: originalQuoteData.orderedBy,
+      refId: quoteId,
+      email: originalQuoteData.email,
+      cellNumber: originalQuoteData.cellNumber,
+      telNum: originalQuoteData.telNum,
+      statusRem: originalQuoteData.statusRem,
+      dueDate: originalQuoteData.dueDate,
+      totalAmount: originalQuoteData.totalAmount,
+      amountDiscount: originalQuoteData.amountDiscount,
+      percentDisc: originalQuoteData.percentDisc,
+      grandTotal: originalQuoteData.grandTotal,
+      totalHrs: originalQuoteData.totalHrs,
+      editedBy: userName, // Use current user name
+      lastEdited: new Date(), // Let MySQL handle the timestamp conversion
+      status: "Open",
+      terms: originalQuoteData.terms,
+    };
+
+    // 4. Insert new quote
+    const insertResult = await connection.query(
+      "INSERT INTO quotes SET ?",
+      newQuoteData
+    );
+    const newQuoteId = insertResult[0].insertId;
+
+    // 5. Get original quote details
+    const quoteDetailsResult = await connection.query(
+      "SELECT * FROM quote_details WHERE quoteId = ?",
+      [quoteId]
+    );
+    const quoteDetails = quoteDetailsResult[0];
+
+    // 6. Copy all details to new quote
+    if (quoteDetails.length > 0) {
+      const insertPromises = quoteDetails.map((detail) => {
+        // Remove Id field (capital I) as it's an auto-increment primary key
+        const { Id, quoteId, ...filteredDetail } = detail;
+        const newDetail = {
+          ...filteredDetail,
+          quoteId: newQuoteId,
+        };
+
+        return connection.query("INSERT INTO quote_details SET ?", newDetail);
+      });
+
+      await Promise.all(insertPromises);
+    }
+
+    // Commit transaction
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Result: newQuoteId,
+      Message: "Quote successfully requoted",
+    });
+  } catch (error) {
+    console.error("Error in quote-requote:", error);
+
+    // Rollback transaction if something failed
+    if (connection) {
+      await connection.rollback();
+    }
+
+    return res.json({
+      Status: false,
+      Error: error.message || "Failed to create requote",
+    });
+  } finally {
+    // Release connection back to the pool
+    if (connection) {
+      connection.release();
+    }
+  }
 });
 
 // Convert quote to job order
@@ -687,10 +695,11 @@ router.post("/quote-makeJO", verifyUser, async (req, res) => {
 
     try {
       // 1. Get quote data
-      const [quoteResults] = await connection.query(
+      const quoteResult = await connection.query(
         "SELECT * FROM quotes WHERE quoteId = ?",
         [quoteId]
       );
+      const quoteResults = quoteResult[0];
 
       if (!quoteResults.length) {
         return res.json({
@@ -702,10 +711,11 @@ router.post("/quote-makeJO", verifyUser, async (req, res) => {
       const quoteData = quoteResults[0];
 
       // 2. Get quote details
-      const [quoteDetails] = await connection.query(
+      const quoteDetailsResult = await connection.query(
         "SELECT * FROM quote_details WHERE quoteId = ?",
         [quoteId]
       );
+      const quoteDetails = quoteDetailsResult[0];
 
       // Start transaction
       await connection.beginTransaction();
@@ -740,12 +750,11 @@ router.post("/quote-makeJO", verifyUser, async (req, res) => {
       };
 
       // 4. Insert order
-      const [orderResult] = await connection.query(
+      const orderResult = await connection.query(
         "INSERT INTO orders SET ?",
         orderData
       );
-
-      const newOrderId = orderResult.insertId;
+      const newOrderId = orderResult[0].insertId;
 
       // 5. Copy details to order
       if (quoteDetails.length > 0) {
@@ -755,11 +764,21 @@ router.post("/quote-makeJO", verifyUser, async (req, res) => {
 
           // Create new order detail
           const newDetail = {
-            ...detailData,
             orderId: newOrderId,
-            // Map quote detail fields to order detail fields
-            itemDescription: detail.description || "",
-            // Add any other field mappings as needed
+            displayOrder: detailData.displayOrder,
+            quantity: detailData.quantity || 0,
+            width: detailData.width || 0,
+            height: detailData.height || 0,
+            unit: detailData.unit || "",
+            material: detailData.material || "",
+            itemDescription: detailData.itemDescription || "",
+            squareFeet: detailData.squareFeet || 0,
+            materialUsage: detailData.materialUsage || 0,
+            persqft: detailData.persqft || 0,
+            unitPrice: detailData.unitPrice || 0,
+            discount: detailData.discount || 0,
+            amount: detailData.amount || 0,
+            printHrs: detailData.printHours || 0, // Map printHours from quote_details to printHrs in order_details
           };
 
           // Insert new order detail
@@ -781,9 +800,7 @@ router.post("/quote-makeJO", verifyUser, async (req, res) => {
       // Return success response with new order ID
       return res.json({
         Status: true,
-        Result: {
-          orderId: newOrderId,
-        },
+        Result: newOrderId,
         Message: "Quote converted to job order successfully",
       });
     } catch (error) {
@@ -809,9 +826,12 @@ router.post("/add-quote", verifyUser, async (req, res) => {
     const {
       projectName,
       clientId,
+      clientName = "", // Default empty string
       quoteDate,
       orderedBy,
-      cellNumber,
+      email = "", // Default empty string
+      cellNumber = "", // Default empty string
+      telNum = "", // Default empty string
       dueDate,
       terms,
       refId,
@@ -849,13 +869,14 @@ router.post("/add-quote", verifyUser, async (req, res) => {
       status: "Open",
     };
 
-    const [result] = await pool.query("INSERT INTO quotes SET ?", quoteData);
+    const result = await pool.query("INSERT INTO quotes SET ?", quoteData);
+    const insertId = result[0].insertId;
 
     return res.json({
       Status: true,
       Message: "Quote created successfully",
       Result: {
-        quoteId: result.insertId,
+        quoteId: insertId,
       },
     });
   } catch (error) {
@@ -903,16 +924,18 @@ router.post("/add-quote-detail", verifyUser, async (req, res) => {
       printHours: printHours || 0,
     };
 
-    const [result] = await pool.query(
+    const result = await pool.query(
       "INSERT INTO quote_details SET ?",
       detailData
     );
+    const insertId = result[0].insertId;
 
     // Recalculate totals for the quote
-    const [detailsResults] = await pool.query(
+    const detailsResult = await pool.query(
       "SELECT * FROM quote_details WHERE quoteId = ?",
       [quoteId]
     );
+    const detailsResults = detailsResult[0];
 
     if (detailsResults.length > 0) {
       let totalAmount = 0;
@@ -924,10 +947,11 @@ router.post("/add-quote-detail", verifyUser, async (req, res) => {
       });
 
       // Get current quote data
-      const [quoteResults] = await pool.query(
+      const quoteResult = await pool.query(
         "SELECT percentDisc FROM quotes WHERE quoteId = ?",
         [quoteId]
       );
+      const quoteResults = quoteResult[0];
 
       if (quoteResults.length > 0) {
         const percentDisc = quoteResults[0].percentDisc || 0;
@@ -946,7 +970,7 @@ router.post("/add-quote-detail", verifyUser, async (req, res) => {
       Status: true,
       Message: "Quote detail added successfully",
       Result: {
-        id: result.insertId,
+        id: insertId,
       },
     });
   } catch (error) {
@@ -959,68 +983,111 @@ router.post("/add-quote-detail", verifyUser, async (req, res) => {
 
 // Delete quote detail
 router.delete("/quote-detail-delete/:id", verifyUser, async (req, res) => {
+  let connection;
   try {
     const detailId = req.params.id;
 
+    // Get a connection from the pool
+    connection = await pool.getConnection();
+
+    // Start transaction
+    await connection.beginTransaction();
+
     // Get quoteId before deleting (for recalculation later)
-    const [detailResult] = await pool.query(
-      "SELECT quoteId FROM quote_details WHERE id = ?",
+    const [detailRows] = await connection.query(
+      "SELECT quoteId FROM quote_details WHERE Id = ?",
       [detailId]
     );
 
-    if (detailResult.length === 0) {
+    if (detailRows.length === 0) {
+      await connection.rollback();
       return res.json({ Status: false, Error: "Quote detail not found" });
     }
 
-    const quoteId = detailResult[0].quoteId;
+    const quoteId = detailRows[0].quoteId;
 
     // Delete the detail
-    const [deleteResult] = await pool.query(
-      "DELETE FROM quote_details WHERE id = ?",
-      [detailId]
-    );
+    await connection.query("DELETE FROM quote_details WHERE Id = ?", [
+      detailId,
+    ]);
 
     // Recalculate totals for the quote
-    const [detailsResults] = await pool.query(
-      "SELECT * FROM quote_details WHERE quoteId = ?",
+    const [detailsResults] = await connection.query(
+      `SELECT 
+        COALESCE(SUM(amount), 0) as totalAmount,
+        COALESCE(SUM(printHours), 0) as totalHours
+      FROM quote_details 
+      WHERE quoteId = ?`,
       [quoteId]
     );
 
-    if (detailsResults.length > 0) {
-      let totalAmount = 0;
-      let totalHrs = 0;
+    // Get current quote data for percentage discount
+    const [quoteResults] = await connection.query(
+      "SELECT percentDisc FROM quotes WHERE quoteId = ?",
+      [quoteId]
+    );
 
-      detailsResults.forEach((detail) => {
-        totalAmount += detail.amount || 0;
-        totalHrs += detail.printHours || 0;
-      });
-
-      // Get current quote data
-      const [quoteResults] = await pool.query(
-        "SELECT percentDisc FROM quotes WHERE quoteId = ?",
-        [quoteId]
-      );
-
-      if (quoteResults.length > 0) {
-        const percentDisc = quoteResults[0].percentDisc || 0;
-        const amountDiscount = (totalAmount * percentDisc) / 100;
-        const grandTotal = totalAmount - amountDiscount;
-
-        // Update quote with new totals
-        await pool.query(
-          "UPDATE quotes SET totalAmount = ?, amountDiscount = ?, grandTotal = ?, totalHrs = ? WHERE quoteId = ?",
-          [totalAmount, amountDiscount, grandTotal, totalHrs, quoteId]
-        );
-      }
+    if (quoteResults.length === 0) {
+      await connection.rollback();
+      return res.json({ Status: false, Error: "Quote not found" });
     }
+
+    // Calculate final values with proper number handling
+    const totalAmount = parseFloat(detailsResults[0].totalAmount) || 0;
+    const totalHrs = parseFloat(detailsResults[0].totalHours) || 0;
+    const percentDisc = parseFloat(quoteResults[0].percentDisc) || 0;
+    const amountDiscount = (totalAmount * percentDisc) / 100;
+    const grandTotal = totalAmount - amountDiscount;
+
+    // Format numbers to avoid precision issues
+    const formattedTotalAmount = parseFloat(totalAmount.toFixed(2));
+    const formattedAmountDiscount = parseFloat(amountDiscount.toFixed(2));
+    const formattedGrandTotal = parseFloat(grandTotal.toFixed(2));
+    const formattedTotalHrs = parseFloat(totalHrs.toFixed(2));
+
+    // Update quote with new totals
+    await connection.query(
+      `UPDATE quotes 
+       SET totalAmount = ?,
+           amountDiscount = ?,
+           grandTotal = ?,
+           totalHrs = ?,
+           lastEdited = CURRENT_TIMESTAMP
+       WHERE quoteId = ?`,
+      [
+        formattedTotalAmount,
+        formattedAmountDiscount,
+        formattedGrandTotal,
+        formattedTotalHrs,
+        quoteId,
+      ]
+    );
+
+    // Commit the transaction
+    await connection.commit();
 
     return res.json({
       Status: true,
       Message: "Quote detail deleted successfully",
+      Result: {
+        totalAmount: formattedTotalAmount,
+        amountDiscount: formattedAmountDiscount,
+        grandTotal: formattedGrandTotal,
+        totalHrs: formattedTotalHrs,
+      },
     });
   } catch (error) {
+    // Rollback transaction on error
+    if (connection) {
+      await connection.rollback();
+    }
     console.error("Error in quote-detail-delete:", error);
     return res.json({ Status: false, Error: error.message });
+  } finally {
+    // Release connection back to the pool
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
@@ -1039,12 +1106,13 @@ router.delete("/quote-delete/:id", verifyUser, async (req, res) => {
       ]);
 
       // Then delete the quote
-      const [deleteResult] = await connection.query(
+      const deleteResult = await connection.query(
         "DELETE FROM quotes WHERE quoteId = ?",
         [quoteId]
       );
+      const deleteData = deleteResult[0];
 
-      if (deleteResult.affectedRows === 0) {
+      if (deleteData.affectedRows === 0) {
         await connection.rollback();
         return res.json({ Status: false, Error: "Quote not found" });
       }

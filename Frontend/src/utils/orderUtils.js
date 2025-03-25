@@ -229,12 +229,8 @@ export const formatPeso = (num) => {
 };
 
 // API error handler
-export const handleApiError = (err, navigate) => {
-  if (
-    err.response?.status === 401 ||
-    err.response?.data?.Error?.includes("jwt expired") ||
-    err.response?.data?.Error?.includes("invalid token")
-  ) {
+export const handleApiError = (err, navigate, setAlert) => {
+  if (err.response?.status === 401) {
     setAlert({
       show: true,
       title: "Error",

@@ -269,10 +269,10 @@ function PrintQuote() {
               <tr key={index} className={index % 2 === 0 ? "row-gray" : ""}>
                 <td className="quote-details-center">{detail.quantity}</td>
                 <td className="quote-details-center">
-                  {detail.width.toFixed(2)}
+                  {Number(detail.width || 0).toFixed(2)}
                 </td>
                 <td className="quote-details-center">
-                  {detail.height.toFixed(2)}
+                  {Number(detail.height || 0).toFixed(2)}
                 </td>
                 <td className="quote-details-center">{detail.unit}</td>
                 <td>

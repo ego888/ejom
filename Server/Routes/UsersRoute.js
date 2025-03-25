@@ -8,8 +8,8 @@ router.get("/sales_employees", async (req, res) => {
   try {
     const sql =
       "SELECT id, name FROM employee WHERE sales = true AND active = true ORDER BY name";
-    const [result] = await pool.query(sql);
-    return res.json({ Status: true, Result: result });
+    const result = await pool.query(sql);
+    return res.json({ Status: true, Result: result[0] });
   } catch (err) {
     console.log(err);
     return res.json({ Status: false, Error: "Query Error" });
@@ -21,8 +21,8 @@ router.get("/artists", async (req, res) => {
   try {
     const sql =
       "SELECT id, name FROM employee WHERE artist = true AND active = true ORDER BY name";
-    const [result] = await pool.query(sql);
-    return res.json({ Status: true, Result: result });
+    const result = await pool.query(sql);
+    return res.json({ Status: true, Result: result[0] });
   } catch (err) {
     console.log(err);
     return res.json({ Status: false, Error: "Query Error" });

@@ -123,9 +123,9 @@ const ClientFilter = forwardRef(
      * Determines if a filter is active based on the selection.
      */
     useEffect(() => {
+      const totalClients = Array.isArray(clientList) ? clientList.length : 0;
       const isFilterActive =
-        selectedClients.length > 0 &&
-        selectedClients.length < clientList.length;
+        selectedClients.length > 0 && selectedClients.length < totalClients;
       onFilterUpdate({ filteredClients: selectedClients, isFilterActive });
     }, [selectedClients, clientList, onFilterUpdate]);
 
@@ -144,8 +144,10 @@ const ClientFilter = forwardRef(
     /**
      * Filters clients based on search term.
      */
-    const filteredClients = clientList.filter((client) =>
-      client.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredClients = (clientList || []).filter((client) =>
+      (client?.clientName || "")
+        .toLowerCase()
+        .includes((searchTerm || "").toLowerCase())
     );
 
     /**
