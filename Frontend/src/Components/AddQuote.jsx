@@ -39,6 +39,14 @@ function AddQuote() {
     graphicsBy: false,
   });
 
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
+
   const [data, setData] = useState({
     clientId: "",
     clientName: "",
@@ -148,7 +156,7 @@ function AddQuote() {
         })
         .catch((error) => {
           console.error("Error updating totals:", error);
-          handleApiError(error, navigate);
+          handleApiError(error, navigate, setAlert);
         });
     }, 5000),
     [isInitialLoad, orderId, id, lastSavedTotals, navigate]
@@ -428,10 +436,10 @@ function AddQuote() {
         })
         .catch((err) => {
           console.error("Error fetching quote:", err);
-          handleApiError(err, navigate);
+          handleApiError(err, navigate, setAlert);
         });
     }
-  }, [id, navigate]);
+  }, [id, navigate, setAlert]);
 
   const fetchDropdownData = async () => {
     if (dropdownsLoaded) return;
@@ -455,7 +463,7 @@ function AddQuote() {
       }
       setDropdownsLoaded(true);
     } catch (err) {
-      handleApiError(err, navigate);
+      handleApiError(err, navigate, setAlert);
     }
   };
 
@@ -544,7 +552,7 @@ function AddQuote() {
         })
         .catch((err) => {
           console.error("Error saving quote:", err);
-          handleApiError(err, navigate);
+          handleApiError(err, navigate, setAlert);
         });
     } else {
       // Update existing quote
@@ -568,7 +576,7 @@ function AddQuote() {
         })
         .catch((err) => {
           console.error("Error updating quote:", err);
-          handleApiError(err, navigate);
+          handleApiError(err, navigate, setAlert);
         });
     }
   };
@@ -1083,7 +1091,7 @@ function AddQuote() {
         }
         setDropdownsLoaded(true);
       } catch (err) {
-        handleApiError(err, navigate);
+        handleApiError(err, navigate, setAlert);
       }
     };
 
@@ -1177,7 +1185,7 @@ function AddQuote() {
           setPaymentTerms(result.data.Result);
         }
       })
-      .catch((err) => handleApiError(err, navigate));
+      .catch((err) => handleApiError(err, navigate, setAlert));
   }, []);
 
   const handlePrintQuote = () => {
@@ -1216,7 +1224,7 @@ function AddQuote() {
       setLastSavedTotals(totals);
     } catch (error) {
       console.error("Error updating totals:", error);
-      handleApiError(error, navigate);
+      handleApiError(error, navigate, setAlert);
     }
   };
 
@@ -1398,14 +1406,6 @@ function AddQuote() {
   const canEdit = () => {
     return data.status === "Open" || currentUser.category_id === 1;
   };
-
-  const [alert, setAlert] = useState({
-    show: false,
-    title: "",
-    message: "",
-    type: "alert",
-    onConfirm: null,
-  });
 
   return (
     <div className="quote">

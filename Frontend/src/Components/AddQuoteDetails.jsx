@@ -264,7 +264,7 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
 
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        `${ServerIP}/auth/add_quote_detail`,
+        `${ServerIP}/auth/add-quote-detail`,
         dataToSend,
         {
           headers: { Authorization: `Bearer ${token}` },

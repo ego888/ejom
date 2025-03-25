@@ -1110,6 +1110,97 @@ router.post("/add-quote-detail", verifyUser, async (req, res) => {
   }
 });
 
+// Add new quote
+router.post("/add_quote", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const {
+      clientId,
+      clientName,
+      projectName,
+      preparedBy,
+      quoteDate,
+      orderedBy,
+      refId,
+      email,
+      cellNumber,
+      telNum,
+      statusRem,
+      dueDate,
+      totalAmount,
+      amountDiscount,
+      percentDisc,
+      grandTotal,
+      totalHrs,
+      editedBy,
+      lastEdited,
+      status,
+      terms,
+    } = req.body;
+
+    // Get connection from pool
+    connection = await pool.getConnection();
+
+    // Start transaction
+    await connection.beginTransaction();
+
+    // Insert quote
+    const [result] = await connection.query(
+      `INSERT INTO quotes (
+        clientId, clientName, projectName, preparedBy, quoteDate,
+        orderedBy, refId, email, cellNumber, telNum, statusRem,
+        dueDate, totalAmount, amountDiscount, percentDisc,
+        grandTotal, totalHrs, editedBy, lastEdited, status, terms
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        clientId,
+        clientName,
+        projectName,
+        preparedBy,
+        quoteDate,
+        orderedBy || null,
+        refId || null,
+        email || null,
+        cellNumber || null,
+        telNum || null,
+        statusRem || null,
+        dueDate || null,
+        totalAmount || 0,
+        amountDiscount || 0,
+        percentDisc || 0,
+        grandTotal || 0,
+        totalHrs || 0,
+        editedBy,
+        lastEdited,
+        status || "Open",
+        terms || null,
+      ]
+    );
+
+    // Commit transaction
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Message: "Quote added successfully",
+      QuoteID: result.insertId,
+    });
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error("Error adding quote:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to add quote: " + error.message,
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+
 // ============= DELETE Routes =============
 
 // Delete quote detail
