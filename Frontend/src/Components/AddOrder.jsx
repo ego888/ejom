@@ -224,6 +224,7 @@ function AddOrder() {
   };
 
   useEffect(() => {
+    let isMounted = true;
     const token = localStorage.getItem("token");
     const config = {
       headers: {
@@ -231,63 +232,103 @@ function AddOrder() {
       },
     };
 
-    // Update all axios calls to use config
-    axios
-      .get(`${ServerIP}/auth/clients`, config)
-      .then((result) => {
-        if (result.data.Status) {
-          setClients(result.data.Result);
-        } else {
-          setAlert({
-            show: true,
-            title: "Error",
-            message: result.data.Error,
-            type: "alert",
-          });
+    const fetchData = async () => {
+      try {
+        const [clientsRes, salesRes, artistsRes] = await Promise.all([
+          axios.get(`${ServerIP}/auth/clients`, config),
+          axios.get(`${ServerIP}/auth/sales_employees`, config),
+          axios.get(`${ServerIP}/auth/artists`, config),
+        ]);
+
+        if (!isMounted) return;
+
+        if (clientsRes.data.Status) {
+          setClients(clientsRes.data.Result);
         }
-      })
-      .catch((err) => {
+        if (salesRes.data.Status) {
+          setSalesEmployees(salesRes.data.Result);
+        }
+        if (artistsRes.data.Status) {
+          setArtists(artistsRes.data.Result);
+        }
+      } catch (err) {
+        if (!isMounted) return;
         setAlert({
           show: true,
           title: "Error",
-          message: "Failed to fetch clients",
+          message: "Failed to fetch initial data",
           type: "alert",
         });
-      });
-    console.log("Clients:", clients);
-    axios
-      .get(`${ServerIP}/auth/sales_employees`, config)
-      .then((result) => {
-        if (result.data.Status) {
-          setSalesEmployees(result.data.Result);
-        }
-      })
-      .catch((err) => console.log(err));
+      }
+    };
 
-    axios
-      .get(`${ServerIP}/auth/artists`, config)
-      .then((result) => {
-        if (result.data.Status) {
-          setArtists(result.data.Result);
-        }
-      })
-      .catch((err) => console.log(err));
+    fetchData();
 
     // Set current user
     if (token) {
       const decoded = jwtDecode(token);
-      setCurrentUser(decoded);
-      setData((prev) => ({ ...prev, preparedBy: decoded.id }));
+      if (isMounted) {
+        setCurrentUser(decoded);
+        setData((prev) => ({ ...prev, preparedBy: decoded.id }));
+      }
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     const token = localStorage.getItem("token");
-    if (token) {
+
+    if (token && isMounted) {
       const decoded = jwtDecode(token);
       setIsAdmin(decoded.categoryId === 1);
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchOrderDetails = async () => {
+      if (!orderId) return;
+
+      const token = localStorage.getItem("token");
+      try {
+        const response = await axios.get(
+          `${ServerIP}/auth/order_details/${orderId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!isMounted) return;
+
+        if (response.data.Status) {
+          setOrderDetails(response.data.Result);
+          setOrderTotals((prev) => ({
+            ...prev,
+            discAmount: data.amountDisc || 0,
+            percentDisc: data.percentDisc || 0,
+          }));
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        handleApiError(err, navigate);
+      }
+    };
+
+    fetchOrderDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [orderId, data.amountDisc, data.percentDisc]);
 
   useEffect(() => {
     const subtotal = orderDetails.reduce(
@@ -1433,7 +1474,7 @@ function AddOrder() {
     // Add event listener
     document.addEventListener("keydown", handleEscKey);
 
-    // Cleanup
+    // Cleanup function
     return () => {
       document.removeEventListener("keydown", handleEscKey);
     };
