@@ -259,7 +259,7 @@ router.get("/orders", async (req, res) => {
 // Get single order
 router.get("/order/:id", async (req, res) => {
   try {
-  const sql = `
+    const sql = `
     SELECT 
       o.*,
       DATE_FORMAT(o.orderDate, '%Y-%m-%d') as orderDate,
@@ -284,9 +284,9 @@ router.get("/order/:id", async (req, res) => {
     const [result] = await pool.query(sql, [req.params.id]);
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+    console.log(err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Search orders by client name
@@ -461,7 +461,7 @@ router.get("/orders-details-forprod", async (req, res) => {
       ORDER BY o.orderID ASC, od.displayOrder ASC`;
 
     const [result] = await pool.query(sql);
-      return res.json({ Status: true, Result: result });
+    return res.json({ Status: true, Result: result });
   } catch (error) {
     console.log(error);
     return res.json({ Status: false, Error: "Query Error" + error });
@@ -587,7 +587,7 @@ router.put("/update_orders_drnum", async (req, res) => {
   try {
     // 1. First get the current lastDRNumber from jomcontrol
     const [currentDRResult] = await connection.query(
-      "SELECT lastDRNumber FROM jomcontrol WHERE controlId = 1"
+      "SELECT lastDRNumber FROM jomControl WHERE controlId = 1"
     );
 
     const currentLastDRNumber = currentDRResult[0].lastDRNumber;
@@ -602,7 +602,7 @@ router.put("/update_orders_drnum", async (req, res) => {
     `;
 
     const sqlUpdateJomControl = `
-      UPDATE jomcontrol
+      UPDATE jomControl
       SET lastDRNumber = ${finalDRNumber}
       WHERE controlId = 1
     `;
@@ -620,9 +620,9 @@ router.put("/update_orders_drnum", async (req, res) => {
     await connection.commit();
 
     return res.json({
-              Status: true,
-              Message: "Orders and JomControl updated successfully",
-            });
+      Status: true,
+      Message: "Orders and JomControl updated successfully",
+    });
   } catch (error) {
     // Rollback on error
     await connection.rollback();
@@ -666,45 +666,45 @@ router.get("/orders-all-DR", async (req, res) => {
 `;
 
     const [result] = await pool.query(sql);
-      console.log("result", result);
+    console.log("result", result);
 
-      // Restructure the data to group order details by order
-      const ordersMap = new Map();
+    // Restructure the data to group order details by order
+    const ordersMap = new Map();
 
-      result.forEach((row) => {
-        if (!ordersMap.has(row.id)) {
-          // Create new order entry
-          ordersMap.set(row.id, {
-            id: row.id,
-            clientId: row.clientId,
-            projectName: row.projectName,
-            dueDate: row.dueDate,
-            dueTime: row.dueTime,
-            clientName: row.clientName,
+    result.forEach((row) => {
+      if (!ordersMap.has(row.id)) {
+        // Create new order entry
+        ordersMap.set(row.id, {
+          id: row.id,
+          clientId: row.clientId,
+          projectName: row.projectName,
+          dueDate: row.dueDate,
+          dueTime: row.dueTime,
+          clientName: row.clientName,
           customerName: row.customerName,
-            deliveryInst: row.deliveryInst,
-            drnum: row.drnum,
-            drDate: row.drDate,
-            order_details: [],
-          });
-        }
-
-        // Add order details if they exist
-        ordersMap.get(row.id).order_details.push({
-          quantity: row.quantity,
-          width: row.width,
-          height: row.height,
-          unit: row.unit,
-          material: row.material,
-          itemDescription: row.itemDescription,
-          displayOrder: row.displayOrder,
+          deliveryInst: row.deliveryInst,
+          drnum: row.drnum,
+          drDate: row.drDate,
+          order_details: [],
         });
+      }
+
+      // Add order details if they exist
+      ordersMap.get(row.id).order_details.push({
+        quantity: row.quantity,
+        width: row.width,
+        height: row.height,
+        unit: row.unit,
+        material: row.material,
+        itemDescription: row.itemDescription,
+        displayOrder: row.displayOrder,
       });
+    });
 
-      // Convert map to array
-      const orders = Array.from(ordersMap.values());
+    // Convert map to array
+    const orders = Array.from(ordersMap.values());
 
-      return res.json({ Status: true, Result: orders });
+    return res.json({ Status: true, Result: orders });
   } catch (error) {
     console.log(error);
     return res.json({ Status: false, Error: "Query Error" + error });
@@ -714,7 +714,7 @@ router.get("/orders-all-DR", async (req, res) => {
 // Get order details
 router.get("/order_details/:orderId", async (req, res) => {
   try {
-  const sql = `
+    const sql = `
     SELECT * 
     FROM order_details 
     WHERE orderId = ? 
@@ -724,19 +724,19 @@ router.get("/order_details/:orderId", async (req, res) => {
     const [result] = await pool.query(sql, [req.params.orderId]);
     return res.json({ Status: true, Result: result });
   } catch (err) {
-      console.log("Select Error:", err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+    console.log("Select Error:", err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Get next display order number for order details
 router.get("/next_display_order/:orderId", async (req, res) => {
   try {
-  const { orderId } = req.params;
-  const sql =
-    "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
+    const { orderId } = req.params;
+    const sql =
+      "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
 
-  console.log("Order ID:", orderId);
+    console.log("Order ID:", orderId);
     const [result] = await pool.query(sql, [orderId]);
 
     // If maxOrder is 0, it means no records exist yet
@@ -770,7 +770,7 @@ router.post(
       // Set the preparedBy to the current user's ID
       const preparedBy = req.user.id;
 
-  const sql = `
+      const sql = `
     INSERT INTO orders (
       clientId, projectName, preparedBy, orderDate, 
       orderedBy, orderReference, cellNumber, specialInst, 
@@ -780,31 +780,31 @@ router.post(
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  const values = [
-    req.body.clientId,
-    req.body.projectName,
+      const values = [
+        req.body.clientId,
+        req.body.projectName,
         preparedBy, // Always use the authenticated user's ID
-    req.body.orderDate || null,
-    req.body.orderedBy || "",
-    req.body.orderReference || "",
-    req.body.cellNumber || "",
-    req.body.specialInst || "",
-    req.body.deliveryInst || "",
-    req.body.graphicsBy,
-    req.body.dueDate || null,
-    req.body.dueTime || null,
-    req.body.sample ? 1 : 0,
-    req.body.reprint ? 1 : 0,
-    req.body.totalAmount || 0,
-    req.body.amountDisc || 0,
-    req.body.percentDisc || 0,
-    req.body.grandTotal || 0,
-    req.body.terms || "",
-    "Open",
-    req.body.totalHrs,
+        req.body.orderDate || null,
+        req.body.orderedBy || "",
+        req.body.orderReference || "",
+        req.body.cellNumber || "",
+        req.body.specialInst || "",
+        req.body.deliveryInst || "",
+        req.body.graphicsBy,
+        req.body.dueDate || null,
+        req.body.dueTime || null,
+        req.body.sample ? 1 : 0,
+        req.body.reprint ? 1 : 0,
+        req.body.totalAmount || 0,
+        req.body.amountDisc || 0,
+        req.body.percentDisc || 0,
+        req.body.grandTotal || 0,
+        req.body.terms || "",
+        "Open",
+        req.body.totalHrs,
         req.user.name, // Always use the authenticated user's name
-    new Date().toLocaleString("sv-SE").replace(",", ""),
-  ];
+        new Date().toLocaleString("sv-SE").replace(",", ""),
+      ];
 
       const [result] = await connection.query(sql, values);
       await connection.commit();
@@ -853,7 +853,7 @@ router.put(
         });
       }
 
-  const sql = `
+      const sql = `
     UPDATE orders 
     SET 
       clientId = ?,
@@ -883,29 +883,29 @@ router.put(
       // Ensure we don't allow changing the preparedBy except for admins
       let preparedBy = isAdmin ? req.body.preparedBy : orderCheck[0].preparedBy;
 
-  const values = [
-    req.body.clientId,
-    req.body.projectName,
+      const values = [
+        req.body.clientId,
+        req.body.projectName,
         preparedBy,
-    req.body.orderDate || null,
-    req.body.orderedBy || null,
-    req.body.orderReference || null,
-    req.body.cellNumber || null,
-    req.body.specialInst || null,
-    req.body.deliveryInst || null,
-    req.body.graphicsBy,
-    req.body.dueDate || null,
-    req.body.dueTime || null,
-    req.body.sample ? 1 : 0,
-    req.body.reprint ? 1 : 0,
-    req.body.totalAmount || 0,
-    req.body.amountDisc || 0,
-    req.body.percentDisc || 0,
-    req.body.grandTotal || 0,
-    req.body.terms || null,
+        req.body.orderDate || null,
+        req.body.orderedBy || null,
+        req.body.orderReference || null,
+        req.body.cellNumber || null,
+        req.body.specialInst || null,
+        req.body.deliveryInst || null,
+        req.body.graphicsBy,
+        req.body.dueDate || null,
+        req.body.dueTime || null,
+        req.body.sample ? 1 : 0,
+        req.body.reprint ? 1 : 0,
+        req.body.totalAmount || 0,
+        req.body.amountDisc || 0,
+        req.body.percentDisc || 0,
+        req.body.grandTotal || 0,
+        req.body.terms || null,
         req.user.name, // Always use the current user as editedBy
-    req.params.id,
-  ];
+        req.params.id,
+      ];
 
       const [result] = await connection.query(sql, values);
       await connection.commit();
@@ -924,7 +924,7 @@ router.put(
 // Update order's edited info and total hours
 router.put("/orders/:orderId/update_edited_info", async (req, res) => {
   try {
-  const sql = `
+    const sql = `
     UPDATE orders 
     SET lastEdited = ?,
         editedBy = ?,
@@ -949,12 +949,12 @@ router.put("/orders/:orderId/update_edited_info", async (req, res) => {
 
     return res.json({ Status: true });
   } catch (err) {
-        console.log("Error updating order edited info:", err);
-        return res.json({
-          Status: false,
-          Error: "Failed to update order edited info",
-        });
-      }
+    console.log("Error updating order edited info:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update order edited info",
+    });
+  }
 });
 
 // Update order detail artist major and minor
@@ -1154,11 +1154,11 @@ router.put(
 router.put("/order_details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-  const { printHrs, ...otherData } = req.body;
-  const data = {
-    ...otherData,
-    printHrs: Number(printHrs || 0),
-  };
+    const { printHrs, ...otherData } = req.body;
+    const data = {
+      ...otherData,
+      printHrs: Number(printHrs || 0),
+    };
     console.log("Data being updated:", data);
     console.log("ID:", id);
     const sql = "UPDATE order_details SET ? WHERE Id = ?";
@@ -1166,12 +1166,12 @@ router.put("/order_details/:id", async (req, res) => {
     const [result] = await pool.query(sql, [data, id]);
     return res.json({ Status: true, Result: result });
   } catch (err) {
-        console.log("Update Error:", err);
-        return res.json({
-          Status: false,
-          Error: "Failed to update order detail",
-        });
-      }
+    console.log("Update Error:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update order detail",
+    });
+  }
 });
 
 // Update display order by detail ID
@@ -1214,9 +1214,9 @@ router.put("/order_details-displayOrder/:detailId", async (req, res) => {
 router.put("/order_detail_noprint/:id", async (req, res) => {
   try {
     const { id } = req.params;
-  const { noPrint } = req.body;
+    const { noPrint } = req.body;
 
-  const sql = `
+    const sql = `
     UPDATE order_details 
     SET noPrint = ? 
       WHERE Id = ?
@@ -1225,12 +1225,12 @@ router.put("/order_detail_noprint/:id", async (req, res) => {
     const [result] = await pool.query(sql, [noPrint, id]);
     return res.json({ Status: true, Result: result });
   } catch (err) {
-      console.log("Update Error:", err);
-      return res.json({
-        Status: false,
-        Error: "Failed to update noPrint status",
-      });
-    }
+    console.log("Update Error:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to update noPrint status",
+    });
+  }
 });
 
 // Add order detail
@@ -1244,14 +1244,14 @@ router.post(
     try {
       await connection.beginTransaction();
 
-  // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
-  const { printHrs, noPrint, ...otherData } = req.body;
+      // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
+      const { printHrs, noPrint, ...otherData } = req.body;
 
-  const data = {
-    ...otherData,
-    printHrs: Number(printHrs) || 0, // Convert to number, default to 0
-    noPrint: Number(noPrint) || 0, // Convert to number, default to 0
-  };
+      const data = {
+        ...otherData,
+        printHrs: Number(printHrs) || 0, // Convert to number, default to 0
+        noPrint: Number(noPrint) || 0, // Convert to number, default to 0
+      };
 
       // Verify user has permission to add detail to this order
       const [orderCheck] = await connection.query(
@@ -1274,7 +1274,7 @@ router.post(
         });
       }
 
-  const sql = "INSERT INTO order_details SET ?";
+      const sql = "INSERT INTO order_details SET ?";
       const [result] = await connection.query(sql, data);
 
       await connection.commit();
@@ -1305,9 +1305,9 @@ router.delete("/order_detail/:id", async (req, res) => {
 
     return res.json({ Status: true });
   } catch (err) {
-      console.log(err);
-      return res.json({ Status: false, Error: "Query Error" });
-    }
+    console.log(err);
+    return res.json({ Status: false, Error: "Query Error" });
+  }
 });
 
 // Add route to get WTax types
@@ -1827,19 +1827,19 @@ router.get(
 
       const [existingOrders] = await pool.query(sql, [invoiceNum]);
 
-    return res.json({
-      Status: true,
+      return res.json({
+        Status: true,
         exists: existingOrders.length > 0,
         orders: existingOrders,
       });
     } catch (error) {
       console.error("Error checking invoice number:", error);
-    return res.json({
-      Status: false,
+      return res.json({
+        Status: false,
         Error: "Failed to check invoice number",
         Details: error.message,
-    });
-  }
+      });
+    }
   }
 );
 
