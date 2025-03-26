@@ -363,7 +363,7 @@ function PrintOrder() {
           @media print {
             @page {
               size: A5 landscape;
-              margin: 0.5cm;
+              margin: 1cm;
             }
             
             body {
