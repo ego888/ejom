@@ -141,7 +141,7 @@ function PrintOrder() {
           {/* Left-aligned: Job Order */}
           <h3 className="m-0 text-start">
             Job Order #{data.orderId || ""}
-            {data.revision && (
+            {data.revision !== 0 && (
               <span className="text-muted ms-2">Rev.{data.revision}</span>
             )}
           </h3>
