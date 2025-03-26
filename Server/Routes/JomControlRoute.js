@@ -50,7 +50,7 @@ router.get("/jomcontrol/artistIncentive", verifyUser, async (req, res) => {
         ArtistMaxPercent,
         ArtistMinAmount,
         HalfIncentiveSqFt
-      FROM jomcontrol 
+      FROM jomControl 
       LIMIT 1
     `;
 

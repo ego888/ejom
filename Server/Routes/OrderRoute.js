@@ -97,12 +97,12 @@ router.get("/orders-min", async (req, res) => {
 
     // Count query
     const countSql = `
-      SELECT COUNT(DISTINCT o.orderID) as total
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN employee e ON o.preparedBy = e.id
-      WHERE ${whereClause}
-    `;
+            SELECT COUNT(DISTINCT o.orderID) as total
+            FROM orders o
+            LEFT JOIN client c ON o.clientId = c.id
+            LEFT JOIN employee e ON o.preparedBy = e.id
+            WHERE ${whereClause}
+        `;
 
     // Execute count query
     const [countResults] = await pool.query(countSql, params);
@@ -189,37 +189,37 @@ router.get("/orders", async (req, res) => {
 
     // Main data query
     const dataSql = `
-      SELECT 
-        o.orderID as id, 
+            SELECT 
+                o.orderID as id, 
         o.revision,
-        o.clientId, 
-        c.clientName,
+                o.clientId, 
+                c.clientName, 
         c.customerName,
-        o.projectName, 
-        o.orderedBy, 
-        o.orderDate, 
-        o.dueDate, 
-        o.dueTime,
-        o.status, 
-        o.drnum, 
-        o.invoiceNum as invnum, 
-        o.totalAmount,
-        o.amountDisc,
-        o.percentDisc,
-        o.grandTotal,
+                o.projectName, 
+                o.orderedBy, 
+                o.orderDate, 
+                o.dueDate, 
+                o.dueTime,
+                o.status, 
+                o.drnum, 
+                o.invoiceNum as invnum, 
+                o.totalAmount,
+                o.amountDisc,
+                o.percentDisc,
+                o.grandTotal,
         o.amountPaid,
         o.datePaid,
-        e.name as salesName, 
-        o.orderReference,
+                e.name as salesName, 
+                o.orderReference,
         o.forProd,
         o.forBill
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN employee e ON o.preparedBy = e.id
-      WHERE ${whereClause}
-      ORDER BY ${sortBy} ${sortDirection}
-      LIMIT ? OFFSET ?
-    `;
+            FROM orders o
+            LEFT JOIN client c ON o.clientId = c.id
+            LEFT JOIN employee e ON o.preparedBy = e.id
+            WHERE ${whereClause}
+            ORDER BY ${sortBy} ${sortDirection}
+            LIMIT ? OFFSET ?
+        `;
 
     // Execute data query with proper parameter order
     const [orders] = await pool.query(dataSql, [...params, limit, offset]);
@@ -259,34 +259,34 @@ router.get("/orders", async (req, res) => {
 // Get single order
 router.get("/order/:id", async (req, res) => {
   try {
-    const sql = `
-      SELECT 
-        o.*,
-        DATE_FORMAT(o.orderDate, '%Y-%m-%d') as orderDate,
-        DATE_FORMAT(o.dueDate, '%Y-%m-%d') as dueDate,
-        DATE_FORMAT(o.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited,
-        DATE_FORMAT(o.drDate, '%Y-%m-%d') as drDate,
-        DATE_FORMAT(o.productionDate, '%Y-%m-%d %H:%i:%s') as productionDate,
-        DATE_FORMAT(o.deliveryDate, '%Y-%m-%d %H:%i:%s') as deliveryDate,
-        DATE_FORMAT(o.billDate, '%Y-%m-%d %H:%i:%s') as billDate,
-        DATE_FORMAT(o.readyDate, '%Y-%m-%d %H:%i:%s') as readyDate,
-        c.clientName,
+  const sql = `
+    SELECT 
+      o.*,
+      DATE_FORMAT(o.orderDate, '%Y-%m-%d') as orderDate,
+      DATE_FORMAT(o.dueDate, '%Y-%m-%d') as dueDate,
+      DATE_FORMAT(o.lastEdited, '%Y-%m-%d %H:%i:%s') as lastedited,
+      DATE_FORMAT(o.drDate, '%Y-%m-%d') as drDate,
+      DATE_FORMAT(o.productionDate, '%Y-%m-%d %H:%i:%s') as productionDate,
+      DATE_FORMAT(o.deliveryDate, '%Y-%m-%d %H:%i:%s') as deliveryDate,
+      DATE_FORMAT(o.billDate, '%Y-%m-%d %H:%i:%s') as billDate,
+      DATE_FORMAT(o.readyDate, '%Y-%m-%d %H:%i:%s') as readyDate,
+      c.clientName,
         c.customerName,
-        e.name as preparedByName,
-        e2.name as graphicsByName
-      FROM orders o
-      LEFT JOIN client c ON o.clientId = c.id
-      LEFT JOIN employee e ON o.preparedBy = e.id
-      LEFT JOIN employee e2 ON o.graphicsBy = e2.id
-      WHERE o.orderID = ?
-    `;
+      e.name as preparedByName,
+      e2.name as graphicsByName
+    FROM orders o
+    LEFT JOIN client c ON o.clientId = c.id
+    LEFT JOIN employee e ON o.preparedBy = e.id
+    LEFT JOIN employee e2 ON o.graphicsBy = e2.id
+    WHERE o.orderID = ?
+  `;
 
     const [result] = await pool.query(sql, [req.params.id]);
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {
-    console.log(err);
-    return res.json({ Status: false, Error: "Query Error" });
-  }
+      console.log(err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
 });
 
 // Search orders by client name
@@ -330,15 +330,15 @@ router.get("/search-orders-by-client", async (req, res) => {
     // Main data query - using same fields as regular order search
     const ordersSql = `
       SELECT 
-        o.orderID as id, 
+        o.orderID as id,
         o.revisionNumber,
-        o.clientId, 
+        o.clientId,
         c.clientName, 
         c.customerName,
-        o.projectName, 
+        o.projectName,
         o.orderedBy, 
         o.orderDate, 
-        o.dueDate, 
+        o.dueDate,
         o.dueTime,
         o.status, 
         o.drnum, 
@@ -461,7 +461,7 @@ router.get("/orders-details-forprod", async (req, res) => {
       ORDER BY o.orderID ASC, od.displayOrder ASC`;
 
     const [result] = await pool.query(sql);
-    return res.json({ Status: true, Result: result });
+      return res.json({ Status: true, Result: result });
   } catch (error) {
     console.log(error);
     return res.json({ Status: false, Error: "Query Error" + error });
@@ -620,9 +620,9 @@ router.put("/update_orders_drnum", async (req, res) => {
     await connection.commit();
 
     return res.json({
-      Status: true,
-      Message: "Orders and JomControl updated successfully",
-    });
+              Status: true,
+              Message: "Orders and JomControl updated successfully",
+            });
   } catch (error) {
     // Rollback on error
     await connection.rollback();
@@ -663,48 +663,48 @@ router.get("/orders-all-DR", async (req, res) => {
       WHERE !o.drnum 
         AND (o.status = 'Prod' OR o.status = 'Finish' OR o.status = 'Delivered')
       ORDER BY o.orderID ASC, od.displayOrder ASC;
-    `;
+`;
 
     const [result] = await pool.query(sql);
-    console.log("result", result);
+      console.log("result", result);
 
-    // Restructure the data to group order details by order
-    const ordersMap = new Map();
+      // Restructure the data to group order details by order
+      const ordersMap = new Map();
 
-    result.forEach((row) => {
-      if (!ordersMap.has(row.id)) {
-        // Create new order entry
-        ordersMap.set(row.id, {
-          id: row.id,
-          clientId: row.clientId,
-          projectName: row.projectName,
-          dueDate: row.dueDate,
-          dueTime: row.dueTime,
-          clientName: row.clientName,
+      result.forEach((row) => {
+        if (!ordersMap.has(row.id)) {
+          // Create new order entry
+          ordersMap.set(row.id, {
+            id: row.id,
+            clientId: row.clientId,
+            projectName: row.projectName,
+            dueDate: row.dueDate,
+            dueTime: row.dueTime,
+            clientName: row.clientName,
           customerName: row.customerName,
-          deliveryInst: row.deliveryInst,
-          drnum: row.drnum,
-          drDate: row.drDate,
-          order_details: [],
+            deliveryInst: row.deliveryInst,
+            drnum: row.drnum,
+            drDate: row.drDate,
+            order_details: [],
+          });
+        }
+
+        // Add order details if they exist
+        ordersMap.get(row.id).order_details.push({
+          quantity: row.quantity,
+          width: row.width,
+          height: row.height,
+          unit: row.unit,
+          material: row.material,
+          itemDescription: row.itemDescription,
+          displayOrder: row.displayOrder,
         });
-      }
-
-      // Add order details if they exist
-      ordersMap.get(row.id).order_details.push({
-        quantity: row.quantity,
-        width: row.width,
-        height: row.height,
-        unit: row.unit,
-        material: row.material,
-        itemDescription: row.itemDescription,
-        displayOrder: row.displayOrder,
       });
-    });
 
-    // Convert map to array
-    const orders = Array.from(ordersMap.values());
+      // Convert map to array
+      const orders = Array.from(ordersMap.values());
 
-    return res.json({ Status: true, Result: orders });
+      return res.json({ Status: true, Result: orders });
   } catch (error) {
     console.log(error);
     return res.json({ Status: false, Error: "Query Error" + error });
@@ -714,29 +714,29 @@ router.get("/orders-all-DR", async (req, res) => {
 // Get order details
 router.get("/order_details/:orderId", async (req, res) => {
   try {
-    const sql = `
-      SELECT * 
-      FROM order_details 
-      WHERE orderId = ? 
-      ORDER BY displayOrder
-    `;
+  const sql = `
+    SELECT * 
+    FROM order_details 
+    WHERE orderId = ? 
+    ORDER BY displayOrder
+  `;
 
     const [result] = await pool.query(sql, [req.params.orderId]);
     return res.json({ Status: true, Result: result });
   } catch (err) {
-    console.log("Select Error:", err);
-    return res.json({ Status: false, Error: "Query Error" });
-  }
+      console.log("Select Error:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
 });
 
 // Get next display order number for order details
 router.get("/next_display_order/:orderId", async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const sql =
-      "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
+  const { orderId } = req.params;
+  const sql =
+    "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
 
-    console.log("Order ID:", orderId);
+  console.log("Order ID:", orderId);
     const [result] = await pool.query(sql, [orderId]);
 
     // If maxOrder is 0, it means no records exist yet
@@ -770,41 +770,41 @@ router.post(
       // Set the preparedBy to the current user's ID
       const preparedBy = req.user.id;
 
-      const sql = `
-        INSERT INTO orders (
-          clientId, projectName, preparedBy, orderDate, 
-          orderedBy, orderReference, cellNumber, specialInst, 
-          deliveryInst, graphicsBy, dueDate, dueTime, 
-          sample, reprint, totalAmount, amountDisc, 
-          percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+  const sql = `
+    INSERT INTO orders (
+      clientId, projectName, preparedBy, orderDate, 
+      orderedBy, orderReference, cellNumber, specialInst, 
+      deliveryInst, graphicsBy, dueDate, dueTime, 
+      sample, reprint, totalAmount, amountDisc, 
+      percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
-      const values = [
-        req.body.clientId,
-        req.body.projectName,
+  const values = [
+    req.body.clientId,
+    req.body.projectName,
         preparedBy, // Always use the authenticated user's ID
-        req.body.orderDate || null,
-        req.body.orderedBy || "",
-        req.body.orderReference || "",
-        req.body.cellNumber || "",
-        req.body.specialInst || "",
-        req.body.deliveryInst || "",
-        req.body.graphicsBy,
-        req.body.dueDate || null,
-        req.body.dueTime || null,
-        req.body.sample ? 1 : 0,
-        req.body.reprint ? 1 : 0,
-        req.body.totalAmount || 0,
-        req.body.amountDisc || 0,
-        req.body.percentDisc || 0,
-        req.body.grandTotal || 0,
-        req.body.terms || "",
-        "Open",
-        req.body.totalHrs,
+    req.body.orderDate || null,
+    req.body.orderedBy || "",
+    req.body.orderReference || "",
+    req.body.cellNumber || "",
+    req.body.specialInst || "",
+    req.body.deliveryInst || "",
+    req.body.graphicsBy,
+    req.body.dueDate || null,
+    req.body.dueTime || null,
+    req.body.sample ? 1 : 0,
+    req.body.reprint ? 1 : 0,
+    req.body.totalAmount || 0,
+    req.body.amountDisc || 0,
+    req.body.percentDisc || 0,
+    req.body.grandTotal || 0,
+    req.body.terms || "",
+    "Open",
+    req.body.totalHrs,
         req.user.name, // Always use the authenticated user's name
-        new Date().toLocaleString("sv-SE").replace(",", ""),
-      ];
+    new Date().toLocaleString("sv-SE").replace(",", ""),
+  ];
 
       const [result] = await connection.query(sql, values);
       await connection.commit();
@@ -853,59 +853,59 @@ router.put(
         });
       }
 
-      const sql = `
-        UPDATE orders 
-        SET 
-          clientId = ?,
-          projectName = ?,
-          preparedBy = ?,
-          orderDate = ?,
-          orderedBy = ?,
-          orderReference = ?,
-          cellNumber = ?,
-          specialInst = ?,
-          deliveryInst = ?,
-          graphicsBy = ?,
-          dueDate = ?,
-          dueTime = ?,
-          sample = ?,
-          reprint = ?,
-          totalAmount = ?,
-          amountDisc = ?,
-          percentDisc = ?,
-          grandTotal = ?,
-          terms = ?,
-          editedBy = ?,
-          lastEdited = CURRENT_TIMESTAMP
-        WHERE orderID = ?
-      `;
+  const sql = `
+    UPDATE orders 
+    SET 
+      clientId = ?,
+      projectName = ?,
+      preparedBy = ?,
+      orderDate = ?,
+      orderedBy = ?,
+      orderReference = ?,
+      cellNumber = ?,
+      specialInst = ?,
+      deliveryInst = ?,
+      graphicsBy = ?,
+      dueDate = ?,
+      dueTime = ?,
+      sample = ?,
+      reprint = ?,
+      totalAmount = ?,
+      amountDisc = ?,
+      percentDisc = ?,
+      grandTotal = ?,
+      terms = ?,
+      editedBy = ?,
+      lastEdited = CURRENT_TIMESTAMP
+    WHERE orderID = ?
+  `;
 
       // Ensure we don't allow changing the preparedBy except for admins
       let preparedBy = isAdmin ? req.body.preparedBy : orderCheck[0].preparedBy;
 
-      const values = [
-        req.body.clientId,
-        req.body.projectName,
+  const values = [
+    req.body.clientId,
+    req.body.projectName,
         preparedBy,
-        req.body.orderDate || null,
-        req.body.orderedBy || null,
-        req.body.orderReference || null,
-        req.body.cellNumber || null,
-        req.body.specialInst || null,
-        req.body.deliveryInst || null,
-        req.body.graphicsBy,
-        req.body.dueDate || null,
-        req.body.dueTime || null,
-        req.body.sample ? 1 : 0,
-        req.body.reprint ? 1 : 0,
-        req.body.totalAmount || 0,
-        req.body.amountDisc || 0,
-        req.body.percentDisc || 0,
-        req.body.grandTotal || 0,
-        req.body.terms || null,
+    req.body.orderDate || null,
+    req.body.orderedBy || null,
+    req.body.orderReference || null,
+    req.body.cellNumber || null,
+    req.body.specialInst || null,
+    req.body.deliveryInst || null,
+    req.body.graphicsBy,
+    req.body.dueDate || null,
+    req.body.dueTime || null,
+    req.body.sample ? 1 : 0,
+    req.body.reprint ? 1 : 0,
+    req.body.totalAmount || 0,
+    req.body.amountDisc || 0,
+    req.body.percentDisc || 0,
+    req.body.grandTotal || 0,
+    req.body.terms || null,
         req.user.name, // Always use the current user as editedBy
-        req.params.id,
-      ];
+    req.params.id,
+  ];
 
       const [result] = await connection.query(sql, values);
       await connection.commit();
@@ -924,17 +924,17 @@ router.put(
 // Update order's edited info and total hours
 router.put("/orders/:orderId/update_edited_info", async (req, res) => {
   try {
-    const sql = `
-      UPDATE orders 
-      SET lastEdited = ?,
-          editedBy = ?,
+  const sql = `
+    UPDATE orders 
+    SET lastEdited = ?,
+        editedBy = ?,
           totalHrs = ?,
           totalAmount = ?,
           amountDisc = ?,
           percentDisc = ?,
           grandTotal = ?
-      WHERE orderID = ?
-    `;
+    WHERE orderID = ?
+  `;
 
     const [result] = await pool.query(sql, [
       req.body.lastEdited,
@@ -949,12 +949,12 @@ router.put("/orders/:orderId/update_edited_info", async (req, res) => {
 
     return res.json({ Status: true });
   } catch (err) {
-    console.log("Error updating order edited info:", err);
-    return res.json({
-      Status: false,
-      Error: "Failed to update order edited info",
-    });
-  }
+        console.log("Error updating order edited info:", err);
+        return res.json({
+          Status: false,
+          Error: "Failed to update order edited info",
+        });
+      }
 });
 
 // Update order detail artist major and minor
@@ -1154,11 +1154,11 @@ router.put(
 router.put("/order_details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { printHrs, ...otherData } = req.body;
-    const data = {
-      ...otherData,
-      printHrs: Number(printHrs || 0),
-    };
+  const { printHrs, ...otherData } = req.body;
+  const data = {
+    ...otherData,
+    printHrs: Number(printHrs || 0),
+  };
     console.log("Data being updated:", data);
     console.log("ID:", id);
     const sql = "UPDATE order_details SET ? WHERE Id = ?";
@@ -1166,12 +1166,12 @@ router.put("/order_details/:id", async (req, res) => {
     const [result] = await pool.query(sql, [data, id]);
     return res.json({ Status: true, Result: result });
   } catch (err) {
-    console.log("Update Error:", err);
-    return res.json({
-      Status: false,
-      Error: "Failed to update order detail",
-    });
-  }
+        console.log("Update Error:", err);
+        return res.json({
+          Status: false,
+          Error: "Failed to update order detail",
+        });
+      }
 });
 
 // Update display order by detail ID
@@ -1214,23 +1214,23 @@ router.put("/order_details-displayOrder/:detailId", async (req, res) => {
 router.put("/order_detail_noprint/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { noPrint } = req.body;
+  const { noPrint } = req.body;
 
-    const sql = `
-      UPDATE order_details 
-      SET noPrint = ? 
+  const sql = `
+    UPDATE order_details 
+    SET noPrint = ? 
       WHERE Id = ?
-    `;
+  `;
 
     const [result] = await pool.query(sql, [noPrint, id]);
     return res.json({ Status: true, Result: result });
   } catch (err) {
-    console.log("Update Error:", err);
-    return res.json({
-      Status: false,
-      Error: "Failed to update noPrint status",
-    });
-  }
+      console.log("Update Error:", err);
+      return res.json({
+        Status: false,
+        Error: "Failed to update noPrint status",
+      });
+    }
 });
 
 // Add order detail
@@ -1244,14 +1244,14 @@ router.post(
     try {
       await connection.beginTransaction();
 
-      // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
-      const { printHrs, noPrint, ...otherData } = req.body;
+  // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
+  const { printHrs, noPrint, ...otherData } = req.body;
 
-      const data = {
-        ...otherData,
-        printHrs: Number(printHrs) || 0, // Convert to number, default to 0
-        noPrint: Number(noPrint) || 0, // Convert to number, default to 0
-      };
+  const data = {
+    ...otherData,
+    printHrs: Number(printHrs) || 0, // Convert to number, default to 0
+    noPrint: Number(noPrint) || 0, // Convert to number, default to 0
+  };
 
       // Verify user has permission to add detail to this order
       const [orderCheck] = await connection.query(
@@ -1274,7 +1274,7 @@ router.post(
         });
       }
 
-      const sql = "INSERT INTO order_details SET ?";
+  const sql = "INSERT INTO order_details SET ?";
       const [result] = await connection.query(sql, data);
 
       await connection.commit();
@@ -1305,9 +1305,9 @@ router.delete("/order_detail/:id", async (req, res) => {
 
     return res.json({ Status: true });
   } catch (err) {
-    console.log(err);
-    return res.json({ Status: false, Error: "Query Error" });
-  }
+      console.log(err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
 });
 
 // Add route to get WTax types
@@ -1827,19 +1827,19 @@ router.get(
 
       const [existingOrders] = await pool.query(sql, [invoiceNum]);
 
-      return res.json({
-        Status: true,
+    return res.json({
+      Status: true,
         exists: existingOrders.length > 0,
         orders: existingOrders,
       });
     } catch (error) {
       console.error("Error checking invoice number:", error);
-      return res.json({
-        Status: false,
+    return res.json({
+      Status: false,
         Error: "Failed to check invoice number",
         Details: error.message,
-      });
-    }
+    });
+  }
   }
 );
 

@@ -91,11 +91,11 @@ function Prod() {
 
       const params = {
         page: currentPage,
-        limit: recordsPerPage,
-        sortBy: sortConfig.key,
-        sortDirection: sortConfig.direction,
-        statuses: selectedStatuses.join(","),
-        sales: selectedSales.length ? selectedSales.join(",") : undefined,
+          limit: recordsPerPage,
+          sortBy: sortConfig.key,
+          sortDirection: sortConfig.direction,
+          statuses: selectedStatuses.join(","),
+          sales: selectedSales.length ? selectedSales.join(",") : undefined,
         clients: selectedClients.length ? selectedClients.join(",") : undefined,
         ...(searchClientName.trim() && {
           search: searchClientName.trim(),
@@ -152,16 +152,16 @@ function Prod() {
           // Only set initial prod statuses if no saved filters exist
           const savedFilters = localStorage.getItem("orderStatusFilter");
           if (!savedFilters) {
-            const prodStatuses = sortedStatuses
-              .slice(2, 6)
-              .map((s) => s.statusId);
-            setSelectedStatuses(prodStatuses);
-            setIsProdChecked(true);
-            localStorage.setItem(
+          const prodStatuses = sortedStatuses
+            .slice(2, 6)
+            .map((s) => s.statusId);
+          setSelectedStatuses(prodStatuses);
+          setIsProdChecked(true);
+          localStorage.setItem(
               "orderStatusFilter",
-              JSON.stringify(prodStatuses)
-            );
-          }
+            JSON.stringify(prodStatuses)
+          );
+        }
         }
 
         if (wtaxResponse.data.Status) {
@@ -514,9 +514,9 @@ function Prod() {
       const response = await axios.post(
         `${ServerIP}/auth/post-payment`,
         payload
-      );
+        );
 
-      if (response.data.Status) {
+        if (response.data.Status) {
         setAlert({
           show: true,
           title: "Success",
@@ -529,14 +529,14 @@ function Prod() {
         setOrderPayments({});
         setRemainingAmount(0);
         // Reset header amount to 0
-        setPaymentInfo((prev) => ({
-          ...prev,
+          setPaymentInfo((prev) => ({
+            ...prev,
           amount: "", // Empty string for input field
-        }));
+          }));
         console.log("fetchOrder from postPaymentToServer");
         fetchOrderData();
-      }
-    } catch (error) {
+        }
+      } catch (error) {
       console.error("Payment error:", error);
       let errorMessage = "Failed to post payment";
 
@@ -845,9 +845,9 @@ function Prod() {
                 <tr key={order.id}>
                   <td
                     style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      navigate(`/dashboard/payment/view/${order.id}`)
-                    }
+                        onClick={() =>
+                          navigate(`/dashboard/payment/view/${order.id}`)
+                        }
                   >
                     {order.id}
                   </td>

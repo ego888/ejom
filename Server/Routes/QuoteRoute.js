@@ -77,9 +77,9 @@ router.get("/quotes", verifyUser, async (req, res) => {
     // Count query
     const [countResult] = await connection.query(
       `SELECT COUNT(*) as total
-       FROM quotes q
-       LEFT JOIN client c ON q.clientId = c.id
-       LEFT JOIN employee e ON q.preparedBy = e.id
+            FROM quotes q
+            LEFT JOIN client c ON q.clientId = c.id
+            LEFT JOIN employee e ON q.preparedBy = e.id
        WHERE ${whereClause}`,
       params
     );
@@ -87,35 +87,35 @@ router.get("/quotes", verifyUser, async (req, res) => {
     // Main data query with DATE_FORMAT for dates
     const [quotes] = await connection.query(
       `SELECT 
-        q.quoteId as id,
-        q.clientId,
-        q.clientName, 
-        q.projectName,
-        q.preparedBy,
+                q.quoteId as id, 
+                q.clientId, 
+                q.clientName, 
+                q.projectName, 
+                q.preparedBy, 
         q.orderedBy,
-        DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
-        DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
-        q.status,
+                DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
+                DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
+                q.status, 
         q.refId as quoteReference,
-        q.totalAmount,
-        q.amountDiscount,
-        q.percentDisc,
-        q.grandTotal,
-        q.totalHrs,
+                q.totalAmount,
+                q.amountDiscount,
+                q.percentDisc,
+                q.grandTotal,
+                q.totalHrs,
         q.terms,
         DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastEdited,
         q.editedBy,
         q.statusRem,
-        q.email,
-        q.cellNumber,
+                q.email,
+                q.cellNumber,
         q.telNum,
         q.status,
         e.name as salesName
-      FROM quotes q
-      LEFT JOIN client c ON q.clientId = c.id
-      LEFT JOIN employee e ON q.preparedBy = e.id
-      WHERE ${whereClause}
-      ORDER BY ${sortBy} ${sortDirection}
+            FROM quotes q
+            LEFT JOIN client c ON q.clientId = c.id
+            LEFT JOIN employee e ON q.preparedBy = e.id
+            WHERE ${whereClause}
+            ORDER BY ${sortBy} ${sortDirection}
       LIMIT ? OFFSET ?`,
       [...params, Number(limit), Number(offset)]
     );
@@ -152,15 +152,15 @@ router.get("/quote/:id", async (req, res) => {
 
     const [results] = await connection.query(
       `SELECT 
-        q.*,
-        DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
-        DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
+      q.*,
+      DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
+      DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
         DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastEdited,
         c.clientName,
         e.name as PreparedBy
-      FROM quotes q
-      LEFT JOIN client c ON q.clientId = c.id
-      LEFT JOIN employee e ON q.preparedBy = e.id
+    FROM quotes q
+    LEFT JOIN client c ON q.clientId = c.id
+    LEFT JOIN employee e ON q.preparedBy = e.id
       WHERE q.quoteId = ?`,
       [req.params.id]
     );
@@ -229,15 +229,15 @@ router.get("/quote_details/:quoteId", async (req, res) => {
 
     const [results] = await connection.query(
       `SELECT 
-        qd.*,
-        q.clientName,
-        c.customerName,
+      qd.*,
+      q.clientName,
+      c.customerName,
         e.name as PreparedByName
-      FROM quote_details qd
-      LEFT JOIN quotes q ON qd.quoteId = q.quoteId
-      LEFT JOIN client c ON q.clientId = c.id
-      LEFT JOIN employee e ON q.preparedBy = e.id
-      WHERE qd.quoteId = ?
+    FROM quote_details qd
+    LEFT JOIN quotes q ON qd.quoteId = q.quoteId
+    LEFT JOIN client c ON q.clientId = c.id
+    LEFT JOIN employee e ON q.preparedBy = e.id
+    WHERE qd.quoteId = ?
       ORDER BY qd.displayOrder`,
       [req.params.quoteId]
     );
@@ -262,9 +262,9 @@ router.get("/quote-statuses", async (req, res) => {
 
     const [results] = await connection.query(
       `SELECT 
-        statusId,
-        step
-      FROM quoteStatus 
+      statusId,
+      step
+    FROM quoteStatus 
       ORDER BY step ASC`
     );
 
@@ -355,7 +355,7 @@ router.get("/quote-detail/:id", verifyUser, async (req, res) => {
 router.put("/quotes/:quoteId/update_edited_info", async (req, res) => {
   try {
     const sql = `
-      UPDATE quotes 
+    UPDATE quotes 
       SET lastEdited = ?,
           editedBy = ?,
           totalHrs = ?
@@ -383,30 +383,30 @@ router.put("/quotes/:quoteId/update_edited_info", async (req, res) => {
 router.put("/update_quote/:id", async (req, res) => {
   try {
     const sql = `
-      UPDATE quotes 
-      SET 
-          clientId = ?,
-          clientName = ?, 
-          projectName = ?,
-          preparedBy = ?,
-          quoteDate = ?,
-          orderedBy = ?,
-          refId = ?,
-          email = ?,
-          cellNumber = ?,
-          telNum = ?,
-          statusRem = ?,
-          dueDate = ?,
-          totalAmount = ?,
-          amountDiscount = ?,
-          percentDisc = ?,
-          grandTotal = ?,
-          totalHrs = ?,
-          editedBy = ?,
-          terms = ?,
-          lastEdited = CURRENT_TIMESTAMP
-      WHERE quoteId = ?
-    `;
+    UPDATE quotes 
+    SET 
+        clientId = ?,
+        clientName = ?,
+        projectName = ?,
+        preparedBy = ?,
+        quoteDate = ?,
+        orderedBy = ?,
+        refId = ?,
+        email = ?,
+        cellNumber = ?,
+        telNum = ?,
+        statusRem = ?,
+        dueDate = ?,
+        totalAmount = ?,
+        amountDiscount = ?,
+        percentDisc = ?,
+        grandTotal = ?,
+        totalHrs = ?,
+        editedBy = ?,
+        terms = ?,
+        lastEdited = CURRENT_TIMESTAMP
+    WHERE quoteId = ?
+  `;
 
     const values = [
       req.body.clientId || 0,
@@ -446,17 +446,17 @@ router.put("/update_quote/:id", async (req, res) => {
 router.put("/quotes/update_totals/:id", async (req, res) => {
   try {
     const sql = `
-      UPDATE quotes 
-      SET 
-          totalAmount = ?,
-          amountDiscount = ?,
-          percentDisc = ?,
-          grandTotal = ?,
-          totalHrs = ?,
-          editedBy = ?,
-          lastEdited = CURRENT_TIMESTAMP
-      WHERE quoteId = ?
-    `;
+    UPDATE quotes 
+    SET 
+        totalAmount = ?,
+        amountDiscount = ?,
+        percentDisc = ?,
+        grandTotal = ?,
+        totalHrs = ?,
+        editedBy = ?,
+        lastEdited = CURRENT_TIMESTAMP
+    WHERE quoteId = ?
+  `;
 
     const values = [
       req.body.totalAmount || 0,
@@ -495,11 +495,11 @@ router.put(
       }
 
       const sql = `
-      UPDATE quote_details 
-      SET displayOrder = ? 
-      WHERE quoteId = ? 
-      AND id = ?
-    `;
+    UPDATE quote_details 
+    SET displayOrder = ? 
+    WHERE quoteId = ? 
+    AND id = ?
+  `;
 
       const result = await pool.query(sql, [displayOrder, quoteId, detailId]);
       return res.json({ Status: true, Result: result[0] });
