@@ -164,17 +164,17 @@ function OrderView() {
           <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
             <div className="d-flex align-items-center gap-3">
               <h3 className="m-0">
-                Order #{data.orderId}{" "}
+                Order # {data.orderId}{" "}
                 {data.revision > 0 && (
                   <span className="text-muted ms-2">Rev.{data.revision}</span>
                 )}
               </h3>
             </div>
             <div className="m-0">
-              <h3>DR #{data.drNum}</h3>
+              <h3>DR # {data.drNum}</h3>
             </div>
             <div className="m-0">
-              <h3>INV #{data.invoiceNum}</h3>
+              <h3>INV # {data.invoiceNum}</h3>
             </div>
             <div className="d-flex gap-2">
               <Button variant="cancel" onClick={() => navigate(-1)}>

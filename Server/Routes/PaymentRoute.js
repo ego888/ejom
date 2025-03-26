@@ -87,17 +87,18 @@ router.post("/post-payment", verifyUser, async (req, res) => {
       });
     }
 
-    // Optional: Validate payment amounts don't exceed remaining balance
-    // const orderBalances = new Map(
-    //   existingOrders.map((order) => [
-    //     order.orderId,
-    //     {
-    //       remaining:
-    //         parseFloat(order.grandTotal) - parseFloat(order.amountPaid),
-    //     },
-    //   ])
-    // );
+    // Create order balances map
+    const orderBalances = new Map(
+      existingOrders.map((order) => [
+        order.orderId,
+        {
+          remaining:
+            parseFloat(order.grandTotal) - parseFloat(order.amountPaid || 0),
+        },
+      ])
+    );
 
+    // Validate payment amounts don't exceed remaining balance
     const overPaidOrders = formattedAllocations.filter((allocation) => {
       const orderBalance = orderBalances.get(allocation.orderId);
       return parseFloat(allocation.amount) > orderBalance?.remaining + 0.01; // Allow small float difference
@@ -136,8 +137,8 @@ router.post("/post-payment", verifyUser, async (req, res) => {
     for (const allocation of formattedAllocations) {
       // Insert payment allocation
       await connection.query(
-        `INSERT INTO payment_allocation 
-         (paymentId, orderId, amount) 
+        `INSERT INTO paymentJoAllocation 
+         (payId, orderId, amountApplied) 
          VALUES (?, ?, ?)`,
         [paymentId, allocation.orderId, allocation.amount]
       );
@@ -145,7 +146,7 @@ router.post("/post-payment", verifyUser, async (req, res) => {
       // Update order table with amount paid and datePaid
       await connection.query(
         `UPDATE orders 
-         SET amountPaid = amountPaid + ?,
+         SET amountPaid = COALESCE(amountPaid, 0) + ?,
              datePaid = COALESCE(datePaid, NOW())
          WHERE orderId = ?`,
         [allocation.amount, allocation.orderId]

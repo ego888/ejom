@@ -92,7 +92,7 @@ router.get("/quotes", verifyUser, async (req, res) => {
                 q.clientName, 
                 q.projectName, 
                 q.preparedBy, 
-        q.orderedBy,
+                q.orderedBy,
                 DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
                 DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
                 q.status, 
@@ -386,7 +386,7 @@ router.put("/update_quote/:id", async (req, res) => {
     UPDATE quotes 
     SET 
         clientId = ?,
-        clientName = ?,
+        clientName = ?, 
         projectName = ?,
         preparedBy = ?,
         quoteDate = ?,

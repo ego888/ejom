@@ -113,54 +113,70 @@ function PaymentAllocation({ payId }) {
         <table className="table table-striped table-hover">
           <thead>
             <tr>
-              <th>Pay ID</th>
-              <th>Pay Date</th>
-              <th>Type</th>
-              <th>OR#</th>
-              <th>Reference</th>
-              <th>Order ID</th>
-              <th className="text-end">Amount Applied</th>
-              <th>Posted By</th>
-              <th>Posted Date</th>
-              <th>Remitted By</th>
-              <th>Remitted Date</th>
+              <th className="text-center">Pay ID</th>
+              <th className="text-center">Pay Date</th>
+              <th className="text-center">Pay Amount</th>
+              <th className="text-center">Type</th>
+              <th className="text-center">OR#</th>
+              <th className="text-center">Reference</th>
+              <th className="text-center">Order ID</th>
+              <th className="text-center">Amount Applied</th>
+              <th className="text-center">Posted By</th>
+              <th className="text-center">Posted Date</th>
+              <th className="text-center">Remitted By</th>
+              <th className="text-center">Remitted Date</th>
             </tr>
           </thead>
           <tbody>
             {allocation.allocations?.map((item, index) => (
               <tr key={index}>
-                <td>{index === 0 ? allocation.payId : ""}</td>
-                <td>
+                <td className="text-center">
+                  {index === 0 ? allocation.payId : ""}
+                </td>
+                <td className="text-center">
                   {index === 0
                     ? new Date(allocation.payDate).toLocaleDateString()
                     : ""}
                 </td>
-                <td>{index === 0 ? allocation.payType : ""}</td>
-                <td>{index === 0 ? allocation.ornum || "N/A" : ""}</td>
-                <td>{index === 0 ? allocation.payReference || "N/A" : ""}</td>
-                <td>{item.orderId}</td>
+                <td className="text-end">
+                  {index === 0 ? formatPeso(allocation.totalPayment) : ""}
+                </td>
+                <td className="text-center">
+                  {index === 0 ? allocation.payType : ""}
+                </td>
+                <td className="text-center">
+                  {index === 0 ? allocation.ornum : ""}
+                </td>
+                <td className="text-center">
+                  {index === 0 ? allocation.payReference : ""}
+                </td>
+                <td className="text-center">{item.orderId}</td>
                 <td className="text-end">{formatNumber(item.amountApplied)}</td>
-                <td>{index === 0 ? allocation.transactedBy : ""}</td>
-                <td>
+                <td className="text-center">
+                  {index === 0 ? allocation.transactedBy : ""}
+                </td>
+                <td className="text-center">
                   {index === 0
                     ? allocation.postedDate
                       ? new Date(allocation.postedDate).toLocaleDateString()
                       : "N/A"
                     : ""}
                 </td>
-                <td>{index === 0 ? allocation.remittedBy || "N/A" : ""}</td>
-                <td>
+                <td className="text-center">
+                  {index === 0 ? allocation.remittedBy : ""}
+                </td>
+                <td className="text-center">
                   {index === 0
                     ? allocation.remittedDate
                       ? new Date(allocation.remittedDate).toLocaleDateString()
-                      : "N/A"
+                      : ""
                     : ""}
                 </td>
               </tr>
             ))}
             {/* Total row */}
             <tr className="table-active fw-bold">
-              <td colSpan="6" className="text-end">
+              <td colSpan="7" className="text-end">
                 Total:
               </td>
               <td className="text-end">

@@ -91,11 +91,11 @@ function Prod() {
 
       const params = {
         page: currentPage,
-          limit: recordsPerPage,
-          sortBy: sortConfig.key,
-          sortDirection: sortConfig.direction,
-          statuses: selectedStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined,
+        limit: recordsPerPage,
+        sortBy: sortConfig.key,
+        sortDirection: sortConfig.direction,
+        statuses: selectedStatuses.join(","),
+        sales: selectedSales.length ? selectedSales.join(",") : undefined,
         clients: selectedClients.length ? selectedClients.join(",") : undefined,
         ...(searchClientName.trim() && {
           search: searchClientName.trim(),
@@ -152,16 +152,16 @@ function Prod() {
           // Only set initial prod statuses if no saved filters exist
           const savedFilters = localStorage.getItem("orderStatusFilter");
           if (!savedFilters) {
-          const prodStatuses = sortedStatuses
-            .slice(2, 6)
-            .map((s) => s.statusId);
-          setSelectedStatuses(prodStatuses);
-          setIsProdChecked(true);
-          localStorage.setItem(
+            const prodStatuses = sortedStatuses
+              .slice(2, 6)
+              .map((s) => s.statusId);
+            setSelectedStatuses(prodStatuses);
+            setIsProdChecked(true);
+            localStorage.setItem(
               "orderStatusFilter",
-            JSON.stringify(prodStatuses)
-          );
-        }
+              JSON.stringify(prodStatuses)
+            );
+          }
         }
 
         if (wtaxResponse.data.Status) {
@@ -174,8 +174,9 @@ function Prod() {
             setSelectedWtax(defaultWTax);
           }
         }
+
         if (vatResponse.data.Status) {
-          setVatRate(vatResponse.data.Result.VAT);
+          setVatRate(vatResponse.data.Result.vatPercent);
         }
         if (paymentTypesResponse.data.Status)
           setPaymentTypes(paymentTypesResponse.data.Result);
@@ -331,6 +332,8 @@ function Prod() {
           const baseAmount = orderAmount / (1 + vatRate / 100);
           wtaxAmount =
             Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
+          console.log("Base Amount:", baseAmount);
+          console.log("wtaxAmount:", wtaxAmount);
           // Adjust payment amount by subtracting WTax
           console.log("WTax Amount:", wtaxAmount);
           if (availableAmount >= orderAmount) {
@@ -467,33 +470,60 @@ function Prod() {
       setShowModal(true);
       return;
     }
+
     // Check if total applied matches header amount
     const totalApplied = Object.values(orderPayments).reduce(
       (sum, p) => sum + (p.payment || 0),
       0
     );
-    if (Number(totalApplied) !== Number(paymentInfo.amount)) {
-      setModalConfig({
+    console.log("totalApplied", totalApplied);
+    console.log("paymentInfo.amount", paymentInfo.amount);
+
+    // Convert both to numbers
+    const applied = Number(totalApplied);
+    const amount = Number(paymentInfo.amount);
+
+    // Only show warning if applied amount is less than payment amount
+    if (applied < amount) {
+      setAlert({
+        show: true,
         title: "Payment Amount Mismatch",
         message: `The total applied amount (${formatCurrency(
-          totalApplied
-        )}) does not match the payment amount (${formatCurrency(
-          paymentInfo.amount
-        )}). Do you want to proceed?`,
-        type: "warning",
-        showCancelButton: true,
+          applied
+        )}) is less than the payment amount (${formatCurrency(
+          amount
+        )}). Do you want to proceed with this partial payment?`,
+        type: "confirm",
+        showOkButton: true,
         onConfirm: () => postPaymentToServer(),
-        onCancel: () => setShowModal(false),
       });
-      setShowModal(true);
       return;
     }
+
+    // If applied amount is greater than payment amount, show error
+    if (applied > amount) {
+      setAlert({
+        show: true,
+        title: "Invalid Payment",
+        message: `The total applied amount (${formatCurrency(
+          applied
+        )}) cannot be greater than the payment amount (${formatCurrency(
+          amount
+        )}). Please adjust the allocations.`,
+        type: "alert",
+        showOkButton: true,
+      });
+      return;
+    }
+
+    // If amounts match, proceed directly
     await postPaymentToServer();
   };
 
   // Function to post payment to server
   const postPaymentToServer = async () => {
     try {
+      // Ensure all numeric values are properly converted
       const payload = {
         payment: {
           amount: Number(paymentInfo.amount),
@@ -506,17 +536,18 @@ function Prod() {
         allocations: Object.entries(orderPayments).map(
           ([orderId, details]) => ({
             orderId: Number(orderId),
-            amountApplied: details.payment,
+            amount: Number(details.payment || 0), // Changed from amountApplied to amount to match backend
           })
         ),
       };
 
+      console.log("Sending payment payload:", JSON.stringify(payload, null, 2));
       const response = await axios.post(
         `${ServerIP}/auth/post-payment`,
         payload
-        );
+      );
 
-        if (response.data.Status) {
+      if (response.data.Status) {
         setAlert({
           show: true,
           title: "Success",
@@ -529,14 +560,14 @@ function Prod() {
         setOrderPayments({});
         setRemainingAmount(0);
         // Reset header amount to 0
-          setPaymentInfo((prev) => ({
-            ...prev,
+        setPaymentInfo((prev) => ({
+          ...prev,
           amount: "", // Empty string for input field
-          }));
+        }));
         console.log("fetchOrder from postPaymentToServer");
         fetchOrderData();
-        }
-      } catch (error) {
+      }
+    } catch (error) {
       console.error("Payment error:", error);
       let errorMessage = "Failed to post payment";
 
@@ -601,7 +632,7 @@ function Prod() {
                 <input
                   id="payment-date"
                   type="date"
-                  className="form-control"
+                  className="form-input"
                   value={paymentInfo.payDate}
                   onChange={(e) =>
                     handlePaymentInfoChange("payDate", e.target.value)
@@ -614,7 +645,7 @@ function Prod() {
                 <label htmlFor="type">Type</label>
                 <select
                   id="type"
-                  className="form-control"
+                  className="form-input"
                   value={paymentInfo.payType}
                   onChange={(e) =>
                     handlePaymentInfoChange("payType", e.target.value)
@@ -635,7 +666,7 @@ function Prod() {
                   id="client"
                   type="text"
                   name="clientName"
-                  className="form-control form-input"
+                  className="form-input"
                   value={searchClientName}
                   onChange={(e) => setSearchClientName(e.target.value)}
                   onKeyDown={handleClientSearch}
@@ -659,7 +690,7 @@ function Prod() {
                 <input
                   id="ornum"
                   type="text"
-                  className="form-control"
+                  className="form-input"
                   value={paymentInfo.ornum}
                   onChange={(e) =>
                     handlePaymentInfoChange("ornum", e.target.value)
@@ -675,7 +706,7 @@ function Prod() {
                 <input
                   id="amount"
                   type="number"
-                  className="form-control"
+                  className="form-input"
                   value={paymentInfo.amount}
                   onChange={(e) =>
                     handlePaymentInfoChange("amount", e.target.value)
@@ -690,7 +721,7 @@ function Prod() {
                 <input
                   id="reference"
                   type="text"
-                  className="form-control"
+                  className="form-input"
                   value={paymentInfo.payReference}
                   onChange={(e) =>
                     handlePaymentInfoChange("payReference", e.target.value)
@@ -706,7 +737,7 @@ function Prod() {
         <div className="d-flex justify-content-end mb-3">
           <select
             id="vat-select"
-            className="form-control form-control-sm"
+            className="form-input"
             style={{ width: "250px" }}
             value={selectedWtax?.WTax}
             onChange={(e) => {
@@ -845,9 +876,9 @@ function Prod() {
                 <tr key={order.id}>
                   <td
                     style={{ cursor: "pointer" }}
-                        onClick={() =>
-                          navigate(`/dashboard/payment/view/${order.id}`)
-                        }
+                    onClick={() =>
+                      navigate(`/dashboard/payment/view/${order.id}`)
+                    }
                   >
                     {order.id}
                   </td>
