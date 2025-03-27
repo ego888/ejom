@@ -40,16 +40,16 @@ function PaymentHistory({ orderId, onPaymentSelect }) {
     <table className="table table-striped">
       <thead>
         <tr>
-          <th>Pay ID</th>
-          <th>Date</th>
+          <th className="text-center">Pay ID</th>
+          <th className="text-center">Date</th>
           <th className="text-center">Type</th>
           <th className="text-center">OR#</th>
-          <th>Amount</th>
-          <th>Reference</th>
-          <th>Posted By</th>
-          <th>Posted Date</th>
-          <th>Remitted By</th>
-          <th>Remitted Date</th>
+          <th className="text-center">Amount</th>
+          <th className="text-center">Reference</th>
+          <th className="text-center">Posted By</th>
+          <th className="text-center">Posted Date</th>
+          <th className="text-center">Remitted By</th>
+          <th className="text-center">Remitted Date</th>
         </tr>
       </thead>
       <tbody>
@@ -68,7 +68,7 @@ function PaymentHistory({ orderId, onPaymentSelect }) {
                 {payment.payId}
               </button>
             </td>
-            <td id="paydate">
+            <td id="paydate" className="text-center">
               {new Date(payment.payDate).toLocaleDateString()}
             </td>
             <td id="paytype" className="text-center">
@@ -77,12 +77,16 @@ function PaymentHistory({ orderId, onPaymentSelect }) {
             <td id="ornum" className="text-center">
               {payment.ornum}
             </td>
-            <td id="amount" className="text-center">
+            <td id="amount" className="text-end">
               {formatPeso(payment.amountApplied)}
             </td>
-            <td id="payreference">{payment.payReference}</td>
-            <td id="transactedby">{payment.transactedBy}</td>
-            <td id="posteddate">
+            <td id="payreference" className="text-center">
+              {payment.payReference}
+            </td>
+            <td id="transactedby" className="text-center">
+              {payment.transactedBy}
+            </td>
+            <td id="posteddate" className="text-center">
               {payment.postedDate
                 ? new Date(payment.postedDate).toLocaleDateString()
                 : ""}

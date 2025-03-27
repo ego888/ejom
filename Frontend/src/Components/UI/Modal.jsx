@@ -20,6 +20,12 @@ import Button from "./Button";
  * @param {ReactNode} [footer] - Footer content (optional, only for "form" modals).
  * @param {object} position - `{ x, y }` coordinates for tooltip placement (used for `"tooltip"` variant).
  * @param {string} className - Additional CSS classes for customization.
+ * @param {string} size - Modal size:
+ *     - `"sm"` → Small modal (300px)
+ *     - `"md"` → Medium modal (500px, default)
+ *     - `"lg"` → Large modal (800px)
+ *     - `"xl"` → Extra large modal (1140px)
+ *     - `"full"` → Full screen modal
  *
  * ## Example Usage:
  *
@@ -49,6 +55,7 @@ import Button from "./Button";
  *   onClose={() => setShowForm(false)}
  *   title="Edit Profile"
  *   footer={<Button onClick={saveProfile}>Save</Button>}
+ *   size="lg"
  * >
  *   <input type="text" placeholder="Enter name" />
  * </Modal>
@@ -64,6 +71,7 @@ const Modal = ({
   position = { x: 0, y: 0 },
   className = "",
   id,
+  size = "md", // "sm" | "md" | "lg" | "xl" | "full"
 }) => {
   if (!show) return null;
 
@@ -88,7 +96,7 @@ const Modal = ({
       aria-modal="true"
       aria-labelledby={`modal-title-${id}`}
     >
-      <div className="modal-container">
+      <div className={`modal-container modal-${size}`}>
         <div className={`modal-content ${className}`}>
           <div className="modal-header">
             <h5 className="modal-title" id={`modal-title-${id}`}>

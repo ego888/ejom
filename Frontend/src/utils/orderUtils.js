@@ -225,7 +225,7 @@ export const formatPeso = (num) => {
     currency: "PHP",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(num);
+  }).format(num || 0);
 };
 
 // API error handler

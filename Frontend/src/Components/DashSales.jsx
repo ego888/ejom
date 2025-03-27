@@ -119,15 +119,6 @@ const DashSales = () => {
     return date.toLocaleDateString();
   };
 
-  // Function to format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
   // Function to get the percentage for the speedometer
   const calculatePercentage = (value, maxValue) => {
     return Math.min(Math.max((value / maxValue) * 100, 0), 100);

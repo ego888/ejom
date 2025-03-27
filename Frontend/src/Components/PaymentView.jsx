@@ -452,18 +452,18 @@ function OrderView() {
                 <table className="table detail table-striped">
                   <thead>
                     <tr>
-                      <th>Qty</th>
-                      <th>Width</th>
-                      <th>Height</th>
-                      <th>Unit</th>
-                      <th>Material</th>
-                      <th>Per Sq Ft</th>
-                      <th>Price</th>
-                      <th>Disc%</th>
-                      <th>Amount</th>
-                      <th>Description</th>
-                      <th>JO Remarks</th>
-                      <th>Action</th>
+                      <th className="text-center">Qty</th>
+                      <th className="text-center">Width</th>
+                      <th className="text-center">Height</th>
+                      <th className="text-center">Unit</th>
+                      <th className="text-center">Material</th>
+                      <th className="text-center">Per Sq Ft</th>
+                      <th className="text-center">Price</th>
+                      <th className="text-center">Disc%</th>
+                      <th className="text-center">Amount</th>
+                      <th className="text-center">Description</th>
+                      <th className="text-center">JO Remarks</th>
+                      <th className="text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody>

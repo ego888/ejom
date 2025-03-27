@@ -151,7 +151,7 @@ function PaymentAllocation({ payId }) {
                   {index === 0 ? allocation.payReference : ""}
                 </td>
                 <td className="text-center">{item.orderId}</td>
-                <td className="text-end">{formatNumber(item.amountApplied)}</td>
+                <td className="text-end">{formatPeso(item.amountApplied)}</td>
                 <td className="text-center">
                   {index === 0 ? allocation.transactedBy : ""}
                 </td>

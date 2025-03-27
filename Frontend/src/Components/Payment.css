@@ -125,3 +125,47 @@
   text-align: center;
   margin-top: 4px;
 }
+
+.payment-allocation-modal {
+  padding: 20px;
+}
+
+.payment-header-info {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.payment-header-info .row {
+  margin-bottom: 10px;
+}
+
+.payment-header-info .row:last-child {
+  margin-bottom: 0;
+}
+
+.payment-header-info strong {
+  color: #495057;
+}
+
+.payment-allocation-modal .table {
+  margin-bottom: 0;
+}
+
+.payment-allocation-modal .table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.payment-allocation-modal .table td {
+  vertical-align: middle;
+}
+
+.payment-allocation-modal .table-info {
+  background-color: #e9ecef;
+}
+
+.payment-allocation-modal .text-right {
+  text-align: right;
+}
