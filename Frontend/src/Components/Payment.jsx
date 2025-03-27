@@ -1237,7 +1237,7 @@ function Prod() {
                       }
                     }}
                   >
-                    {order.amountPaid
+                    {order.amountPaid > 0
                       ? `₱${order.amountPaid.toLocaleString()}`
                       : ""}
                   </td>
@@ -1286,8 +1286,10 @@ function Prod() {
                         min="0"
                         max={order.grandTotal - (order.amountPaid || 0)}
                       />
+                    ) : orderPayments[order.id]?.payment > 0 ? (
+                      formatPeso(orderPayments[order.id]?.payment)
                     ) : (
-                      formatPeso(orderPayments[order.id]?.payment || 0)
+                      ""
                     )}
                   </td>
                   <td className="text-right">
@@ -1301,16 +1303,20 @@ function Prod() {
                         }
                         min="0"
                       />
+                    ) : orderPayments[order.id]?.wtax > 0 ? (
+                      formatPeso(orderPayments[order.id]?.wtax)
                     ) : (
-                      formatPeso(orderPayments[order.id]?.wtax || 0)
+                      ""
                     )}
                   </td>
                   <td className="text-right">
-                    {formatPeso(
-                      order.grandTotal -
+                    {(() => {
+                      const balance =
+                        order.grandTotal -
                         (order.amountPaid || 0) -
-                        (orderPayments[order.id]?.payment || 0)
-                    )}
+                        (orderPayments[order.id]?.payment || 0);
+                      return balance > 0 ? formatPeso(balance) : "";
+                    })()}
                   </td>
                   <td>
                     {order.datePaid
@@ -1359,26 +1365,30 @@ function Prod() {
                 </td>
                 <td className="text-right">
                   <strong>
-                    {formatPeso(
-                      Object.values(orderPayments).reduce(
+                    {(() => {
+                      const total = Object.values(orderPayments).reduce(
                         (sum, p) => sum + (p.payment || 0),
                         0
-                      )
-                    )}
+                      );
+                      return total > 0 ? formatPeso(total) : "";
+                    })()}
                   </strong>
                 </td>
                 <td className="text-right">
                   <strong>
-                    {formatPeso(
-                      Object.values(orderPayments).reduce(
+                    {(() => {
+                      const total = Object.values(orderPayments).reduce(
                         (sum, p) => sum + (p.wtax || 0),
                         0
-                      )
-                    )}
+                      );
+                      return total > 0 ? formatPeso(total) : "";
+                    })()}
                   </strong>
                 </td>
                 <td className="text-right">
-                  <strong>{formatPeso(remainingAmount)}</strong>
+                  <strong>
+                    {remainingAmount > 0 ? formatPeso(remainingAmount) : ""}
+                  </strong>
                 </td>
                 <td colSpan="2"></td>
               </tr>
