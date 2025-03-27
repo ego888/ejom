@@ -486,7 +486,7 @@ function Orders() {
                   </td>
                   <td>{order.ornum || ""}</td>
                   <td className="number_right">
-                    {order.amountPaid ? formatPeso(order.amountPaid) : ""}
+                    {order.amountPaid === 0 ? formatPeso(order.amountPaid) : ""}
                   </td>
                   <td>
                     {order.datePaid
