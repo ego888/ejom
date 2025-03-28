@@ -32,27 +32,27 @@ function PrintOrder() {
     Promise.all([
       axios.get(`${ServerIP}/auth/order/${id}`, config),
       axios.get(`${ServerIP}/auth/order_details/${id}`, config),
-      axios.get(`${ServerIP}/auth/sales_employees`, config),
-      axios.get(`${ServerIP}/auth/artists`, config),
+      // axios.get(`${ServerIP}/auth/sales_employees`, config),
+      // axios.get(`${ServerIP}/auth/artists`, config),
     ])
-      .then(([orderRes, detailsRes, salesRes, artistsRes]) => {
+      .then(([orderRes, detailsRes]) => {
         if (orderRes.data.Status) {
           setData(orderRes.data.Result);
           setOrderDetails(detailsRes.data.Result);
 
           // Create a map of employee IDs to names
-          const empMap = {};
-          if (salesRes.data.Status) {
-            salesRes.data.Result.forEach((emp) => {
-              empMap[emp.id] = emp.name;
-            });
-          }
-          if (artistsRes.data.Status) {
-            artistsRes.data.Result.forEach((emp) => {
-              empMap[emp.id] = emp.name;
-            });
-          }
-          setEmployees(empMap);
+          // const empMap = {};
+          // if (salesRes.data.Status) {
+          //   salesRes.data.Result.forEach((emp) => {
+          //     empMap[emp.id] = emp.name;
+          //   });
+          // }
+          // if (artistsRes.data.Status) {
+          //   artistsRes.data.Result.forEach((emp) => {
+          //     empMap[emp.id] = emp.name;
+          //   });
+          // }
+          // setEmployees(empMap);
 
           // Calculate pages
           const itemsPerPage = 10;
@@ -165,41 +165,58 @@ function PrintOrder() {
         <div className="header-grid">
           <div className="header-item">
             <span className="label">Client:</span>{" "}
-            <span className="field-value">{data.clientName || ""}</span>
+            <span className="field-value">
+              <strong>{data.clientName || ""}</strong>
+            </span>
+          </div>
+          <div className="header-item">
+            <span className="label vertical-center">
+              {data.customerName || ""}
+            </span>
           </div>
           <div className="header-item">
             <span className="label">Project:</span>{" "}
-            <span className="field-value">{data.projectName || ""}</span>
+            <span className="field-value">
+              <strong>{data.projectName || ""}</strong>
+            </span>
           </div>
           <div className="header-item">
             <span className="label">Ordered By:</span>{" "}
-            <span className="field-value">{data.orderedBy || ""}</span>
+            <span className="lable">
+              <strong>{data.orderedBy || ""}</strong>
+            </span>
           </div>
           <div className="header-item">
             <span className="label">Order Reference:</span>{" "}
-            <span className="field-value">{data.orderReference || ""}</span>
+            <span className="label">
+              <strong>{data.orderReference || ""}</strong>
+            </span>
           </div>
           <div className="header-item">
             <span className="label">Order Date:</span>{" "}
             <span className="label">
-              {data.orderDate
-                ? new Date(data.orderDate).toLocaleDateString()
-                : "-"}
+              <strong>{new Date(data.orderDate).toLocaleDateString()}</strong>
             </span>
           </div>
           <div className="header-item">
             <span className="label">Due:</span>{" "}
             <span className="label">
-              {data.dueDate || ""} {data.dueTime || ""}
+              <strong>
+                {data.dueDate || ""} {data.dueTime || ""}
+              </strong>
             </span>
           </div>
           <div className="header-item">
             <span className="label">Graphics:</span>{" "}
-            <span className="label">{employees[data.graphicsBy] || ""}</span>
+            <span className="label">
+              <strong>{data.graphicsByName || ""}</strong>
+            </span>
           </div>
           <div className="header-item">
             <span className="label">Prepared By:</span>{" "}
-            <span className="label">{employees[data.preparedBy] || ""}</span>
+            <span className="label">
+              <strong>{data.preparedByName || ""}</strong>
+            </span>
           </div>
         </div>
         <div className="instructions-grid mt-2">
@@ -207,27 +224,30 @@ function PrintOrder() {
             <div className="instruction-item d-flex justify-content-between">
               <div>
                 <span className="label">Special Instructions:</span>{" "}
-                <span className="label">{data.specialInst || ""}</span>
+                <span className="field-value">
+                  <strong>{data.specialInst || ""}</strong>
+                </span>
               </div>
-              <div className="checkmarks">
-                {data.sample && <span>☑ Sample</span>}
+              <div className="field-value me-3">
+                <strong>{data.sample === 1 && <span>☑ Sample</span>}</strong>
               </div>
             </div>
           )}
-          {data.deliveryInst && (
-            <div className="instruction-item d-flex justify-content-between">
+          <div className="instruction-item d-flex justify-content-between">
+            {data.deliveryInst && (
               <div>
                 <span className="label">Delivery Instructions:</span>{" "}
-                <span className="label">{data.deliveryInst || ""}</span>
+                <span className="field-value">
+                  <strong>{data.deliveryInst || ""}</strong>
+                </span>
               </div>
-              <div className="checkmarks">
-                {data.reprint && <span>☑ Reprint</span>}
-              </div>
+            )}
+            <div className="field-value me-3">
+              <strong>{data.reprint === 1 && <span>☑ Reprint</span>}</strong>
             </div>
-          )}
+          </div>
         </div>
       </div>
-
       {/* Order Details Table */}
       <div>
         <table className="table table-bordered table-sm">
@@ -260,7 +280,7 @@ function PrintOrder() {
             {orderDetails.map((detail, index) => (
               <React.Fragment key={`${detail.orderId}_${detail.displayOrder}`}>
                 <tr className="main-row">
-                  <td className="text-center label">
+                  <td className="text-center field-value">
                     {Number(detail.quantity).toLocaleString()}
                   </td>
                   <td className="text-center field-value">{detail.width}</td>
@@ -272,10 +292,10 @@ function PrintOrder() {
                 </tr>
                 {hasAllowancesOrRemarks(detail) && (
                   <tr className="remarks-row">
-                    <td colSpan="3" className="label">
+                    <td colSpan="3" className="field-value">
                       {renderAllowances(detail)}
                     </td>
-                    <td colSpan="4" className="label">
+                    <td colSpan="4" className="field-value">
                       {detail.remarks && `Remarks: ${detail.remarks}`}
                     </td>
                   </tr>
@@ -285,21 +305,16 @@ function PrintOrder() {
           </tbody>
         </table>
       </div>
-
       {/* Total Hours */}
-      <div className="text-end">
-        <span className="label">Total Hours:</span>{" "}
-        <span className="field-value" style={{ marginRight: "15px" }}>
-          {data.totalHrs || ""}
-        </span>
-      </div>
-
+      <span className="label">Total Hours:</span>{" "}
+      <span className="field-value" style={{ marginRight: "15px" }}>
+        {data.totalHrs || ""}
+      </span>
       {/* Page Info and Print DateTime */}
       <div className="page-info">
         JO#{data.orderId} • Page {currentPage} of {totalPages} •{" "}
         {new Date().toLocaleString()}
       </div>
-
       {/* Print-specific styles */}
       <style>
         {`
@@ -311,7 +326,7 @@ function PrintOrder() {
 
           .header-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 4px;
           }
 
@@ -391,6 +406,7 @@ function PrintOrder() {
               border-bottom: 2px solid #000 !important;
               padding: 2px 4px;
               vertical-align: middle;
+              border-top: 2px solid #000 !important;
             }
 
             .table td {
@@ -402,6 +418,7 @@ function PrintOrder() {
             /* Main row with solid black top border */
             .table tbody tr.main-row td {
               border-top: 2px solid #000 !important;
+              border-bottom: 2px solid #000 !important;
             }
 
             /* Light borders for remarks */

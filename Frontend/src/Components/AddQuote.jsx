@@ -1436,7 +1436,7 @@ function AddQuote() {
               </Button>
               {canEdit() && (
                 <Button variant="save" onClick={handleSubmit}>
-                  {isHeaderSaved ? "Finish Edit" : "Save Quote"}
+                  {isHeaderSaved ? "Save Edit" : "Save Quote"}
                 </Button>
               )}
               <Button variant="cancel" onClick={handleCancel}>

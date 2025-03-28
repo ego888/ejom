@@ -1560,7 +1560,7 @@ function AddOrder() {
                 </>
               )}
               <Button variant="save" onClick={handleSubmit}>
-                {isHeaderSaved ? "Finish Edit" : "Save Order"}
+                {isHeaderSaved ? "Save Edit" : "Save Order"}
               </Button>
               <Button variant="cancel" onClick={handleCancel}>
                 Cancel
