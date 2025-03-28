@@ -404,6 +404,7 @@ router.put("/update_quote/:id", async (req, res) => {
         totalHrs = ?,
         editedBy = ?,
         terms = ?,
+        deliveryRemarks = ?,
         lastEdited = CURRENT_TIMESTAMP
     WHERE quoteId = ?
   `;
@@ -428,6 +429,7 @@ router.put("/update_quote/:id", async (req, res) => {
       req.body.totalHrs || 0,
       req.body.editedBy,
       req.body.terms || null,
+      req.body.deliveryRemarks || null,
       req.params.id,
     ];
 

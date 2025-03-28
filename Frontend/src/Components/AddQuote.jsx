@@ -69,6 +69,7 @@ function AddQuote() {
     percentDisc: 0,
     grandTotal: 0,
     totalHrs: 0,
+    deliveryRemarks: "",
   });
 
   const [quoteDetails, setQuoteDetails] = useState([]);
@@ -416,6 +417,7 @@ function AddQuote() {
               lastEdited: quoteData.lastedited || "",
               orderId: parseInt(quoteData.quoteId),
               terms: quoteData.terms || "",
+              deliveryRemarks: quoteData.deliveryRemarks || "",
               status: quoteData.status || "Open",
             };
 
@@ -523,6 +525,7 @@ function AddQuote() {
       lastEdited: currentDateTime,
       status: data.status,
       terms: data.terms || null,
+      deliveryRemarks: data.deliveryRemarks || null,
     };
 
     if (!isHeaderSaved) {
@@ -1604,7 +1607,24 @@ function AddQuote() {
                   />
                 </div>
               </div>
-              <div className="col-4">
+              <div className="col-3">
+                <div className="d-flex flex-column">
+                  <label htmlFor="deliveryRemarks" className="form-label">
+                    Delivery
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    id="deliveryRemarks"
+                    value={data.deliveryRemarks || ""}
+                    onChange={(e) =>
+                      setData({ ...data, deliveryRemarks: e.target.value })
+                    }
+                    disabled={!isEditMode || !canEdit()}
+                  />
+                </div>
+              </div>
+              <div className="col-3">
                 <div className="d-flex flex-column">
                   <label htmlFor="email" className="form-label">
                     Email
@@ -1621,7 +1641,7 @@ function AddQuote() {
                   />
                 </div>
               </div>
-              <div className="col-4">
+              <div className="col-3">
                 <div className="d-flex flex-column">
                   <label htmlFor="cellNumber" className="form-label">
                     Cell Number
@@ -1638,7 +1658,7 @@ function AddQuote() {
                   />
                 </div>
               </div>
-              <div className="col-4">
+              <div className="col-3">
                 <div className="d-flex flex-column">
                   <label htmlFor="telNum" className="form-label">
                     Telephone Number

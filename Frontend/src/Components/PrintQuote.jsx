@@ -306,7 +306,7 @@ function PrintQuote() {
               <div>Email: {quote.preparedByEmail}</div>
             </div>
             <div className="terms-delivery">
-              <div>Delivery: {companyInfo?.quoteDelivery}</div>
+              <div>Delivery: {quote.deliveryRemarks}</div>
             </div>
           </div>
           <div className="totals-right">
