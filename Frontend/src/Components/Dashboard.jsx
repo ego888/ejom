@@ -109,6 +109,8 @@ const REPORTS_SALES = {
   subItems: [SALES_REPORT, SOA],
 };
 
+const DTR = { path: "dtr", icon: "bi-clock-history", text: "DTR" };
+
 const Dashboard = () => {
   const [permissions, setPermissions] = useState({
     isAdmin: false,
@@ -239,6 +241,7 @@ const Dashboard = () => {
       ARTISTLOG,
       PRINTLOG,
       PAYMENT,
+      DTR,
       REPORTS,
       MASTERFILES,
       PROFILE,
@@ -256,9 +259,6 @@ const Dashboard = () => {
 
     // Filter items based on user role using switch cases
     let visibleItems = [];
-
-    // Common items for all active users
-    //visibleItems.push(PROFILE);
 
     // Add role-specific items
     if (permissions.isSales) {

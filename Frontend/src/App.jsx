@@ -42,6 +42,7 @@ import ReportSalesIncentives from "./Components/Reports/ReportSalesIncentives";
 import SOAPrint from "./Components/Reports/SOAPrint";
 import WIPLog from "./Components/WIPLog";
 import DashSales from "./Components/DashSales";
+import DTR from "./Components/DTR";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
@@ -198,6 +199,7 @@ function App() {
           <Route path="/dashboard/artistlog" element={<ArtistLog />}></Route>
           <Route path="/dashboard/printlog" element={<PrintLog />}></Route>
           <Route path="/dashboard/payment" element={<Payment />}></Route>
+          <Route path="/dashboard/dtr" element={<DTR />}></Route>
           <Route path="/dashboard/sales-report" element={<ReportSales />} />
           <Route path="/dashboard/soa" element={<SOA />} />
           <Route
