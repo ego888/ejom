@@ -909,7 +909,7 @@ function AddQuote() {
           }
 
           // If we have perSqFt, calculate price and amount
-          if (updatedDetail.persqft) {
+          if (updatedDetail.persqft > 0) {
             const price = calculatePrice(
               area.squareFeet,
               updatedDetail.persqft
@@ -928,9 +928,11 @@ function AddQuote() {
 
       // When unit price changes
       if (field === "unitPrice") {
-        if (updatedDetail.squareFeet) {
+        if (updatedDetail.squareFeet > 0) {
           const perSqFt = calculatePerSqFt(value, updatedDetail.squareFeet);
           updatedDetail.persqft = perSqFt.toFixed(2);
+        } else {
+          updatedDetail.persqft = 0;
         }
 
         const amount = calculateAmount(

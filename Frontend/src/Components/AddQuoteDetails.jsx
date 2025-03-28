@@ -119,11 +119,14 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
         }
       }
 
+      console.log("updatedDetail", updatedDetail);
       // When unit price changes
       if (field === "unitPrice") {
-        if (updatedDetail.squareFeet) {
+        if (updatedDetail.squareFeet > 0) {
           const perSqFt = calculatePerSqFt(value, updatedDetail.squareFeet);
           updatedDetail.perSqFt = perSqFt.toFixed(2);
+        } else {
+          updatedDetail.perSqFt = 0;
         }
 
         const amount = calculateAmount(
@@ -225,7 +228,10 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
       );
 
       // Calculate price and amount
-      const price = calculatePrice(area.squareFeet, detail.perSqFt);
+      let price = Number(detail.unitPrice);
+      if (area.squareFeet > 0) {
+        price = calculatePrice(area.squareFeet, detail.perSqFt);
+      }
       const amount = calculateAmount(price, detail.discount, detail.quantity);
 
       // Calculate print hours
@@ -256,9 +262,9 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
         unitPrice: price.toFixed(2),
         discount: detail.discount || 0,
         amount: amount.toFixed(2),
-        squareFeet: area.squareFeet,
-        materialUsage: area.materialUsage,
-        printHours: printHrs,
+        squareFeet: area.squareFeet || 0,
+        materialUsage: area.materialUsage || 0,
+        printHours: printHrs || 0,
         perSqFt: detail.perSqFt || 0,
       };
 
@@ -389,7 +395,6 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
             onChange={(e) => handleInputChange("unit", e.target.value)}
             options={units}
             error={error.unit}
-            required
             labelKey="unit"
             valueKey="unit"
           />
@@ -403,7 +408,6 @@ function AddQuoteDetails({ quoteId, onDetailAdded }) {
             onChange={(e) => handleInputChange("material", e.target.value)}
             options={materials}
             error={error.material}
-            required
             labelKey="Material"
             valueKey="Material"
           />
