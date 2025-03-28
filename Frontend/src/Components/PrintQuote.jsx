@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
+import gcashQRCode from "../assets/GLG QRcode.jpg";
 import "./PrintQuote.css";
 
 function PrintQuote() {
@@ -14,6 +15,7 @@ function PrintQuote() {
   const [companyInfo, setCompanyInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [logoLoaded, setLogoLoaded] = useState(false);
+  const [qrCodeLoaded, setQRCodeLoaded] = useState(false);
   const [isPrintCompleted, setPrintCompleted] = useState(false);
 
   // Preload logo
@@ -21,6 +23,13 @@ function PrintQuote() {
     const img = new Image();
     img.src = GoLargeLogo;
     img.onload = () => setLogoLoaded(true);
+  }, []);
+
+  // Preload QRcode
+  useEffect(() => {
+    const img = new Image();
+    img.src = gcashQRCode;
+    img.onload = () => setQRCodeLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -351,6 +360,17 @@ function PrintQuote() {
                 })}
               </span>
             </div>
+            <div>Bank Info: {companyInfo?.bankInfo}</div>
+            {gcashQRCode && (
+              <div className="gcash-container">
+                <div>GCash:</div>
+                <img
+                  src={gcashQRCode}
+                  alt="GCash QR Code"
+                  className="gcash-qr-code"
+                />
+              </div>
+            )}
           </div>
         </div>
 
