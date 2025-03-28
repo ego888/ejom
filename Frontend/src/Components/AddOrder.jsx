@@ -1639,7 +1639,11 @@ function AddOrder() {
                     value={data.clientId || ""}
                     onChange={(e) => handleClientChange(e.target.value)}
                     options={clients}
-                    disabled={!isEditMode || !canEdit()}
+                    disabled={
+                      !isEditMode ||
+                      !canEdit() ||
+                      (data.amountPaid > 0 && !adminOverride)
+                    }
                     error={error.clientId}
                     required
                     placeholder=""
