@@ -315,7 +315,6 @@ async function parseFile(filePath, fileType) {
 function processDTRData(data) {
   console.log(`Processing ${data.length} entries`);
 
-  // Check which file format we're dealing with
   const isFormatType1 =
     data.length > 0 &&
     !Array.isArray(data[0]) &&
@@ -335,7 +334,6 @@ function processDTRData(data) {
     }`
   );
 
-  // Debug the first row to see what we're dealing with
   if (data.length > 0) {
     console.log("First row data structure:", typeof data[0]);
     if (typeof data[0] === "object" && !Array.isArray(data[0])) {
@@ -352,115 +350,38 @@ function processDTRData(data) {
   let processedEntries = [];
 
   if (isFormatType1) {
-    // Format 1: Process data with column headers (AC-No., Name, Time, State)
-    const employeeTimeRecords = {};
-
-    // First pass: Collect all time records
     data.forEach((row) => {
       try {
+        console.log("ROW:", row);
         const empId = row["AC-No."]?.toString().trim();
         const empName = row["Name"]?.toString().trim();
-        // Use Time field as DateTime if available
-        const dateTimeStr = (row["DateTime"] || row["Time"])?.toString().trim();
-        const state = row["State"]?.toString().trim();
+        const dateTimeStr = row["Time"]?.toString().trim();
 
-        if (!empId || !dateTimeStr || !state) {
+        if (!empId || !dateTimeStr) {
           return; // Skip invalid rows
         }
 
-        // Parse date and time
         const dateTime = moment(dateTimeStr, "M/D/YYYY h:mm A");
         if (!dateTime.isValid()) {
           console.warn(`Invalid datetime format: ${dateTimeStr}`);
           return;
         }
 
-        const dateFormatted = dateTime.format("YYYY-MM-DD");
-        const timeFormatted = dateTime.format("HH:mm:ss");
-        const dayOfWeek = dateTime.format("ddd");
-
-        if (!employeeTimeRecords[empId]) {
-          employeeTimeRecords[empId] = {};
-        }
-
-        if (!employeeTimeRecords[empId][dateFormatted]) {
-          employeeTimeRecords[empId][dateFormatted] = {
-            empId,
-            empName,
-            date: dateFormatted,
-            day: dayOfWeek,
-            records: [],
-          };
-        }
-
-        employeeTimeRecords[empId][dateFormatted].records.push({
-          time: timeFormatted,
-          state,
-        });
-      } catch (error) {
-        console.error("Error processing row:", error, row);
-      }
-    });
-
-    // Second pass: Create entries from the collected records
-    Object.values(employeeTimeRecords).forEach((empDates) => {
-      Object.values(empDates).forEach((dayData) => {
-        const { empId, empName, date, day, records } = dayData;
-
-        // Sort records by time
-        records.sort((a, b) => a.time.localeCompare(b.time));
-
-        // Find first clockIn and last clockOut
-        let timeIn = null;
-        let timeOut = null;
-
-        for (const record of records) {
-          if (record.state.includes("C/In") && !timeIn) {
-            timeIn = record.time;
-          }
-          if (record.state.includes("C/Out")) {
-            timeOut = record.time;
-          }
-        }
-
-        // Calculate hours worked
-        let hours = 0;
-        let overtime = 0;
-
-        if (timeIn && timeOut) {
-          const startTime = moment(`${date} ${timeIn}`, "YYYY-MM-DD HH:mm:ss");
-          const endTime = moment(`${date} ${timeOut}`, "YYYY-MM-DD HH:mm:ss");
-
-          // Calculate total hours worked
-          const duration = moment.duration(endTime.diff(startTime));
-          hours = duration.asHours();
-
-          // Calculate overtime (over 8 hours)
-          if (hours > 8) {
-            overtime = hours - 8;
-            hours = 8;
-          }
-
-          // Round to 2 decimal places
-          hours = Math.round(hours * 100) / 100;
-          overtime = Math.round(overtime * 100) / 100;
-        }
+        const date = dateTime.format("YYYY-MM-DD");
+        const time = dateTime.format("HH:mm:ss");
+        const day = dateTime.format("ddd");
 
         processedEntries.push({
           empId,
           empName,
           date,
           day,
-          timeIn: timeIn || "",
-          timeOut: timeOut || "",
-          state:
-            timeIn && timeOut ? "Present" : timeIn ? "Incomplete" : "Absent",
-          hours,
-          overtime,
-          specialHours: 0,
-          remarks: "",
+          time,
+          rawState: dateTimeStr,
         });
-      });
+      } catch (error) {
+        console.error("Error processing row:", error, row);
+      }
     });
   } else if (isFormatType2) {
     // Format 2: Process headerless data with only employee ID and datetime
@@ -556,7 +477,7 @@ function processDTRData(data) {
       } employees`
     );
 
-    // Second pass: Create entries from the collected records
+    // Second pass: Create entries from the collected records HOLD THIS PROCESS FOR NOW
     Object.values(employeeTimeRecords).forEach((empDates) => {
       Object.values(empDates).forEach((dayData) => {
         const { empId, empName, date, day, records } = dayData;
@@ -565,39 +486,40 @@ function processDTRData(data) {
         records.sort((a, b) => a.time.localeCompare(b.time));
 
         // Assume first record is timeIn and last record is timeOut if multiple records exist
-        let timeIn = records.length > 0 ? records[0].time : null;
-        let timeOut =
-          records.length > 1 ? records[records.length - 1].time : null;
+        // let timeIn = records.length > 0 ? records[0].time : null;
+        // let timeOut =
+        //   records.length > 1 ? records[records.length - 1].time : null;
 
-        console.log(
-          `Employee ${empId} on ${date}: timeIn=${timeIn}, timeOut=${timeOut}`
-        );
+        // console.log(
+        //   `Employee ${empId} on ${date}: timeIn=${timeIn}, timeOut=${timeOut}`
+        // );
 
-        // Calculate hours worked
-        let hours = 0;
-        let overtime = 0;
+        // // Calculate hours worked
+        // let hours = 0;
+        // let overtime = 0;
 
-        if (timeIn && timeOut) {
-          const startTime = moment(`${date} ${timeIn}`, "YYYY-MM-DD HH:mm:ss");
-          const endTime = moment(`${date} ${timeOut}`, "YYYY-MM-DD HH:mm:ss");
+        // if (timeIn && timeOut) {
+        //   const startTime = moment(`${date} ${timeIn}`, "YYYY-MM-DD HH:mm:ss");
+        //   const endTime = moment(`${date} ${timeOut}`, "YYYY-MM-DD HH:mm:ss");
 
-          // Calculate total hours worked
-          const duration = moment.duration(endTime.diff(startTime));
-          hours = duration.asHours();
+        //   // Calculate total hours worked
+        //   const duration = moment.duration(endTime.diff(startTime));
+        //   hours = duration.asHours();
 
-          // Calculate overtime (over 8 hours)
-          if (hours > 8) {
-            overtime = hours - 8;
-            hours = 8;
-          }
+        //   // Calculate overtime (over 8 hours)
+        //   if (hours > 8) {
+        //     overtime = hours - 8;
+        //     hours = 8;
+        //   }
 
-          // Round to 2 decimal places
-          hours = Math.round(hours * 100) / 100;
-          overtime = Math.round(overtime * 100) / 100;
+        //   // Round to 2 decimal places
+        //   hours = Math.round(hours * 100) / 100;
+        //   overtime = Math.round(overtime * 100) / 100;
 
-          console.log(`Calculated: hours=${hours}, overtime=${overtime}`);
-        }
+        //   console.log(`Calculated: hours=${hours}, overtime=${overtime}`);
+        // }
 
+        console.log("EMPLOYEE TIME RECORDS:", empId, empName, date, day, state);
         processedEntries.push({
           empId,
           empName,
@@ -605,12 +527,7 @@ function processDTRData(data) {
           day,
           timeIn: timeIn || "",
           timeOut: timeOut || "",
-          state:
-            timeIn && timeOut ? "Present" : timeIn ? "Incomplete" : "Absent",
-          hours,
-          overtime,
-          specialHours: 0,
-          remarks: "",
+          state,
         });
 
         console.log(`Added processed entry for employee ${empId} on ${date}`);
@@ -628,12 +545,12 @@ function processDTRData(data) {
     console.log("First processed entry:", JSON.stringify(processedEntries[0]));
   }
 
-  // Sort processed entries by empId and date
+  // Sort processed entries by empId and rawState
   processedEntries.sort((a, b) => {
     if (a.empId !== b.empId) {
       return a.empId.localeCompare(b.empId);
     }
-    return a.date.localeCompare(b.date);
+    return a.rawState.localeCompare(b.rawState);
   });
 
   return processedEntries;
@@ -768,6 +685,7 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
         console.log(
           `Parsed ${rawData.length} rows from file ${file.originalname}`
         );
+        console.log("RAWDATA", rawData);
 
         // Debug sample of rawData
         if (rawData.length > 0) {
@@ -824,6 +742,8 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
       entry.empName,
       entry.date,
       entry.day || "NA",
+      entry.time || null,
+      entry.rawState || null,
       entry.timeIn || null,
       entry.timeOut || null,
       entry.state || null,
@@ -833,6 +753,7 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
       entry.remarks || null,
     ]);
 
+    console.log("ENTRIES DATA", entriesData);
     // Insert processed entries in bulk - use uppercase table names
     if (entriesData.length > 0) {
       console.log(
@@ -840,7 +761,7 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
       );
       await connection.query(
         `INSERT INTO DTREntries 
-         (batchId, empId, empName, date, day, timeIn, timeOut, state, hours, overtime, specialHours, remarks) 
+         (batchId, empId, empName, date, day, time, rawState, timeIn, timeOut, state, hours, overtime, specialHours, remarks) 
          VALUES ?`,
         [entriesData]
       );
@@ -1253,7 +1174,7 @@ router.post(
         }
       }
 
-      console.log(`Total entries to insert: ${allProcessedData.length}`);
+      console.log(`Total entries to insert 1: ${allProcessedData.length}`);
 
       if (allProcessedData.length === 0) {
         await connection.rollback();
@@ -1270,6 +1191,8 @@ router.post(
         entry.empName,
         entry.date,
         entry.day || "NA",
+        entry.time || null,
+        entry.rawState || null,
         entry.timeIn || null,
         entry.timeOut || null,
         entry.state || null,
@@ -1285,7 +1208,7 @@ router.post(
       );
       await connection.query(
         `INSERT INTO DTREntries 
-       (batchId, empId, empName, date, day, timeIn, timeOut, state, hours, overtime, specialHours, remarks) 
+       (batchId, empId, empName, date, day, time, rawState, timeIn, timeOut, state, hours, overtime, specialHours, remarks) 
        VALUES ?`,
         [entriesData]
       );

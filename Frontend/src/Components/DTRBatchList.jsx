@@ -74,6 +74,7 @@ const DTRBatchList = ({
           <table className="table table-bordered table-hover">
             <thead className="table-light">
               <tr>
+                <th>Batch ID</th>
                 <th>Batch Name</th>
                 <th>Period</th>
                 <th>File Count</th>
@@ -85,6 +86,7 @@ const DTRBatchList = ({
             <tbody>
               {batches.map((batch, index) => (
                 <tr key={batch.id || index}>
+                  <td>{batch.id || index}</td>
                   <td>{batch.batchName || "Untitled Batch"}</td>
                   <td>
                     {formatDate(batch.periodStart)} -{" "}

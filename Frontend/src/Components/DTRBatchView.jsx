@@ -179,6 +179,12 @@ const DTRBatchView = ({ batch, onBack }) => {
                   Day {getSortIndicator("day")}
                 </th>
                 <th
+                  onClick={() => handleSort("time")}
+                  style={{ cursor: "pointer" }}
+                >
+                  Time {getSortIndicator("time")}
+                </th>
+                <th
                   onClick={() => handleSort("timeIn")}
                   style={{ cursor: "pointer" }}
                 >
@@ -217,6 +223,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                   <td>{entry.empName}</td>
                   <td>{formatDate(entry.date)}</td>
                   <td>{entry.day}</td>
+                  <td>{entry.time}</td>
                   <td>{entry.timeIn || "-"}</td>
                   <td>{entry.timeOut || "-"}</td>
                   <td>{entry.state || "-"}</td>
