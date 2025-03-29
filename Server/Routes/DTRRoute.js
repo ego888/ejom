@@ -378,6 +378,7 @@ function processDTRData(data, existingEmployees = new Map()) {
         const empId = row["AC-No."]?.toString().trim();
         const empName = row["Name"]?.toString().trim();
         const dateTimeStr = row["Time"]?.toString().trim();
+        const state = row["State"]?.toString().trim();
 
         if (!empId || !dateTimeStr) {
           return; // Skip invalid rows
@@ -400,6 +401,8 @@ function processDTRData(data, existingEmployees = new Map()) {
           day,
           time,
           rawState: dateTimeStr,
+          state: state || null,
+          remarks: "Type 1",
         });
 
         if (empId && empName) {

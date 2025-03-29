@@ -3,6 +3,28 @@ import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
 
+const getDayColor = (day) => {
+  console.log("Day received:", day);
+  switch (day?.toLowerCase()) {
+    case "sun":
+      return "#ffebee"; // Light red for Sunday
+    case "sat":
+      return "#e3f2fd"; // Light blue for Saturday
+    case "mon":
+      return "#f1f8e9"; // Light green for Monday
+    case "tue":
+      return "#fff3e0"; // Light orange for Tuesday
+    case "wed":
+      return "#f3e5f5"; // Light purple for Wednesday
+    case "thu":
+      return "#e8f5e9"; // Mint green for Thursday
+    case "fri":
+      return "#fff8e1"; // Light yellow for Friday
+    default:
+      return "transparent";
+  }
+};
+
 const DTRBatchView = ({ batch, onBack }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -216,27 +238,49 @@ const DTRBatchView = ({ batch, onBack }) => {
                 >
                   OT {getSortIndicator("overtime")}
                 </th>
+                <th style={{ textAlign: "center" }}>Raw State</th>
+                <th style={{ textAlign: "center" }}>Remarks</th>
               </tr>
             </thead>
             <tbody>
-              {sortedEntries.map((entry, index) => (
-                <tr key={entry.id || index}>
-                  <td>{entry.empId}</td>
-                  <td>{entry.empName}</td>
-                  <td>{formatDate(entry.date)}</td>
-                  <td>{entry.day}</td>
-                  <td>{entry.time}</td>
-                  <td>{entry.timeIn || "-"}</td>
-                  <td>{entry.timeOut || "-"}</td>
-                  <td>{entry.state || "-"}</td>
-                  <td className="text-center">
-                    {Number(entry.hours || 0).toFixed(2)}
-                  </td>
-                  <td className="text-center">
-                    {Number(entry.overtime || 0).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
+              {sortedEntries.map((entry, index) => {
+                const bgColor = getDayColor(entry.day);
+                console.log("Entry day:", entry.day, "Color:", bgColor);
+                return (
+                  <tr key={entry.id || index}>
+                    <td style={{ backgroundColor: bgColor }}>{entry.empId}</td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {entry.empName}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {formatDate(entry.date)}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>{entry.day}</td>
+                    <td style={{ backgroundColor: bgColor }}>{entry.time}</td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {entry.timeIn || "-"}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {entry.timeOut || "-"}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {entry.state || "-"}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {Number(entry.hours || 0).toFixed(2)}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {Number(entry.overtime || 0).toFixed(2)}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {entry.rawState || ""}
+                    </td>
+                    <td style={{ backgroundColor: bgColor }}>
+                      {entry.remarks || ""}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
