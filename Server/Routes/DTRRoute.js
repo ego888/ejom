@@ -1083,7 +1083,7 @@ router.get("/export/:batchId", async (req, res) => {
 });
 
 // Delete batch
-router.delete("/batch/:batchId", async (req, res) => {
+router.delete("/DTRdelete/:batchId", async (req, res) => {
   let connection;
 
   try {
@@ -1106,12 +1106,6 @@ router.delete("/batch/:batchId", async (req, res) => {
         Error: "Batch not found",
       });
     }
-
-    // Delete entries first (cascade should handle this, but just to be safe)
-    await connection.query("DELETE FROM DTREntries WHERE batchId = ?", [
-      batchId,
-    ]);
-    console.log(`Deleted entries for batch ${batchId}`);
 
     // Then delete the batch
     await connection.query("DELETE FROM DTRBatches WHERE id = ?", [batchId]);
@@ -1665,6 +1659,93 @@ router.post("/update-time-out/:batchId", async (req, res) => {
     res.status(500).json({
       Status: false,
       Error: `Failed to update time out: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Route to add a new entry
+router.post("/add-entry/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    const { entry } = req.body;
+
+    if (!entry) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Entry data is required",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Insert the new entry
+    await connection.query(
+      `INSERT INTO DTREntries 
+       (batchId, empId, empName, date, day, timeIn, timeOut, 
+        processed, editedIn, editedOut, remarks) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        batchId,
+        entry.empId,
+        entry.empName,
+        entry.date,
+        entry.day,
+        entry.timeIn,
+        entry.timeOut,
+        entry.processed,
+        entry.editedIn,
+        entry.editedOut,
+        entry.remarks,
+      ]
+    );
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Successfully added new entry",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error adding new entry:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to add new entry: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Add this new route for deleting individual entries
+router.delete("/delete-entry/:batchId/:entryId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId, entryId } = req.params;
+    console.log(`Deleting entry ${entryId} from batch ${batchId}`);
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update the entry to mark it as deleted
+    await connection.query(`DELETE FROM DTREntries WHERE id = ?`, [entryId]);
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Entry successfully deleted",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error deleting entry:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to delete entry: ${error.message}`,
     });
   } finally {
     if (connection) connection.release();

@@ -3,6 +3,7 @@ import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
 import ModalAlert from "./UI/ModalAlert";
+import Modal from "react-bootstrap/Modal";
 
 const getDayColor = (day) => {
   switch (day?.toLowerCase()) {
@@ -41,6 +42,11 @@ const getDayColor = (day) => {
   }
 };
 
+const formatTime = (timeString) => {
+  if (!timeString) return "-";
+  return timeString.substring(0, 5); // Takes only HH:MM from HH:MM:SS
+};
+
 const DTRBatchView = ({ batch, onBack }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -61,6 +67,14 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [defaultTime, setDefaultTime] = useState("");
   const [showFloatingTime, setShowFloatingTime] = useState(false);
   const [floatingPosition, setFloatingPosition] = useState({ x: 0, y: 0 });
+  const [showAddDateModal, setShowAddDateModal] = useState(false);
+  const [empId, setEmpId] = useState("");
+  const [empName, setEmpName] = useState("");
+  const [date, setDate] = useState("");
+  const [timeIn, setTimeIn] = useState("08:00");
+  const [timeOut, setTimeOut] = useState("17:00");
+  const [referenceHours, setReferenceHours] = useState("00");
+  const [referenceMinutes, setReferenceMinutes] = useState("00");
 
   useEffect(() => {
     if (batch?.id) {
@@ -117,7 +131,11 @@ const DTRBatchView = ({ batch, onBack }) => {
           (entry.remarks &&
             entry.remarks.toLowerCase().includes(searchTerm.toLowerCase())) ||
           (entry.day &&
-            entry.day.toLowerCase().includes(searchTerm.toLowerCase()));
+            entry.day.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (entry.timeIn &&
+            entry.timeIn.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (entry.timeOut &&
+            entry.timeOut.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const notDeleted = !hideDeleted || !entry.deleteRecord;
 
@@ -621,6 +639,61 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
+  const handleAddDate = async (entry) => {
+    try {
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/add-entry/${batch.id}`,
+        {
+          entry,
+        }
+      );
+
+      if (response.data.Status) {
+        await fetchBatchData(batch.id);
+      } else {
+        setError(response.data.Error || "Failed to add entry");
+      }
+    } catch (error) {
+      console.error("Error adding entry:", error);
+      setError("Failed to add entry. Please try again.");
+    }
+  };
+
+  const handleDateClick = (entry) => {
+    // Create next day's date
+    const nextDate = new Date(entry.date);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    // Format the date to YYYY-MM-DD
+    const formattedDate = nextDate.toISOString().split("T")[0];
+
+    // Set the modal data
+    setEmpId(entry.empId);
+    setEmpName(entry.empName);
+    setDate(formattedDate);
+    setTimeIn("08:00");
+    setTimeOut("17:00");
+    setShowAddDateModal(true);
+  };
+
+  const handleDeleteEntry = async (entry) => {
+    try {
+      if (!window.confirm("Are you sure you want to delete this record?")) {
+        return;
+      }
+
+      // Use the new delete-entry endpoint
+      await axios.delete(
+        `${ServerIP}/auth/dtr/delete-entry/${batch.id}/${entry.id}`
+      );
+
+      await fetchBatchData(batch.id);
+    } catch (error) {
+      console.error("Error deleting entry:", error);
+      setError("Failed to delete entry. Please try again.");
+    }
+  };
+
   const renderButtons = () => (
     <>
       <Button variant="danger" onClick={handleDeleteRepeat} className="ms-2">
@@ -681,17 +754,56 @@ const DTRBatchView = ({ batch, onBack }) => {
         />
       </div>
 
-      <div className="mb-3 form-check">
-        <input
-          type="checkbox"
-          className="form-check-input"
-          id="hideDeleted"
-          checked={hideDeleted}
-          onChange={(e) => setHideDeleted(e.target.checked)}
-        />
-        <label className="form-check-label" htmlFor="hideDeleted">
-          Hide deleted records
-        </label>
+      <div className="mb-3 d-flex align-items-center gap-5">
+        <div className="form-check">
+          <input
+            type="checkbox"
+            className="form-check-input"
+            id="hideDeleted"
+            checked={hideDeleted}
+            onChange={(e) => setHideDeleted(e.target.checked)}
+          />
+          <label className="form-check-label" htmlFor="hideDeleted">
+            Hide deleted records
+          </label>
+        </div>
+
+        <div className="d-flex align-items-center gap-2">
+          <label className="form-label mb-0 ml-4">Reference Time:</label>
+          <div className="d-flex gap-1 align-items-center">
+            <input
+              type="number"
+              className="form-control form-control-sm"
+              style={{ width: "28px" }}
+              value={referenceHours}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 0 && val <= 23) {
+                  setReferenceHours(val.toString().padStart(2, "0"));
+                }
+              }}
+              min="0"
+              max="23"
+              placeholder="HH"
+            />
+            <span>:</span>
+            <input
+              type="number"
+              className="form-control form-control-sm"
+              style={{ width: "28px" }}
+              value={referenceMinutes}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 0 && val <= 59) {
+                  setReferenceMinutes(val.toString().padStart(2, "0"));
+                }
+              }}
+              min="0"
+              max="59"
+              placeholder="MM"
+            />
+          </div>
+        </div>
       </div>
 
       {sortedEntries.length === 0 ? (
@@ -782,9 +894,39 @@ const DTRBatchView = ({ batch, onBack }) => {
                   <tr key={entry.id || index}>
                     <td style={rowStyle}>{entry.empId}</td>
                     <td style={rowStyle}>{entry.empName}</td>
-                    <td style={rowStyle}>{formatDate(entry.date)}</td>
+                    <td
+                      style={{
+                        ...rowStyle,
+                        cursor: "pointer",
+                        color: "blue",
+                        position: "relative",
+                      }}
+                    >
+                      <div className="d-flex align-items-center">
+                        <span
+                          onClick={() => handleDateClick(entry)}
+                          title="Click to add next day"
+                        >
+                          {formatDate(entry.date)}
+                        </span>
+                        {entry.editedIn === 1 && entry.editedOut === 1 && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            className="ms-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEntry(entry);
+                            }}
+                            title="Delete this record"
+                          >
+                            <i className="bi bi-trash"></i>
+                          </Button>
+                        )}
+                      </div>
+                    </td>
                     <td style={rowStyle}>{entry.day}</td>
-                    <td style={rowStyle}>{entry.time}</td>
+                    <td style={rowStyle}>{formatTime(entry.time)}</td>
                     <td
                       style={{
                         ...rowStyle,
@@ -802,7 +944,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                       }}
                       onClick={(e) => handleTimeClick(entry, "in", e)}
                     >
-                      {entry.timeIn || "-"}
+                      {formatTime(entry.timeIn)}
                     </td>
                     <td
                       style={{
@@ -821,7 +963,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                       }}
                       onClick={(e) => handleTimeClick(entry, "out", e)}
                     >
-                      {entry.timeOut || "-"}
+                      {formatTime(entry.timeOut)}
                     </td>
                     <td style={rowStyle}>{entry.state || "-"}</td>
                     <td style={rowStyle}>
@@ -880,6 +1022,25 @@ const DTRBatchView = ({ batch, onBack }) => {
         type={timeType}
         entry={selectedEntry}
         formatDate={formatDate}
+      />
+
+      <AddDateModal
+        show={showAddDateModal}
+        onHide={() => {
+          setShowAddDateModal(false);
+          setEmpId("");
+          setEmpName("");
+          setDate("");
+          setTimeIn("08:00");
+          setTimeOut("17:00");
+        }}
+        onSave={handleAddDate}
+        batch={batch}
+        empId={empId}
+        empName={empName}
+        date={date}
+        timeIn={timeIn}
+        timeOut={timeOut}
       />
     </div>
   );
@@ -1045,6 +1206,155 @@ const FloatingTimeInput = ({
         </form>
       </div>
     </div>
+  );
+};
+
+const AddDateModal = ({
+  show,
+  onHide,
+  onSave,
+  batch,
+  empId,
+  empName,
+  date,
+  timeIn,
+  timeOut,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [localEmpId, setLocalEmpId] = useState(empId);
+  const [localEmpName, setLocalEmpName] = useState(empName);
+  const [localDate, setLocalDate] = useState(date);
+  const [localTimeIn, setLocalTimeIn] = useState(timeIn);
+  const [localTimeOut, setLocalTimeOut] = useState(timeOut);
+
+  useEffect(() => {
+    if (show) {
+      setLocalEmpId(empId);
+      setLocalEmpName(empName);
+      setLocalDate(date);
+      setLocalTimeIn(timeIn);
+      setLocalTimeOut(timeOut);
+      fetchEmployees();
+    }
+  }, [show, empId, empName, date, timeIn, timeOut]);
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get(`${ServerIP}/auth/dtr/DTRemployees`);
+      if (response.data.Status) {
+        setEmployees(response.data.Employees);
+      }
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const dayOfWeek = new Date(localDate).toLocaleDateString("en-US", {
+        weekday: "short",
+      });
+
+      const entry = {
+        empId: localEmpId,
+        empName: localEmpName,
+        date: localDate,
+        day: dayOfWeek,
+        timeIn: localTimeIn + ":00",
+        timeOut: localTimeOut + ":00",
+        processed: 1,
+        editedIn: 1,
+        editedOut: 1,
+        remarks: "MANUAL ADD",
+      };
+
+      await onSave(entry);
+      onHide();
+    } catch (error) {
+      console.error("Error adding entry:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmployeeSelect = (e) => {
+    const selectedEmp = employees.find((emp) => emp.empId === e.target.value);
+    if (selectedEmp) {
+      setLocalEmpId(selectedEmp.empId);
+      setLocalEmpName(selectedEmp.empName);
+    }
+  };
+
+  return (
+    <Modal show={show} onHide={onHide}>
+      <Modal.Header closeButton>
+        <Modal.Title>Add Missing Date</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Employee</label>
+            <select
+              className="form-select"
+              value={localEmpId}
+              onChange={handleEmployeeSelect}
+              required
+            >
+              <option value="">Select Employee</option>
+              {employees.map((emp) => (
+                <option key={emp.empId} value={emp.empId}>
+                  {emp.empName} ({emp.empId})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={localDate}
+              onChange={(e) => setLocalDate(e.target.value)}
+              min={batch.periodStart}
+              max={batch.periodEnd}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Time In (HH:MM)</label>
+            <input
+              type="time"
+              className="form-control"
+              value={localTimeIn}
+              onChange={(e) => setLocalTimeIn(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Time Out (HH:MM)</label>
+            <input
+              type="time"
+              className="form-control"
+              value={localTimeOut}
+              onChange={(e) => setLocalTimeOut(e.target.value)}
+              required
+            />
+          </div>
+          <div className="d-flex justify-content-end gap-2">
+            <Button variant="secondary" onClick={onHide}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal.Body>
+    </Modal>
   );
 };
 
