@@ -1412,7 +1412,7 @@ router.post("/update-entries/:batchId", async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    // Update each entry - add remarks to the update query
+    // Update each entry
     for (const entry of entries) {
       await connection.query(
         `
@@ -1421,8 +1421,7 @@ router.post("/update-entries/:batchId", async (req, res) => {
           timeIn = ?,
           timeOut = ?,
           processed = ?,
-          deleteRecord = ?,
-          remarks = ?
+          deleteRecord = ?
         WHERE id = ? AND batchId = ?
       `,
         [
@@ -1430,7 +1429,6 @@ router.post("/update-entries/:batchId", async (req, res) => {
           entry.timeOut,
           entry.processed || 0,
           entry.deleteRecord || 0,
-          entry.remarks || null,
           entry.id,
           batchId,
         ]

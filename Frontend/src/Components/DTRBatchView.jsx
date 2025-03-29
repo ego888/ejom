@@ -159,27 +159,11 @@ const DTRBatchView = ({ batch, onBack }) => {
           next = entries[nextIndex];
         }
 
-        // If no valid next record found, process current record based on time
-        if (!next) {
+        // If no valid next record found or next record is for different employee
+        if (!next || next.empId !== current.empId) {
+          // Process current record based on time of day
           const [hours] = current.time.split(":").map(Number);
-          await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
-            entries: [
-              {
-                ...current,
-                timeIn: hours < 12 ? current.time : null,
-                timeOut: hours >= 12 ? current.time : null,
-                processed: 1,
-                remarks: "LACK " + (current.remarks || ""),
-                deleteRecord: 0,
-              },
-            ],
-          });
-          break;
-        }
 
-        // If next record is for different employee or different date
-        if (next.empId !== current.empId || next.date !== current.date) {
-          const [hours] = current.time.split(":").map(Number);
           await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
             entries: [
               {
@@ -187,15 +171,17 @@ const DTRBatchView = ({ batch, onBack }) => {
                 timeIn: hours < 12 ? current.time : null,
                 timeOut: hours >= 12 ? current.time : null,
                 processed: 1,
-                remarks: "LACK " + (current.remarks || ""),
+                remarks: "PROC, " + (current.remarks || ""),
                 deleteRecord: 0,
               },
             ],
           });
+
+          if (!next) break;
           continue;
         }
 
-        // Same employee, same date - process as pair
+        // Rest of the existing logic for same employee
         const currentDate = new Date(current.date);
         const nextDate = new Date(next.date);
         const isNextDay =
@@ -235,18 +221,16 @@ const DTRBatchView = ({ batch, onBack }) => {
             setShowConfirmModal(true);
             return; // Exit and wait for user input
           } else {
-            // After 7 AM - Process current as single record based on time
-            const [currentHours] = current.time.split(":").map(Number);
+            // After 7 AM - Process as new time-in
             await axios.post(
               `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
               {
                 entries: [
                   {
                     ...current,
-                    timeIn: currentHours < 12 ? current.time : null,
-                    timeOut: currentHours >= 12 ? current.time : null,
+                    timeIn: current.time,
                     processed: 1,
-                    remarks: "LACK " + (current.remarks || ""),
+                    remarks: "PROC, " + (current.remarks || ""),
                     deleteRecord: 0,
                   },
                 ],
@@ -281,6 +265,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         const lastRecord = entries[entries.length - 1];
         if (!lastRecord.deleteRecord && !lastRecord.processed) {
           const [hours] = lastRecord.time.split(":").map(Number);
+
           await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
             entries: [
               {
@@ -288,7 +273,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                 timeIn: hours < 12 ? lastRecord.time : null,
                 timeOut: hours >= 12 ? lastRecord.time : null,
                 processed: 1,
-                remarks: "LACK " + (lastRecord.remarks || ""),
+                remarks: "PROC, " + (lastRecord.remarks || ""),
                 deleteRecord: 0,
               },
             ],
@@ -296,7 +281,46 @@ const DTRBatchView = ({ batch, onBack }) => {
         }
       }
 
-      // Refresh data after all processing is complete
+      // Final pass: Check all unprocessed records
+      const response = await axios.get(
+        `${ServerIP}/auth/dtr/export/${batch.id}`
+      );
+      if (response.data.Status) {
+        const currentEntries = response.data.Entries;
+        const unprocessedEntries = currentEntries.filter(
+          (entry) =>
+            entry.processed === 0 &&
+            !entry.deleteRecord &&
+            !entry.timeIn &&
+            !entry.timeOut
+        );
+
+        if (unprocessedEntries.length > 0) {
+          for (const entry of unprocessedEntries) {
+            const [hours] = entry.time.split(":").map(Number);
+
+            await axios.post(
+              `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
+              {
+                entries: [
+                  {
+                    id: entry.id,
+                    ...entry,
+                    timeIn: hours < 12 ? entry.time : null,
+                    timeOut: hours >= 12 ? entry.time : null,
+                    processed: 1,
+                    remarks:
+                      hours < 12 ? "PROC, SINGLE-IN" : "PROC, SINGLE-OUT",
+                    deleteRecord: 0,
+                  },
+                ],
+              }
+            );
+          }
+        }
+      }
+
+      // Final refresh after all processing is complete
       await fetchBatchData(batch.id);
       setCurrentIndex(0);
     } catch (error) {
