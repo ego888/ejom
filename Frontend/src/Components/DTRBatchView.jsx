@@ -25,17 +25,17 @@ const getDayColor = (day) => {
     case "sun":
       return "#ffebee"; // Light red for Sunday
     case "sat":
-      return "#e8f5e9"; // Light blue for Saturday
+      return "#ffe0e0"; // Light blue for Saturday
     case "mon":
-      return "#fff9c4"; // Light green for Monday
+      return "#e1f5fe"; // Light green for Monday
     case "tue":
-      return "#ede7f6"; // Light orange for Tuesday
+      return "#d0f8ce"; // Light orange for Tuesday
     case "wed":
-      return "#ffe0b2"; // Light purple for Wednesday
+      return "#fffde7"; // Light purple for Wednesday
     case "thu":
-      return "#ffcdd2"; // Mint green for Thursday
+      return "#fce4ec"; // Mint green for Thursday
     case "fri":
-      return "#cfd8dc"; // Light yellow for Friday
+      return "#ffecb3"; // Light yellow for Friday
     default:
       return "transparent";
   }
@@ -55,6 +55,12 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [analyzedEntries, setAnalyzedEntries] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hideDeleted, setHideDeleted] = useState(false);
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [timeType, setTimeType] = useState(null); // 'in' or 'out'
+  const [defaultTime, setDefaultTime] = useState("");
+  const [showFloatingTime, setShowFloatingTime] = useState(false);
+  const [floatingPosition, setFloatingPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (batch?.id) {
@@ -109,7 +115,9 @@ const DTRBatchView = ({ batch, onBack }) => {
           (entry.state &&
             entry.state.toLowerCase().includes(searchTerm.toLowerCase())) ||
           (entry.remarks &&
-            entry.remarks.toLowerCase().includes(searchTerm.toLowerCase()));
+            entry.remarks.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (entry.day &&
+            entry.day.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const notDeleted = !hideDeleted || !entry.deleteRecord;
 
@@ -248,6 +256,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                     ...current,
                     timeIn: current.time,
                     processed: 0,
+                    editedIn: 1,
                     remarks: "LACK, " + (current.remarks || ""),
                     deleteRecord: 0,
                   },
@@ -487,6 +496,131 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
+  const handleCalculateHours = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Filter entries that need hours calculation
+      const entriesToUpdate = entries.filter(
+        (entry) =>
+          entry.processed === 1 &&
+          entry.deleteRecord !== 1 &&
+          entry.timeIn &&
+          entry.timeOut
+      );
+
+      // Calculate hours for each entry
+      const updatedEntries = entriesToUpdate.map((entry) => {
+        // Convert times to minutes for easier calculation
+        const timeInParts = entry.timeIn.split(":").map(Number);
+        const timeOutParts = entry.timeOut.split(":").map(Number);
+
+        let timeInMinutes = timeInParts[0] * 60 + timeInParts[1];
+        let timeOutMinutes = timeOutParts[0] * 60 + timeOutParts[1];
+
+        // If timeOut is less than timeIn, assume it's next day
+        if (timeOutMinutes < timeInMinutes) {
+          timeOutMinutes += 24 * 60; // Add 24 hours
+        }
+
+        let totalMinutes = timeOutMinutes - timeInMinutes;
+
+        // Subtract lunch break (12:00-13:00) if period covers it
+        if (timeInMinutes < 13 * 60 && timeOutMinutes > 12 * 60) {
+          totalMinutes -= 60; // Subtract 1 hour
+        }
+
+        // Subtract dinner break (19:00-20:00) if period covers it
+        if (timeInMinutes < 20 * 60 && timeOutMinutes > 19 * 60) {
+          totalMinutes -= 60; // Subtract 1 hour
+        }
+
+        // Convert minutes to hours
+        const totalHours = totalMinutes / 60;
+
+        // Calculate regular hours and overtime
+        let regularHours = totalHours;
+        let overtimeHours = 0;
+
+        if (totalHours > 8) {
+          regularHours = 8;
+          overtimeHours = totalHours - 8;
+        }
+
+        return {
+          id: entry.id,
+          hours: regularHours.toFixed(2),
+          overtime: overtimeHours.toFixed(2),
+        };
+      });
+
+      // Send all updates in one request
+      if (updatedEntries.length > 0) {
+        await axios.post(`${ServerIP}/auth/dtr/update-hours/${batch.id}`, {
+          entries: updatedEntries,
+        });
+      }
+
+      // Refresh data after all calculations are complete
+      await fetchBatchData(batch.id);
+    } catch (error) {
+      console.error("Error calculating hours:", error);
+      setError("Failed to calculate hours. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTimeClick = (entry, type, event) => {
+    // Only allow clicking if the record isn't deleted and either:
+    // 1. The field is empty, or
+    // 2. The field has been manually edited before
+    if (
+      entry.deleteRecord ||
+      (type === "in" && entry.timeIn && !entry.editedIn) ||
+      (type === "out" && entry.timeOut && !entry.editedOut)
+    ) {
+      return;
+    }
+
+    let defaultTimeValue = "";
+    if (type === "in" && entry.timeOut) {
+      const [hours, minutes] = entry.timeOut.split(":");
+      let newHours = parseInt(hours) - 4;
+      if (newHours < 0) newHours += 24;
+      defaultTimeValue = `${String(newHours).padStart(2, "0")}:${minutes}`;
+    } else if (type === "out" && entry.timeIn) {
+      const [hours, minutes] = entry.timeIn.split(":");
+      let newHours = (parseInt(hours) + 4) % 24;
+      defaultTimeValue = `${String(newHours).padStart(2, "0")}:${minutes}`;
+    }
+
+    setSelectedEntry(entry);
+    setTimeType(type);
+    setDefaultTime(defaultTimeValue);
+    setFloatingPosition({ x: event.clientX - 150, y: event.clientY + 20 });
+    setShowFloatingTime(true);
+  };
+
+  const handleTimeUpdate = async (newTime) => {
+    try {
+      const endpoint = timeType === "in" ? "update-time-in" : "update-time-out";
+      const payload = {
+        id: selectedEntry.id,
+        [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
+        processed: 1,
+      };
+
+      await axios.post(`${ServerIP}/auth/dtr/${endpoint}/${batch.id}`, payload);
+      await fetchBatchData(batch.id);
+      setShowFloatingTime(false);
+    } catch (error) {
+      console.error("Error updating time:", error);
+      setError("Failed to update time. Please try again.");
+    }
+  };
+
   const renderButtons = () => (
     <>
       <Button variant="danger" onClick={handleDeleteRepeat} className="ms-2">
@@ -494,6 +628,9 @@ const DTRBatchView = ({ batch, onBack }) => {
       </Button>
       <Button variant="primary" onClick={handleAnalyze} className="ms-2">
         <i className="bi bi-clock-history"></i> Analyze Time In/Out
+      </Button>
+      <Button variant="success" onClick={handleCalculateHours} className="ms-2">
+        <i className="bi bi-calculator"></i> Calculate Hours
       </Button>
     </>
   );
@@ -648,8 +785,44 @@ const DTRBatchView = ({ batch, onBack }) => {
                     <td style={rowStyle}>{formatDate(entry.date)}</td>
                     <td style={rowStyle}>{entry.day}</td>
                     <td style={rowStyle}>{entry.time}</td>
-                    <td style={rowStyle}>{entry.timeIn || "-"}</td>
-                    <td style={rowStyle}>{entry.timeOut || "-"}</td>
+                    <td
+                      style={{
+                        ...rowStyle,
+                        cursor:
+                          (!entry.timeIn || entry.editedIn) &&
+                          !entry.deleteRecord
+                            ? "pointer"
+                            : "default",
+                        color:
+                          (!entry.timeIn || entry.editedIn) &&
+                          !entry.deleteRecord
+                            ? "blue"
+                            : "inherit",
+                        fontWeight: entry.editedIn ? "bold" : "normal",
+                      }}
+                      onClick={(e) => handleTimeClick(entry, "in", e)}
+                    >
+                      {entry.timeIn || "-"}
+                    </td>
+                    <td
+                      style={{
+                        ...rowStyle,
+                        cursor:
+                          (!entry.timeOut || entry.editedOut) &&
+                          !entry.deleteRecord
+                            ? "pointer"
+                            : "default",
+                        color:
+                          (!entry.timeOut || entry.editedOut) &&
+                          !entry.deleteRecord
+                            ? "blue"
+                            : "inherit",
+                        fontWeight: entry.editedOut ? "bold" : "normal",
+                      }}
+                      onClick={(e) => handleTimeClick(entry, "out", e)}
+                    >
+                      {entry.timeOut || "-"}
+                    </td>
                     <td style={rowStyle}>{entry.state || "-"}</td>
                     <td style={rowStyle}>
                       {Number(entry.hours || 0).toFixed(2)}
@@ -697,6 +870,180 @@ const DTRBatchView = ({ batch, onBack }) => {
         onConfirm={() => handleConfirmTime(true)}
         onClose={() => handleConfirmTime(false)}
       />
+
+      <FloatingTimeInput
+        show={showFloatingTime}
+        position={floatingPosition}
+        onHide={() => setShowFloatingTime(false)}
+        onSave={handleTimeUpdate}
+        defaultTime={defaultTime}
+        type={timeType}
+        entry={selectedEntry}
+        formatDate={formatDate}
+      />
+    </div>
+  );
+};
+
+const FloatingTimeInput = ({
+  show,
+  position,
+  onHide,
+  onSave,
+  defaultTime,
+  type,
+  entry,
+  formatDate,
+}) => {
+  const [localPosition, setLocalPosition] = useState(position);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [hours, setHours] = useState("");
+  const [minutes, setMinutes] = useState("");
+
+  useEffect(() => {
+    if (defaultTime) {
+      const [h, m] = defaultTime.split(":");
+      setHours(h);
+      setMinutes(m);
+    }
+  }, [defaultTime]);
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      setLocalPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formattedTime = `${hours.padStart(2, "0")}:${minutes.padStart(
+      2,
+      "0"
+    )}:00`;
+    onSave(formattedTime);
+  };
+
+  if (!show) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: localPosition.x,
+        top: localPosition.y,
+        zIndex: 1050,
+        backgroundColor: "white",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+        width: "300px",
+      }}
+    >
+      <div
+        style={{
+          padding: "8px",
+          backgroundColor: "#f8f9fa",
+          borderBottom: "1px solid #ccc",
+          cursor: "move",
+          userSelect: "none",
+        }}
+        onMouseDown={handleMouseDown}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <span>Enter Time {type === "in" ? "In" : "Out"}</span>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={onHide}
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
+
+      <div style={{ padding: "15px" }}>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-2">
+            <small>
+              {entry?.empName} - {formatDate(entry?.date)}
+            </small>
+          </div>
+          <div className="d-flex gap-2 align-items-center mb-3">
+            <div>
+              <label className="form-label">Hours</label>
+              <input
+                type="number"
+                className="form-control"
+                style={{ width: "80px" }}
+                value={hours}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val) && val >= 0 && val <= 23) {
+                    setHours(val.toString());
+                  }
+                }}
+                min="0"
+                max="23"
+                required
+              />
+            </div>
+            <div className="pt-4">:</div>
+            <div>
+              <label className="form-label">Minutes</label>
+              <input
+                type="number"
+                className="form-control"
+                style={{ width: "80px" }}
+                value={minutes}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val) && val >= 0 && val <= 59) {
+                    setMinutes(val.toString());
+                  }
+                }}
+                min="0"
+                max="59"
+                required
+              />
+            </div>
+          </div>
+          <div className="d-flex justify-content-end gap-2">
+            <Button variant="secondary" type="button" onClick={onHide}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit">
+              Save
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

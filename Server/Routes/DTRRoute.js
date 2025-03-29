@@ -660,6 +660,8 @@ async function setupDTRTables() {
         remarks VARCHAR(255),
         processed INT DEFAULT 0,
         deleteRecord INT DEFAULT 0,
+        editedIn INT DEFAULT 0,
+        editedOut INT DEFAULT 0,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (batchId) REFERENCES DTRBatches(id) ON DELETE CASCADE
       )
@@ -1450,6 +1452,219 @@ router.post("/update-entries/:batchId", async (req, res) => {
     res.status(500).json({
       Status: false,
       Error: `Failed to update entries: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Add route to update hours
+router.post("/update-hours/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    const { entries } = req.body;
+
+    if (!entries || !Array.isArray(entries)) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Invalid entries data",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update each entry
+    for (const entry of entries) {
+      await connection.query(
+        `
+        UPDATE DTREntries 
+        SET 
+          hours = ?,
+          overtime = ?,
+          remarks = CONCAT('HOURS, ', remarks)
+        WHERE id = ? AND batchId = ? AND processed = 1 AND deleteRecord = 0
+      `,
+        [entry.hours, entry.overtime, entry.id, batchId]
+      );
+    }
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Successfully updated hours",
+      UpdatedCount: entries.length,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating hours:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to update hours: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Add this new route after the existing routes
+router.post("/update-time/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    const { entries } = req.body;
+
+    if (!entries || !Array.isArray(entries)) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Invalid entries data",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update each entry
+    for (const entry of entries) {
+      const updateFields = [];
+      const updateValues = [];
+
+      if (entry.timeIn) {
+        updateFields.push("timeIn = ?");
+        updateValues.push(entry.timeIn);
+      }
+      if (entry.timeOut) {
+        updateFields.push("timeOut = ?");
+        updateValues.push(entry.timeOut);
+      }
+
+      updateFields.push("processed = ?");
+      updateValues.push(entry.processed);
+
+      // Add the ID and batchId to the values array
+      updateValues.push(entry.id, batchId);
+
+      await connection.query(
+        `
+        UPDATE DTREntries 
+        SET ${updateFields.join(", ")}
+        WHERE id = ? AND batchId = ?
+      `,
+        updateValues
+      );
+    }
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Successfully updated time entries",
+      UpdatedCount: entries.length,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating time entries:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to update time entries: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Route to update timeIn
+router.post("/update-time-in/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    const { id, timeIn, processed } = req.body;
+
+    if (!id || !timeIn) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Missing required fields: id and timeIn",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    await connection.query(
+      `
+      UPDATE DTREntries 
+      SET 
+        timeIn = ?,
+        processed = ?,
+        editedIn = 1,
+        remarks = CONCAT('MANUAL IN, ', COALESCE(remarks, ''))
+      WHERE id = ? AND batchId = ?
+    `,
+      [timeIn, processed || 0, id, batchId]
+    );
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Successfully updated time in",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating time in:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to update time in: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Route to update timeOut
+router.post("/update-time-out/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    const { id, timeOut, processed } = req.body;
+
+    if (!id || !timeOut) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Missing required fields: id and timeOut",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    await connection.query(
+      `
+      UPDATE DTREntries 
+      SET 
+        timeOut = ?,
+        processed = ?,
+        editedOut = 1,
+        remarks = CONCAT('MANUAL OUT, ', COALESCE(remarks, ''))
+      WHERE id = ? AND batchId = ?
+    `,
+      [timeOut, processed || 0, id, batchId]
+    );
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Successfully updated time out",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating time out:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to update time out: ${error.message}`,
     });
   } finally {
     if (connection) connection.release();
