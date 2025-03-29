@@ -75,12 +75,26 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [timeOut, setTimeOut] = useState("17:00");
   const [referenceHours, setReferenceHours] = useState("00");
   const [referenceMinutes, setReferenceMinutes] = useState("00");
+  const [rightClickTarget, setRightClickTarget] = useState(null);
 
   useEffect(() => {
     if (batch?.id) {
       fetchBatchData(batch.id);
     }
   }, [batch?.id]);
+
+  useEffect(() => {
+    const handleGlobalRightClick = (e) => {
+      if (e.target.closest(".table-responsive")) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("contextmenu", handleGlobalRightClick);
+    return () => {
+      document.removeEventListener("contextmenu", handleGlobalRightClick);
+    };
+  }, []);
 
   const fetchBatchData = async (batchId) => {
     setLoading(true);
@@ -694,6 +708,32 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
+  const handleTimeRightClick = async (e, entry, type) => {
+    e.preventDefault();
+
+    if (entry.deleteRecord) return;
+
+    setRightClickTarget(`${entry.id}-${type}`);
+    const referenceTime = `${referenceHours}:${referenceMinutes}:00`;
+
+    try {
+      const endpoint =
+        type === "in" ? "update-time-in-only" : "update-time-out-only";
+      const payload = {
+        id: entry.id,
+        time: referenceTime,
+      };
+
+      await axios.post(`${ServerIP}/auth/dtr/${endpoint}/${batch.id}`, payload);
+      await fetchBatchData(batch.id);
+    } catch (error) {
+      console.error(`Error updating ${type} time:`, error);
+      setError(`Failed to update ${type} time. Please try again.`);
+    } finally {
+      setTimeout(() => setRightClickTarget(null), 300);
+    }
+  };
+
   const renderButtons = () => (
     <>
       <Button variant="danger" onClick={handleDeleteRepeat} className="ms-2">
@@ -941,8 +981,17 @@ const DTRBatchView = ({ batch, onBack }) => {
                             ? "blue"
                             : "inherit",
                         fontWeight: entry.editedIn ? "bold" : "normal",
+                        backgroundColor:
+                          rightClickTarget === `${entry.id}-in`
+                            ? "#fff3cd"
+                            : undefined,
+                        transition: "background-color 0.3s",
                       }}
                       onClick={(e) => handleTimeClick(entry, "in", e)}
+                      onContextMenu={(e) =>
+                        handleTimeRightClick(e, entry, "in")
+                      }
+                      title="Right-click to set reference time"
                     >
                       {formatTime(entry.timeIn)}
                     </td>
@@ -960,8 +1009,17 @@ const DTRBatchView = ({ batch, onBack }) => {
                             ? "blue"
                             : "inherit",
                         fontWeight: entry.editedOut ? "bold" : "normal",
+                        backgroundColor:
+                          rightClickTarget === `${entry.id}-out`
+                            ? "#fff3cd"
+                            : undefined,
+                        transition: "background-color 0.3s",
                       }}
                       onClick={(e) => handleTimeClick(entry, "out", e)}
+                      onContextMenu={(e) =>
+                        handleTimeRightClick(e, entry, "out")
+                      }
+                      title="Right-click to set reference time"
                     >
                       {formatTime(entry.timeOut)}
                     </td>

@@ -1752,4 +1752,65 @@ router.delete("/delete-entry/:batchId/:entryId", async (req, res) => {
   }
 });
 
+// Add these new routes
+router.post("/update-time-in-only/:batchId", async (req, res) => {
+  try {
+    const { id, time } = req.body;
+    const { batchId } = req.params;
+
+    console.log("TIME:", time, id, batchId);
+    const sql = `
+      UPDATE DTREntries 
+      SET timeIn = ?
+      WHERE id = ?
+    `;
+
+    const [result] = await pool.query(sql, [time, id, batchId]);
+
+    if (result.affectedRows > 0) {
+      res.json({ Status: true, Message: "Time in updated successfully" });
+    } else {
+      res.json({ Status: false, Error: "Failed to update time in" });
+    }
+  } catch (error) {
+    console.error("Error updating time in:", error);
+    res.json({ Status: false, Error: "Server error while updating time in" });
+  }
+});
+
+router.post("/update-time-out-only/:batchId", async (req, res) => {
+  try {
+    const { id, time } = req.body;
+    const { batchId } = req.params;
+
+    const sql = `
+      UPDATE DTREntries 
+      SET timeOut = ?
+      WHERE id = ?
+    `;
+
+    const [result] = await pool.query(sql, [time, id, batchId]);
+
+    if (result.affectedRows > 0) {
+      res.json({ Status: true, Message: "Time out updated successfully" });
+    } else {
+      res.json({ Status: false, Error: "Failed to update time out" });
+    }
+  } catch (error) {
+    console.error("Error updating time out:", error);
+    res.json({ Status: false, Error: "Server error while updating time out" });
+  }
+});
+
+// Add this error handling middleware after all your routes
+router.use((err, req, res, next) => {
+  console.error("Router Error:", err);
+  res.status(500).json({
+    Status: false,
+    Error: "Internal server error",
+    Code: "SERVER_ERROR",
+    details: err.message,
+  });
+});
+
 export const DTRRouter = router;
