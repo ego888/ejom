@@ -23,7 +23,9 @@ const DTRSummaryReport = ({ batch, onEmployeeSelect }) => {
     setError(null);
 
     try {
-      const response = await axios.get(`${ServerIP}/dtr/summary/${batchId}`);
+      const response = await axios.get(
+        `${ServerIP}/auth/dtr/summary/${batchId}`
+      );
       if (response.data.Status) {
         setSummaryData(response.data.Summary);
       } else {

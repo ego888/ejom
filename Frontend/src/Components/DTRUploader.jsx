@@ -129,11 +129,15 @@ const DTRUploader = ({ onUploadSuccess }) => {
     try {
       setUploading(true);
 
-      const response = await axios.post(`${ServerIP}/dtr/upload`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/upload`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       if (response.data.Status) {
         setAlert({

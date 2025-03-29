@@ -15,9 +15,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const uploadDir = path.join(__dirname, "../uploads/dtr");
 
-// Create uploads directory if it doesn't exist
+// Ensure upload directory exists with proper permissions
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true, mode: 0o755 });
+    console.log("Created upload directory:", uploadDir);
+  } catch (err) {
+    console.error("Error creating upload directory:", err);
+  }
+}
+
+// Log upload directory status
+try {
+  const stats = fs.statSync(uploadDir);
+  console.log("Upload directory status:", {
+    path: uploadDir,
+    exists: true,
+    isDirectory: stats.isDirectory(),
+    permissions: stats.mode,
+    writable: fs.accessSync(uploadDir, fs.constants.W_OK),
+  });
+} catch (err) {
+  console.error("Error checking upload directory:", err);
 }
 
 // Configure multer for file uploads
@@ -312,8 +331,11 @@ async function parseFile(filePath, fileType) {
 }
 
 // Process DTR data and standardize format
-function processDTRData(data) {
+function processDTRData(data, existingEmployees = new Map()) {
   console.log(`Processing ${data.length} entries`);
+
+  // Merge existing employees with any new ones found in the data
+  const employeeNames = new Map(existingEmployees);
 
   const isFormatType1 =
     data.length > 0 &&
@@ -379,6 +401,10 @@ function processDTRData(data) {
           time,
           rawState: dateTimeStr,
         });
+
+        if (empId && empName) {
+          employeeNames.set(empId, empName);
+        }
       } catch (error) {
         console.error("Error processing row:", error, row);
       }
@@ -453,7 +479,10 @@ function processDTRData(data) {
         if (!employeeTimeRecords[empId][dateFormatted]) {
           employeeTimeRecords[empId][dateFormatted] = {
             empId,
-            empName: `Employee ${empId}`, // Default name when not provided
+            empName:
+              employeeNames.get(empId) ||
+              existingEmployees.get(empId) ||
+              `Employee ${empId}`,
             date: dateFormatted,
             day: dayOfWeek,
             records: [],
@@ -477,7 +506,7 @@ function processDTRData(data) {
       } employees`
     );
 
-    // Second pass: Create entries from the collected records HOLD THIS PROCESS FOR NOW
+    // Second pass: Create entries from the collected records
     Object.values(employeeTimeRecords).forEach((empDates) => {
       Object.values(empDates).forEach((dayData) => {
         const { empId, empName, date, day, records } = dayData;
@@ -485,52 +514,84 @@ function processDTRData(data) {
         // Sort records by time
         records.sort((a, b) => a.time.localeCompare(b.time));
 
-        // Assume first record is timeIn and last record is timeOut if multiple records exist
-        // let timeIn = records.length > 0 ? records[0].time : null;
-        // let timeOut =
-        //   records.length > 1 ? records[records.length - 1].time : null;
+        // Filter out records based on rules
+        const filteredRecords = [];
+        for (let i = 0; i < records.length; i++) {
+          const currentTime = moment(`${date} ${records[i].time}`);
 
-        // console.log(
-        //   `Employee ${empId} on ${date}: timeIn=${timeIn}, timeOut=${timeOut}`
-        // );
+          // Skip if this record was already processed
+          if (records[i].processed) continue;
 
-        // // Calculate hours worked
-        // let hours = 0;
-        // let overtime = 0;
+          // Check if there's a next record to compare
+          if (i + 1 < records.length) {
+            const nextTime = moment(`${date} ${records[i + 1].time}`);
 
-        // if (timeIn && timeOut) {
-        //   const startTime = moment(`${date} ${timeIn}`, "YYYY-MM-DD HH:mm:ss");
-        //   const endTime = moment(`${date} ${timeOut}`, "YYYY-MM-DD HH:mm:ss");
+            // Calculate minutes difference
+            const minutesDiff = nextTime.diff(currentTime, "minutes");
 
-        //   // Calculate total hours worked
-        //   const duration = moment.duration(endTime.diff(startTime));
-        //   hours = duration.asHours();
+            // Get hours for time range checks
+            const currentHour = currentTime.hours();
+            const nextHour = nextTime.hours();
+            const currentMinute = currentTime.minutes();
+            const nextMinute = nextTime.minutes();
 
-        //   // Calculate overtime (over 8 hours)
-        //   if (hours > 8) {
-        //     overtime = hours - 8;
-        //     hours = 8;
-        //   }
+            // Rule 1: Skip both records if they're within 15 minutes
+            if (minutesDiff <= 15) {
+              records[i].processed = true;
+              records[i + 1].processed = true;
+              continue;
+            }
 
-        //   // Round to 2 decimal places
-        //   hours = Math.round(hours * 100) / 100;
-        //   overtime = Math.round(overtime * 100) / 100;
+            // Rule 2: Skip both records if they're between 12:00-13:00
+            if (
+              (currentHour === 12 ||
+                (currentHour === 13 && currentMinute === 0)) &&
+              (nextHour === 12 || (nextHour === 13 && nextMinute === 0))
+            ) {
+              records[i].processed = true;
+              records[i + 1].processed = true;
+              continue;
+            }
 
-        //   console.log(`Calculated: hours=${hours}, overtime=${overtime}`);
-        // }
+            // Rule 3: Skip both records if they're between 19:00-20:00
+            if (
+              (currentHour === 19 ||
+                (currentHour === 20 && currentMinute === 0)) &&
+              (nextHour === 19 || (nextHour === 20 && nextMinute === 0))
+            ) {
+              records[i].processed = true;
+              records[i + 1].processed = true;
+              continue;
+            }
+          }
 
-        console.log("EMPLOYEE TIME RECORDS:", empId, empName, date, day, state);
-        processedEntries.push({
-          empId,
-          empName,
-          date,
-          day,
-          timeIn: timeIn || "",
-          timeOut: timeOut || "",
-          state,
+          // If record wasn't filtered out, add it
+          if (!records[i].processed) {
+            filteredRecords.push(records[i]);
+          }
+        }
+
+        // Process remaining records
+        filteredRecords.forEach((record) => {
+          console.log("EMPLOYEE TIME RECORDS:", empId, empName, date, day);
+
+          // Create raw state by combining date and time
+          const rawState = `${date} ${record.time}`;
+
+          processedEntries.push({
+            empId,
+            empName,
+            date,
+            day,
+            time: record.time,
+            rawState: rawState,
+            remarks: "Type 2",
+          });
+
+          console.log(
+            `Added processed entry for employee ${empId} on ${date} at ${record.time}`
+          );
         });
-
-        console.log(`Added processed entry for employee ${empId} on ${date}`);
       });
     });
   } else {
@@ -665,6 +726,9 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
     const batchId = batchResult.insertId;
     console.log("Created batch with ID:", batchId);
 
+    // Get existing employee names
+    const existingEmployees = await getExistingEmployeeNames(connection);
+
     // Process each uploaded file
     let totalEntries = 0;
     let allProcessedData = [];
@@ -701,7 +765,7 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
         }
 
         // Process the data
-        const processedData = processDTRData(rawData);
+        const processedData = processDTRData(rawData, existingEmployees);
         console.log(
           `Processed ${processedData.length} entries from ${file.originalname}`
         );
@@ -989,7 +1053,7 @@ router.get("/export/:batchId", async (req, res) => {
     const [entries] = await connection.query(
       `SELECT * FROM DTREntries 
        WHERE batchId = ? 
-       ORDER BY empId, date, timeIn`,
+       ORDER BY empId, date, time`,
       [batchId]
     );
 
@@ -1075,38 +1139,64 @@ router.post(
     const uploadedFiles = req.files || [];
     const { batchId } = req.params;
 
-    try {
-      console.log("=========== DTR ADD TO BATCH REQUEST ===========");
-      console.log(`Adding ${uploadedFiles.length} files to batch ${batchId}`);
+    console.log("=== ADD TO BATCH REQUEST ===");
+    console.log("Batch ID:", batchId);
+    console.log(
+      "Files received:",
+      uploadedFiles.map((f) => ({
+        name: f.originalname,
+        size: f.size,
+        path: f.path,
+        mimetype: f.mimetype,
+      }))
+    );
+    console.log("Request body:", req.body);
+    console.log("Request headers:", req.headers);
+    console.log("============================");
 
-      if (uploadedFiles.length === 0) {
-        console.log("Error: No files uploaded");
+    try {
+      // Validate files
+      if (!uploadedFiles || uploadedFiles.length === 0) {
+        console.log("No files received in request");
         return res.status(400).json({
           Status: false,
           Error: "No files uploaded",
+          Debug: {
+            files: req.files,
+            body: req.body,
+          },
+        });
+      }
+
+      // Validate batch ID
+      if (!batchId || isNaN(batchId)) {
+        console.log("Invalid batch ID:", batchId);
+        return res.status(400).json({
+          Status: false,
+          Error: "Invalid batch ID",
+          Debug: { batchId },
         });
       }
 
       connection = await pool.getConnection();
       await connection.beginTransaction();
-      console.log("Database transaction started");
 
-      // Get the existing batch
+      // Add this line to get existing employee names
+      const existingEmployees = await getExistingEmployeeNames(connection);
+
+      // Verify batch exists
       const [batchDetails] = await connection.query(
         "SELECT * FROM DTRBatches WHERE id = ?",
         [batchId]
       );
 
       if (batchDetails.length === 0) {
-        console.log(`Batch ${batchId} not found`);
+        await connection.rollback();
         return res.status(404).json({
           Status: false,
           Error: "Batch not found",
         });
       }
-
-      const existingBatch = batchDetails[0];
-      console.log("Found existing batch:", existingBatch);
 
       // Process each uploaded file
       let totalEntries = 0;
@@ -1122,38 +1212,18 @@ router.post(
 
         try {
           console.log(`Processing file: ${file.originalname} (${fileType})`);
+
           // Parse the file
           const rawData = await parseFile(filePath, fileType);
           console.log(
             `Parsed ${rawData.length} rows from file ${file.originalname}`
           );
 
-          // Debug sample of rawData
-          if (rawData.length > 0) {
-            console.log("First entry type:", typeof rawData[0]);
-            if (typeof rawData[0] === "object" && !Array.isArray(rawData[0])) {
-              console.log("First entry keys:", Object.keys(rawData[0]));
-            } else if (Array.isArray(rawData[0])) {
-              console.log(
-                "First entry is array, first few values:",
-                rawData[0].slice(0, 5)
-              );
-            }
-          }
-
-          // Process the data
-          const processedData = processDTRData(rawData);
+          // Pass existingEmployees to processDTRData
+          const processedData = processDTRData(rawData, existingEmployees);
           console.log(
             `Processed ${processedData.length} entries from ${file.originalname}`
           );
-
-          // Debug sample of processed data
-          if (processedData.length > 0) {
-            console.log(
-              "First processed entry:",
-              JSON.stringify(processedData[0])
-            );
-          }
 
           // Add to all processed data
           allProcessedData = [...allProcessedData, ...processedData];
@@ -1173,8 +1243,6 @@ router.post(
           });
         }
       }
-
-      console.log(`Total entries to insert 1: ${allProcessedData.length}`);
 
       if (allProcessedData.length === 0) {
         await connection.rollback();
@@ -1203,63 +1271,123 @@ router.post(
       ]);
 
       // Insert processed entries in bulk
-      console.log(
-        `Inserting ${entriesData.length} entries into DTREntries table`
-      );
-      await connection.query(
-        `INSERT INTO DTREntries 
+      if (entriesData.length > 0) {
+        await connection.query(
+          `INSERT INTO DTREntries 
        (batchId, empId, empName, date, day, time, rawState, timeIn, timeOut, state, hours, overtime, specialHours, remarks) 
        VALUES ?`,
-        [entriesData]
-      );
-      console.log("Bulk insert completed successfully");
+          [entriesData]
+        );
+      }
 
-      // Update batch with total files and entries
-      const newFileCount = existingBatch.fileCount + uploadedFiles.length;
-      const newEntryCount = existingBatch.entryCount + totalEntries;
+      // Update batch with new total files and entries
+      const [currentBatch] = await connection.query(
+        "SELECT fileCount, entryCount FROM DTRBatches WHERE id = ?",
+        [batchId]
+      );
+
+      const newFileCount = currentBatch[0].fileCount + uploadedFiles.length;
+      const newEntryCount = currentBatch[0].entryCount + totalEntries;
 
       await connection.query(
         "UPDATE DTRBatches SET fileCount = ?, entryCount = ? WHERE id = ?",
         [newFileCount, newEntryCount, batchId]
       );
-      console.log(
-        `Updated batch ${batchId} with new file count: ${newFileCount}, entry count: ${newEntryCount}`
-      );
 
       await connection.commit();
-      console.log("Database transaction committed");
 
-      // Fetch the updated batch
+      // Get updated batch details
       const [updatedBatch] = await connection.query(
         "SELECT * FROM DTRBatches WHERE id = ?",
         [batchId]
       );
-      console.log("Fetched updated batch for response");
 
-      console.log("Sending success response to client");
-      res.status(200).json({
+      res.json({
         Status: true,
-        Message: `Successfully added ${totalEntries} DTR entries from ${uploadedFiles.length} files to batch ${batchId}`,
-        BatchId: batchId,
+        Message: `Successfully added ${totalEntries} entries from ${uploadedFiles.length} files`,
         Files: fileProcessingResults,
         Batch: updatedBatch[0],
       });
-      console.log("=========== DTR ADD TO BATCH COMPLETE ===========");
     } catch (error) {
-      console.error("Error adding files to batch:", error);
-      if (connection) {
-        await connection.rollback();
-        console.log("Database transaction rolled back due to error");
-      }
-
-      res.status(500).json({
+      console.error("Error in add-to-batch:", error);
+      if (connection) await connection.rollback();
+      return res.status(500).json({
         Status: false,
-        Error: `Failed to add files to batch: ${error.message}`,
+        Error: error.message,
+        Stack: error.stack,
       });
     } finally {
       if (connection) connection.release();
     }
   }
 );
+
+// Add this test route
+router.post(
+  "/test-upload/:batchId",
+  upload.array("dtrFiles", 10),
+  (req, res) => {
+    console.log("Test upload received:", {
+      files: req.files,
+      body: req.body,
+      params: req.params,
+    });
+    res.json({
+      Status: true,
+      message: "Test upload received",
+      filesCount: req.files.length,
+      batchId: req.params.batchId,
+    });
+  }
+);
+
+// Add this new route to get employee names
+router.get("/DTRemployees", async (req, res) => {
+  let connection;
+
+  try {
+    connection = await pool.getConnection();
+
+    // Get unique employee IDs and names
+    const [employees] = await connection.query(`
+      SELECT DISTINCT empId, empName 
+      FROM DTREntries 
+      ORDER BY empName
+    `);
+
+    res.json({
+      Status: true,
+      Employees: employees,
+    });
+  } catch (error) {
+    console.error("Error fetching employee list:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to fetch employee list: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Add this function to get employee names before processing new files
+async function getExistingEmployeeNames(connection) {
+  try {
+    const [employees] = await connection.query(`
+      SELECT DISTINCT empId, empName 
+      FROM DTREntries
+    `);
+
+    const employeeMap = new Map();
+    employees.forEach((emp) => {
+      employeeMap.set(emp.empId, emp.empName);
+    });
+
+    return employeeMap;
+  } catch (error) {
+    console.error("Error fetching existing employee names:", error);
+    return new Map();
+  }
+}
 
 export const DTRRouter = router;

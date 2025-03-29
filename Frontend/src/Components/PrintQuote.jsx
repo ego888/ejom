@@ -360,7 +360,9 @@ function PrintQuote() {
                 })}
               </span>
             </div>
-            <div>Bank Info: {companyInfo?.bankInfo}</div>
+            <div style={{ whiteSpace: "pre-wrap" }}>
+              Bank Info: {companyInfo?.bankInfo}
+            </div>
             {gcashQRCode && (
               <div className="gcash-container">
                 <div>GCash:</div>

@@ -20,7 +20,7 @@ const DTRDetailReport = ({ batch, employeeId, onBackToSummary }) => {
 
     try {
       const response = await axios.get(
-        `${ServerIP}/dtr/detail/${batchId}/${empId}`
+        `${ServerIP}/auth/dtr/detail/${batchId}/${empId}`
       );
       if (response.data.Status) {
         setDetailData(response.data.Detail);

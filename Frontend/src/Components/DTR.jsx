@@ -37,8 +37,8 @@ const DTR = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log("Fetching batches from:", `${ServerIP}/dtr/batches`);
-      const response = await axios.get(`${ServerIP}/dtr/batches`);
+      console.log("Fetching batches from:", `${ServerIP}/auth/dtr/batches`);
+      const response = await axios.get(`${ServerIP}/auth/dtr/batches`);
       console.log("Batch response:", response.data);
 
       // Always initialize with an empty array if we get no batches
@@ -112,7 +112,9 @@ const DTR = () => {
       console.log(`Exporting batch: ${batch.id} - ${batch.batchName}`);
 
       // Fetch all the entries for this batch
-      const response = await axios.get(`${ServerIP}/dtr/export/${batch.id}`);
+      const response = await axios.get(
+        `${ServerIP}/auth/dtr/export/${batch.id}`
+      );
 
       if (
         !response.data.Status ||
@@ -198,7 +200,9 @@ const DTR = () => {
       setLoading(true);
       console.log(`Deleting batch: ${batch.id} - ${batch.batchName}`);
 
-      const response = await axios.delete(`${ServerIP}/dtr/batch/${batch.id}`);
+      const response = await axios.delete(
+        `${ServerIP}/auth/dtr/batch/${batch.id}`
+      );
 
       if (response.data.Status) {
         console.log("Batch deleted successfully");
@@ -283,43 +287,55 @@ const DTR = () => {
     }
 
     const formData = new FormData();
+
+    // Log each file being added
     for (let i = 0; i < selectedFiles.length; i++) {
-      formData.append("dtrFiles", selectedFiles[i]);
+      const file = selectedFiles[i];
+      console.log(`Adding file ${i + 1}:`, {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+      formData.append("dtrFiles", file);
     }
 
+    // Add other form data
     formData.append("batchName", batchName);
     formData.append("periodStart", periodStart);
     formData.append("periodEnd", periodEnd);
 
-    // If editing an existing batch, include the batch ID
-    if (isEditingExistingBatch && selectedBatch?.id) {
-      formData.append("batchId", selectedBatch.id);
-    }
-
-    console.log("Form data prepared:", {
+    // Log the complete request details
+    console.log("Upload request details:", {
+      url: isEditingExistingBatch
+        ? `${ServerIP}/auth/dtr/add-to-batch/${selectedBatch.id}`
+        : `${ServerIP}/auth/dtr/upload`,
       batchName,
       periodStart,
       periodEnd,
       batchId: isEditingExistingBatch ? selectedBatch?.id : undefined,
+      fileCount: selectedFiles.length,
       files: selectedFiles.map((f) => f.name),
+      formDataEntries: Array.from(formData.entries()).map(([key, value]) => ({
+        key,
+        value: value instanceof File ? `File: ${value.name}` : value,
+      })),
     });
 
     setLoading(true);
     setError(null);
-    setUploadSuccess(false);
 
     try {
-      console.log("Submitting DTR upload form...");
-      // Use appropriate endpoint based on whether adding to existing batch
-      const endpoint = isEditingExistingBatch
-        ? `${ServerIP}/dtr/add-to-batch/${selectedBatch.id}`
-        : `${ServerIP}/dtr/upload`;
-
-      const response = await axios.post(endpoint, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        isEditingExistingBatch
+          ? `${ServerIP}/auth/dtr/add-to-batch/${selectedBatch.id}`
+          : `${ServerIP}/auth/dtr/upload`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       console.log("Upload response:", response.data);
 
@@ -350,7 +366,17 @@ const DTR = () => {
         setActiveTab("batches");
       }, 1000);
     } catch (err) {
-      console.error("Error uploading DTR files:", err);
+      console.error("Upload error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        fullError: err,
+        requestDetails: {
+          batchId: selectedBatch?.id,
+          fileCount: selectedFiles.length,
+          isEditingBatch: isEditingExistingBatch,
+        },
+      });
       const errorMessage =
         err.response?.data?.Error ||
         err.response?.data?.message ||

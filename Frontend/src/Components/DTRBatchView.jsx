@@ -24,7 +24,9 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
-      const response = await axios.get(`${ServerIP}/dtr/export/${batchId}`);
+      const response = await axios.get(
+        `${ServerIP}/auth/dtr/export/${batchId}`
+      );
       if (response.data.Status) {
         setEntries(response.data.Entries);
       } else {
