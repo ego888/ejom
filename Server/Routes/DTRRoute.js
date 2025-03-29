@@ -658,6 +658,8 @@ async function setupDTRTables() {
         overtime DECIMAL(10,2) DEFAULT 0,
         specialHours DECIMAL(10,2) DEFAULT 0,
         remarks VARCHAR(255),
+        processed INT DEFAULT 0,
+        deleteRecord INT DEFAULT 0,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (batchId) REFERENCES DTRBatches(id) ON DELETE CASCADE
       )
@@ -1392,5 +1394,66 @@ async function getExistingEmployeeNames(connection) {
     return new Map();
   }
 }
+
+// Add route to update entries
+router.post("/update-entries/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    const { entries } = req.body;
+
+    if (!entries || !Array.isArray(entries)) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Invalid entries data",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update each entry - add remarks to the update query
+    for (const entry of entries) {
+      await connection.query(
+        `
+        UPDATE DTREntries 
+        SET 
+          timeIn = ?,
+          timeOut = ?,
+          processed = ?,
+          deleteRecord = ?,
+          remarks = ?
+        WHERE id = ? AND batchId = ?
+      `,
+        [
+          entry.timeIn,
+          entry.timeOut,
+          entry.processed || 0,
+          entry.deleteRecord || 0,
+          entry.remarks || null,
+          entry.id,
+          batchId,
+        ]
+      );
+    }
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Successfully updated entries",
+      UpdatedCount: entries.length,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating entries:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to update entries: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
 
 export const DTRRouter = router;
