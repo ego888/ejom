@@ -1421,7 +1421,8 @@ router.post("/update-entries/:batchId", async (req, res) => {
           timeIn = ?,
           timeOut = ?,
           processed = ?,
-          deleteRecord = ?
+          deleteRecord = ?,
+          remarks = ?
         WHERE id = ? AND batchId = ?
       `,
         [
@@ -1429,6 +1430,7 @@ router.post("/update-entries/:batchId", async (req, res) => {
           entry.timeOut,
           entry.processed || 0,
           entry.deleteRecord || 0,
+          entry.remarks || null,
           entry.id,
           batchId,
         ]

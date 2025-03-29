@@ -6,20 +6,36 @@ import ModalAlert from "./UI/ModalAlert";
 
 const getDayColor = (day) => {
   switch (day?.toLowerCase()) {
+    // case "sun":
+    //   return "#ffebee"; // Light red for Sunday
+    // case "sat":
+    //   return "#e3f2fd"; // Light blue for Saturday
+    // case "mon":
+    //   return "#f1f8e9"; // Light green for Monday
+    // case "tue":
+    //   return "#fff3e0"; // Light orange for Tuesday
+    // case "wed":
+    //   return "#f3e5f5"; // Light purple for Wednesday
+    // case "thu":
+    //   return "#e8f5e9"; // Mint green for Thursday
+    // case "fri":
+    //   return "#fff8e1"; // Light yellow for Friday
+    // default:
+    //   return "transparent";
     case "sun":
       return "#ffebee"; // Light red for Sunday
     case "sat":
-      return "#e3f2fd"; // Light blue for Saturday
+      return "#e8f5e9"; // Light blue for Saturday
     case "mon":
-      return "#f1f8e9"; // Light green for Monday
+      return "#fff9c4"; // Light green for Monday
     case "tue":
-      return "#fff3e0"; // Light orange for Tuesday
+      return "#ede7f6"; // Light orange for Tuesday
     case "wed":
-      return "#f3e5f5"; // Light purple for Wednesday
+      return "#ffe0b2"; // Light purple for Wednesday
     case "thu":
-      return "#e8f5e9"; // Mint green for Thursday
+      return "#ffcdd2"; // Mint green for Thursday
     case "fri":
-      return "#fff8e1"; // Light yellow for Friday
+      return "#cfd8dc"; // Light yellow for Friday
     default:
       return "transparent";
   }
@@ -91,7 +107,9 @@ const DTRBatchView = ({ batch, onBack }) => {
           entry.empName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           entry.date.includes(searchTerm) ||
           (entry.state &&
-            entry.state.toLowerCase().includes(searchTerm.toLowerCase()));
+            entry.state.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (entry.remarks &&
+            entry.remarks.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const notDeleted = !hideDeleted || !entry.deleteRecord;
 
@@ -170,8 +188,8 @@ const DTRBatchView = ({ batch, onBack }) => {
                 ...current,
                 timeIn: hours < 12 ? current.time : null,
                 timeOut: hours >= 12 ? current.time : null,
-                processed: 1,
-                remarks: "PROC, " + (current.remarks || ""),
+                processed: 0,
+                remarks: "LACK, " + (current.remarks || ""),
                 deleteRecord: 0,
               },
             ],
@@ -229,8 +247,8 @@ const DTRBatchView = ({ batch, onBack }) => {
                   {
                     ...current,
                     timeIn: current.time,
-                    processed: 1,
-                    remarks: "PROC, " + (current.remarks || ""),
+                    processed: 0,
+                    remarks: "LACK, " + (current.remarks || ""),
                     deleteRecord: 0,
                   },
                 ],
@@ -272,8 +290,8 @@ const DTRBatchView = ({ batch, onBack }) => {
                 ...lastRecord,
                 timeIn: hours < 12 ? lastRecord.time : null,
                 timeOut: hours >= 12 ? lastRecord.time : null,
-                processed: 1,
-                remarks: "PROC, " + (lastRecord.remarks || ""),
+                processed: 0,
+                remarks: "LACK, " + (lastRecord.remarks || ""),
                 deleteRecord: 0,
               },
             ],
@@ -308,9 +326,8 @@ const DTRBatchView = ({ batch, onBack }) => {
                     ...entry,
                     timeIn: hours < 12 ? entry.time : null,
                     timeOut: hours >= 12 ? entry.time : null,
-                    processed: 1,
-                    remarks:
-                      hours < 12 ? "PROC, SINGLE-IN" : "PROC, SINGLE-OUT",
+                    processed: 0,
+                    remarks: "LACK, " + (entry.remarks || ""),
                     deleteRecord: 0,
                   },
                 ],
