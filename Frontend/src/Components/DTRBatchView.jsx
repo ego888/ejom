@@ -4,6 +4,7 @@ import { ServerIP } from "../config";
 import Button from "./UI/Button";
 import ModalAlert from "./UI/ModalAlert";
 import Modal from "react-bootstrap/Modal";
+import DTRTotalView from "./DTRTotalView";
 
 const getDayColor = (day) => {
   switch (day?.toLowerCase()) {
@@ -24,7 +25,7 @@ const getDayColor = (day) => {
     // default:
     //   return "transparent";
     case "sun":
-      return "#ffebee"; // Light red for Sunday
+      return "#ff66cc"; // Light red for Sunday
     case "sat":
       return "#ffe0e0"; // Light blue for Saturday
     case "mon":
@@ -76,6 +77,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [referenceHours, setReferenceHours] = useState("00");
   const [referenceMinutes, setReferenceMinutes] = useState("00");
   const [rightClickTarget, setRightClickTarget] = useState(null);
+  const [activeTab, setActiveTab] = useState("entries"); // 'entries' or 'totals'
 
   useEffect(() => {
     if (batch?.id) {
@@ -644,9 +646,33 @@ const DTRBatchView = ({ batch, onBack }) => {
         processed: 1,
       };
 
-      await axios.post(`${ServerIP}/auth/dtr/${endpoint}/${batch.id}`, payload);
-      await fetchBatchData(batch.id);
-      setShowFloatingTime(false);
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
+        payload
+      );
+
+      if (response.data.Status) {
+        // Update local state instead of fetching
+        setEntries((prevEntries) =>
+          prevEntries.map((prevEntry) => {
+            if (prevEntry.id === selectedEntry.id) {
+              return {
+                ...prevEntry,
+                [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
+                [timeType === "in" ? "editedIn" : "editedOut"]: 1,
+                processed: 1,
+                remarks:
+                  (prevEntry.remarks || "") +
+                  (timeType === "in" ? " | MANUAL IN" : " | MANUAL OUT"),
+              };
+            }
+            return prevEntry;
+          })
+        );
+        setShowFloatingTime(false);
+      } else {
+        setError(response.data.Error || "Failed to update time");
+      }
     } catch (error) {
       console.error("Error updating time:", error);
       setError("Failed to update time. Please try again.");
@@ -655,6 +681,7 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const handleAddDate = async (entry) => {
     try {
+      console.log("HANDLE ADD DATE:", entry);
       const response = await axios.post(
         `${ServerIP}/auth/dtr/add-entry/${batch.id}`,
         {
@@ -724,8 +751,27 @@ const DTRBatchView = ({ batch, onBack }) => {
         time: referenceTime,
       };
 
-      await axios.post(`${ServerIP}/auth/dtr/${endpoint}/${batch.id}`, payload);
-      await fetchBatchData(batch.id);
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
+        payload
+      );
+
+      if (response.data.Status) {
+        // Update the local state instead of fetching all data
+        setEntries((prevEntries) =>
+          prevEntries.map((prevEntry) => {
+            if (prevEntry.id === entry.id) {
+              return {
+                ...prevEntry,
+                [type === "in" ? "timeIn" : "timeOut"]: referenceTime,
+              };
+            }
+            return prevEntry;
+          })
+        );
+      } else {
+        setError(response.data.Error || `Failed to update ${type} time`);
+      }
     } catch (error) {
       console.error(`Error updating ${type} time:`, error);
       setError(`Failed to update ${type} time. Please try again.`);
@@ -734,18 +780,113 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
-  const renderButtons = () => (
-    <>
-      <Button variant="danger" onClick={handleDeleteRepeat} className="ms-2">
-        <i className="bi bi-trash"></i> Delete Repeat
-      </Button>
-      <Button variant="primary" onClick={handleAnalyze} className="ms-2">
-        <i className="bi bi-clock-history"></i> Analyze Time In/Out
-      </Button>
-      <Button variant="success" onClick={handleCalculateHours} className="ms-2">
-        <i className="bi bi-calculator"></i> Calculate Hours
-      </Button>
-    </>
+  const handleSundayHoliday = async () => {
+    try {
+      // Process entries one at a time
+      for (const entry of entries) {
+        // Skip if entry is deleted
+        if (entry.deleteRecord) continue;
+
+        // Only process if we have both timeIn and timeOut
+        if (entry.timeIn && entry.timeOut) {
+          let sundayHours = 0;
+          let sundayOT = 0;
+          let nightDifferential = 0;
+
+          // For Sunday entries, move regular hours to sundayHours and OT to sundayOT
+          if (entry.day?.toLowerCase() === "sun") {
+            sundayHours = Number(entry.hours) || 0;
+            sundayOT = Number(entry.overtime) || 0;
+            // Clear regular hours and OT for Sundays
+            entry.hours = 0;
+            entry.overtime = 0;
+          }
+
+          // Calculate night differential (10 PM - 6 AM)
+          const timeIn = new Date(`2000-01-01T${entry.timeIn}`);
+          const timeOut = new Date(`2000-01-01T${entry.timeOut}`);
+
+          // If timeOut is earlier than timeIn, assume it's next day
+          if (timeOut < timeIn) {
+            timeOut.setDate(timeOut.getDate() + 1);
+          }
+
+          const nightStart = new Date(`2000-01-01T22:00:00`);
+          const nightEnd = new Date(`2000-01-02T06:00:00`);
+          let nightHours = 0;
+
+          // Check if work period overlaps with night differential period
+          if (timeIn < nightEnd || timeOut > nightStart) {
+            const effectiveStart = timeIn > nightStart ? timeIn : nightStart;
+            const effectiveEnd = timeOut < nightEnd ? timeOut : nightEnd;
+
+            if (effectiveEnd > effectiveStart) {
+              nightHours = (effectiveEnd - effectiveStart) / (1000 * 60 * 60);
+            }
+
+            // If work spans midnight
+            if (timeOut > nightEnd && timeIn < nightStart) {
+              nightHours =
+                (nightEnd - new Date(`2000-01-02T00:00:00`)) /
+                  (1000 * 60 * 60) +
+                (timeOut - nightStart) / (1000 * 60 * 60);
+            }
+          }
+
+          nightDifferential = nightHours;
+
+          // Update the database one entry at a time
+          const response = await axios.post(
+            `${ServerIP}/auth/dtr/update-special-hours/${batch.id}`,
+            {
+              entry: {
+                id: entry.id,
+                sundayHours:
+                  sundayHours > 0 ? Number(sundayHours.toFixed(2)) : 0,
+                sundayOT: sundayOT > 0 ? Number(sundayOT.toFixed(2)) : 0,
+                nightDifferential:
+                  nightDifferential > 0
+                    ? Number(nightDifferential.toFixed(2))
+                    : 0,
+                hours: entry.hours,
+                overtime: entry.overtime,
+              },
+            }
+          );
+
+          if (!response.data.Status) {
+            throw new Error(response.data.Error || "Failed to update entry");
+          }
+        }
+      }
+
+      // After all entries are processed, refresh the data
+      await fetchBatchData(batch.id);
+    } catch (error) {
+      console.error("Error processing Sunday/Holiday hours:", error);
+      setError("Failed to process Sunday/Holiday hours. Please try again.");
+    }
+  };
+
+  const renderTabs = () => (
+    <ul className="nav nav-tabs mb-3">
+      <li className="nav-item">
+        <button
+          className={`nav-link ${activeTab === "entries" ? "active" : ""}`}
+          onClick={() => setActiveTab("entries")}
+        >
+          Entries
+        </button>
+      </li>
+      <li className="nav-item">
+        <button
+          className={`nav-link ${activeTab === "totals" ? "active" : ""}`}
+          onClick={() => setActiveTab("totals")}
+        >
+          Totals
+        </button>
+      </li>
+    </ul>
   );
 
   if (!batch) {
@@ -777,268 +918,314 @@ const DTRBatchView = ({ batch, onBack }) => {
           </div>
         </div>
         <div>
-          {renderButtons()}
           <Button variant="secondary" onClick={onBack} className="ms-2">
             <i className="bi bi-arrow-left"></i> Back to Batches
           </Button>
         </div>
       </div>
 
-      <div className="mb-3">
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Search by ID, name, date or status..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      {renderTabs()}
 
-      <div className="mb-3 d-flex align-items-center gap-5">
-        <div className="form-check">
-          <input
-            type="checkbox"
-            className="form-check-input"
-            id="hideDeleted"
-            checked={hideDeleted}
-            onChange={(e) => setHideDeleted(e.target.checked)}
-          />
-          <label className="form-check-label" htmlFor="hideDeleted">
-            Hide deleted records
-          </label>
-        </div>
-
-        <div className="d-flex align-items-center gap-2">
-          <label className="form-label mb-0 ml-4">Reference Time:</label>
-          <div className="d-flex gap-1 align-items-center">
+      {activeTab === "entries" ? (
+        <>
+          <div className="mb-3">
             <input
-              type="number"
-              className="form-control form-control-sm"
-              style={{ width: "28px" }}
-              value={referenceHours}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (!isNaN(val) && val >= 0 && val <= 23) {
-                  setReferenceHours(val.toString().padStart(2, "0"));
-                }
-              }}
-              min="0"
-              max="23"
-              placeholder="HH"
-            />
-            <span>:</span>
-            <input
-              type="number"
-              className="form-control form-control-sm"
-              style={{ width: "28px" }}
-              value={referenceMinutes}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (!isNaN(val) && val >= 0 && val <= 59) {
-                  setReferenceMinutes(val.toString().padStart(2, "0"));
-                }
-              }}
-              min="0"
-              max="59"
-              placeholder="MM"
+              type="text"
+              className="form-control"
+              placeholder="Search by ID, name, date or status..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-        </div>
-      </div>
 
-      {sortedEntries.length === 0 ? (
-        <div className="alert alert-info mt-3">
-          {searchTerm
-            ? "No matching records found."
-            : "No records found in this batch."}
-        </div>
-      ) : (
-        <div className="table-responsive mt-3">
-          <table className="table table-bordered table-hover">
-            <thead className="table-light">
-              <tr>
-                <th
-                  onClick={() => handleSort("empId")}
-                  style={{ cursor: "pointer" }}
-                >
-                  ID {getSortIndicator("empId")}
-                </th>
-                <th
-                  onClick={() => handleSort("empName")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Name {getSortIndicator("empName")}
-                </th>
-                <th
-                  onClick={() => handleSort("date")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Date {getSortIndicator("date")}
-                </th>
-                <th
-                  onClick={() => handleSort("day")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Day {getSortIndicator("day")}
-                </th>
-                <th
-                  onClick={() => handleSort("time")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Time {getSortIndicator("time")}
-                </th>
-                <th
-                  onClick={() => handleSort("timeIn")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Time In {getSortIndicator("timeIn")}
-                </th>
-                <th
-                  onClick={() => handleSort("timeOut")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Time Out {getSortIndicator("timeOut")}
-                </th>
-                <th
-                  onClick={() => handleSort("state")}
-                  style={{ cursor: "pointer" }}
-                >
-                  State {getSortIndicator("state")}
-                </th>
-                <th
-                  onClick={() => handleSort("hours")}
-                  style={{ cursor: "pointer", textAlign: "center" }}
-                >
-                  Hours {getSortIndicator("hours")}
-                </th>
-                <th
-                  onClick={() => handleSort("overtime")}
-                  style={{ cursor: "pointer", textAlign: "center" }}
-                >
-                  OT {getSortIndicator("overtime")}
-                </th>
-                <th style={{ textAlign: "center" }}>Raw State</th>
-                <th style={{ textAlign: "center" }}>Remarks</th>
-                <th style={{ textAlign: "center" }}>Processed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedEntries.map((entry, index) => {
-                const bgColor = getDayColor(entry.day);
-                const rowStyle = {
-                  backgroundColor: bgColor,
-                  textDecoration: entry.deleteRecord ? "line-through" : "none",
-                };
+          <div className="mb-3 d-flex align-items-center gap-5">
+            <div className="form-check">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="hideDeleted"
+                checked={hideDeleted}
+                onChange={(e) => setHideDeleted(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="hideDeleted">
+                Hide deleted records
+              </label>
+            </div>
 
-                return (
-                  <tr key={entry.id || index}>
-                    <td style={rowStyle}>{entry.empId}</td>
-                    <td style={rowStyle}>{entry.empName}</td>
-                    <td
-                      style={{
-                        ...rowStyle,
-                        cursor: "pointer",
-                        color: "blue",
-                        position: "relative",
-                      }}
+            <div className="d-flex align-items-center gap-2">
+              <label className="form-label mb-0 ml-4">Reference Time:</label>
+              <div className="d-flex gap-1 align-items-center">
+                <input
+                  type="number"
+                  className="form-control form-control-sm"
+                  style={{ width: "28px" }}
+                  value={referenceHours}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 0 && val <= 23) {
+                      setReferenceHours(val.toString().padStart(2, "0"));
+                    }
+                  }}
+                  min="0"
+                  max="23"
+                  placeholder="HH"
+                />
+                <span>:</span>
+                <input
+                  type="number"
+                  className="form-control form-control-sm"
+                  style={{ width: "28px" }}
+                  value={referenceMinutes}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 0 && val <= 59) {
+                      setReferenceMinutes(val.toString().padStart(2, "0"));
+                    }
+                  }}
+                  min="0"
+                  max="59"
+                  placeholder="MM"
+                />
+              </div>
+            </div>
+          </div>
+
+          {sortedEntries.length === 0 ? (
+            <div className="alert alert-info mt-3">
+              {searchTerm
+                ? "No matching records found."
+                : "No records found in this batch."}
+            </div>
+          ) : (
+            <div className="table-responsive mt-3">
+              <table className="table table-bordered table-hover">
+                <thead className="table-light">
+                  <tr>
+                    <th
+                      onClick={() => handleSort("empId")}
+                      style={{ cursor: "pointer" }}
                     >
-                      <div className="d-flex align-items-center">
-                        <span
-                          onClick={() => handleDateClick(entry)}
-                          title="Click to add next day"
-                        >
-                          {formatDate(entry.date)}
-                        </span>
-                        {entry.editedIn === 1 && entry.editedOut === 1 && (
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            className="ms-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteEntry(entry);
-                            }}
-                            title="Delete this record"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                    <td style={rowStyle}>{entry.day}</td>
-                    <td style={rowStyle}>{formatTime(entry.time)}</td>
-                    <td
-                      style={{
-                        ...rowStyle,
-                        cursor:
-                          (!entry.timeIn || entry.editedIn) &&
-                          !entry.deleteRecord
-                            ? "pointer"
-                            : "default",
-                        color:
-                          (!entry.timeIn || entry.editedIn) &&
-                          !entry.deleteRecord
-                            ? "blue"
-                            : "inherit",
-                        fontWeight: entry.editedIn ? "bold" : "normal",
-                        backgroundColor:
-                          rightClickTarget === `${entry.id}-in`
-                            ? "#fff3cd"
-                            : undefined,
-                        transition: "background-color 0.3s",
-                      }}
-                      onClick={(e) => handleTimeClick(entry, "in", e)}
-                      onContextMenu={(e) =>
-                        handleTimeRightClick(e, entry, "in")
-                      }
-                      title="Right-click to set reference time"
+                      ID {getSortIndicator("empId")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("empName")}
+                      style={{ cursor: "pointer" }}
                     >
-                      {formatTime(entry.timeIn)}
-                    </td>
-                    <td
-                      style={{
-                        ...rowStyle,
-                        cursor:
-                          (!entry.timeOut || entry.editedOut) &&
-                          !entry.deleteRecord
-                            ? "pointer"
-                            : "default",
-                        color:
-                          (!entry.timeOut || entry.editedOut) &&
-                          !entry.deleteRecord
-                            ? "blue"
-                            : "inherit",
-                        fontWeight: entry.editedOut ? "bold" : "normal",
-                        backgroundColor:
-                          rightClickTarget === `${entry.id}-out`
-                            ? "#fff3cd"
-                            : undefined,
-                        transition: "background-color 0.3s",
-                      }}
-                      onClick={(e) => handleTimeClick(entry, "out", e)}
-                      onContextMenu={(e) =>
-                        handleTimeRightClick(e, entry, "out")
-                      }
-                      title="Right-click to set reference time"
+                      Name {getSortIndicator("empName")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("date")}
+                      style={{ cursor: "pointer" }}
                     >
-                      {formatTime(entry.timeOut)}
-                    </td>
-                    <td style={rowStyle}>{entry.state || "-"}</td>
-                    <td style={rowStyle}>
-                      {Number(entry.hours || 0).toFixed(2)}
-                    </td>
-                    <td style={rowStyle}>
-                      {Number(entry.overtime || 0).toFixed(2)}
-                    </td>
-                    <td style={rowStyle}>{entry.rawState || ""}</td>
-                    <td style={rowStyle}>{entry.remarks || ""}</td>
-                    <td style={rowStyle}>{entry.processed || ""}</td>
+                      Date {getSortIndicator("date")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("day")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Day {getSortIndicator("day")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("time")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Time {getSortIndicator("time")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("timeIn")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Time In {getSortIndicator("timeIn")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("timeOut")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Time Out {getSortIndicator("timeOut")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("state")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      State {getSortIndicator("state")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("hours")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Hours {getSortIndicator("hours")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("overtime")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      OT {getSortIndicator("overtime")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("sundayHours")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Sun Hrs {getSortIndicator("sundayHours")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("sundayOT")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Sun OT {getSortIndicator("sundayOT")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("nightDifferential")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Night Diff {getSortIndicator("nightDifferential")}
+                    </th>
+                    <th style={{ textAlign: "center" }}>Raw State</th>
+                    <th style={{ textAlign: "center" }}>Remarks</th>
+                    <th style={{ textAlign: "center" }}>Processed</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {sortedEntries.map((entry, index) => {
+                    const bgColor = getDayColor(entry.day);
+                    const rowStyle = {
+                      backgroundColor: bgColor,
+                      textDecoration: entry.deleteRecord
+                        ? "line-through"
+                        : "none",
+                    };
+
+                    return (
+                      <tr key={entry.id || index}>
+                        <td style={rowStyle}>{entry.empId}</td>
+                        <td style={rowStyle}>{entry.empName}</td>
+                        <td
+                          style={{
+                            ...rowStyle,
+                            cursor: "pointer",
+                            color: "blue",
+                            position: "relative",
+                          }}
+                        >
+                          <div className="d-flex align-items-center">
+                            <span
+                              onClick={() => handleDateClick(entry)}
+                              title="Click to add next day"
+                            >
+                              {formatDate(entry.date)}
+                            </span>
+                            {entry.editedIn === 1 && entry.editedOut === 1 && (
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                className="ms-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteEntry(entry);
+                                }}
+                                title="Delete this record"
+                              >
+                                <i className="bi bi-trash"></i>
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                        <td style={rowStyle}>{entry.day}</td>
+                        <td style={rowStyle}>{formatTime(entry.time)}</td>
+                        <td
+                          style={{
+                            ...rowStyle,
+                            cursor:
+                              (!entry.timeIn || entry.editedIn) &&
+                              !entry.deleteRecord
+                                ? "pointer"
+                                : "default",
+                            color:
+                              (!entry.timeIn || entry.editedIn) &&
+                              !entry.deleteRecord
+                                ? "blue"
+                                : "inherit",
+                            fontWeight: entry.editedIn ? "bold" : "normal",
+                            backgroundColor:
+                              rightClickTarget === `${entry.id}-in`
+                                ? "#fff3cd"
+                                : undefined,
+                            transition: "background-color 0.3s",
+                          }}
+                          onClick={(e) => handleTimeClick(entry, "in", e)}
+                          onContextMenu={(e) =>
+                            handleTimeRightClick(e, entry, "in")
+                          }
+                          title="Right-click to set reference time"
+                        >
+                          {formatTime(entry.timeIn)}
+                        </td>
+                        <td
+                          style={{
+                            ...rowStyle,
+                            cursor:
+                              (!entry.timeOut || entry.editedOut) &&
+                              !entry.deleteRecord
+                                ? "pointer"
+                                : "default",
+                            color:
+                              (!entry.timeOut || entry.editedOut) &&
+                              !entry.deleteRecord
+                                ? "blue"
+                                : "inherit",
+                            fontWeight: entry.editedOut ? "bold" : "normal",
+                            backgroundColor:
+                              rightClickTarget === `${entry.id}-out`
+                                ? "#fff3cd"
+                                : undefined,
+                            transition: "background-color 0.3s",
+                          }}
+                          onClick={(e) => handleTimeClick(entry, "out", e)}
+                          onContextMenu={(e) =>
+                            handleTimeRightClick(e, entry, "out")
+                          }
+                          title="Right-click to set reference time"
+                        >
+                          {formatTime(entry.timeOut)}
+                        </td>
+                        <td style={rowStyle}>{entry.state || "-"}</td>
+                        <td style={rowStyle}>
+                          {Number(entry.hours || 0) > 0
+                            ? Number(entry.hours).toFixed(2)
+                            : ""}
+                        </td>
+                        <td style={rowStyle}>
+                          {Number(entry.overtime || 0) > 0
+                            ? Number(entry.overtime).toFixed(2)
+                            : ""}
+                        </td>
+                        <td style={rowStyle}>
+                          {Number(entry.sundayHours || 0) > 0
+                            ? Number(entry.sundayHours).toFixed(2)
+                            : ""}
+                        </td>
+                        <td style={rowStyle}>
+                          {Number(entry.sundayOT || 0) > 0
+                            ? Number(entry.sundayOT).toFixed(2)
+                            : ""}
+                        </td>
+                        <td style={rowStyle}>
+                          {Number(entry.nightDifferential || 0) > 0
+                            ? Number(entry.nightDifferential).toFixed(2)
+                            : ""}
+                        </td>
+                        <td style={rowStyle}>{entry.rawState || ""}</td>
+                        <td style={rowStyle}>{entry.remarks || ""}</td>
+                        <td style={rowStyle}>{entry.processed || ""}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : (
+        <DTRTotalView entries={sortedEntries} batch={batch} />
       )}
 
       <ModalAlert
@@ -1161,7 +1348,7 @@ const FloatingTimeInput = ({
     }
   }, [isDragging]);
 
-  const handleSubmit = (e) => {
+  const handleTimeSubmit = (e) => {
     e.preventDefault();
     const formattedTime = `${hours.padStart(2, "0")}:${minutes.padStart(
       2,
@@ -1169,6 +1356,7 @@ const FloatingTimeInput = ({
     )}:00`;
     onSave(formattedTime);
   };
+  console.log("HANDLE TIME SUBMIT:", entry);
 
   if (!show) return null;
 
@@ -1208,7 +1396,7 @@ const FloatingTimeInput = ({
       </div>
 
       <div style={{ padding: "15px" }}>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleTimeSubmit}>
           <div className="mb-2">
             <small>
               {entry?.empName} - {formatDate(entry?.date)}
@@ -1308,7 +1496,7 @@ const AddDateModal = ({
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleAddDateSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
@@ -1353,7 +1541,7 @@ const AddDateModal = ({
         <Modal.Title>Add Missing Date</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleAddDateSubmit}>
           <div className="mb-3">
             <label className="form-label">Employee</label>
             <select

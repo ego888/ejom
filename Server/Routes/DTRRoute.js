@@ -1477,7 +1477,11 @@ router.post("/update-hours/:batchId", async (req, res) => {
         SET 
           hours = ?,
           overtime = ?,
-          remarks = CONCAT('HOURS, ', remarks)
+          remarks = IF(
+            INSTR(remarks, 'HOURS') = 0,
+            CONCAT('HOURS, ', remarks),
+            remarks
+          )
         WHERE id = ? AND batchId = ? AND processed = 1 AND deleteRecord = 0
       `,
         [entry.hours, entry.overtime, entry.id, batchId]
@@ -1811,6 +1815,60 @@ router.use((err, req, res, next) => {
     Code: "SERVER_ERROR",
     details: err.message,
   });
+});
+
+// Add this new route to update special hours
+router.post("/update-special-hours/:batchId", async (req, res) => {
+  try {
+    const { entry } = req.body;
+    const { batchId } = req.params;
+
+    if (!entry || !entry.id) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Invalid entry data",
+      });
+    }
+
+    const sql = `
+      UPDATE DTREntries 
+      SET 
+        sundayHours = ?,
+        sundayOT = ?,
+        nightDifferential = ?,
+        hours = ?,
+        overtime = ?
+      WHERE id = ? AND batchId = ?
+    `;
+
+    const [result] = await pool.query(sql, [
+      entry.sundayHours || 0,
+      entry.sundayOT || 0,
+      entry.nightDifferential || 0,
+      entry.hours || 0,
+      entry.overtime || 0,
+      entry.id,
+      batchId,
+    ]);
+
+    if (result.affectedRows > 0) {
+      res.json({
+        Status: true,
+        Message: "Special hours updated successfully for entry " + entry.id,
+      });
+    } else {
+      res.json({
+        Status: false,
+        Error: "Failed to update entry " + entry.id,
+      });
+    }
+  } catch (error) {
+    console.error("Error updating special hours:", error);
+    res.status(500).json({
+      Status: false,
+      Error: "Server error while updating special hours: " + error.message,
+    });
+  }
 });
 
 export const DTRRouter = router;
