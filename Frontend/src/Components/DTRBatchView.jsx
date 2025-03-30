@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
@@ -79,6 +79,15 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [rightClickTarget, setRightClickTarget] = useState(null);
   const [activeTab, setActiveTab] = useState("entries"); // 'entries' or 'totals'
   const [showEditPeriodModal, setShowEditPeriodModal] = useState(false);
+  const [showDateContextMenu, setShowDateContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({
+    x: 0,
+    y: 0,
+  });
+  const [contextMenuEntry, setContextMenuEntry] = useState(null);
+  const [showChangeNameModal, setShowChangeNameModal] = useState(false);
+  const [newName, setNewName] = useState("");
+  const contextMenuRef = useRef(null);
 
   useEffect(() => {
     if (batch?.id) {
@@ -620,15 +629,27 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
 
     let defaultTimeValue = "";
-    if (type === "in" && entry.timeOut) {
-      const [hours, minutes] = entry.timeOut.split(":");
-      let newHours = parseInt(hours) - 4;
-      if (newHours < 0) newHours += 24;
-      defaultTimeValue = `${String(newHours).padStart(2, "0")}:${minutes}`;
-    } else if (type === "out" && entry.timeIn) {
-      const [hours, minutes] = entry.timeIn.split(":");
-      let newHours = (parseInt(hours) + 4) % 24;
-      defaultTimeValue = `${String(newHours).padStart(2, "0")}:${minutes}`;
+
+    // If there's an existing time for this type, use it
+    if (type === "in" && entry.timeIn) {
+      defaultTimeValue = entry.timeIn.substring(0, 5); // Remove seconds
+    } else if (type === "out" && entry.timeOut) {
+      defaultTimeValue = entry.timeOut.substring(0, 5); // Remove seconds
+    } else {
+      // Calculate default time based on the other time field
+      if (type === "in" && entry.timeOut) {
+        const [hours, minutes] = entry.timeOut.split(":");
+        let newHours = parseInt(hours) - 4;
+        if (newHours < 0) newHours += 24;
+        defaultTimeValue = `${String(newHours).padStart(2, "0")}:${minutes}`;
+      } else if (type === "out" && entry.timeIn) {
+        const [hours, minutes] = entry.timeIn.split(":");
+        let newHours = (parseInt(hours) + 4) % 24;
+        defaultTimeValue = `${String(newHours).padStart(2, "0")}:${minutes}`;
+      } else {
+        // If no existing times, use the raw time from the entry
+        defaultTimeValue = entry.time.substring(0, 5); // Remove seconds
+      }
     }
 
     setSelectedEntry(entry);
@@ -639,44 +660,117 @@ const DTRBatchView = ({ batch, onBack }) => {
   };
 
   const handleTimeUpdate = async (newTime) => {
+    console.log("HANDLE TIME SUBMIT:", newTime);
+    console.log("SELECTED ENTRY:", selectedEntry);
+    if (!newTime || !selectedEntry) return;
+
     try {
-      const endpoint = timeType === "in" ? "update-time-in" : "update-time-out";
-      const payload = {
-        id: selectedEntry.id,
-        [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
-        processed: 1,
-      };
+      let needsSwap = false;
 
-      const response = await axios.post(
-        `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
-        payload
-      );
+      // Check if we need to swap times
+      if (selectedEntry.timeIn && selectedEntry.timeOut) {
+        const timeInMinutes = selectedEntry.timeIn
+          .split(":")
+          .reduce((acc, time) => 60 * acc + +time, 0);
+        const timeOutMinutes = selectedEntry.timeOut
+          .split(":")
+          .reduce((acc, time) => 60 * acc + +time, 0);
+        const newTimeMinutes = newTime
+          .split(":")
+          .reduce((acc, time) => 60 * acc + +time, 0);
 
-      if (response.data.Status) {
-        // Update local state instead of fetching
-        setEntries((prevEntries) =>
-          prevEntries.map((prevEntry) => {
-            if (prevEntry.id === selectedEntry.id) {
-              return {
-                ...prevEntry,
-                [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
-                [timeType === "in" ? "editedIn" : "editedOut"]: 1,
-                processed: 1,
-                remarks:
-                  (prevEntry.remarks || "") +
-                  (timeType === "in" ? " | MANUAL IN" : " | MANUAL OUT"),
-              };
-            }
-            return prevEntry;
-          })
+        // If the new time would cause times to be out of order, we need to swap
+        needsSwap =
+          (timeType === "in" && newTimeMinutes > timeOutMinutes) ||
+          (timeType === "out" && newTimeMinutes < timeInMinutes);
+      }
+
+      if (needsSwap) {
+        // Handle swap case
+        const newEditedIn = selectedEntry.editedOut;
+        const newEditedOut = selectedEntry.editedIn;
+        const [newTimeIn, newTimeOut] =
+          selectedEntry.editedIn === 0
+            ? [newTime, selectedEntry.timeIn]
+            : [selectedEntry.timeOut, newTime];
+
+        // const newEditedIn = timeType === "out" ? 1 : 0;
+        // const newEditedOut = timeType === "in" ? 1 : 0;
+
+        console.log("NEW TIME IN:", newTimeIn);
+        console.log("NEW TIME OUT:", newTimeOut);
+        console.log("NEW EDITED IN:", newEditedIn);
+        console.log("NEW EDITED OUT:", newEditedOut);
+        const response = await axios.post(
+          `${ServerIP}/auth/dtr/update-time-in-out/${batch.id}`,
+          {
+            id: selectedEntry.id,
+            timeIn: newTimeIn,
+            timeOut: newTimeOut,
+            editedIn: newEditedIn,
+            editedOut: newEditedOut,
+          }
         );
-        setShowFloatingTime(false);
+
+        if (response.data.Status) {
+          setEntries((prevEntries) =>
+            prevEntries.map((prevEntry) => {
+              if (prevEntry.id === selectedEntry.id) {
+                return {
+                  ...prevEntry,
+                  timeIn: newTimeIn,
+                  timeOut: newTimeOut,
+                  editedIn: newEditedIn,
+                  editedOut: newEditedOut,
+                  processed: 1,
+                  remarks: (prevEntry.remarks || "") + " | TIMES SWAPPED",
+                };
+              }
+              return prevEntry;
+            })
+          );
+        }
       } else {
-        setError(response.data.Error || "Failed to update time");
+        // Handle normal update case
+        const endpoint =
+          timeType === "in" ? "update-time-in" : "update-time-out";
+        const payload = {
+          id: selectedEntry.id,
+          [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
+          processed: 1,
+        };
+
+        const response = await axios.post(
+          `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
+          payload
+        );
+
+        if (response.data.Status) {
+          setEntries((prevEntries) =>
+            prevEntries.map((prevEntry) => {
+              if (prevEntry.id === selectedEntry.id) {
+                return {
+                  ...prevEntry,
+                  [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
+                  [timeType === "in" ? "editedIn" : "editedOut"]: 1,
+                  processed: 1,
+                  remarks:
+                    (prevEntry.remarks || "") +
+                    (timeType === "in" ? " | MANUAL IN" : " | MANUAL OUT"),
+                };
+              }
+              return prevEntry;
+            })
+          );
+        }
       }
     } catch (error) {
       console.error("Error updating time:", error);
-      setError("Failed to update time. Please try again.");
+      alert("Failed to update time. Please try again.");
+    } finally {
+      setShowFloatingTime(false);
+      setSelectedEntry(null);
+      setTimeType(null);
     }
   };
 
@@ -701,40 +795,86 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
-  const handleDateClick = (entry) => {
-    // Create next day's date
-    const nextDate = new Date(entry.date);
-    nextDate.setDate(nextDate.getDate() + 1);
-
-    // Format the date to YYYY-MM-DD
-    const formattedDate = nextDate.toISOString().split("T")[0];
-
-    // Set the modal data
-    setEmpId(entry.empId);
-    setEmpName(entry.empName);
-    setDate(formattedDate);
-    setTimeIn("08:00");
-    setTimeOut("17:00");
-    setShowAddDateModal(true);
+  const handleDateClick = (entry, event) => {
+    event.preventDefault();
+    setContextMenuEntry(entry);
+    setContextMenuPosition({ x: event.clientX, y: event.clientY });
+    setShowDateContextMenu(true);
   };
 
-  const handleDeleteEntry = async (entry) => {
+  const handleDateContextMenuAction = async (action) => {
+    if (!contextMenuEntry) return;
+
     try {
-      if (!window.confirm("Are you sure you want to delete this record?")) {
-        return;
+      if (action === "add") {
+        setEmpId(contextMenuEntry.empId);
+        setEmpName(contextMenuEntry.empName);
+        setDate(contextMenuEntry.date);
+        setTimeIn("08:00");
+        setTimeOut("17:00");
+        setShowAddDateModal(true);
+      } else if (action === "delete") {
+        await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
+          entries: [
+            {
+              ...contextMenuEntry,
+              processed: 0,
+              remarks: "DELETED " + (contextMenuEntry.remarks || ""),
+              deleteRecord: 1,
+            },
+          ],
+        });
+        await fetchBatchData(batch.id);
+      } else if (action === "changeName") {
+        setNewName(contextMenuEntry.empName);
+        setShowChangeNameModal(true);
       }
-
-      // Use the new delete-entry endpoint
-      await axios.delete(
-        `${ServerIP}/auth/dtr/delete-entry/${batch.id}/${entry.id}`
-      );
-
-      await fetchBatchData(batch.id);
     } catch (error) {
-      console.error("Error deleting entry:", error);
-      setError("Failed to delete entry. Please try again.");
+      console.error("Error handling date context menu action:", error);
+      setError("Failed to process action. Please try again.");
+    } finally {
+      setShowDateContextMenu(false);
     }
   };
+
+  const handleChangeName = async () => {
+    if (!newName.trim() || !contextMenuEntry) return;
+
+    try {
+      // Update all entries with the same empId
+      const entriesToUpdate = entries
+        .filter((entry) => entry.empId === contextMenuEntry.empId)
+        .map((entry) => ({
+          ...entry,
+          empName: newName,
+        }));
+
+      if (entriesToUpdate.length > 0) {
+        await axios.post(`${ServerIP}/auth/dtr/change-name/${batch.id}`, {
+          entries: entriesToUpdate,
+        });
+        await fetchBatchData(batch.id);
+      }
+      setShowChangeNameModal(false);
+    } catch (error) {
+      console.error("Error changing name:", error);
+      setError("Failed to change name. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target)
+      ) {
+        setShowDateContextMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleTimeRightClick = async (e, entry, type) => {
     e.preventDefault();
@@ -1035,6 +1175,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                       setReferenceHours(val.toString().padStart(2, "0"));
                     }
                   }}
+                  onFocus={(e) => e.target.select()}
                   min="0"
                   max="23"
                   placeholder="HH"
@@ -1051,6 +1192,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                       setReferenceMinutes(val.toString().padStart(2, "0"));
                     }
                   }}
+                  onFocus={(e) => e.target.select()}
                   min="0"
                   max="59"
                   placeholder="MM"
@@ -1174,29 +1316,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                             color: "blue",
                             position: "relative",
                           }}
+                          onClick={(e) => handleDateClick(entry, e)}
+                          title="Click to show options"
                         >
-                          <div className="d-flex align-items-center">
-                            <span
-                              onClick={() => handleDateClick(entry)}
-                              title="Click to add next day"
-                            >
-                              {formatDate(entry.date)}
-                            </span>
-                            {entry.editedIn === 1 && entry.editedOut === 1 && (
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                className="ms-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteEntry(entry);
-                                }}
-                                title="Delete this record"
-                              >
-                                <i className="bi bi-trash"></i>
-                              </Button>
-                            )}
-                          </div>
+                          {formatDate(entry.date)}
                         </td>
                         <td style={rowStyle}>{entry.day}</td>
                         <td style={rowStyle}>{formatTime(entry.time)}</td>
@@ -1363,6 +1486,106 @@ const DTRBatchView = ({ batch, onBack }) => {
         onSave={handleUpdatePeriod}
         batch={batch}
       />
+
+      {showDateContextMenu && (
+        <div
+          ref={contextMenuRef}
+          style={{
+            position: "fixed",
+            top: contextMenuPosition.y,
+            left: contextMenuPosition.x,
+            backgroundColor: "white",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+            zIndex: 1000,
+            padding: "4px 0",
+          }}
+        >
+          <div
+            className="px-3 py-2"
+            style={{ cursor: "pointer" }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = "#f8f9fa")}
+            onMouseLeave={(e) =>
+              (e.target.style.backgroundColor = "transparent")
+            }
+            onClick={() => handleDateContextMenuAction("add")}
+          >
+            Add Next Day
+          </div>
+          <div
+            className="px-3 py-2"
+            style={{ cursor: "pointer" }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = "#f8f9fa")}
+            onMouseLeave={(e) =>
+              (e.target.style.backgroundColor = "transparent")
+            }
+            onClick={() => handleDateContextMenuAction("changeName")}
+          >
+            Change Name
+          </div>
+          <div
+            className="px-3 py-2"
+            style={{ cursor: "pointer" }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = "#f8f9fa")}
+            onMouseLeave={(e) =>
+              (e.target.style.backgroundColor = "transparent")
+            }
+            onClick={() => handleDateContextMenuAction("delete")}
+          >
+            Delete Record
+          </div>
+        </div>
+      )}
+
+      <Modal
+        show={showChangeNameModal}
+        onHide={() => setShowChangeNameModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Change Employee Name</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleChangeName();
+            }}
+          >
+            <div className="mb-3">
+              <label className="form-label">Current Name</label>
+              <input
+                type="text"
+                className="form-control"
+                value={contextMenuEntry?.empName || ""}
+                disabled
+              />
+            </div>
+            <div className="mb-3">
+              <label className="form-label">New Name</label>
+              <input
+                type="text"
+                className="form-control"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="d-flex justify-content-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setShowChangeNameModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };
@@ -1382,6 +1605,7 @@ const FloatingTimeInput = ({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
+  const hourInputRef = useRef(null); // Add ref for the hour input field
 
   useEffect(() => {
     if (defaultTime) {
@@ -1390,6 +1614,15 @@ const FloatingTimeInput = ({
       setMinutes(m);
     }
   }, [defaultTime]);
+
+  // Focus on the hour input when the popup appears
+  useEffect(() => {
+    if (show && hourInputRef.current) {
+      setTimeout(() => {
+        hourInputRef.current.focus();
+      }, 50); // Small delay to ensure DOM is ready
+    }
+  }, [show]);
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
@@ -1424,7 +1657,7 @@ const FloatingTimeInput = ({
     }
   }, [isDragging]);
 
-  const handleTimeSubmit = (e) => {
+  const handleTimeSubmit = async (e) => {
     e.preventDefault();
     const formattedTime = `${hours.padStart(2, "0")}:${minutes.padStart(
       2,
@@ -1432,7 +1665,7 @@ const FloatingTimeInput = ({
     )}:00`;
     onSave(formattedTime);
   };
-  console.log("HANDLE TIME SUBMIT:", entry);
+  console.log("HANDLE OPEN TIME WINDOW:", entry);
 
   if (!show) return null;
 
@@ -1482,6 +1715,7 @@ const FloatingTimeInput = ({
             <div>
               <label className="form-label">Hours</label>
               <input
+                ref={hourInputRef} // Add ref to the hour input
                 type="number"
                 className="form-control"
                 style={{ width: "80px" }}
@@ -1492,6 +1726,7 @@ const FloatingTimeInput = ({
                     setHours(val.toString());
                   }
                 }}
+                onFocus={(e) => e.target.select()}
                 min="0"
                 max="23"
                 required
@@ -1511,6 +1746,7 @@ const FloatingTimeInput = ({
                     setMinutes(val.toString());
                   }
                 }}
+                onFocus={(e) => e.target.select()}
                 min="0"
                 max="59"
                 required
@@ -1518,11 +1754,11 @@ const FloatingTimeInput = ({
             </div>
           </div>
           <div className="d-flex justify-content-end gap-2">
-            <Button variant="secondary" type="button" onClick={onHide}>
-              Cancel
-            </Button>
             <Button variant="primary" type="submit">
               Save
+            </Button>
+            <Button variant="secondary" type="button" onClick={onHide}>
+              Cancel
             </Button>
           </div>
         </form>
@@ -1549,6 +1785,7 @@ const AddDateModal = ({
   const [localDate, setLocalDate] = useState(date);
   const [localTimeIn, setLocalTimeIn] = useState(timeIn);
   const [localTimeOut, setLocalTimeOut] = useState(timeOut);
+  const timeInRef = useRef(null);
 
   useEffect(() => {
     if (show) {
@@ -1558,6 +1795,13 @@ const AddDateModal = ({
       setLocalTimeIn(timeIn);
       setLocalTimeOut(timeOut);
       fetchEmployees();
+
+      // Focus on the time in field after the modal is shown
+      setTimeout(() => {
+        if (timeInRef.current) {
+          timeInRef.current.focus();
+        }
+      }, 300); // Slightly longer delay for modal animation
     }
   }, [show, empId, empName, date, timeIn, timeOut]);
 
@@ -1649,10 +1893,12 @@ const AddDateModal = ({
           <div className="mb-3">
             <label className="form-label">Time In (HH:MM)</label>
             <input
+              ref={timeInRef}
               type="time"
               className="form-control"
               value={localTimeIn}
               onChange={(e) => setLocalTimeIn(e.target.value)}
+              onFocus={(e) => e.target.select()}
               required
             />
           </div>
@@ -1663,15 +1909,16 @@ const AddDateModal = ({
               className="form-control"
               value={localTimeOut}
               onChange={(e) => setLocalTimeOut(e.target.value)}
+              onFocus={(e) => e.target.select()}
               required
             />
           </div>
           <div className="d-flex justify-content-end gap-2">
-            <Button variant="secondary" onClick={onHide}>
-              Cancel
-            </Button>
             <Button variant="primary" type="submit" disabled={loading}>
               {loading ? "Saving..." : "Save"}
+            </Button>
+            <Button variant="secondary" onClick={onHide}>
+              Cancel
             </Button>
           </div>
         </form>

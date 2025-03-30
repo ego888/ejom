@@ -1508,70 +1508,70 @@ router.post("/update-hours/:batchId", async (req, res) => {
 });
 
 // Add this new route after the existing routes
-router.post("/update-time/:batchId", async (req, res) => {
-  let connection;
-  try {
-    const { batchId } = req.params;
-    const { entries } = req.body;
+// router.post("/update-time/:batchId", async (req, res) => {
+//   let connection;
+//   try {
+//     const { batchId } = req.params;
+//     const { entries } = req.body;
 
-    if (!entries || !Array.isArray(entries)) {
-      return res.status(400).json({
-        Status: false,
-        Error: "Invalid entries data",
-      });
-    }
+//     if (!entries || !Array.isArray(entries)) {
+//       return res.status(400).json({
+//         Status: false,
+//         Error: "Invalid entries data",
+//       });
+//     }
 
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
+//     connection = await pool.getConnection();
+//     await connection.beginTransaction();
 
-    // Update each entry
-    for (const entry of entries) {
-      const updateFields = [];
-      const updateValues = [];
+//     // Update each entry
+//     for (const entry of entries) {
+//       const updateFields = [];
+//       const updateValues = [];
 
-      if (entry.timeIn) {
-        updateFields.push("timeIn = ?");
-        updateValues.push(entry.timeIn);
-      }
-      if (entry.timeOut) {
-        updateFields.push("timeOut = ?");
-        updateValues.push(entry.timeOut);
-      }
+//       if (entry.timeIn) {
+//         updateFields.push("timeIn = ?");
+//         updateValues.push(entry.timeIn);
+//       }
+//       if (entry.timeOut) {
+//         updateFields.push("timeOut = ?");
+//         updateValues.push(entry.timeOut);
+//       }
 
-      updateFields.push("processed = ?");
-      updateValues.push(entry.processed);
+//       updateFields.push("processed = ?");
+//       updateValues.push(entry.processed);
 
-      // Add the ID and batchId to the values array
-      updateValues.push(entry.id, batchId);
+//       // Add the ID and batchId to the values array
+//       updateValues.push(entry.id, batchId);
 
-      await connection.query(
-        `
-        UPDATE DTREntries 
-        SET ${updateFields.join(", ")}
-        WHERE id = ? AND batchId = ?
-      `,
-        updateValues
-      );
-    }
+//       await connection.query(
+//         `
+//         UPDATE DTREntries
+//         SET ${updateFields.join(", ")}
+//         WHERE id = ? AND batchId = ?
+//       `,
+//         updateValues
+//       );
+//     }
 
-    await connection.commit();
+//     await connection.commit();
 
-    res.json({
-      Status: true,
-      Message: "Successfully updated time entries",
-      UpdatedCount: entries.length,
-    });
-  } catch (error) {
-    if (connection) await connection.rollback();
-    console.error("Error updating time entries:", error);
-    res.status(500).json({
-      Status: false,
-      Error: `Failed to update time entries: ${error.message}`,
-    });
-  } finally {
-    if (connection) connection.release();
-  }
-});
+//     res.json({
+//       Status: true,
+//       Message: "Successfully updated time entries",
+//       UpdatedCount: entries.length,
+//     });
+//   } catch (error) {
+//     if (connection) await connection.rollback();
+//     console.error("Error updating time entries:", error);
+//     res.status(500).json({
+//       Status: false,
+//       Error: `Failed to update time entries: ${error.message}`,
+//     });
+//   } finally {
+//     if (connection) connection.release();
+//   }
+// });
 
 // Route to update timeIn
 router.post("/update-time-in/:batchId", async (req, res) => {
@@ -1806,6 +1806,56 @@ router.post("/update-time-out-only/:batchId", async (req, res) => {
   }
 });
 
+// Add this new route for updating both timeIn and timeOut
+router.post("/update-time-in-out/:batchId", async (req, res) => {
+  let connection;
+  try {
+    // const { batchId } = req.params;
+    const { id, timeIn, timeOut, editedIn, editedOut } = req.body;
+
+    if (!id || !timeIn || !timeOut) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Missing required fields: id, timeIn, and timeOut",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    console.log("Passed Data:", req.body);
+    await connection.query(
+      `
+      UPDATE DTREntries 
+      SET 
+        timeIn = ?,
+        timeOut = ?,
+        editedIn = ?,
+        editedOut = ?,
+        processed = 1
+      WHERE id = ?
+    `,
+      [timeIn, timeOut, editedIn, editedOut, id]
+    );
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      Message: "Successfully updated time in and out",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating time in and out:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to update time in and out: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 // Add this error handling middleware after all your routes
 router.use((err, req, res, next) => {
   console.error("Router Error:", err);
@@ -1886,6 +1936,56 @@ router.post("/dtr/update-period/:batchId", async (req, res) => {
   } catch (error) {
     console.error("Error in update-period route:", error);
     return res.json({ Status: false, Error: "Server error" });
+  }
+});
+
+// Add this new route for changing employee names
+router.post("/change-name/:batchId", async (req, res) => {
+  const { batchId } = req.params;
+  const { entries } = req.body;
+
+  if (!entries || !Array.isArray(entries) || entries.length === 0) {
+    return res.json({
+      Status: false,
+      Error: "No entries provided for name change",
+    });
+  }
+
+  try {
+    // Group entries by empId to get unique employees
+    const uniqueEmployees = entries.reduce((acc, entry) => {
+      if (!acc[entry.empId]) {
+        acc[entry.empId] = entry.empName;
+      }
+      return acc;
+    }, {});
+
+    // Update each unique employee's name
+    for (const [empId, newName] of Object.entries(uniqueEmployees)) {
+      const [result] = await pool.query(
+        `UPDATE DTREntries 
+         SET empName = ?
+         WHERE batchId = ? AND empId = ?`,
+        [newName, batchId, empId]
+      );
+
+      if (result.affectedRows === 0) {
+        console.warn(
+          `No entries updated for employee ${empId} in batch ${batchId}`
+        );
+      }
+    }
+
+    res.json({
+      Status: true,
+      Message: "Employee names updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating employee names:", error);
+    res.json({
+      Status: false,
+      Error: "Failed to update employee names",
+    });
   }
 });
 

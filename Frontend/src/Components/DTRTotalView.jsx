@@ -240,19 +240,19 @@ const DTRTotalView = ({ entries, batch }) => {
                       (Period Hrs: {employee.totals.periodHours})
                     </td>
                   )}
-                  <td className="text-end fw-bold">
+                  <td className="text-end">
                     {formatNumber(employee.totals.hours)}
                   </td>
-                  <td className="text-end fw-bold">
+                  <td className="text-end">
                     {formatNumber(employee.totals.overtime)}
                   </td>
-                  <td className="text-end fw-bold">
+                  <td className="text-end">
                     {formatNumber(employee.totals.sundayHours)}
                   </td>
-                  <td className="text-end fw-bold">
+                  <td className="text-end">
                     {formatNumber(employee.totals.sundayOT)}
                   </td>
-                  <td className="text-end fw-bold">
+                  <td className="text-end">
                     {formatNumber(employee.totals.nightDifferential)}
                   </td>
                   {showAllRows && <td></td>}

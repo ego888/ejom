@@ -94,8 +94,20 @@ const DTR = () => {
     setSelectedBatch(batch);
     setIsEditingExistingBatch(true);
     setBatchName(batch.batchName);
-    setPeriodStart(batch.periodStart.substring(0, 10)); // Extract YYYY-MM-DD from date
-    setPeriodEnd(batch.periodEnd.substring(0, 10)); // Extract YYYY-MM-DD from date
+
+    // Fix date handling to prevent off-by-one day issues
+    // For periodStart
+    const startDate = new Date(batch.periodStart);
+    startDate.setMinutes(
+      startDate.getMinutes() + startDate.getTimezoneOffset()
+    );
+    setPeriodStart(startDate.toISOString().substring(0, 10));
+
+    // For periodEnd
+    const endDate = new Date(batch.periodEnd);
+    endDate.setMinutes(endDate.getMinutes() + endDate.getTimezoneOffset());
+    setPeriodEnd(endDate.toISOString().substring(0, 10));
+
     setActiveTab("upload");
   };
 

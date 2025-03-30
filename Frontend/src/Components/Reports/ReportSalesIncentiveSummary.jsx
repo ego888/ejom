@@ -78,15 +78,15 @@ const ReportSalesIncentiveSummary = ({ data }) => {
               <tr key={index}>
                 <td>{item.preparedBy}</td>
                 <td className="text-center">{item.orderCount}</td>
-                <td className="text-end">₱{formatNumber(item.totalAmount)}</td>
+                <td className="text-end">{formatNumber(item.totalAmount)}</td>
                 <td className="text-end border-start">
-                  ₱{formatNumber(item.salesIncentive)}
+                  {formatNumber(item.salesIncentive)}
                 </td>
                 <td className="text-end">
-                  ₱{formatNumber(item.overideIncentive)}
+                  {formatNumber(item.overideIncentive)}
                 </td>
                 <td className="text-end border-start">
-                  ₱{formatNumber(item.salesIncentive + item.overideIncentive)}
+                  {formatNumber(item.salesIncentive + item.overideIncentive)}
                 </td>
               </tr>
             ))}
@@ -97,10 +97,9 @@ const ReportSalesIncentiveSummary = ({ data }) => {
                 <td className="text-end">Total:</td>
                 <td className="text-center">{grandTotals.orderCount}</td>
                 <td className="text-end">
-                  ₱{formatNumber(grandTotals.totalAmount)}
+                  {formatNumber(grandTotals.totalAmount)}
                 </td>
                 <td className="text-end border-start">
-                  ₱
                   {formatNumber(
                     summaryArray.reduce(
                       (sum, item) => sum + item.salesIncentive,
@@ -109,7 +108,6 @@ const ReportSalesIncentiveSummary = ({ data }) => {
                   )}
                 </td>
                 <td className="text-end">
-                  ₱
                   {formatNumber(
                     summaryArray.reduce(
                       (sum, item) => sum + item.overideIncentive,
@@ -118,7 +116,6 @@ const ReportSalesIncentiveSummary = ({ data }) => {
                   )}
                 </td>
                 <td className="text-end border-start">
-                  ₱
                   {formatNumber(
                     summaryArray.reduce(
                       (sum, item) =>

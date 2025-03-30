@@ -198,7 +198,7 @@ router.get("/check-ornum", verifyUser, async (req, res) => {
     connection = await pool.getConnection();
 
     const [results] = await connection.query(
-      "SELECT payId FROM payments WHERE ornum = ?",
+        "SELECT payId FROM payments WHERE ornum = ?",
       [ornum]
     );
 
@@ -251,10 +251,10 @@ router.get("/order-payment-history", verifyUser, async (req, res) => {
       [orderId]
     );
 
-    return res.json({
-      Status: true,
-      paymentDetails,
-    });
+        return res.json({
+          Status: true,
+          paymentDetails,
+        });
   } catch (error) {
     console.error("Error getting order payment details:", error);
     return res.status(500).json({
@@ -331,12 +331,12 @@ router.get("/payment-allocation", verifyUser, async (req, res) => {
     const allocations = results
       .filter((row) => row.orderId) // Filter out null orderId rows
       .map((row) => ({
-        orderId: row.orderId,
+      orderId: row.orderId,
         amountApplied: parseFloat(row.amountApplied) || 0,
         projectName: row.projectName,
         orderTotal: parseFloat(row.orderTotal) || 0,
         orderAmountPaid: parseFloat(row.orderAmountPaid) || 0,
-      }));
+    }));
 
     return res.json({
       Status: true,
