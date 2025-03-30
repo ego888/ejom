@@ -78,6 +78,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [referenceMinutes, setReferenceMinutes] = useState("00");
   const [rightClickTarget, setRightClickTarget] = useState(null);
   const [activeTab, setActiveTab] = useState("entries"); // 'entries' or 'totals'
+  const [showEditPeriodModal, setShowEditPeriodModal] = useState(false);
 
   useEffect(() => {
     if (batch?.id) {
@@ -868,6 +869,35 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
+  const handleUpdatePeriod = async (newStartDate, newEndDate) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/update-period/${batch.id}`,
+        {
+          periodStart: newStartDate,
+          periodEnd: newEndDate,
+        }
+      );
+
+      if (response.data.Status) {
+        // Update the local batch data
+        batch.periodStart = newStartDate;
+        batch.periodEnd = newEndDate;
+        // Refresh the data to recalculate totals
+        await fetchBatchData(batch.id);
+      } else {
+        setError(response.data.Error || "Failed to update period dates");
+      }
+    } catch (error) {
+      console.error("Error updating period dates:", error);
+      setError("Failed to update period dates. Please try again.");
+    } finally {
+      setLoading(false);
+      setShowEditPeriodModal(false);
+    }
+  };
+
   const renderTabs = () => (
     <ul className="nav nav-tabs mb-3">
       <li className="nav-item">
@@ -887,6 +917,35 @@ const DTRBatchView = ({ batch, onBack }) => {
         </button>
       </li>
     </ul>
+  );
+
+  const renderButtons = () => (
+    <div className="mb-3 d-flex gap-2">
+      <Button
+        variant="secondary"
+        onClick={handleDeleteRepeat}
+        disabled={loading}
+      >
+        Delete Repeat
+      </Button>
+      <Button variant="secondary" onClick={handleAnalyze} disabled={loading}>
+        Analyze Time In/Out
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={handleCalculateHours}
+        disabled={loading}
+      >
+        Calculate Hours
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={handleSundayHoliday}
+        disabled={loading}
+      >
+        Sunday/Holiday
+      </Button>
+    </div>
   );
 
   if (!batch) {
@@ -910,10 +969,19 @@ const DTRBatchView = ({ batch, onBack }) => {
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
           <h3>Batch Details: {batch.batchName}</h3>
-          <div>
+          <div className="d-flex align-items-center gap-2">
             <strong>Period:</strong> {formatDate(batch.periodStart)} -{" "}
             {formatDate(batch.periodEnd)}
-            <br />
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => setShowEditPeriodModal(true)}
+              title="Edit period dates"
+            >
+              <i className="bi bi-pencil"></i>
+            </Button>
+          </div>
+          <div>
             <strong>Total Entries:</strong> {entries.length}
           </div>
         </div>
@@ -924,6 +992,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         </div>
       </div>
 
+      {renderButtons()}
       {renderTabs()}
 
       {activeTab === "entries" ? (
@@ -1287,6 +1356,13 @@ const DTRBatchView = ({ batch, onBack }) => {
         timeIn={timeIn}
         timeOut={timeOut}
       />
+
+      <EditPeriodModal
+        show={showEditPeriodModal}
+        onHide={() => setShowEditPeriodModal(false)}
+        onSave={handleUpdatePeriod}
+        batch={batch}
+      />
     </div>
   );
 };
@@ -1596,6 +1672,90 @@ const AddDateModal = ({
             </Button>
             <Button variant="primary" type="submit" disabled={loading}>
               {loading ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal.Body>
+    </Modal>
+  );
+};
+
+const EditPeriodModal = ({ show, onHide, onSave, batch }) => {
+  const [startDate, setStartDate] = useState(batch?.periodStart || "");
+  const [endDate, setEndDate] = useState(batch?.periodEnd || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (show) {
+      setStartDate(batch?.periodStart || "");
+      setEndDate(batch?.periodEnd || "");
+      setError("");
+    }
+  }, [show, batch]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    // Validate dates
+    if (!startDate || !endDate) {
+      setError("Both dates are required");
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end < start) {
+      setError("End date cannot be earlier than start date");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await onSave(startDate, endDate);
+    } catch (error) {
+      setError("Failed to update period dates");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal show={show} onHide={onHide}>
+      <Modal.Header closeButton>
+        <Modal.Title>Edit Period Dates</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <form onSubmit={handleSubmit}>
+          {error && <div className="alert alert-danger mb-3">{error}</div>}
+          <div className="mb-3">
+            <label className="form-label">Start Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">End Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="d-flex justify-content-end gap-2">
+            <Button variant="secondary" onClick={onHide}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

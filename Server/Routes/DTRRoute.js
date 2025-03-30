@@ -1871,4 +1871,22 @@ router.post("/update-special-hours/:batchId", async (req, res) => {
   }
 });
 
+// Add this route to handle period date updates
+router.post("/dtr/update-period/:batchId", async (req, res) => {
+  try {
+    const { periodStart, periodEnd } = req.body;
+    const batchId = req.params.batchId;
+
+    const sql =
+      "UPDATE dtr_batches SET periodStart = ?, periodEnd = ? WHERE id = ?";
+    const values = [periodStart, periodEnd, batchId];
+
+    await pool.query(sql, values);
+    return res.json({ Status: true });
+  } catch (error) {
+    console.error("Error in update-period route:", error);
+    return res.json({ Status: false, Error: "Server error" });
+  }
+});
+
 export const DTRRouter = router;

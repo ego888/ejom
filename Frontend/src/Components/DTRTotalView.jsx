@@ -175,7 +175,7 @@ const DTRTotalView = ({ entries, batch }) => {
               <th className="text-center">Sun Hrs</th>
               <th className="text-center">Sun OT</th>
               <th className="text-center">Night Diff</th>
-              {showAllRows && <th>Remarks</th>}
+              {showAllRows && <th className="text-center">Remarks</th>}
             </tr>
           </thead>
           <tbody>
