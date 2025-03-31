@@ -1410,20 +1410,36 @@ router.post("/update-entries/:batchId", async (req, res) => {
 
     // Update each entry
     for (const entry of entries) {
+      // Format the date to YYYY-MM-DD
+      const formattedDate = entry.date
+        ? moment(entry.date).format("YYYY-MM-DD")
+        : null;
+      const formattedDateOut = entry.dateOut
+        ? moment(entry.dateOut).format("YYYY-MM-DD")
+        : null;
+
       await connection.query(
         `
         UPDATE DTREntries 
         SET 
-          timeIn = ?,
-          timeOut = ?,
-          processed = ?,
-          deleteRecord = ?,
-          remarks = ?
+            date = ?,
+            dateOut = ?,
+            timeIn = ?,
+            timeOut = ?,
+            editedIn = ?,
+            editedOut = ?,
+            processed = ?,
+            deleteRecord = ?,
+            remarks = ?
         WHERE id = ? AND batchId = ?
       `,
         [
+          formattedDate,
+          formattedDateOut,
           entry.timeIn,
           entry.timeOut,
+          entry.editedIn,
+          entry.editedOut,
           entry.processed || 0,
           entry.deleteRecord || 0,
           entry.remarks || null,
@@ -1986,6 +2002,30 @@ router.post("/change-name/:batchId", async (req, res) => {
       Status: false,
       Error: "Failed to update employee names",
     });
+  }
+});
+
+// Update route: reset-entries
+router.post("/reset-entries/:batchId", async (req, res) => {
+  const connection = await pool.getConnection();
+
+  try {
+    const { batchId } = req.params;
+
+    await connection.beginTransaction();
+    await connection.query(
+      `UPDATE DTREntries SET processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
+      [batchId]
+    );
+    await connection.commit();
+
+    return res.json({ Status: true });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Error resetting entries:", error);
+    return res.json({ Status: false, Error: "Failed to reset entries" });
+  } finally {
+    connection.release();
   }
 });
 

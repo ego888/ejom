@@ -194,6 +194,34 @@ const DTRBatchView = ({ batch, onBack }) => {
     return sortableEntries;
   }, [entries, sortConfig, searchTerm, hideDeleted]);
 
+  const handleReset = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to reset all entries? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/reset-entries/${batch.id}`
+      );
+      if (response.data.Status) {
+        await fetchBatchData(batch.id);
+      } else {
+        setError(response.data.Error || "Failed to reset entries");
+      }
+    } catch (error) {
+      console.error("Error resetting entries:", error);
+      setError("Failed to reset entries. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getSortIndicator = (key) => {
     if (sortConfig.key === key) {
       return sortConfig.direction === "ascending" ? " ↑" : " ↓";
@@ -238,10 +266,13 @@ const DTRBatchView = ({ batch, onBack }) => {
             entries: [
               {
                 ...current,
+                dateOut: current.date,
                 timeIn: hours < 12 ? current.time : null,
                 timeOut: hours >= 12 ? current.time : null,
+                editedIn: hours < 12 ? 0 : 1,
+                editedOut: hours < 12 ? 1 : 0,
                 processed: 0,
-                remarks: "LACK, " + (current.remarks || ""),
+                remarks: "LACK1, " + (current.remarks || ""),
                 deleteRecord: 0,
               },
             ],
@@ -269,10 +300,11 @@ const DTRBatchView = ({ batch, onBack }) => {
                 entries: [
                   {
                     ...current,
+                    dateOut: next.date,
                     timeIn: current.time,
                     timeOut: next.time,
                     processed: 1,
-                    remarks: "PROC, " + (current.remarks || ""),
+                    remarks: "PROC1, " + (current.remarks || ""),
                     deleteRecord: 0,
                   },
                   {
@@ -291,6 +323,9 @@ const DTRBatchView = ({ batch, onBack }) => {
             setShowConfirmModal(true);
             return; // Exit and wait for user input
           } else {
+            console.log("LACK2 data: ", current);
+
+            const [hours] = current.time.split(":").map(Number);
             // After 7 AM - Process as new time-in
             await axios.post(
               `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
@@ -298,10 +333,13 @@ const DTRBatchView = ({ batch, onBack }) => {
                 entries: [
                   {
                     ...current,
-                    timeIn: current.time,
+                    dateOut: current.date,
+                    timeIn: hours > 12 ? null : current.time,
+                    timeOut: hours > 12 ? current.time : null,
+                    editedIn: hours > 12 ? 1 : 0,
+                    editedOut: hours > 12 ? 0 : 1,
                     processed: 0,
-                    editedIn: 1,
-                    remarks: "LACK, " + (current.remarks || ""),
+                    remarks: "LACK2, " + (current.remarks || ""),
                     deleteRecord: 0,
                   },
                 ],
@@ -314,10 +352,11 @@ const DTRBatchView = ({ batch, onBack }) => {
             entries: [
               {
                 ...current,
+                dateOut: next.date,
                 timeIn: current.time,
                 timeOut: next.time,
                 processed: 1,
-                remarks: "PROC, " + (current.remarks || ""),
+                remarks: "PROC2, " + (current.remarks || ""),
                 deleteRecord: 0,
               },
               {
@@ -341,10 +380,13 @@ const DTRBatchView = ({ batch, onBack }) => {
             entries: [
               {
                 ...lastRecord,
+                dateOut: lastRecord.date,
                 timeIn: hours < 12 ? lastRecord.time : null,
                 timeOut: hours >= 12 ? lastRecord.time : null,
+                editedIn: hours < 12 ? 0 : 1,
+                editedOut: hours < 12 ? 1 : 0,
                 processed: 0,
-                remarks: "LACK, " + (lastRecord.remarks || ""),
+                remarks: "LACK3, " + (lastRecord.remarks || ""),
                 deleteRecord: 0,
               },
             ],
@@ -377,10 +419,13 @@ const DTRBatchView = ({ batch, onBack }) => {
                   {
                     id: entry.id,
                     ...entry,
+                    dateOut: entry.date,
                     timeIn: hours < 12 ? entry.time : null,
                     timeOut: hours >= 12 ? entry.time : null,
+                    editedIn: hours < 12 ? 0 : 1,
+                    editedOut: hours < 12 ? 1 : 0,
                     processed: 0,
-                    remarks: "LACK, " + (entry.remarks || ""),
+                    remarks: "LACK4, " + (entry.remarks || ""),
                     deleteRecord: 0,
                   },
                 ],
@@ -411,10 +456,11 @@ const DTRBatchView = ({ batch, onBack }) => {
         const updateBatch = [
           {
             ...currentEntry.current,
+            dateOut: currentEntry.next.date,
             timeIn: currentEntry.current.time,
             timeOut: currentEntry.next.time,
             processed: 1,
-            remarks: "PROC, " + (currentEntry.current.remarks || ""),
+            remarks: "PROC3, " + (currentEntry.current.remarks || ""),
             deleteRecord: 0,
           },
           {
@@ -437,7 +483,7 @@ const DTRBatchView = ({ batch, onBack }) => {
             ...currentEntry.current,
             timeIn: currentEntry.current.time,
             processed: 1,
-            remarks: "PROC, " + (currentEntry.current.remarks || ""),
+            remarks: "PROC4, " + (currentEntry.current.remarks || ""),
             deleteRecord: 0,
           },
         ];
@@ -480,6 +526,32 @@ const DTRBatchView = ({ batch, onBack }) => {
 
         // Skip if already deleted
         if (current.deleteRecord) {
+          continue;
+        }
+
+        // Check if date is within batch period
+        const currentDate = new Date(current.date);
+        const batchStartDate = new Date(batch.periodStart);
+        const batchEndDate = new Date(batch.periodEnd);
+
+        if (currentDate < batchStartDate || currentDate > batchEndDate) {
+          try {
+            await axios.post(
+              `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
+              {
+                entries: [
+                  {
+                    ...current,
+                    processed: 0,
+                    remarks: "OUTSIDE PERIOD " + (current.remarks || ""),
+                    deleteRecord: 1,
+                  },
+                ],
+              }
+            );
+          } catch (error) {
+            console.error("Error updating entry:", error);
+          }
           continue;
         }
 
@@ -1061,29 +1133,25 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const renderButtons = () => (
     <div className="mb-3 d-flex gap-2">
-      <Button
-        variant="secondary"
-        onClick={handleDeleteRepeat}
-        disabled={loading}
-      >
+      <Button variant="edit" onClick={handleDeleteRepeat} disabled={loading}>
         Delete Repeat
       </Button>
-      <Button variant="secondary" onClick={handleAnalyze} disabled={loading}>
+      <Button variant="cancel" onClick={handleAnalyze} disabled={loading}>
         Analyze Time In/Out
       </Button>
-      <Button
-        variant="secondary"
-        onClick={handleCalculateHours}
-        disabled={loading}
-      >
+      <Button variant="view" onClick={handleCalculateHours} disabled={loading}>
         Calculate Hours
       </Button>
-      <Button
-        variant="secondary"
-        onClick={handleSundayHoliday}
-        disabled={loading}
-      >
+      <Button variant="add" onClick={handleSundayHoliday} disabled={loading}>
         Sunday/Holiday
+      </Button>
+      <Button
+        variant="danger"
+        onClick={handleReset}
+        disabled={loading}
+        className="ms-auto"
+      >
+        RESET
       </Button>
     </div>
   );
@@ -1225,28 +1293,34 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Name {getSortIndicator("empName")}
                     </th>
                     <th
-                      onClick={() => handleSort("date")}
-                      style={{ cursor: "pointer" }}
-                    >
-                      Date {getSortIndicator("date")}
-                    </th>
-                    <th
                       onClick={() => handleSort("day")}
                       style={{ cursor: "pointer" }}
                     >
                       Day {getSortIndicator("day")}
                     </th>
                     <th
+                      onClick={() => handleSort("date")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Date {getSortIndicator("date")}
+                    </th>
+                    <th
                       onClick={() => handleSort("time")}
                       style={{ cursor: "pointer" }}
                     >
-                      Time {getSortIndicator("time")}
+                      Orig Time {getSortIndicator("time")}
                     </th>
                     <th
                       onClick={() => handleSort("timeIn")}
                       style={{ cursor: "pointer" }}
                     >
                       Time In {getSortIndicator("timeIn")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("date")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Date Out {getSortIndicator("dateOut")}
                     </th>
                     <th
                       onClick={() => handleSort("timeOut")}
@@ -1309,6 +1383,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                       <tr key={entry.id || index}>
                         <td style={rowStyle}>{entry.empId}</td>
                         <td style={rowStyle}>{entry.empName}</td>
+                        <td style={rowStyle}>{entry.day}</td>
                         <td
                           style={{
                             ...rowStyle,
@@ -1321,7 +1396,6 @@ const DTRBatchView = ({ batch, onBack }) => {
                         >
                           {formatDate(entry.date)}
                         </td>
-                        <td style={rowStyle}>{entry.day}</td>
                         <td style={rowStyle}>{formatTime(entry.time)}</td>
                         <td
                           style={{
@@ -1351,6 +1425,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                         >
                           {formatTime(entry.timeIn)}
                         </td>
+                        <td style={rowStyle}>{formatDate(entry.dateOut)}</td>
                         <td
                           style={{
                             ...rowStyle,
