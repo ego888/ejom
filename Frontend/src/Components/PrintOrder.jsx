@@ -266,9 +266,10 @@ function PrintOrder() {
               <th className="text-center" style={{ width: "8%" }}>
                 Hours
               </th>
-              <th className="text-center" style={{ width: "56%" }}>
+              <th className="text-center" style={{ width: "48%" }}>
                 Filename
               </th>
+              <th className="text-center" style={{ width: "1%" }}></th>
             </tr>
           </thead>
           <tbody>
@@ -284,6 +285,17 @@ function PrintOrder() {
                   <td className="text-center field-value">{detail.material}</td>
                   <td className="text-center label">{detail.printHrs}</td>
                   <td className="label"></td>
+                  <td
+                    className="text-center"
+                    style={{
+                      fontSize: "8pt",
+                      paddingRight: "10px",
+                      paddingLeft: "0px",
+                      color: "gray",
+                    }}
+                  >
+                    {detail.displayOrder}
+                  </td>
                 </tr>
                 {hasAllowancesOrRemarks(detail) && (
                   <tr className="remarks-row">
@@ -291,7 +303,7 @@ function PrintOrder() {
                       {renderAllowances(detail)}
                     </td>
                     <td
-                      colSpan="4"
+                      colSpan="5"
                       className="field-value"
                       style={{ whiteSpace: "pre-wrap", fontSize: "10pt" }}
                     >
