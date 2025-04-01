@@ -497,7 +497,17 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     console.log("statusToSet", statusToSet);
 
     // Handle status change rules
-    if (currentOrder.status === "Billed" || currentOrder.status === "Closed") {
+    if (
+      newStatus === "Printed" &&
+      (currentOrder.status === "Prod" ||
+        currentOrder.status === "Finish" ||
+        currentOrder.status === "Delivered")
+    ) {
+      statusToSet = currentOrder.status;
+    } else if (
+      currentOrder.status === "Billed" ||
+      currentOrder.status === "Closed"
+    ) {
       // Don't change status, but log the attempt
       statusToSet = currentOrder.status;
       logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;

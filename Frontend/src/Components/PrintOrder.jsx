@@ -13,7 +13,6 @@ function PrintOrder() {
   const [orderDetails, setOrderDetails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState({});
-  const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [logoLoaded, setLogoLoaded] = useState(false);
 
@@ -32,39 +31,35 @@ function PrintOrder() {
     Promise.all([
       axios.get(`${ServerIP}/auth/order/${id}`, config),
       axios.get(`${ServerIP}/auth/order_details/${id}`, config),
-      // axios.get(`${ServerIP}/auth/sales_employees`, config),
-      // axios.get(`${ServerIP}/auth/artists`, config),
     ])
       .then(([orderRes, detailsRes]) => {
         if (orderRes.data.Status) {
           setData(orderRes.data.Result);
           setOrderDetails(detailsRes.data.Result);
-
-          // Create a map of employee IDs to names
-          // const empMap = {};
-          // if (salesRes.data.Status) {
-          //   salesRes.data.Result.forEach((emp) => {
-          //     empMap[emp.id] = emp.name;
-          //   });
-          // }
-          // if (artistsRes.data.Status) {
-          //   artistsRes.data.Result.forEach((emp) => {
-          //     empMap[emp.id] = emp.name;
-          //   });
-          // }
-          // setEmployees(empMap);
-
-          // Calculate pages
-          const itemsPerPage = 10;
-          const calculatedPages = Math.ceil(
-            detailsRes.data.Result.length / itemsPerPage
-          );
-          setTotalPages(calculatedPages);
         }
         setLoading(false);
       })
       .catch((err) => handleApiError(err));
   }, [id]);
+
+  // Calculate current page based on scroll position
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!loading && data) {
+        const scrollPosition = window.scrollY;
+        const windowHeight = window.innerHeight;
+
+        // Calculate which page we're on based on scroll position
+        const currentPageNum = Math.floor(scrollPosition / windowHeight) + 1;
+
+        // Ensure current page is at least 1
+        setCurrentPage(Math.max(1, currentPageNum));
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loading, data]);
 
   // Single effect to handle printing when everything is loaded
   useEffect(() => {
@@ -295,7 +290,11 @@ function PrintOrder() {
                     <td colSpan="3" className="field-value">
                       {renderAllowances(detail)}
                     </td>
-                    <td colSpan="4" className="field-value">
+                    <td
+                      colSpan="4"
+                      className="field-value"
+                      style={{ whiteSpace: "pre-wrap", fontSize: "10pt" }}
+                    >
                       {detail.remarks && `Remarks: ${detail.remarks}`}
                     </td>
                   </tr>
@@ -312,8 +311,7 @@ function PrintOrder() {
       </span>
       {/* Page Info and Print DateTime */}
       <div className="page-info">
-        JO#{data.orderId} • Page {currentPage} of {totalPages} •{" "}
-        {new Date().toLocaleString()}
+        JO#{data.orderId} • Page {currentPage} • {new Date().toLocaleString()}
       </div>
       {/* Print-specific styles */}
       <style>
@@ -451,6 +449,9 @@ function PrintOrder() {
               writing-mode: vertical-lr;
               transform: rotate(180deg);
               white-space: nowrap;
+              background-color: white;
+              padding: 0px 0px;
+              background-opacity: 0.4;
               text-shadow: -1px -1px 0 #fff,  
                            1px -1px 0 #fff,
                           -1px  1px 0 #fff,
