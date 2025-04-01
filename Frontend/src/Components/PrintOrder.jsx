@@ -311,7 +311,7 @@ function PrintOrder() {
       </span>
       {/* Page Info and Print DateTime */}
       <div className="page-info">
-        JO#{data.orderId} • Page {currentPage} • {new Date().toLocaleString()}
+        JO#{data.orderId} • {new Date().toLocaleString()} •
       </div>
       {/* Print-specific styles */}
       <style>
@@ -383,8 +383,13 @@ function PrintOrder() {
               font-size: 9pt;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              counter-reset: page;
             }
 
+            div.p-3 {
+              counter-increment: page;
+            }
+              
             .header-box {
               border: 1px solid #ddd;
               padding: 6px;
@@ -456,6 +461,11 @@ function PrintOrder() {
                            1px -1px 0 #fff,
                           -1px  1px 0 #fff,
                            1px  1px 0 #fff;
+            }
+
+            .page-info::after {
+              transform: rotate(180deg);
+              content: " Page " counter(page);
             }
 
             .header-logo {
