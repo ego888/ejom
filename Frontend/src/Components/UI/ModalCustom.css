@@ -29,6 +29,7 @@
 }
 
 .custom-modal-title {
+  text-align: center;
   margin: 0;
   font-size: 1.25rem;
   font-weight: 500;

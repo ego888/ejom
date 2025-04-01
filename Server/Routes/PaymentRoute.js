@@ -198,7 +198,7 @@ router.get("/check-ornum", verifyUser, async (req, res) => {
     connection = await pool.getConnection();
 
     const [results] = await connection.query(
-        "SELECT payId FROM payments WHERE ornum = ?",
+      "SELECT payId FROM payments WHERE ornum = ?",
       [ornum]
     );
 
@@ -251,10 +251,10 @@ router.get("/order-payment-history", verifyUser, async (req, res) => {
       [orderId]
     );
 
-        return res.json({
-          Status: true,
-          paymentDetails,
-        });
+    return res.json({
+      Status: true,
+      paymentDetails,
+    });
   } catch (error) {
     console.error("Error getting order payment details:", error);
     return res.status(500).json({
@@ -331,12 +331,12 @@ router.get("/payment-allocation", verifyUser, async (req, res) => {
     const allocations = results
       .filter((row) => row.orderId) // Filter out null orderId rows
       .map((row) => ({
-      orderId: row.orderId,
+        orderId: row.orderId,
         amountApplied: parseFloat(row.amountApplied) || 0,
         projectName: row.projectName,
         orderTotal: parseFloat(row.orderTotal) || 0,
         orderAmountPaid: parseFloat(row.orderAmountPaid) || 0,
-    }));
+      }));
 
     return res.json({
       Status: true,
@@ -439,6 +439,90 @@ router.post("/recalculate-paid-amount", verifyUser, async (req, res) => {
     if (connection) {
       connection.release();
     }
+  }
+});
+
+// View allocation details from temp tables
+router.get("/view-allocation", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payId } = req.query;
+
+    if (!payId) {
+      return res.status(400).json({ Status: false, Error: "Missing payId" });
+    }
+
+    connection = await pool.getConnection();
+
+    // First get the payment header
+    const [paymentHeader] = await connection.query(
+      `SELECT 
+        p.payId,
+        DATE_FORMAT(p.payDate, '%Y-%m-%d') as payDate,
+        p.amount AS totalPayment, 
+        p.payType,
+        p.payReference,
+        p.ornum, 
+        p.transactedBy,
+        DATE_FORMAT(p.postedDate, '%Y-%m-%d %H:%i:%s') as postedDate
+      FROM tempPayments p
+      WHERE p.payId = ?`,
+      [payId]
+    );
+
+    if (!paymentHeader.length) {
+      return res.json({
+        Status: false,
+        Error: "Payment not found",
+      });
+    }
+
+    // Then get all allocations with complete order details
+    const [allocations] = await connection.query(
+      `SELECT 
+        pa.orderId,
+        pa.amountApplied,
+        o.projectName,
+        o.grandTotal as orderTotal,
+        o.amountPaid as orderAmountPaid,
+        c.clientName,
+        c.customerName,
+        o.status
+      FROM tempPaymentAllocation pa
+      JOIN orders o ON pa.orderId = o.orderId
+      JOIN client c ON o.clientId = c.id
+      WHERE pa.payId = ?
+      ORDER BY pa.orderId ASC`,
+      [payId]
+    );
+
+    // Format the response
+    const formattedResponse = {
+      ...paymentHeader[0],
+      allocations: allocations.map((allocation) => ({
+        orderId: allocation.orderId,
+        amountApplied: parseFloat(allocation.amountApplied) || 0,
+        projectName: allocation.projectName || "",
+        orderTotal: parseFloat(allocation.orderTotal) || 0,
+        orderAmountPaid: parseFloat(allocation.orderAmountPaid) || 0,
+        clientName: allocation.clientName || "",
+        customerName: allocation.customerName || "",
+        status: allocation.status,
+      })),
+    };
+
+    return res.json({
+      Status: true,
+      paymentAllocation: formattedResponse,
+    });
+  } catch (error) {
+    console.error("Error getting allocation details:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to get allocation details: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -709,90 +793,6 @@ router.post("/delete-temp-allocation", verifyUser, async (req, res) => {
   }
 });
 
-// View allocation details from temp tables
-router.get("/view-allocation", verifyUser, async (req, res) => {
-  let connection;
-  try {
-    const { payId } = req.query;
-
-    if (!payId) {
-      return res.status(400).json({ Status: false, Error: "Missing payId" });
-    }
-
-    connection = await pool.getConnection();
-
-    // First get the payment header
-    const [paymentHeader] = await connection.query(
-      `SELECT 
-        p.payId,
-        DATE_FORMAT(p.payDate, '%Y-%m-%d') as payDate,
-        p.amount AS totalPayment, 
-        p.payType,
-        p.payReference,
-        p.ornum, 
-        p.transactedBy,
-        DATE_FORMAT(p.postedDate, '%Y-%m-%d %H:%i:%s') as postedDate
-      FROM tempPayments p
-      WHERE p.payId = ?`,
-      [payId]
-    );
-
-    if (!paymentHeader.length) {
-      return res.json({
-        Status: false,
-        Error: "Payment not found",
-      });
-    }
-
-    // Then get all allocations with complete order details
-    const [allocations] = await connection.query(
-      `SELECT 
-        pa.orderId,
-        pa.amountApplied,
-        o.projectName,
-        o.grandTotal as orderTotal,
-        o.amountPaid as orderAmountPaid,
-        c.clientName,
-        c.customerName,
-        o.status
-      FROM tempPaymentAllocation pa
-      JOIN orders o ON pa.orderId = o.orderId
-      JOIN client c ON o.clientId = c.id
-      WHERE pa.payId = ?
-      ORDER BY pa.orderId ASC`,
-      [payId]
-    );
-
-    // Format the response
-    const formattedResponse = {
-      ...paymentHeader[0],
-      allocations: allocations.map((allocation) => ({
-        orderId: allocation.orderId,
-        amountApplied: parseFloat(allocation.amountApplied) || 0,
-        projectName: allocation.projectName || "",
-        orderTotal: parseFloat(allocation.orderTotal) || 0,
-        orderAmountPaid: parseFloat(allocation.orderAmountPaid) || 0,
-        clientName: allocation.clientName || "",
-        customerName: allocation.customerName || "",
-        status: allocation.status,
-      })),
-    };
-
-    return res.json({
-      Status: true,
-      paymentAllocation: formattedResponse,
-    });
-  } catch (error) {
-    console.error("Error getting allocation details:", error);
-    return res.status(500).json({
-      Status: false,
-      Error: "Failed to get allocation details: " + error.message,
-    });
-  } finally {
-    if (connection) connection.release();
-  }
-});
-
 // Post payment from temp tables
 router.post("/post-temp-payment", verifyUser, async (req, res) => {
   let connection;
@@ -924,6 +924,97 @@ router.post("/cancel-temp-payment", verifyUser, async (req, res) => {
     return res.status(500).json({
       Status: false,
       Error: "Failed to cancel temp payment: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Get unremitted payments
+router.get("/unremitted-payments", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    const [payments] = await connection.query(
+      `SELECT 
+        p.payId,
+        o.orderId,
+        c.clientName,
+        o.grandTotal,
+        pa.amountApplied,
+        p.ornum,
+        p.payType,
+        DATE_FORMAT(p.payDate, '%Y-%m-%d') as payDate,
+        p.payReference,
+        p.amount,
+        p.transactedBy,
+        DATE_FORMAT(p.postedDate, '%Y-%m-%d') as postedDate
+      FROM payments p
+      JOIN paymentJoAllocation pa ON p.payId = pa.payId
+      JOIN orders o ON pa.orderId = o.orderId
+      JOIN client c ON o.clientId = c.id
+      WHERE p.remittedBy IS NULL
+      ORDER BY p.payType ASC`
+    );
+
+    return res.json({
+      Status: true,
+      Result: payments,
+    });
+  } catch (error) {
+    console.error("Error fetching unremitted payments:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch unremitted payments: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Remit payment
+router.post("/remit-payment", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payIds, remittedBy } = req.body;
+
+    if (
+      !payIds ||
+      !Array.isArray(payIds) ||
+      payIds.length === 0 ||
+      !remittedBy
+    ) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Payment IDs array and remittedBy are required",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update all payments with remittance details
+    await connection.query(
+      `UPDATE payments 
+       SET remittedBy = ?, 
+           remittedDate = NOW() 
+       WHERE payId IN (${payIds.map(() => "?").join(",")})`,
+      [remittedBy, ...payIds]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Message: `${payIds.length} payment(s) remitted successfully`,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error remitting payments:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to remit payments: " + error.message,
     });
   } finally {
     if (connection) connection.release();

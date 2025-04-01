@@ -14,6 +14,7 @@ import { formatPeso } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
 import Modal from "./UI/Modal";
 import PaymentAllocationModal from "./PaymentAllocationModal";
+import RemitModal from "./RemitModal";
 
 function Prod() {
   const navigate = useNavigate();
@@ -84,6 +85,7 @@ function Prod() {
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [amount, setAmount] = useState("");
+  const [showRemitModal, setShowRemitModal] = useState(false);
 
   // 1. Move fetchOrderData outside useEffect
   const fetchOrderData = async () => {
@@ -994,29 +996,29 @@ function Prod() {
           </div>
         </div>
 
-        {/* Add View Allocations button after the payment info header */}
-        <div className="d-flex justify-content-end mb-3">
-          {checkPay.size > 0 && (
-            <Button
-              variant="view"
-              onClick={() => setShowAllocationModal(true)}
-              className="me-2"
-            >
-              View Allocations ({checkPay.size})
+        {/* Add View Allocations and Remit buttons after the payment info header */}
+        <div className="d-flex justify-content-between mb-3">
+          <div className="d-flex gap-2">
+            <Button variant="save" onClick={() => setShowRemitModal(true)}>
+              Remit
             </Button>
-          )}
+            {checkPay.size > 0 && (
+              <Button
+                variant="view"
+                onClick={() => setShowAllocationModal(true)}
+              >
+                View Allocations ({checkPay.size})
+              </Button>
+            )}
+          </div>
           <select
             id="vat-select"
             className="form-input"
             style={{ width: "250px" }}
             value={selectedWtax?.WTax}
             onChange={(e) => {
-              console.log("Selected value:", e.target.value);
-              console.log("WTax types:", wtaxTypes);
               const selected = wtaxTypes.find((w) => w.WTax === e.target.value);
-              console.log("Found WTax:", selected);
               setSelectedWtax(selected);
-
               // Recalculate WTax for all checked orders when WTax type changes
               if (selected) {
                 const newOrderPayments = { ...orderPayments };
@@ -1454,6 +1456,10 @@ function Prod() {
         orders={orders}
         onPostPayment={handlePostPayment}
         onCancelPayment={handleCancelPayment}
+      />
+      <RemitModal
+        show={showRemitModal}
+        onClose={() => setShowRemitModal(false)}
       />
     </div>
   );

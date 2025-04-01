@@ -9,6 +9,7 @@ const ModalCustom = ({
   children,
   width = "90%",
   height = "80%",
+  hideCloseButton = false,
 }) => {
   useEffect(() => {
     if (show) {
@@ -30,9 +31,11 @@ const ModalCustom = ({
       >
         <div className="custom-modal-header">
           <h5 className="custom-modal-title">{title}</h5>
-          <Button variant="cancel" size="sm" onClick={onClose}>
-            Close
-          </Button>
+          {!hideCloseButton && (
+            <Button variant="cancel" size="sm" onClick={onClose}>
+              Close
+            </Button>
+          )}
         </div>
         <div className="custom-modal-body">{children}</div>
       </div>
