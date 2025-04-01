@@ -20,6 +20,7 @@ const SOA = () => {
     key: null,
     direction: "asc",
   });
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   // Load data when component mounts
@@ -84,7 +85,6 @@ const SOA = () => {
 
   const handleShowDetails = async (clientId, category, amount) => {
     if (amount === 0) return;
-    console.log("SOA clicked:", clientId, category, amount);
 
     try {
       const token = localStorage.getItem("token");
@@ -93,35 +93,62 @@ const SOA = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("SOA response:", response.data);
-
       if (response.data.Status) {
+        const title = `${
+          category === "production"
+            ? "Production"
+            : category === "0-30"
+            ? "0-30 Days"
+            : category === "31-60"
+            ? "31-60 Days"
+            : category === "61-90"
+            ? "61-90 Days"
+            : category === "over90"
+            ? "Over 90 Days"
+            : "Total"
+        } Details`;
+
+        // Set data first, then show modal
         setDetailsData(response.data.Result);
-        setDetailsTitle(
-          `${
-            category === "production"
-              ? "Production"
-              : category === "0-30"
-              ? "0-30 Days"
-              : category === "31-60"
-              ? "31-60 Days"
-              : category === "61-90"
-              ? "61-90 Days"
-              : category === "over90"
-              ? "Over 90 Days"
-              : "Total"
-          } Details`
-        );
-        console.log("Setting showDetails to true");
-        setShowDetails(true);
+        setDetailsTitle(title);
+        // Use setTimeout to ensure state updates are processed
+        setTimeout(() => {
+          setShowDetails(true);
+        }, 0);
       }
     } catch (error) {
       console.error("Error fetching details:", error);
     }
   };
 
+  const handleCloseModal = () => {
+    // First hide the modal
+    setShowDetails(false);
+    // Then clear the data after a short delay
+    setTimeout(() => {
+      setDetailsData(null);
+      setDetailsTitle("");
+    }, 100);
+  };
+
   const handlePrintSOA = (clientId) => {
     window.open(`/dashboard/print_soa/${clientId}`, "_blank");
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value.toLowerCase());
+  };
+
+  const filteredData = () => {
+    if (!reportData) return [];
+    if (!searchTerm) return getSortedData();
+
+    return getSortedData().filter(
+      (row) =>
+        row.clientName.toLowerCase().includes(searchTerm) ||
+        (row.customerName &&
+          row.customerName.toLowerCase().includes(searchTerm))
+    );
   };
 
   return (
@@ -130,10 +157,30 @@ const SOA = () => {
         <h3>Statement of Account</h3>
       </div>
 
+      {/* Search bar */}
+      <div className="d-flex justify-content-end mb-3 px-4">
+        <div className="search-container">
+          <label htmlFor="clientSearch" className="visually-hidden">
+            Search clients
+          </label>
+          <input
+            id="clientSearch"
+            name="clientSearch"
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Search by client name..."
+            onChange={handleSearch}
+            value={searchTerm}
+            style={{ width: "300px" }}
+            aria-label="Search clients"
+          />
+        </div>
+      </div>
+
       {reportData && (
         <div className="report-summary-container">
-          <div className="report-table-container">
-            <table className="table table-hover report-table">
+          <div className="report-table-container table-responsive">
+            <table className="table table-hover report-table table-striped">
               <thead className="table-active">
                 <tr>
                   <th
@@ -202,7 +249,7 @@ const SOA = () => {
                 </tr>
               </thead>
               <tbody>
-                {getSortedData()?.map((row, index) => (
+                {filteredData()?.map((row, index) => (
                   <tr key={index}>
                     <td
                       className="clickable"
@@ -210,6 +257,7 @@ const SOA = () => {
                       style={{ cursor: "pointer" }}
                     >
                       {row.clientName}
+                      <div className="small text-muted">{row.customerName}</div>
                     </td>
                     <td
                       className={`text-end ${
@@ -322,37 +370,55 @@ const SOA = () => {
                   <td className="text-end">
                     ₱
                     {formatNumber(
-                      reportData.reduce((sum, row) => sum + row.production, 0)
+                      reportData.reduce(
+                        (sum, row) => sum + (Number(row.production) || 0),
+                        0
+                      )
                     )}
                   </td>
                   <td className="text-end">
                     ₱
                     {formatNumber(
-                      reportData.reduce((sum, row) => sum + row.days_0_30, 0)
+                      reportData.reduce(
+                        (sum, row) => sum + (Number(row.days_0_30) || 0),
+                        0
+                      )
                     )}
                   </td>
                   <td className="text-end">
                     ₱
                     {formatNumber(
-                      reportData.reduce((sum, row) => sum + row.days_31_60, 0)
+                      reportData.reduce(
+                        (sum, row) => sum + (Number(row.days_31_60) || 0),
+                        0
+                      )
                     )}
                   </td>
                   <td className="text-end">
                     ₱
                     {formatNumber(
-                      reportData.reduce((sum, row) => sum + row.days_61_90, 0)
+                      reportData.reduce(
+                        (sum, row) => sum + (Number(row.days_61_90) || 0),
+                        0
+                      )
                     )}
                   </td>
                   <td className="text-end">
                     ₱
                     {formatNumber(
-                      reportData.reduce((sum, row) => sum + row.days_over_90, 0)
+                      reportData.reduce(
+                        (sum, row) => sum + (Number(row.days_over_90) || 0),
+                        0
+                      )
                     )}
                   </td>
                   <td className="text-end">
                     ₱
                     {formatNumber(
-                      reportData.reduce((sum, row) => sum + row.total_ar, 0)
+                      reportData.reduce(
+                        (sum, row) => sum + (Number(row.total_ar) || 0),
+                        0
+                      )
                     )}
                   </td>
                 </tr>
@@ -365,16 +431,12 @@ const SOA = () => {
       {showDetails && detailsData && (
         <ModalCustom
           title={detailsTitle}
-          onClose={() => {
-            console.log("Closing modal");
-            setShowDetails(false);
-            setDetailsData(null);
-          }}
+          onClose={handleCloseModal}
           show={showDetails}
           width="95%"
           height="85%"
         >
-          <SOADetails data={detailsData} />
+          <SOADetails data={detailsData} onClose={handleCloseModal} />
         </ModalCustom>
       )}
     </div>

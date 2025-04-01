@@ -32,7 +32,12 @@ function Orders() {
           direction: "desc",
         };
   });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => {
+    return localStorage.getItem("ordersSearchTerm") || "";
+  });
+  const [displaySearchTerm, setDisplaySearchTerm] = useState(() => {
+    return localStorage.getItem("ordersSearchTerm") || "";
+  });
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedSales, setSelectedSales] = useState([]);
   const [isProdChecked, setIsProdChecked] = useState(false);
@@ -188,12 +193,14 @@ function Orders() {
     debounce((term) => {
       setSearchTerm(term);
       setCurrentPage(1);
+      localStorage.setItem("ordersSearchTerm", term);
     }, 500),
     []
   );
 
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
+    setDisplaySearchTerm(term);
     debouncedSearch(term);
   };
 
@@ -322,6 +329,7 @@ function Orders() {
               className="form-control form-control-sm"
               placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
               onChange={handleSearch}
+              value={displaySearchTerm}
               style={{ width: "400px" }}
               aria-label="Search orders"
             />

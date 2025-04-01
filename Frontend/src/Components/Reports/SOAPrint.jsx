@@ -167,15 +167,15 @@ function SOAPrint() {
                 <td>{item.orderReference || ""}</td>
                 <td>{item.customerRef || ""}</td>
                 <td>{item.projectName}</td>
-                <td className="text-right">₱{formatNumber(item.grandTotal)}</td>
-                <td className="text-right">₱{formatNumber(item.amountPaid)}</td>
+                <td className="text-right">{formatPeso(item.grandTotal)}</td>
+                <td className="text-right">{formatPeso(item.amountPaid)}</td>
                 <td>
                   {item.datePaid
                     ? new Date(item.datePaid).toLocaleDateString()
                     : ""}
                 </td>
                 <td className="text-right">
-                  ₱{formatNumber(item.grandTotal - item.amountPaid)}
+                  {formatPeso(item.grandTotal - item.amountPaid)}
                 </td>
               </tr>
             ))}
@@ -185,7 +185,7 @@ function SOAPrint() {
               <td colSpan="8" className="text-right fw-bold">
                 Total Payable:
               </td>
-              <td className="text-right fw-bold">₱{formatNumber(total)}</td>
+              <td className="text-right fw-bold">{formatPeso(total)}</td>
             </tr>
           </tfoot>
         </table>
@@ -194,11 +194,17 @@ function SOAPrint() {
         <div className="signature-section mt-4">
           <div className="prepared-by">
             <p>Prepared by:</p>
-            <p className="name">Marianita M. Cane</p>
-            <p className="note">
-              This SOA is system generated. No signature required.
-            </p>
+            <p className="name">{companyInfo?.soaName}</p>
+            <p className="note">This SOA is system generated.</p>
+            <p className="note">No signature required.</p>
           </div>
+
+          {/* Bank Information */}
+          <div className="bank-info mt-1">
+            <p className="name">Bank Information:</p>
+            <p className="mt-0">{companyInfo.bankInfo}</p>
+          </div>
+
           <div className="received-by">
             <p>Received by:</p>
             <div className="signature-line">

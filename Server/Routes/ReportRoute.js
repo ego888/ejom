@@ -289,6 +289,7 @@ router.get("/statement-of-account", verifyUser, async (req, res) => {
       SELECT 
         c.id AS clientId,
         c.clientName,
+        c.customerName,
         SUM(CASE 
           WHEN o.status IN ('Prod', 'Finished') 
           THEN o.grandTotal - o.amountPaid 
@@ -327,7 +328,6 @@ router.get("/statement-of-account", verifyUser, async (req, res) => {
         END) as total_ar
       FROM client c
       LEFT JOIN orders o ON c.id = o.clientId 
-        AND o.status != 'Open','Printed','Prod','Finished','Closed','Cancel'
         AND (o.grandTotal - o.amountPaid) > 0
       GROUP BY c.id, c.clientName
       HAVING production > 0 OR total_ar > 0
@@ -382,6 +382,9 @@ router.get("/soa-details", verifyUser, async (req, res) => {
       case "over90":
         statusCondition = "o.status IN ('Delivered', 'Billed')";
         dateCondition = "DATEDIFF(CURRENT_DATE, o.productionDate) > 90";
+      case "total":
+        statusCondition = "o.status IN ('Delivered', 'Billed')";
+        dateCondition = "1=1";
         break;
       default:
         return res.json({ Status: false, Error: "Invalid category" });

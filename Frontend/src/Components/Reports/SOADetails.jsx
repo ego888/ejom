@@ -50,12 +50,24 @@ const SOADetails = ({ data, onClose }) => {
               <td>{item.projectName}</td>
               <td>{item.terms}</td>
               <td>{item.preparedBy}</td>
-              <td className="text-end">₱{formatNumber(item.totalAmount)}</td>
-              <td className="text-center">{item.percentDisc}%</td>
-              <td className="text-end">₱{formatNumber(item.amountDisc)}</td>
-              <td className="text-end">₱{formatNumber(item.grandTotal)}</td>
-              <td className="text-end">₱{formatNumber(item.amountPaid)}</td>
-              <td className="text-end">₱{formatNumber(item.balance)}</td>
+              <td className="text-end">
+                {item.totalAmount > 0 ? formatPeso(item.totalAmount) : ""}
+              </td>
+              <td className="text-center">
+                {item.percentDisc > 0 ? `${item.percentDisc}%` : ""}
+              </td>
+              <td className="text-end">
+                {item.amountDisc > 0 ? formatPeso(item.amountDisc) : ""}
+              </td>
+              <td className="text-end">
+                {item.grandTotal > 0 ? formatPeso(item.grandTotal) : ""}
+              </td>
+              <td className="text-end">
+                {item.amountPaid > 0 ? formatPeso(item.amountPaid) : ""}
+              </td>
+              <td className="text-end">
+                {item.balance > 0 ? formatPeso(item.balance) : ""}
+              </td>
               <td>
                 {item.datePaid
                   ? new Date(item.datePaid).toLocaleDateString()
@@ -70,32 +82,42 @@ const SOADetails = ({ data, onClose }) => {
               Total:
             </td>
             <td className="text-end">
-              ₱
-              {formatNumber(
-                data.reduce((sum, item) => sum + item.totalAmount, 0)
+              {formatPeso(
+                data.reduce(
+                  (sum, item) => sum + (Number(item.totalAmount) || 0),
+                  0
+                )
               )}
             </td>
             <td></td>
             <td className="text-end">
-              ₱
-              {formatNumber(
-                data.reduce((sum, item) => sum + item.amountDisc, 0)
+              {formatPeso(
+                data.reduce(
+                  (sum, item) => sum + (Number(item.amountDisc) || 0),
+                  0
+                )
               )}
             </td>
             <td className="text-end">
-              ₱
-              {formatNumber(
-                data.reduce((sum, item) => sum + item.grandTotal, 0)
+              {formatPeso(
+                data.reduce(
+                  (sum, item) => sum + (Number(item.grandTotal) || 0),
+                  0
+                )
               )}
             </td>
             <td className="text-end">
-              ₱
-              {formatNumber(
-                data.reduce((sum, item) => sum + item.amountPaid, 0)
+              {formatPeso(
+                data.reduce(
+                  (sum, item) => sum + (Number(item.amountPaid) || 0),
+                  0
+                )
               )}
             </td>
             <td className="text-end">
-              ₱{formatNumber(data.reduce((sum, item) => sum + item.balance, 0))}
+              {formatPeso(
+                data.reduce((sum, item) => sum + (Number(item.balance) || 0), 0)
+              )}
             </td>
             <td></td>
           </tr>

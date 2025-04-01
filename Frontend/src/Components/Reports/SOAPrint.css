@@ -158,7 +158,9 @@
 }
 
 .signature-line {
-  margin: 15px 0;
+  margin-top: 40px;
+  border-top: 1px solid #000;
+  padding-top: 5px;
 }
 
 .signature-line .line {
@@ -203,21 +205,32 @@
   display: flex;
   justify-content: space-between;
   margin-top: 30px;
+  width: 100%;
+  page-break-inside: avoid;
 }
 
-.signature-block {
-  width: 45%;
+.prepared-by {
+  flex: 1;
+  width: 10%;
+  text-align: left;
+  page-break-inside: avoid;
 }
 
-.signature-block .signature-line {
-  border-top: 1px solid #000;
-  margin-top: 30px;
-  padding-top: 5px;
+.bank-info {
+  flex: 1;
+  width: 50%;
+  text-align: left;
+  padding: 0px 10px;
+  margin: 0;
+  white-space: pre-wrap;
+  page-break-inside: avoid;
 }
 
-.signature-title {
-  font-size: 11px;
-  margin-top: 5px;
+.received-by {
+  flex: 1;
+  width: 30%;
+  padding: 0 0px;
+  text-align: left;
 }
 
 /* Document Footer */
@@ -239,6 +252,11 @@
 .print-date {
   flex: 0 0 auto; /* Ensures it stays right-aligned */
   text-align: right;
+}
+
+.note {
+  font-size: 10px;
+  margin: 0px;
 }
 
 /* Print styles */
