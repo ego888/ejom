@@ -105,7 +105,7 @@ const DTRBatchList = ({
                       >
                         <i className="bi bi-plus-circle"></i> Add Files
                       </Button>
-                      <Button
+                      {/* <Button
                         variant="view"
                         size="sm"
                         onClick={() => {
@@ -115,7 +115,7 @@ const DTRBatchList = ({
                         title="View summary report"
                       >
                         <i className="bi bi-file-earmark-text"></i> Report
-                      </Button>
+                      </Button> */}
                       <Button
                         variant="view"
                         size="sm"
@@ -124,14 +124,14 @@ const DTRBatchList = ({
                       >
                         <i className="bi bi-table"></i> View Batch
                       </Button>
-                      <Button
+                      {/* <Button
                         variant="edit"
                         size="sm"
                         onClick={() => onExportBatch(batch)}
                         title="Export batch data as CSV"
                       >
                         <i className="bi bi-download"></i> Export
-                      </Button>
+                      </Button> */}
                       <Button
                         variant="delete"
                         size="sm"

@@ -96,6 +96,30 @@ const DTRBatchView = ({ batch, onBack }) => {
   }, [batch?.id]);
 
   useEffect(() => {
+    // Load hide deleted preference from localStorage
+    const savedHideDeleted = localStorage.getItem("dtrHideDeleted");
+    if (savedHideDeleted !== null) {
+      setHideDeleted(savedHideDeleted === "true");
+    }
+
+    // Load active tab preference from localStorage
+    const savedActiveTab = localStorage.getItem("dtrActiveTab");
+    if (savedActiveTab) {
+      setActiveTab(savedActiveTab);
+    }
+  }, []);
+
+  // Save hideDeleted preference to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("dtrHideDeleted", hideDeleted);
+  }, [hideDeleted]);
+
+  // Save activeTab preference to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("dtrActiveTab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
     const handleGlobalRightClick = (e) => {
       if (e.target.closest(".table-responsive")) {
         e.preventDefault();
@@ -116,6 +140,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       const response = await axios.get(
         `${ServerIP}/auth/dtr/export/${batchId}`
       );
+      console.log("FETCH BATCH DATA:", response.data.Entries[0]);
       if (response.data.Status) {
         setEntries(response.data.Entries);
       } else {
@@ -700,7 +725,16 @@ const DTRBatchView = ({ batch, onBack }) => {
       return;
     }
 
+    console.log("HANDLE TIME CLICK:", entry);
     let defaultTimeValue = "";
+    let defaultDateValue = "";
+
+    // Set default date based on type
+    if (type === "in") {
+      defaultDateValue = entry.date;
+    } else if (type === "out") {
+      defaultDateValue = entry.dateOut === "" ? entry.date : entry.dateOut;
+    }
 
     // If there's an existing time for this type, use it
     if (type === "in" && entry.timeIn) {
@@ -731,32 +765,33 @@ const DTRBatchView = ({ batch, onBack }) => {
     setShowFloatingTime(true);
   };
 
-  const handleTimeUpdate = async (newTime) => {
+  const handleTimeUpdate = async (newTime, newDate) => {
     console.log("HANDLE TIME SUBMIT:", newTime);
+    console.log("HANDLE DATE SUBMIT:", newDate);
     console.log("SELECTED ENTRY:", selectedEntry);
-    if (!newTime || !selectedEntry) return;
+    if (!newTime || !selectedEntry || !newDate) return;
 
     try {
       let needsSwap = false;
 
       // Check if we need to swap times
-      if (selectedEntry.timeIn && selectedEntry.timeOut) {
-        const timeInMinutes = selectedEntry.timeIn
-          .split(":")
-          .reduce((acc, time) => 60 * acc + +time, 0);
-        const timeOutMinutes = selectedEntry.timeOut
-          .split(":")
-          .reduce((acc, time) => 60 * acc + +time, 0);
-        const newTimeMinutes = newTime
-          .split(":")
-          .reduce((acc, time) => 60 * acc + +time, 0);
-
-        // If the new time would cause times to be out of order, we need to swap
-        needsSwap =
-          (timeType === "in" && newTimeMinutes > timeOutMinutes) ||
-          (timeType === "out" && newTimeMinutes < timeInMinutes);
+      if (selectedEntry.editedIn === 1) {
+        // compare newdate+newTime with dateOut+timeOut
+        const newDateTime = new Date(`${newDate}T${newTime}`);
+        const dateOut = new Date(
+          `${selectedEntry.dateOut}T${selectedEntry.timeOut}`
+        );
+        needsSwap = newDateTime > dateOut;
+      } else if (selectedEntry.editedOut === 1) {
+        // compare newdate+newTime with date+timeIn
+        const newDateTime = new Date(`${newDate}T${newTime}`);
+        const dateIn = new Date(
+          `${selectedEntry.date}T${selectedEntry.timeIn}`
+        );
+        needsSwap = newDateTime < dateIn;
       }
 
+      console.log("NEEDS SWAP:", needsSwap);
       if (needsSwap) {
         // Handle swap case
         const newEditedIn = selectedEntry.editedOut;
@@ -765,9 +800,6 @@ const DTRBatchView = ({ batch, onBack }) => {
           selectedEntry.editedIn === 0
             ? [newTime, selectedEntry.timeIn]
             : [selectedEntry.timeOut, newTime];
-
-        // const newEditedIn = timeType === "out" ? 1 : 0;
-        // const newEditedOut = timeType === "in" ? 1 : 0;
 
         console.log("NEW TIME IN:", newTimeIn);
         console.log("NEW TIME OUT:", newTimeOut);
@@ -781,6 +813,11 @@ const DTRBatchView = ({ batch, onBack }) => {
             timeOut: newTimeOut,
             editedIn: newEditedIn,
             editedOut: newEditedOut,
+            date: timeType === "in" ? newDate : selectedEntry.date,
+            dateOut:
+              timeType === "out"
+                ? newDate
+                : selectedEntry.dateOut || selectedEntry.date,
           }
         );
 
@@ -794,6 +831,11 @@ const DTRBatchView = ({ batch, onBack }) => {
                   timeOut: newTimeOut,
                   editedIn: newEditedIn,
                   editedOut: newEditedOut,
+                  date: timeType === "in" ? newDate : prevEntry.date,
+                  dateOut:
+                    timeType === "out"
+                      ? newDate
+                      : prevEntry.dateOut || prevEntry.date,
                   processed: 1,
                   remarks: (prevEntry.remarks || "") + " | TIMES SWAPPED",
                 };
@@ -809,6 +851,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         const payload = {
           id: selectedEntry.id,
           [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
+          [timeType === "in" ? "date" : "dateOut"]: newDate,
           processed: 1,
         };
 
@@ -824,6 +867,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                 return {
                   ...prevEntry,
                   [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
+                  [timeType === "in" ? "date" : "dateOut"]: newDate,
                   [timeType === "in" ? "editedIn" : "editedOut"]: 1,
                   processed: 1,
                   remarks:
@@ -1194,81 +1238,82 @@ const DTRBatchView = ({ batch, onBack }) => {
           </div>
         </div>
         <div>
-          <Button variant="secondary" onClick={onBack} className="ms-2">
+          <Button variant="print" onClick={onBack} className="ms-2">
             <i className="bi bi-arrow-left"></i> Back to Batches
           </Button>
         </div>
       </div>
 
       {renderButtons()}
+
+      <div className="mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Search by ID, name, date or status..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      <div className="mb-3 d-flex align-items-center gap-5">
+        <div className="form-check">
+          <input
+            type="checkbox"
+            className="form-check-input"
+            id="hideDeleted"
+            checked={hideDeleted}
+            onChange={(e) => setHideDeleted(e.target.checked)}
+          />
+          <label className="form-check-label" htmlFor="hideDeleted">
+            Hide deleted records
+          </label>
+        </div>
+
+        <div className="d-flex align-items-center gap-2">
+          <label className="form-label mb-0 ml-4">Reference Time:</label>
+          <div className="d-flex gap-1 align-items-center">
+            <input
+              type="number"
+              className="form-control form-control-sm"
+              style={{ width: "28px" }}
+              value={referenceHours}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 0 && val <= 23) {
+                  setReferenceHours(val.toString().padStart(2, "0"));
+                }
+              }}
+              onFocus={(e) => e.target.select()}
+              min="0"
+              max="23"
+              placeholder="HH"
+            />
+            <span>:</span>
+            <input
+              type="number"
+              className="form-control form-control-sm"
+              style={{ width: "28px" }}
+              value={referenceMinutes}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 0 && val <= 59) {
+                  setReferenceMinutes(val.toString().padStart(2, "0"));
+                }
+              }}
+              onFocus={(e) => e.target.select()}
+              min="0"
+              max="59"
+              placeholder="MM"
+            />
+          </div>
+        </div>
+      </div>
+
       {renderTabs()}
 
       {activeTab === "entries" ? (
         <>
-          <div className="mb-3">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search by ID, name, date or status..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="mb-3 d-flex align-items-center gap-5">
-            <div className="form-check">
-              <input
-                type="checkbox"
-                className="form-check-input"
-                id="hideDeleted"
-                checked={hideDeleted}
-                onChange={(e) => setHideDeleted(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="hideDeleted">
-                Hide deleted records
-              </label>
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <label className="form-label mb-0 ml-4">Reference Time:</label>
-              <div className="d-flex gap-1 align-items-center">
-                <input
-                  type="number"
-                  className="form-control form-control-sm"
-                  style={{ width: "28px" }}
-                  value={referenceHours}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    if (!isNaN(val) && val >= 0 && val <= 23) {
-                      setReferenceHours(val.toString().padStart(2, "0"));
-                    }
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  min="0"
-                  max="23"
-                  placeholder="HH"
-                />
-                <span>:</span>
-                <input
-                  type="number"
-                  className="form-control form-control-sm"
-                  style={{ width: "28px" }}
-                  value={referenceMinutes}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    if (!isNaN(val) && val >= 0 && val <= 59) {
-                      setReferenceMinutes(val.toString().padStart(2, "0"));
-                    }
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  min="0"
-                  max="59"
-                  placeholder="MM"
-                />
-              </div>
-            </div>
-          </div>
-
           {sortedEntries.length === 0 ? (
             <div className="alert alert-info mt-3">
               {searchTerm
@@ -1680,6 +1725,7 @@ const FloatingTimeInput = ({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
+  const [date, setDate] = useState("");
   const hourInputRef = useRef(null); // Add ref for the hour input field
 
   useEffect(() => {
@@ -1688,7 +1734,16 @@ const FloatingTimeInput = ({
       setHours(h);
       setMinutes(m);
     }
-  }, [defaultTime]);
+
+    // Set the date based on entry and type
+    if (entry) {
+      if (type === "in") {
+        setDate(entry.date);
+      } else {
+        setDate(entry.dateOut || entry.date);
+      }
+    }
+  }, [defaultTime, entry, type]);
 
   // Focus on the hour input when the popup appears
   useEffect(() => {
@@ -1738,7 +1793,7 @@ const FloatingTimeInput = ({
       2,
       "0"
     )}:00`;
-    onSave(formattedTime);
+    onSave(formattedTime, date);
   };
   console.log("HANDLE OPEN TIME WINDOW:", entry);
 
@@ -1755,7 +1810,7 @@ const FloatingTimeInput = ({
         border: "1px solid #ccc",
         borderRadius: "4px",
         boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        width: "300px",
+        width: "320px",
       }}
     >
       <div
@@ -1785,6 +1840,16 @@ const FloatingTimeInput = ({
             <small>
               {entry?.empName} - {formatDate(entry?.date)}
             </small>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
           </div>
           <div className="d-flex gap-2 align-items-center mb-3">
             <div>

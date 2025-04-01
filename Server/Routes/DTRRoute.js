@@ -1056,9 +1056,15 @@ router.get("/export/:batchId", async (req, res) => {
       });
     }
 
-    // Get all entries for this batch
+    // Get all entries for this batch - format date and dateOut as strings
     const [entries] = await connection.query(
-      `SELECT * FROM DTREntries 
+      `SELECT id, batchId, empId, empName, 
+       DATE_FORMAT(date, '%Y-%m-%d') as date, 
+       DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut, 
+       day, time, rawState, timeIn, timeOut, state, 
+       hours, overtime, sundayHours, sundayOT, nightDifferential,
+       processed, deleteRecord, editedIn, editedOut, remarks
+       FROM DTREntries 
        WHERE batchId = ? 
        ORDER BY empId, date, time`,
       [batchId]
@@ -1523,78 +1529,12 @@ router.post("/update-hours/:batchId", async (req, res) => {
   }
 });
 
-// Add this new route after the existing routes
-// router.post("/update-time/:batchId", async (req, res) => {
-//   let connection;
-//   try {
-//     const { batchId } = req.params;
-//     const { entries } = req.body;
-
-//     if (!entries || !Array.isArray(entries)) {
-//       return res.status(400).json({
-//         Status: false,
-//         Error: "Invalid entries data",
-//       });
-//     }
-
-//     connection = await pool.getConnection();
-//     await connection.beginTransaction();
-
-//     // Update each entry
-//     for (const entry of entries) {
-//       const updateFields = [];
-//       const updateValues = [];
-
-//       if (entry.timeIn) {
-//         updateFields.push("timeIn = ?");
-//         updateValues.push(entry.timeIn);
-//       }
-//       if (entry.timeOut) {
-//         updateFields.push("timeOut = ?");
-//         updateValues.push(entry.timeOut);
-//       }
-
-//       updateFields.push("processed = ?");
-//       updateValues.push(entry.processed);
-
-//       // Add the ID and batchId to the values array
-//       updateValues.push(entry.id, batchId);
-
-//       await connection.query(
-//         `
-//         UPDATE DTREntries
-//         SET ${updateFields.join(", ")}
-//         WHERE id = ? AND batchId = ?
-//       `,
-//         updateValues
-//       );
-//     }
-
-//     await connection.commit();
-
-//     res.json({
-//       Status: true,
-//       Message: "Successfully updated time entries",
-//       UpdatedCount: entries.length,
-//     });
-//   } catch (error) {
-//     if (connection) await connection.rollback();
-//     console.error("Error updating time entries:", error);
-//     res.status(500).json({
-//       Status: false,
-//       Error: `Failed to update time entries: ${error.message}`,
-//     });
-//   } finally {
-//     if (connection) connection.release();
-//   }
-// });
-
 // Route to update timeIn
 router.post("/update-time-in/:batchId", async (req, res) => {
   let connection;
   try {
     const { batchId } = req.params;
-    const { id, timeIn, processed } = req.body;
+    const { id, timeIn, processed, date } = req.body;
 
     if (!id || !timeIn) {
       return res.status(400).json({
@@ -1613,10 +1553,13 @@ router.post("/update-time-in/:batchId", async (req, res) => {
         timeIn = ?,
         processed = ?,
         editedIn = 1,
+        ${date ? "date = ?," : ""}
         remarks = CONCAT('MANUAL IN, ', COALESCE(remarks, ''))
       WHERE id = ? AND batchId = ?
     `,
-      [timeIn, processed || 0, id, batchId]
+      date
+        ? [timeIn, processed || 0, date, id, batchId]
+        : [timeIn, processed || 0, id, batchId]
     );
 
     await connection.commit();
@@ -1642,7 +1585,7 @@ router.post("/update-time-out/:batchId", async (req, res) => {
   let connection;
   try {
     const { batchId } = req.params;
-    const { id, timeOut, processed } = req.body;
+    const { id, timeOut, processed, dateOut } = req.body;
 
     if (!id || !timeOut) {
       return res.status(400).json({
@@ -1661,10 +1604,13 @@ router.post("/update-time-out/:batchId", async (req, res) => {
         timeOut = ?,
         processed = ?,
         editedOut = 1,
+        ${dateOut ? "dateOut = ?," : ""}
         remarks = CONCAT('MANUAL OUT, ', COALESCE(remarks, ''))
       WHERE id = ? AND batchId = ?
     `,
-      [timeOut, processed || 0, id, batchId]
+      dateOut
+        ? [timeOut, processed || 0, dateOut, id, batchId]
+        : [timeOut, processed || 0, id, batchId]
     );
 
     await connection.commit();
@@ -1827,7 +1773,8 @@ router.post("/update-time-in-out/:batchId", async (req, res) => {
   let connection;
   try {
     // const { batchId } = req.params;
-    const { id, timeIn, timeOut, editedIn, editedOut } = req.body;
+    const { id, timeIn, timeOut, editedIn, editedOut, date, dateOut } =
+      req.body;
 
     if (!id || !timeIn || !timeOut) {
       return res.status(400).json({
@@ -1840,18 +1787,38 @@ router.post("/update-time-in-out/:batchId", async (req, res) => {
     await connection.beginTransaction();
 
     console.log("Passed Data:", req.body);
+
+    const updateFields = [
+      "timeIn = ?",
+      "timeOut = ?",
+      "editedIn = ?",
+      "editedOut = ?",
+      "processed = 1",
+    ];
+
+    const updateValues = [timeIn, timeOut, editedIn, editedOut];
+
+    if (date) {
+      updateFields.push("date = ?");
+      updateValues.push(date);
+    }
+
+    if (dateOut) {
+      updateFields.push("dateOut = ?");
+      updateValues.push(dateOut);
+    }
+
+    // Add ID at the end of values array
+    updateValues.push(id);
+
     await connection.query(
       `
       UPDATE DTREntries 
       SET 
-        timeIn = ?,
-        timeOut = ?,
-        editedIn = ?,
-        editedOut = ?,
-        processed = 1
+        ${updateFields.join(", ")}
       WHERE id = ?
     `,
-      [timeIn, timeOut, editedIn, editedOut, id]
+      updateValues
     );
 
     await connection.commit();
