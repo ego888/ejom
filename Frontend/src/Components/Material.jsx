@@ -194,7 +194,7 @@ const Material = () => {
                 <td className="text-center">{m.UnitCost ? "Yes" : "No"}</td>
                 <td className="text-center">{m.MaterialType}</td>
                 <td className="text-center">{m.MachineType}</td>
-                <td className="text-center">{m.NoIncentive ? "Yes" : "No"}</td>
+                <td className="text-center">{m.noIncentive ? "Yes" : "No"}</td>
                 <td>
                   <div className="d-flex justify-content-center gap-2">
                     <Button
