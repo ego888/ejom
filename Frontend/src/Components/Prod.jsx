@@ -318,25 +318,25 @@ function Prod() {
     localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   };
 
-  const isAllIndeterminate = () => {
-    return (
-      selectedStatuses.length > 0 &&
-      selectedStatuses.length < statusOptions.length
-    );
-  };
+  // const isAllIndeterminate = () => {
+  //   return (
+  //     selectedStatuses.length > 0 &&
+  //     selectedStatuses.length < statusOptions.length
+  //   );
+  // };
 
-  const handleAllCheckbox = (e) => {
-    let newStatuses = [];
-    if (e.target.checked) {
-      newStatuses = statusOptions.map((s) => s.statusId);
-    }
-    setSelectedStatuses(newStatuses);
-    setIsAllChecked(e.target.checked);
-    setIsProdChecked(e.target.checked);
+  // const handleAllCheckbox = (e) => {
+  //   let newStatuses = [];
+  //   if (e.target.checked) {
+  //     newStatuses = statusOptions.map((s) => s.statusId);
+  //   }
+  //   setSelectedStatuses(newStatuses);
+  //   setIsAllChecked(e.target.checked);
+  //   setIsProdChecked(e.target.checked);
 
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  };
+  //   // Save to localStorage
+  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+  // };
 
   // Add function to handle forProd update
   const handleForProdChange = async (orderId, newValue) => {
@@ -551,6 +551,7 @@ function Prod() {
       "Prod",
       "Finished",
       "Delivered",
+      "Billed",
     ];
     if (billableStatuses.includes(order.status)) {
       setSelectedOrderId(order.id);
@@ -886,6 +887,7 @@ function Prod() {
                         "Prod",
                         "Finished",
                         "Delivered",
+                        "Billed",
                       ].includes(order.status)
                         ? "pointer"
                         : "default",

@@ -416,15 +416,15 @@ function AddOrder() {
   };
 
   const handleSubmit = (e, isPrintAction = false) => {
-    if (!canEdit()) {
-      setAlert({
-        show: true,
-        title: "Permission Denied",
-        message: "You don't have permission to edit this record",
-        type: "alert",
-      });
-      return;
-    }
+    // if (!canEdit()) {
+    //   setAlert({
+    //     show: true,
+    //     title: "Permission Denied",
+    //     message: "You don't have permission to edit this record",
+    //     type: "alert",
+    //   });
+    //   return;
+    // }
     e?.preventDefault();
 
     // Validate required fields
@@ -1725,7 +1725,7 @@ function AddOrder() {
                     onChange={(e) =>
                       setData({ ...data, orderReference: e.target.value })
                     }
-                    disabled={!isEditMode || !canEdit()}
+                    // disabled={!isEditMode || !canEdit()}
                   />
                 </div>
               </div>

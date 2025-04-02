@@ -1422,6 +1422,7 @@ router.put("/update_order_invoice", verifyUser, async (req, res) => {
       "Prod",
       "Finished",
       "Delivered",
+      "Billed",
     ];
     if (!billableStatuses.includes(currentOrder.status)) {
       return res.json({
@@ -1436,11 +1437,10 @@ router.put("/update_order_invoice", verifyUser, async (req, res) => {
     // Update order
     await connection.query(
       `UPDATE orders 
-       SET status = 'Billed',
-           invoiceNum = ?,
+       SET invoiceNum = IF(invoiceNum = '' OR invoiceNum IS NULL, ?, CONCAT(invoiceNum, ', ', ?)),
            billDate = NOW()
        WHERE orderID = ?`,
-      [invNumber, orderId]
+      [invNumber, invNumber, orderId]
     );
 
     // Commit transaction
