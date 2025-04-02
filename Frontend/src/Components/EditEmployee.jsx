@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 const EditEmployee = () => {
   const { id } = useParams();
@@ -22,6 +23,12 @@ const EditEmployee = () => {
     admin: false,
   });
   const [category, setCategory] = useState([]);
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,22 +77,59 @@ const EditEmployee = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Submitting data:", data); // Debug log
+    console.log("Submitting data:", data);
+
+    // Frontend validation
+    if (!data.name?.trim()) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Name is required",
+        type: "alert",
+      });
+      return;
+    }
+    if (!data.email?.trim()) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Email is required",
+        type: "alert",
+      });
+      return;
+    }
+
+    console.log("it pass validation");
     axios
-      .put(`${ServerIP}/auth/employee/edit/${id}`, data)
+      .put(`${ServerIP}/auth/employee/update/${id}`, data)
       .then((result) => {
+        console.log("THEN result: ", result);
         if (result.data.Status) {
-          navigate("/dashboard/employee"); // Navigate to the manage employees screen after saving
+          console.log("API Success: navigating now");
+          setAlert({
+            show: true,
+            title: "Success",
+            message: "Employee updated successfully",
+            type: "alert",
+          });
         } else {
           setAlert({
             show: true,
             title: "Error",
-            message: result.data.Error,
+            message: result.data.Error || "Failed to save employee",
             type: "alert",
           });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.error("Error saving employee:", err);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to save employee. Please try again.",
+          type: "alert",
+        });
+      });
   };
 
   const handleCancel = () => {
@@ -287,6 +331,19 @@ const EditEmployee = () => {
           </div>
         </form>
       </div>
+
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => {
+          setAlert({ ...alert, show: false });
+          if (alert.type === "alert") {
+            navigate("/dashboard/employee");
+          }
+        }}
+      />
     </div>
   );
 };
