@@ -102,13 +102,13 @@ const Modal = ({
             <h5 className="modal-title" id={`modal-title-${id}`}>
               {title}
             </h5>
-            <Button
+            {/* <Button
               variant="cancel"
               iconOnly
               size="sm"
               onClick={onClose}
               aria-label="Close modal"
-            />
+            /> */}
           </div>
           <div className="modal-body">{children}</div>
           {footer && <div className="modal-footer">{footer}</div>}

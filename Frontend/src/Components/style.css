@@ -518,3 +518,7 @@ datalist option:hover {
 .active-filter {
   color: #0d6efd !important;
 }
+
+.modal .btn-close {
+  display: none !important;
+}
