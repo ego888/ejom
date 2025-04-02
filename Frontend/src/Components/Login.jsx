@@ -1,6 +1,5 @@
 import axios from "axios";
 import React, { useState } from "react";
-//import "./style.css";
 import { useNavigate } from "react-router-dom";
 import { ServerIP } from "../config";
 import { jwtDecode } from "jwt-decode";
@@ -18,27 +17,23 @@ const Login = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    console.log("Attempting login...", ServerIP);
+    setError(null);
+
     axios
       .post(`${ServerIP}/auth/login`, values)
       .then((result) => {
-        console.log("Login response:", result.data);
         if (result.data.loginStatus) {
-          console.log("VALUES:", values);
-          const token = result.data.token;
-          localStorage.setItem("valid", "true");
-          localStorage.setItem("token", token);
+          const receivedToken = result.data.token;
+          const decoded = jwtDecode(receivedToken);
+          const userId = decoded.id;
+
+          // ✅ Store token and username early
+          localStorage.setItem("token", receivedToken);
           localStorage.setItem("userName", values.name);
 
-          // Get user ID from token
-          const decoded = jwtDecode(token);
-          const userId = decoded.id;
           setUserId(userId);
-
-          // Check if user has fullName
-          checkUserProfile(userId, token);
+          checkUserProfile(userId);
         } else {
-          console.log("Login failed:", result.data.Error);
           setError(result.data.Error);
         }
       })
@@ -48,7 +43,9 @@ const Login = () => {
       });
   };
 
-  const checkUserProfile = (userId, token) => {
+  const checkUserProfile = (userId) => {
+    const token = localStorage.getItem("token");
+
     axios
       .get(`${ServerIP}/auth/get_employee/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -57,28 +54,38 @@ const Login = () => {
         if (response.data.Status) {
           const userData = response.data.Result[0];
 
-          // Check if fullName is empty
           if (!userData.fullName || userData.fullName.trim() === "") {
+            // Require profile update before proceeding
             setShowProfileModal(true);
           } else {
-            // Navigate to dashboard if fullName exists
-            console.log("Login successful, navigating to dashboard...");
-            navigate("/dashboard");
+            // Profile already complete — complete login
+            completeLogin();
           }
         } else {
-          console.log("Failed to fetch user data:", response.data.Error);
-          navigate("/dashboard");
+          setError("Failed to fetch user profile");
         }
       })
       .catch((err) => {
-        console.error("Error fetching user data:", err);
-        navigate("/dashboard");
+        console.error("Error fetching user profile:", err);
+        setError("An error occurred checking user profile");
       });
   };
 
-  const handleProfileUpdate = (updatedName) => {
-    console.log("Profile updated, navigating to dashboard...");
+  const completeLogin = () => {
+    localStorage.setItem("valid", "true");
     navigate("/dashboard");
+  };
+
+  const handleProfileUpdate = () => {
+    setShowProfileModal(false);
+    completeLogin();
+  };
+
+  const handleProfileCancel = () => {
+    setShowProfileModal(false);
+    setUserId(null);
+    localStorage.clear(); // Cancel login
+    setError("Login cancelled — profile update required.");
   };
 
   return (
@@ -125,12 +132,9 @@ const Login = () => {
       {showProfileModal && userId && (
         <ProfileUpdateModal
           show={showProfileModal}
-          onClose={() => {
-            setShowProfileModal(false);
-            navigate("/dashboard");
-          }}
           userId={userId}
           onUpdate={handleProfileUpdate}
+          onClose={handleProfileCancel}
         />
       )}
     </div>
