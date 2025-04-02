@@ -42,22 +42,22 @@ router.post("/material/add", async (req, res) => {
   try {
     const sql = `
       INSERT INTO material 
-      (material, materialType, machineType, costPerYard, costPerSqFt, roll, unitSqFt, 
-       vendorId, comments, noIncentive) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (material, description, sqFtPerHour, minimumPrice, fixWidth, fixHeight, cost, unitCost, materialType, machineType, noIncentive) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
-      req.body.material,
-      req.body.materialType,
-      req.body.machineType,
-      req.body.costPerYard,
-      req.body.costPerSqFt,
-      req.body.roll,
-      req.body.unitSqFt,
-      req.body.vendorId,
-      req.body.comments,
-      req.body.noIncentive ? 1 : 0,
+      req.body.Material,
+      req.body.Description,
+      req.body.SqFtPerHour,
+      req.body.MinimumPrice,
+      req.body.FixWidth,
+      req.body.FixHeight,
+      req.body.Cost,
+      req.body.UnitCost,
+      req.body.MaterialType,
+      req.body.MachineType,
+      req.body.NoIncentive,
     ];
 
     const [result] = await pool.query(sql, values);
@@ -74,29 +74,31 @@ router.put("/material/edit/:id", async (req, res) => {
     const sql = `
       UPDATE material 
       SET 
-        material = ?,
-        materialType = ?,
-        machineType = ?,
-        costPerYard = ?,
-        costPerSqFt = ?,
-        roll = ?,
-        unitSqFt = ?,
-        vendorId = ?,
-        comments = ?,
-        noIncentive = ?
+        Material = ?,
+        Description = ?,
+        SqFtPerHour = ?,
+        MinimumPrice = ?,
+        FixWidth = ?,
+        FixHeight = ?,
+        Cost = ?,
+        UnitCost = ?,
+        MaterialType = ?,
+        MachineType = ?,
+        NoIncentive = ?
       WHERE id = ?
     `;
 
     const values = [
-      req.body.material,
-      req.body.materialType,
-      req.body.machineType,
-      req.body.costPerYard,
-      req.body.costPerSqFt,
-      req.body.roll,
-      req.body.unitSqFt,
-      req.body.vendorId,
-      req.body.comments,
+      req.body.Material,
+      req.body.Description,
+      req.body.SqFtPerHour || 0,
+      req.body.MinimumPrice || 0,
+      req.body.FixWidth || 0,
+      req.body.FixHeight || 0,
+      req.body.Cost || 0,
+      req.body.UnitCost ? 1 : 0,
+      req.body.MaterialType || "",
+      req.body.MachineType || "",
       req.body.noIncentive ? 1 : 0,
       id,
     ];
@@ -104,7 +106,7 @@ router.put("/material/edit/:id", async (req, res) => {
     const [result] = await pool.query(sql, values);
     return res.json({ Status: true });
   } catch (err) {
-    console.log(err);
+    console.log("Error updating material:", err);
     return res.json({ Status: false, Error: "Query Error" });
   }
 });

@@ -7,17 +7,17 @@ import ModalAlert from "./UI/ModalAlert";
 
 const EditMaterial = () => {
   const [material, setMaterial] = useState({
-    material: "",
-    description: "",
-    sqFtPerHour: "",
-    minimumPrice: "",
-    fixWidth: "",
-    fixHeight: "",
-    cost: "",
-    unitCost: "",
-    noIncentive: false,
-    materialType: "",
-    machineType: "",
+    Material: "",
+    Description: "",
+    SqFtPerHour: "",
+    MinimumPrice: "",
+    FixWidth: "",
+    FixHeight: "",
+    Cost: "",
+    UnitCost: "",
+    NoIncentive: "",
+    MaterialType: "",
+    MachineType: "",
   });
   const [materialTypes, setMaterialTypes] = useState([]);
   const [machineTypes, setMachineTypes] = useState([]);
@@ -36,17 +36,17 @@ const EditMaterial = () => {
       .get(`${ServerIP}/auth/material/${id}`)
       .then((result) => {
         setMaterial({
-          material: result.data.Result.Material,
-          description: result.data.Result.Description,
-          sqFtPerHour: result.data.Result.SqFtPerHour,
-          minimumPrice: result.data.Result.MinimumPrice,
-          fixWidth: result.data.Result.FixWidth,
-          fixHeight: result.data.Result.FixHeight,
-          cost: result.data.Result.Cost,
-          unitCost: result.data.Result.UnitCost,
-          noIncentive: result.data.Result.NoIncentive,
-          materialType: result.data.Result.MaterialType,
-          machineType: result.data.Result.MachineType,
+          Material: result.data.Result.Material,
+          Description: result.data.Result.Description,
+          SqFtPerHour: result.data.Result.SqFtPerHour,
+          MinimumPrice: result.data.Result.MinimumPrice,
+          FixWidth: result.data.Result.FixWidth,
+          FixHeight: result.data.Result.FixHeight,
+          Cost: result.data.Result.Cost,
+          UnitCost: result.data.Result.UnitCost,
+          NoIncentive: result.data.Result.NoIncentive,
+          MaterialType: result.data.Result.MaterialType,
+          MachineType: result.data.Result.MachineType,
         });
       })
       .catch((err) => console.log(err));
@@ -59,9 +59,7 @@ const EditMaterial = () => {
   // Function to fetch unique material types
   const fetchMaterialTypes = async () => {
     try {
-      const response = await axios.get(
-        `${ServerIP}/auth/unique-material-types`
-      );
+      const response = await axios.get(`${ServerIP}/auth/material-types`);
       if (response.data.Status) {
         setMaterialTypes(response.data.Result || []);
       }
@@ -73,7 +71,7 @@ const EditMaterial = () => {
   // Function to fetch unique machine types
   const fetchMachineTypes = async () => {
     try {
-      const response = await axios.get(`${ServerIP}/auth/unique-machine-types`);
+      const response = await axios.get(`${ServerIP}/auth/machine-types`);
       if (response.data.Status) {
         setMachineTypes(response.data.Result || []);
       }
@@ -87,7 +85,7 @@ const EditMaterial = () => {
     console.log("Form submitted with data:", material);
 
     // Frontend validation
-    if (!material.material.trim()) {
+    if (!material.Material?.trim()) {
       console.log("Validation error: Material is required");
       setAlert({
         show: true,
@@ -97,7 +95,7 @@ const EditMaterial = () => {
       });
       return;
     }
-    if (!material.description.trim()) {
+    if (!material.Description?.trim()) {
       console.log("Validation error: Description is required");
       setAlert({
         show: true,
@@ -119,7 +117,7 @@ const EditMaterial = () => {
           setAlert({
             show: true,
             title: "Error",
-            message: result.data.Error,
+            message: result.data.Error || "Failed to save material",
             type: "alert",
           });
         }
@@ -149,9 +147,9 @@ const EditMaterial = () => {
               placeholder="Enter Material"
               className="form-control"
               maxLength={12}
-              value={material.material}
+              value={material.Material}
               onChange={(e) =>
-                setMaterial({ ...material, material: e.target.value })
+                setMaterial({ ...material, Material: e.target.value })
               }
             />
           </div>
@@ -163,9 +161,9 @@ const EditMaterial = () => {
               name="description"
               placeholder="Enter Description"
               className="form-control"
-              value={material.description}
+              value={material.Description}
               onChange={(e) =>
-                setMaterial({ ...material, description: e.target.value })
+                setMaterial({ ...material, Description: e.target.value })
               }
             />
           </div>
@@ -177,9 +175,9 @@ const EditMaterial = () => {
               name="sqFtPerHour"
               placeholder="Enter SqFt Per Hour"
               className="form-control"
-              value={material.sqFtPerHour}
+              value={material.SqFtPerHour}
               onChange={(e) =>
-                setMaterial({ ...material, sqFtPerHour: e.target.value })
+                setMaterial({ ...material, SqFtPerHour: e.target.value })
               }
             />
           </div>
@@ -191,9 +189,9 @@ const EditMaterial = () => {
               name="minimumPrice"
               placeholder="Enter Minimum Price"
               className="form-control"
-              value={material.minimumPrice}
+              value={material.MinimumPrice}
               onChange={(e) =>
-                setMaterial({ ...material, minimumPrice: e.target.value })
+                setMaterial({ ...material, MinimumPrice: e.target.value })
               }
             />
           </div>
@@ -205,9 +203,9 @@ const EditMaterial = () => {
               name="fixWidth"
               placeholder="Enter Fix Width"
               className="form-control"
-              value={material.fixWidth}
+              value={material.FixWidth}
               onChange={(e) =>
-                setMaterial({ ...material, fixWidth: e.target.value })
+                setMaterial({ ...material, FixWidth: e.target.value })
               }
             />
           </div>
@@ -219,9 +217,9 @@ const EditMaterial = () => {
               name="fixHeight"
               placeholder="Enter Fix Height"
               className="form-control"
-              value={material.fixHeight}
+              value={material.FixHeight}
               onChange={(e) =>
-                setMaterial({ ...material, fixHeight: e.target.value })
+                setMaterial({ ...material, FixHeight: e.target.value })
               }
             />
           </div>
@@ -233,9 +231,9 @@ const EditMaterial = () => {
               name="cost"
               placeholder="Enter Cost"
               className="form-control"
-              value={material.cost}
+              value={material.Cost}
               onChange={(e) =>
-                setMaterial({ ...material, cost: e.target.value })
+                setMaterial({ ...material, Cost: e.target.value })
               }
             />
           </div>
@@ -247,9 +245,9 @@ const EditMaterial = () => {
               type="checkbox"
               id="unitCost"
               name="unitCost"
-              checked={material.unitCost}
+              checked={material.UnitCost}
               onChange={(e) =>
-                setMaterial({ ...material, unitCost: e.target.checked })
+                setMaterial({ ...material, UnitCost: e.target.checked })
               }
             />
           </div>
@@ -261,9 +259,9 @@ const EditMaterial = () => {
               type="checkbox"
               id="noIncentive"
               name="noIncentive"
-              checked={material.noIncentive}
+              checked={material.NoIncentive}
               onChange={(e) =>
-                setMaterial({ ...material, noIncentive: e.target.checked })
+                setMaterial({ ...material, NoIncentive: e.target.checked })
               }
             />
           </div>
@@ -276,9 +274,9 @@ const EditMaterial = () => {
               list="materialTypeList"
               placeholder="Enter Material Type"
               className="form-control"
-              value={material.materialType}
+              value={material.MaterialType}
               onChange={(e) =>
-                setMaterial({ ...material, materialType: e.target.value })
+                setMaterial({ ...material, MaterialType: e.target.value })
               }
               autoComplete="off"
             />
@@ -297,9 +295,9 @@ const EditMaterial = () => {
               list="machineTypeList"
               placeholder="Enter Machine Type"
               className="form-control"
-              value={material.machineType}
+              value={material.MachineType}
               onChange={(e) =>
-                setMaterial({ ...material, machineType: e.target.value })
+                setMaterial({ ...material, MachineType: e.target.value })
               }
               autoComplete="off"
             />

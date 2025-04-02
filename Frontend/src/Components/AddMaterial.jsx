@@ -7,17 +7,17 @@ import ModalAlert from "./UI/ModalAlert";
 
 const AddMaterial = () => {
   const [material, setMaterial] = useState({
-    material: "",
-    description: "",
-    sqFtPerHour: 0,
-    minimumPrice: 0,
-    fixWidth: 0,
-    fixHeight: 0,
-    cost: 0,
-    unitCost: false,
-    noIncentive: false,
-    materialType: "",
-    machineType: "",
+    Material: "",
+    Description: "",
+    SqFtPerHour: 0,
+    MinimumPrice: 0,
+    FixWidth: 0,
+    FixHeight: 0,
+    Cost: 0,
+    UnitCost: false,
+    NoIncentive: false,
+    MaterialType: "",
+    MachineType: "",
   });
   const [materialTypes, setMaterialTypes] = useState([]);
   const [machineTypes, setMachineTypes] = useState([]);
@@ -39,9 +39,7 @@ const AddMaterial = () => {
   // Function to fetch unique material types
   const fetchMaterialTypes = async () => {
     try {
-      const response = await axios.get(
-        `${ServerIP}/auth/unique-material-types`
-      );
+      const response = await axios.get(`${ServerIP}/auth/material-types`);
       if (response.data.Status) {
         setMaterialTypes(response.data.Result || []);
       }
@@ -53,7 +51,7 @@ const AddMaterial = () => {
   // Function to fetch unique machine types
   const fetchMachineTypes = async () => {
     try {
-      const response = await axios.get(`${ServerIP}/auth/unique-machine-types`);
+      const response = await axios.get(`${ServerIP}/auth/machine-types`);
       if (response.data.Status) {
         setMachineTypes(response.data.Result || []);
       }
@@ -87,15 +85,15 @@ const AddMaterial = () => {
 
     const formData = {
       ...material,
-      sqFtPerHour: material.sqFtPerHour || 0,
-      minimumPrice: material.minimumPrice || 0,
-      fixWidth: material.fixWidth || 0,
-      fixHeight: material.fixHeight || 0,
-      cost: material.cost || 0,
-      unitCost: material.unitCost || false,
-      noIncentive: material.noIncentive || false,
-      materialType: material.materialType || "",
-      machineType: material.machineType || "",
+      SqFtPerHour: material.SqFtPerHour || 0,
+      MinimumPrice: material.MinimumPrice || 0,
+      FixWidth: material.FixWidth || 0,
+      FixHeight: material.FixHeight || 0,
+      Cost: material.Cost || 0,
+      UnitCost: material.UnitCost || false,
+      NoIncentive: material.NoIncentive || false,
+      MaterialType: material.MaterialType || "",
+      MachineType: material.MachineType || "",
     };
 
     axios
@@ -261,9 +259,9 @@ const AddMaterial = () => {
               list="materialTypeList"
               placeholder="Enter Material Type"
               className="form-control"
-              value={material.materialType}
+              value={material.MaterialType}
               onChange={(e) =>
-                setMaterial({ ...material, materialType: e.target.value })
+                setMaterial({ ...material, MaterialType: e.target.value })
               }
               autoComplete="off"
             />
@@ -282,9 +280,9 @@ const AddMaterial = () => {
               list="machineTypeList"
               placeholder="Enter Machine Type"
               className="form-control"
-              value={material.machineType}
+              value={material.MachineType}
               onChange={(e) =>
-                setMaterial({ ...material, machineType: e.target.value })
+                setMaterial({ ...material, MachineType: e.target.value })
               }
               autoComplete="off"
             />
