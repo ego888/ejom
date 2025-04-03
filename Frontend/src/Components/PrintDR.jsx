@@ -140,7 +140,7 @@ function PrintDR({ data }) {
                     </div>
                     <div className="info-row">
                       <div className="info-label text-center">Client:</div>
-                      <div className="info-value">{order.clientName || ""}</div>
+                      <div className="info-value">{order.customerName}</div>
                     </div>
                     <div className="info-row">
                       <div className="info-label text-center">

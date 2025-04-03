@@ -64,6 +64,7 @@ function ProdPrintOneDR() {
         const preparedOrder = {
           orderId: orderInfo.orderId,
           clientName: orderInfo.clientName,
+          customerName: orderInfo.customerName,
           projectName: orderInfo.projectName,
           drDate: orderInfo.drDate,
           drNum: drNumber,

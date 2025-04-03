@@ -106,6 +106,7 @@ function OrderView() {
     const orderInfo = {
       orderId: data.orderId,
       clientName: data.clientName,
+      customerName: data.customerName,
       projectName: data.projectName,
       drNum: data.drNum,
       drDate: data.drDate,

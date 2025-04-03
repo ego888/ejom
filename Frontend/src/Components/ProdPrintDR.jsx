@@ -72,6 +72,7 @@ function ProdPrintDR() {
           return {
             orderId: order.id,
             clientName: order.clientName,
+            customerName: order.customerName,
             projectName: order.projectName,
             drDate: drDate,
             drNum: ++currentDrNumber,
