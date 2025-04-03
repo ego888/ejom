@@ -69,6 +69,9 @@ function ProdPrintOneDR() {
           drNum: drNumber,
           deliveryInst: orderInfo.deliveryInst,
           order_details: orderInfo.order_details,
+          totalAmount: orderInfo.totalAmount,
+          amountDisc: orderInfo.amountDisc,
+          grandTotal: orderInfo.grandTotal,
         };
 
         console.log("preparedOrder", preparedOrder);

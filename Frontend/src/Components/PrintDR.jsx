@@ -199,30 +199,18 @@ function PrintDR({ data }) {
                                 ? " - " + detail.itemDescription
                                 : ""}
                             </td>
-                            <td>
-                              {(detail.unit_price || detail.unitPrice) &&
-                              (detail.unit_price || detail.unitPrice) !== 0
-                                ? detail.unit_price || detail.unitPrice
-                                : ""}
+                            <td className="text-end">
+                              {detail.unitPrice !== 0 ? detail.unitPrice : ""}
                             </td>
                             {order.order_details?.some(
-                              (d) =>
-                                (d.discount_amount || d.discount) &&
-                                (d.discount_amount || d.discount) !== 0
+                              (d) => d.discount !== 0
                             ) && (
-                              <td>
-                                {(detail.discount_amount || detail.discount) &&
-                                (detail.discount_amount || detail.discount) !==
-                                  0
-                                  ? detail.discount_amount || detail.discount
-                                  : ""}
+                              <td className="text-end">
+                                {detail.discount !== 0 ? detail.discount : ""}
                               </td>
                             )}
-                            <td>
-                              {(detail.total_amount || detail.amount) &&
-                              (detail.total_amount || detail.amount) !== 0
-                                ? detail.total_amount || detail.amount
-                                : ""}
+                            <td className="text-end">
+                              {detail.amount !== 0 ? detail.amount : ""}
                             </td>
                           </tr>
                         );
@@ -240,7 +228,7 @@ function PrintDR({ data }) {
                   </div>
                   <div className="right-section">
                     <div className="totals-section">
-                      {!order.amount_disc || order.amount_disc === 0 ? (
+                      {!(Number(order.amountDisc) === 0) ? (
                         <div className="total-row grand-total">
                           <div className="total-label">Grand Total:</div>
                           <div className="total-value">{order.grandTotal}</div>

@@ -83,9 +83,15 @@ function ProdPrintDR() {
                 unit: order.unit || "",
                 material: order.material || "",
                 itemDescription: order.description || "",
+                unitPrice: order.unitPrice || "",
+                discount: order.discount || "",
+                amount: order.amount || "",
               },
             ],
             deliveryInst: order.deliveryInst || "",
+            totalAmount: order.totalAmount || "",
+            amountDisc: order.amountDisc || "",
+            grandTotal: order.grandTotal || "",
           };
         });
 
