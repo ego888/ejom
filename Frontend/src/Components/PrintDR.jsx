@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { formatPeso, formatNumber } from "../utils/orderUtils";
 
 // Constants for DR printing
-const ROWS_PER_PAGE = 8; // Number of rows to display per page
+const ROWS_PER_PAGE = 7; // Number of rows to display per page
 
 function PrintDR({ data }) {
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -298,7 +298,7 @@ function PrintDR({ data }) {
               padding: 0.5in;
               position: relative;
               font-family: Arial, sans-serif;
-              font-size: 12px;
+              font-size: 14px;
               page-break-after: always;
               overflow: hidden; /* Prevent content from spilling over */
             }
@@ -325,7 +325,7 @@ function PrintDR({ data }) {
             .info-row {
               display: flex;
               margin-bottom: 2px;
-              font-size: 12px;
+              font-size: 14px;
             }
 
             .info-label {
@@ -337,7 +337,7 @@ function PrintDR({ data }) {
 
             .info-value {
               flex: 1;
-              font-size: 12px;
+              font-size: 14px;
             }
 
             .delivery-label {
@@ -351,7 +351,7 @@ function PrintDR({ data }) {
               border: 1px solid rgb(29, 29, 29);
               border-radius: 8px;
               min-height: 60px;
-              font-size: 12px;
+              font-size: 14px;
             }
 
             .dr-table {
@@ -395,7 +395,7 @@ function PrintDR({ data }) {
               border: 1px solid rgb(29, 29, 29);
               border-radius: 8px;
               min-height: 60px;
-              font-size: 12px;
+              font-size: 14px;
             }
 
             .total-row {
@@ -403,7 +403,7 @@ function PrintDR({ data }) {
               justify-content: space-between;
               margin-bottom: 5px;
               padding: 2px 5px;
-              font-size: 11px;
+              font-size: 14px;
             }
 
             .total-row.grand-total {
@@ -435,7 +435,7 @@ function PrintDR({ data }) {
               border-top: 1px solid black;
               padding-top: 5px;
               text-align: center;
-              font-size: 11px;
+              font-size: 12px;
             }
 
             .page-footer {
