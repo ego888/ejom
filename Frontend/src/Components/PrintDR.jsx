@@ -228,7 +228,7 @@ function PrintDR({ data }) {
                   </div>
                   <div className="right-section">
                     <div className="totals-section">
-                      {!(Number(order.amountDisc) === 0) ? (
+                      {Number(order.amountDisc) === 0 ? (
                         <div className="total-row grand-total">
                           <div className="total-label">Grand Total:</div>
                           <div className="total-value">{order.grandTotal}</div>
