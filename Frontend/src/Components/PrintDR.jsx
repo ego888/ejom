@@ -238,19 +238,19 @@ function PrintDR({ data }) {
                           <div className="total-row">
                             <div className="total-label">Total Amount:</div>
                             <div className="total-value">
-                              formatNumber({order.totalAmount})
+                              {formatNumber(order.totalAmount)}
                             </div>
                           </div>
                           <div className="total-row">
                             <div className="total-label">Amount Discount:</div>
                             <div className="total-value">
-                              formatNumber({order.amountDisc})
+                              {formatNumber(order.amountDisc)}
                             </div>
                           </div>
                           <div className="total-row grand-total">
                             <div className="total-label">Grand Total:</div>
                             <div className="total-value">
-                              formatPeso({order.grandTotal})
+                              {formatPeso(order.grandTotal)}
                             </div>
                           </div>
                         </>
