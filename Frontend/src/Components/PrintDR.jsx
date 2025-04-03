@@ -15,6 +15,23 @@ function PrintDR({ data }) {
   });
   const navigate = useNavigate();
 
+  // Add debug logging
+  useEffect(() => {
+    console.log("PrintDR Data:", data);
+    if (data && data.length > 0) {
+      console.log("First Order Details:", data[0].order_details);
+      console.log("First Order Totals:", {
+        totalAmount: data[0].totalAmount,
+        amountDisc: data[0].amountDisc,
+        grandTotal: data[0].grandTotal,
+      });
+      // Log the first detail to see its structure
+      if (data[0].order_details && data[0].order_details.length > 0) {
+        console.log("First Detail Structure:", data[0].order_details[0]);
+      }
+    }
+  }, [data]);
+
   const calculatePages = (details = [], rowsPerPage = 11) => {
     if (!details || details.length === 0) return 1;
     if (details.length >= 9 && details.length <= 11) return 2;
@@ -141,6 +158,11 @@ function PrintDR({ data }) {
                       <th className="text-center">Qty</th>
                       <th className="text-center">Size</th>
                       <th className="text-center">Material - Description</th>
+                      <th className="text-center">Unit Price</th>
+                      {order.order_details?.some(
+                        (detail) => detail.discount && detail.discount !== 0
+                      ) && <th className="text-center">Discount</th>}
+                      <th className="text-center">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -149,28 +171,62 @@ function PrintDR({ data }) {
                         pageIndex * rowsPerPage,
                         (pageIndex + 1) * rowsPerPage
                       )
-                      .map((detail, idx) => (
-                        <tr key={idx}>
-                          <td className="text-center">
-                            {detail.quantity && detail.quantity !== 0
-                              ? detail.quantity
-                              : ""}
-                          </td>
-                          <td className="text-center">
-                            {detail.width || detail.height
-                              ? `${detail.width || ""} ${
-                                  detail.height ? "x " + detail.height : ""
-                                } ${detail.unit || ""}`
-                              : ""}
-                          </td>
-                          <td>
-                            {detail.material}
-                            {detail.itemDescription
-                              ? " - " + detail.itemDescription
-                              : ""}
-                          </td>
-                        </tr>
-                      ))}
+                      .map((detail, idx) => {
+                        // Add debug logging for each detail
+                        console.log(`Detail ${idx}:`, {
+                          unitPrice: detail.unit_price || detail.unitPrice,
+                          discount: detail.discount_amount || detail.discount,
+                          amount: detail.total_amount || detail.amount,
+                          rawDetail: detail,
+                        });
+                        return (
+                          <tr key={idx}>
+                            <td className="text-center">
+                              {detail.quantity && detail.quantity !== 0
+                                ? detail.quantity
+                                : ""}
+                            </td>
+                            <td className="text-center">
+                              {detail.width || detail.height
+                                ? `${detail.width || ""} ${
+                                    detail.height ? "x " + detail.height : ""
+                                  } ${detail.unit || ""}`
+                                : ""}
+                            </td>
+                            <td>
+                              {detail.material}
+                              {detail.itemDescription
+                                ? " - " + detail.itemDescription
+                                : ""}
+                            </td>
+                            <td>
+                              {(detail.unit_price || detail.unitPrice) &&
+                              (detail.unit_price || detail.unitPrice) !== 0
+                                ? detail.unit_price || detail.unitPrice
+                                : ""}
+                            </td>
+                            {order.order_details?.some(
+                              (d) =>
+                                (d.discount_amount || d.discount) &&
+                                (d.discount_amount || d.discount) !== 0
+                            ) && (
+                              <td>
+                                {(detail.discount_amount || detail.discount) &&
+                                (detail.discount_amount || detail.discount) !==
+                                  0
+                                  ? detail.discount_amount || detail.discount
+                                  : ""}
+                              </td>
+                            )}
+                            <td>
+                              {(detail.total_amount || detail.amount) &&
+                              (detail.total_amount || detail.amount) !== 0
+                                ? detail.total_amount || detail.amount
+                                : ""}
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               )}
@@ -182,9 +238,40 @@ function PrintDR({ data }) {
                     <div className="delivery-label">Delivery Instructions:</div>
                     <div className="info-value">{order.deliveryInst || ""}</div>
                   </div>
-                  <div className="signature-section">
-                    <div className="signature-block">
-                      <div className="signature-line">Received by / Date</div>
+                  <div className="right-section">
+                    <div className="totals-section">
+                      {!order.amount_disc || order.amount_disc === 0 ? (
+                        <div className="total-row grand-total">
+                          <div className="total-label">Grand Total:</div>
+                          <div className="total-value">{order.grandTotal}</div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="total-row">
+                            <div className="total-label">Total Amount:</div>
+                            <div className="total-value">
+                              {order.totalAmount}
+                            </div>
+                          </div>
+                          <div className="total-row">
+                            <div className="total-label">Amount Discount:</div>
+                            <div className="total-value">
+                              {order.amountDisc}
+                            </div>
+                          </div>
+                          <div className="total-row grand-total">
+                            <div className="total-label">Grand Total:</div>
+                            <div className="total-value">
+                              {order.grandTotal}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="signature-section">
+                      <div className="signature-block">
+                        <div className="signature-line">Received by / Date</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -270,7 +357,7 @@ function PrintDR({ data }) {
             }
 
             .delivery-instructions {
-              flex: 0 0 65%;
+              flex: 0 0 70%;
               padding: 5px;
               border: 1px solid rgb(29, 29, 29);
               border-radius: 8px;
@@ -314,18 +401,41 @@ function PrintDR({ data }) {
               text-align: center;
             }
 
-            .bottom-section {
+            .totals-section {
+              padding: 5px;
+              border: 1px solid rgb(29, 29, 29);
+              border-radius: 8px;
+              min-height: 60px;
+              font-size: 12px;
+            }
+
+            .total-row {
               display: flex;
               justify-content: space-between;
-              align-items: flex-start;
+              margin-bottom: 5px;
+              padding: 2px 5px;
+              font-size: 11px;
+            }
+
+            .total-row.grand-total {
+              font-weight: bold;
+              border-top: 1px solid rgb(29, 29, 29);
               margin-top: 5px;
-              gap: 20px;
-              position: relative;
+              padding-top: 5px;
+            }
+
+            .total-label {
+              font-weight: bold;
+              white-space: nowrap;
+            }
+
+            .total-value {
+              text-align: right;
+              white-space: nowrap;
             }
 
             .signature-section {
-              flex: 0 0 30%;
-              margin-top: 10px;
+              margin-top: 0;
             }
 
             .signature-block {
@@ -336,6 +446,7 @@ function PrintDR({ data }) {
               border-top: 1px solid black;
               padding-top: 5px;
               text-align: center;
+              font-size: 11px;
             }
 
             .page-footer {
@@ -350,6 +461,22 @@ function PrintDR({ data }) {
 
             .jo-number {
               font-weight: bold;
+            }
+
+            .bottom-section {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-top: 5px;
+              gap: 10px;
+              position: relative;
+            }
+
+            .right-section {
+              flex: 0 0 30%;
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
             }
           `}
         </style>

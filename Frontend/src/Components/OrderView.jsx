@@ -118,8 +118,14 @@ function OrderView() {
           unit: detail.unit,
           material: detail.material,
           itemDescription: detail.itemDescription,
+          unitPrice: detail.unitPrice,
+          discountAmount: detail.discountAmount,
+          totalAmount: detail.totalAmount,
         })),
       deliveryInst: data.deliveryInst,
+      totalAmount: data.totalAmount,
+      amountDisc: data.amountDisc,
+      grandTotal: data.grandTotal,
     };
 
     navigate("/dashboard/prod_print_one_dr", { state: { orderInfo } });
