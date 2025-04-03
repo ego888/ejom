@@ -191,10 +191,10 @@ router.get("/orders", async (req, res) => {
     const dataSql = `
             SELECT 
                 o.orderID as id, 
-        o.revision,
+                o.revision,
                 o.clientId, 
                 c.clientName, 
-        c.customerName,
+                c.customerName,
                 o.projectName, 
                 o.orderedBy, 
                 o.orderDate, 
@@ -207,12 +207,12 @@ router.get("/orders", async (req, res) => {
                 o.amountDisc,
                 o.percentDisc,
                 o.grandTotal,
-        o.amountPaid,
-        o.datePaid,
+                o.amountPaid,
+                o.datePaid,
                 e.name as salesName, 
                 o.orderReference,
-        o.forProd,
-        o.forBill
+                o.forProd,
+                o.forBill
             FROM orders o
             LEFT JOIN client c ON o.clientId = c.id
             LEFT JOIN employee e ON o.preparedBy = e.id

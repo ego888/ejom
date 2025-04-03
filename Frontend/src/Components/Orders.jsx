@@ -247,61 +247,61 @@ function Orders() {
   };
 
   // Handle records per page change
-  const handleRecordsPerPageChange = (e) => {
-    setRecordsPerPage(Number(e.target.value));
-    setCurrentPage(1); // Reset to first page
-  };
+  // const handleRecordsPerPageChange = (e) => {
+  //   setRecordsPerPage(Number(e.target.value));
+  //   setCurrentPage(1); // Reset to first page
+  // };
 
-  const isProdIndeterminate = () => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = JSON.parse(
-      localStorage.getItem("orderStatusFilter") || "[]"
-    ).filter((s) => prodStatuses.includes(s));
-    return (
-      selectedProdStatuses.length > 0 &&
-      selectedProdStatuses.length < prodStatuses.length
-    );
-  };
+  // const isProdIndeterminate = () => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   const selectedProdStatuses = JSON.parse(
+  //     localStorage.getItem("orderStatusFilter") || "[]"
+  //   ).filter((s) => prodStatuses.includes(s));
+  //   return (
+  //     selectedProdStatuses.length > 0 &&
+  //     selectedProdStatuses.length < prodStatuses.length
+  //   );
+  // };
 
-  const handleProdCheckbox = (e) => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    let newStatuses;
-    if (e.target.checked) {
-      newStatuses = [
-        ...new Set([
-          ...JSON.parse(localStorage.getItem("orderStatusFilter") || "[]"),
-          ...prodStatuses,
-        ]),
-      ];
-    } else {
-      newStatuses = JSON.parse(
-        localStorage.getItem("orderStatusFilter") || "[]"
-      ).filter((s) => !prodStatuses.includes(s));
-    }
+  // const handleProdCheckbox = (e) => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   let newStatuses;
+  //   if (e.target.checked) {
+  //     newStatuses = [
+  //       ...new Set([
+  //         ...JSON.parse(localStorage.getItem("orderStatusFilter") || "[]"),
+  //         ...prodStatuses,
+  //       ]),
+  //     ];
+  //   } else {
+  //     newStatuses = JSON.parse(
+  //       localStorage.getItem("orderStatusFilter") || "[]"
+  //     ).filter((s) => !prodStatuses.includes(s));
+  //   }
 
-    localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
-    setIsProdChecked(e.target.checked);
-    setIsAllChecked(newStatuses.length === statusOptions.length);
-  };
+  //   localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
+  //   setIsProdChecked(e.target.checked);
+  //   setIsAllChecked(newStatuses.length === statusOptions.length);
+  // };
 
-  const isAllIndeterminate = () => {
-    return (
-      JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length >
-        0 &&
-      JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length <
-        statusOptions.length
-    );
-  };
+  // const isAllIndeterminate = () => {
+  //   return (
+  //     JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length >
+  //       0 &&
+  //     JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length <
+  //       statusOptions.length
+  //   );
+  // };
 
-  const handleAllCheckbox = (e) => {
-    let newStatuses = [];
-    if (e.target.checked) {
-      newStatuses = statusOptions.map((s) => s.statusId);
-    }
-    localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
-    setIsAllChecked(e.target.checked);
-    setIsProdChecked(e.target.checked);
-  };
+  // const handleAllCheckbox = (e) => {
+  //   let newStatuses = [];
+  //   if (e.target.checked) {
+  //     newStatuses = statusOptions.map((s) => s.statusId);
+  //   }
+  //   localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
+  //   setIsAllChecked(e.target.checked);
+  //   setIsProdChecked(e.target.checked);
+  // };
 
   return (
     <div className="orders-theme">
@@ -494,7 +494,9 @@ function Orders() {
                   </td>
                   <td>{order.ornum || ""}</td>
                   <td className="number_right">
-                    {order.amountPaid === 0 ? formatPeso(order.amountPaid) : ""}
+                    {Number(order.amountPaid) === 0
+                      ? ""
+                      : formatPeso(order.amountPaid)}
                   </td>
                   <td>
                     {order.datePaid
