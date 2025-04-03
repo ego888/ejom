@@ -4,6 +4,7 @@ import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import { ServerIP } from "../config";
 import { useNavigate } from "react-router-dom";
+import { formatPeso, formatNumber } from "../utils/orderUtils";
 
 // Constants for DR printing
 const ROWS_PER_PAGE = 8; // Number of rows to display per page
@@ -162,7 +163,7 @@ function PrintDR({ data }) {
                       <th className="text-center">Material - Description</th>
                       <th className="text-center">Unit Price</th>
                       {order.order_details?.some(
-                        (detail) => detail.discount && detail.discount !== 0
+                        (detail) => Number(detail.discount) !== 0
                       ) && <th className="text-center">Discount</th>}
                       <th className="text-center">Amount</th>
                     </tr>
@@ -195,17 +196,19 @@ function PrintDR({ data }) {
                                 : ""}
                             </td>
                             <td className="text-end">
-                              {detail.unitPrice !== 0 ? detail.unitPrice : ""}
+                              {detail.unitPrice !== 0
+                                ? formatNumber(detail.unitPrice)
+                                : ""}
                             </td>
-                            {order.order_details?.some(
-                              (d) => d.discount !== 0
-                            ) && (
+                            {Number(detail.discount) !== 0 && (
                               <td className="text-end">
-                                {detail.discount !== 0 ? detail.discount : ""}
+                                {formatNumber(detail.discount)}
                               </td>
                             )}
                             <td className="text-end">
-                              {detail.amount !== 0 ? detail.amount : ""}
+                              {detail.amount !== 0
+                                ? formatNumber(detail.amount)
+                                : ""}
                             </td>
                           </tr>
                         );
@@ -226,26 +229,28 @@ function PrintDR({ data }) {
                       {Number(order.amountDisc) === 0 ? (
                         <div className="total-row grand-total">
                           <div className="total-label">Grand Total:</div>
-                          <div className="total-value">{order.grandTotal}</div>
+                          <div className="total-value">
+                            {formatPeso(order.grandTotal)}
+                          </div>
                         </div>
                       ) : (
                         <>
                           <div className="total-row">
                             <div className="total-label">Total Amount:</div>
                             <div className="total-value">
-                              {order.totalAmount}
+                              formatNumber({order.totalAmount})
                             </div>
                           </div>
                           <div className="total-row">
                             <div className="total-label">Amount Discount:</div>
                             <div className="total-value">
-                              {order.amountDisc}
+                              formatNumber({order.amountDisc})
                             </div>
                           </div>
                           <div className="total-row grand-total">
                             <div className="total-label">Grand Total:</div>
                             <div className="total-value">
-                              {order.grandTotal}
+                              formatPeso({order.grandTotal})
                             </div>
                           </div>
                         </>

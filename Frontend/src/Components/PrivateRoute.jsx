@@ -74,6 +74,8 @@ const checkRouteAccess = (route, permissions) => {
       return permissions.isArtist;
     case "printlog":
       return permissions.isOperator;
+    case "wiplog":
+      return permissions.isProduction;
     case "": // dashboard route
     case "material":
     case "employee":

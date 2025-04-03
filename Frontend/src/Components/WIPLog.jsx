@@ -7,6 +7,7 @@ import "./WIPLog.css";
 function WIPLog() {
   const [finishedOrderId, setFinishedOrderId] = useState("");
   const [deliverOrderId, setDeliverOrderId] = useState("");
+  const [billedOrderId, setBilledOrderId] = useState("");
   const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
   const handleStatusUpdate = async (orderId, newStatus) => {
@@ -22,6 +23,7 @@ function WIPLog() {
         }
       );
 
+      console.log(response.data.Status);
       if (response.data.Status) {
         setAlert({
           show: true,
@@ -34,6 +36,8 @@ function WIPLog() {
           setFinishedOrderId("");
         } else if (newStatus === "Delivered") {
           setDeliverOrderId("");
+        } else if (newStatus === "Billed") {
+          setBilledOrderId("");
         }
       } else {
         setAlert({
@@ -58,6 +62,13 @@ function WIPLog() {
     e.preventDefault();
     if (deliverOrderId) {
       handleStatusUpdate(deliverOrderId, "Delivered");
+    }
+  };
+
+  const handleBilledSubmit = (e) => {
+    e.preventDefault();
+    if (billedOrderId) {
+      handleStatusUpdate(billedOrderId, "Billed");
     }
   };
 
@@ -105,6 +116,29 @@ function WIPLog() {
                   />
                   <button className="btn btn-primary" type="submit">
                     Deliver
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-6">
+          <div className="card ">
+            <div className="card-body">
+              <h5 className="card-title">Mark as Billed</h5>
+              <form onSubmit={handleBilledSubmit}>
+                <div className="input-group mb-3">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter Order ID"
+                    value={billedOrderId}
+                    onChange={(e) => setBilledOrderId(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <button className="btn btn-primary" type="submit">
+                    Billed
                   </button>
                 </div>
               </form>

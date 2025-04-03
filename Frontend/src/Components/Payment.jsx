@@ -1267,7 +1267,7 @@ function Prod() {
                         disabled={
                           !canEditPayments() ||
                           (remainingAmount <= 0 && !checkPay.has(order.id)) ||
-                          order.grandTotal <= (order.amountPaid || 0)
+                          order.grandTotal - order.amountPaid <= 0
                         }
                       />
                     </div>

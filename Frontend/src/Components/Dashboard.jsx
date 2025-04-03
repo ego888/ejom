@@ -270,7 +270,7 @@ const Dashboard = () => {
     }
 
     if (permissions.isProduction) {
-      visibleItems.push(PROD, SOA);
+      visibleItems.push(PROD, WIPLOG, SOA);
     }
 
     if (permissions.isArtist) {
