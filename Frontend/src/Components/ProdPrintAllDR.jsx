@@ -1,10 +1,10 @@
-import React from "react";
-import ReactDOMServer from "react-dom/server";
-import axios from "axios";
-import { ServerIP } from "../config";
-import { handleApiError } from "../utils/handleApiError";
-import { useNavigate } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
+// import React from "react";
+// import ReactDOMServer from "react-dom/server";
+// import axios from "axios";
+// import { ServerIP } from "../config";
+// import { handleApiError } from "../utils/handleApiError";
+// import { useNavigate } from "react-router-dom";
+// import { QRCodeSVG } from "qrcode.react";
 export const handlePrintAllDR = async (selectedOrders, navigate) => {
   try {
     const token = localStorage.getItem("token");
@@ -160,18 +160,42 @@ export const handlePrintAllDR = async (selectedOrders, navigate) => {
                 <thead>
                   <tr>
                     <th>Quantity</th>
-                    <th>Description</th>
-                    <th>Material</th>
                     <th>Size</th>
+                    <th>Material - Description</th>
+                    <th>Unit Price</th>
+                    <th>Discount</th>
+                    <th>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td style="text-align: center">${order.quantity}</td>
-                    <td>${order.description || ""}</td>
-                    <td>${order.material}</td>
-                    <td>${order.width} x ${order.height}</td>
-                  </tr>
+                    <td className="text-center">
+                      ${
+                        order.quantity && order.quantity !== 0
+                          ? order.quantity
+                          : ""
+                      }
+                    </td>
+                    <td className="text-center">
+                      ${
+                        order.width || order.height
+                          ? `${order.width || ""} ${
+                              order.height ? "x " + order.height : ""
+                            } ${order.unit || ""}`
+                          : ""
+                      }
+                    </td>
+                    <td>
+                      {detail.material}
+                      ${order.description || ""}
+                    </td>
+                    <td className="text-end">
+                      ${order.unitPrice !== 0 ? order.unitPrice : ""}
+                    </td>
+                    ${order.discount !== 0 ? order.discount : ""}
+                    <td className="text-end">
+                      ${order.amount !== 0 ? order.amount : ""}
+                    </td>
                 </tbody>
               </table>
               <div class="signature-section">

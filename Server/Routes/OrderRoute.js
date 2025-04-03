@@ -660,12 +660,18 @@ router.get("/orders-all-DR", async (req, res) => {
         o.deliveryInst,
         o.drnum,
         o.drDate,
+        o.totalAmount,
+        o.amountDisc,
+        o.grandTotal,
         od.quantity,
         od.width,
         od.height,
         od.unit,
         od.material,
         od.itemDescription,
+        od.unitPrice,
+        od.discount,
+        od.amount,
         od.displayOrder
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
@@ -695,6 +701,9 @@ router.get("/orders-all-DR", async (req, res) => {
           deliveryInst: row.deliveryInst,
           drnum: row.drnum,
           drDate: row.drDate,
+          totalAmount: row.totalAmount,
+          amountDisc: row.amountDisc,
+          grandTotal: row.grandTotal,
           order_details: [],
         });
       }
@@ -707,6 +716,9 @@ router.get("/orders-all-DR", async (req, res) => {
         unit: row.unit,
         material: row.material,
         itemDescription: row.itemDescription,
+        unitPrice: row.unitPrice,
+        discount: row.discount,
+        amount: row.amount,
         displayOrder: row.displayOrder,
       });
     });

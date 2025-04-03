@@ -5,6 +5,9 @@ import axios from "../utils/axiosConfig"; // Import configured axios
 import { ServerIP } from "../config";
 import { useNavigate } from "react-router-dom";
 
+// Constants for DR printing
+const ROWS_PER_PAGE = 8; // Number of rows to display per page
+
 function PrintDR({ data }) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [alert, setAlert] = useState({
@@ -32,9 +35,9 @@ function PrintDR({ data }) {
     }
   }, [data]);
 
-  const calculatePages = (details = [], rowsPerPage = 11) => {
+  const calculatePages = (details = [], rowsPerPage = ROWS_PER_PAGE) => {
     if (!details || details.length === 0) return 1;
-    if (details.length >= 9 && details.length <= 11) return 2;
+    // Reduce rows per page to ensure enough space for signature
     return Math.ceil(details.length / rowsPerPage);
   };
 
@@ -88,8 +91,8 @@ function PrintDR({ data }) {
     // Trigger print after a short delay to ensure content is rendered
     const printTimeout = setTimeout(() => {
       window.print();
-      // Show confirmation dialog after printing
-      setShowConfirmation(true);
+      // Call handleConfirmPrint directly instead of showing confirmation dialog
+      handleConfirmPrint();
     }, 500);
 
     return () => {
@@ -101,12 +104,11 @@ function PrintDR({ data }) {
     <>
       <div className="dr-pages">
         {data.map((order, orderIndex) => {
-          const rowsPerPage = 11;
-          const totalPages = calculatePages(order.order_details, rowsPerPage);
+          const totalPages = calculatePages(order.order_details, ROWS_PER_PAGE);
           const needsExtraPage =
             order.order_details &&
             order.order_details.length >= 9 &&
-            order.order_details.length <= 11;
+            order.order_details.length <= ROWS_PER_PAGE;
 
           return Array.from({ length: totalPages }).map((_, pageIndex) => (
             <div
@@ -168,17 +170,10 @@ function PrintDR({ data }) {
                   <tbody>
                     {(order.order_details || [])
                       .slice(
-                        pageIndex * rowsPerPage,
-                        (pageIndex + 1) * rowsPerPage
+                        pageIndex * ROWS_PER_PAGE,
+                        (pageIndex + 1) * ROWS_PER_PAGE
                       )
                       .map((detail, idx) => {
-                        // Add debug logging for each detail
-                        console.log(`Detail ${idx}:`, {
-                          unitPrice: detail.unit_price || detail.unitPrice,
-                          discount: detail.discount_amount || detail.discount,
-                          amount: detail.total_amount || detail.amount,
-                          rawDetail: detail,
-                        });
                         return (
                           <tr key={idx}>
                             <td className="text-center">
@@ -300,6 +295,7 @@ function PrintDR({ data }) {
               font-family: Arial, sans-serif;
               font-size: 12px;
               page-break-after: always;
+              overflow: hidden; /* Prevent content from spilling over */
             }
 
             .dr-page:last-child {
@@ -469,15 +465,6 @@ function PrintDR({ data }) {
           `}
         </style>
       </div>
-
-      <ModalAlert
-        show={showConfirmation}
-        title="Print Confirmation"
-        message="Was the DR printing successful? Click OK to update DR numbers into Order records."
-        type="confirm"
-        onConfirm={handleConfirmPrint}
-        onClose={() => navigate(-1)}
-      />
 
       <ModalAlert
         show={alert.show}
