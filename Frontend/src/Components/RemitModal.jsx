@@ -104,7 +104,7 @@ function RemitModal({ show, onClose }) {
         <table style="width: 100%; border-collapse: collapse; table-stripe">
           <tr>
             <th style="border: 1px solid #ddd; padding: 8px;">Pay ID</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Order ID</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">JO #</th>
             <th style="border: 1px solid #ddd; padding: 8px;">Client</th>
             <th style="border: 1px solid #ddd; padding: 8px;">Order Total</th>
             <th style="border: 1px solid #ddd; padding: 8px;">Amount Applied</th>
@@ -276,7 +276,7 @@ function RemitModal({ show, onClose }) {
             <thead>
               <tr>
                 <th className="text-center">Pay ID</th>
-                <th className="text-center">Order ID</th>
+                <th className="text-center">JO #</th>
                 <th className="text-center">Client</th>
                 <th className="text-center">Order Total</th>
                 <th className="text-center">Amount Applied</th>

@@ -86,7 +86,7 @@ function WIPLog() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Enter Order ID"
+                    placeholder="Enter JO #"
                     value={finishedOrderId}
                     onChange={(e) => setFinishedOrderId(e.target.value)}
                     autoComplete="off"
@@ -109,7 +109,7 @@ function WIPLog() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Enter Order ID"
+                    placeholder="Enter JO #"
                     value={deliverOrderId}
                     onChange={(e) => setDeliverOrderId(e.target.value)}
                     autoComplete="off"
@@ -132,7 +132,7 @@ function WIPLog() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Enter Order ID"
+                    placeholder="Enter JO #"
                     value={billedOrderId}
                     onChange={(e) => setBilledOrderId(e.target.value)}
                     autoComplete="off"

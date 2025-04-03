@@ -107,7 +107,7 @@ function ProdPrintProduction() {
       <table className="prod-table">
         <thead>
           <tr className="header-row">
-            <th>Order ID</th>
+            <th>JO #</th>
             <th>Client</th>
             <th style={{ maxWidth: "200px" }}>Project Name</th>
             <th>Due Date & Time</th>

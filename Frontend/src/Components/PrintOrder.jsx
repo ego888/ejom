@@ -323,7 +323,7 @@ function PrintOrder() {
       </span>
       {/* Page Info and Print DateTime */}
       <div className="page-info">
-        JO#{data.orderId} • {new Date().toLocaleString()}
+        JO #{data.orderId} • {new Date().toLocaleString()}
       </div>
       {/* Print-specific styles */}
       <style>

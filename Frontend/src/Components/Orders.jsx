@@ -376,7 +376,7 @@ function Orders() {
                     sortConfig.key === "id" ? sortConfig.direction : "none"
                   }
                 >
-                  Order ID {getSortIndicator("id")}
+                  JO # {getSortIndicator("id")}
                 </th>
                 <th
                   className={`text-center ${

@@ -345,7 +345,7 @@ function PrintLog() {
                   onClick={() => handleSort("id")}
                   style={{ cursor: "pointer" }}
                 >
-                  Order ID {getSortIndicator("id")}
+                  JO # {getSortIndicator("id")}
                 </th>
                 <th
                   className="text-center"

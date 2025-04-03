@@ -129,7 +129,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                 className="text-center cursor-pointer"
                 onClick={() => handleSort("orderId")}
               >
-                Order ID {getSortIcon("orderId")}
+                JO # {getSortIcon("orderId")}
               </th>
               <th
                 className="text-center cursor-pointer"

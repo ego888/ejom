@@ -795,15 +795,11 @@ router.get("/next_display_order/:orderId", async (req, res) => {
     const sql =
       "SELECT COALESCE(MAX(displayOrder), 0) as maxOrder FROM order_details WHERE orderId = ?";
 
-    console.log("Order ID:", orderId);
     const [result] = await pool.query(sql, [orderId]);
 
     // If maxOrder is 0, it means no records exist yet
     const maxOrder = result[0].maxOrder;
     const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
-
-    console.log("Current max order:", maxOrder);
-    console.log("Next display order:", nextDisplayOrder);
 
     return res.json({
       Status: true,

@@ -272,7 +272,7 @@ function ArtistLog() {
             <thead>
               <tr className="table-header">
                 <th aria-label="order-id" className="text-center">
-                  Order ID
+                  JO #
                 </th>
                 <th aria-label="client" className="text-center">
                   Client
@@ -330,8 +330,8 @@ function ArtistLog() {
                       {index === 0
                         ? item.orderId +
                           (item.revision ? `-${item.revision}` : "")
-                      : ""}
-                  </td>
+                        : ""}
+                    </td>
                     <td className="client-cell">
                       <div>{item.clientName}</div>
                       {item.customerName && (
@@ -339,18 +339,18 @@ function ArtistLog() {
                           {item.customerName}
                         </div>
                       )}
-                  </td>
+                    </td>
                     <td className="project-name" id={`project-${index}`}>
                       {index === 0 ? item.projectName : ""}
-                  </td>
+                    </td>
                     <td className="due-date" id={`due-datetime-${index}`}>
                       {index === 0 && item.dueDate
                         ? `${new Date(item.dueDate).toLocaleDateString()} ${
                             item.dueTime || ""
                           }`
-                      : ""}
-                  </td>
-                  <td
+                        : ""}
+                    </td>
+                    <td
                       className="production-date"
                       id={`production-date-${index}`}
                     >
@@ -446,8 +446,8 @@ function ArtistLog() {
                           handleFieldChange(item.Id, "minor", e.target.value)
                         }
                       />
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
                 ))
               )}
             </tbody>

@@ -26,7 +26,7 @@ const SOADetails = ({ data, onClose }) => {
       >
         <thead className="table-active">
           <tr>
-            <th className="text-center">Order ID</th>
+            <th className="text-center">JO #</th>
             <th className="text-center">Date</th>
             <th className="text-center">Reference</th>
             <th className="text-center">Project</th>
