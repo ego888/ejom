@@ -492,7 +492,7 @@ function Orders() {
                   <td className="number_right">
                     {order.grandTotal ? formatPeso(order.grandTotal) : ""}
                   </td>
-                  <td>{order.ornum || ""}</td>
+                  <td>{order.orNums || ""}</td>
                   <td className="number_right">
                     {Number(order.amountPaid) === 0
                       ? ""

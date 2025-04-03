@@ -1136,6 +1136,7 @@ function Prod() {
                 </th>
                 <th className="text-center">Grand Total</th>
                 <th className="text-center">Amount Paid</th>
+                <th className="text-center">OR#</th>
                 <th className="text-center">Pay</th>
                 <th className="text-right">Payment</th>
                 <th className="text-right">WTax</th>
@@ -1243,6 +1244,7 @@ function Prod() {
                       ? `₱${order.amountPaid.toLocaleString()}`
                       : ""}
                   </td>
+                  <td>{order.orNums || ""}</td>
                   <td className="text-center">
                     <div className="checkbox-container">
                       <label

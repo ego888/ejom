@@ -188,7 +188,7 @@ router.get("/orders", async (req, res) => {
     const whereClause = whereConditions.join(" AND ");
 
     // Main data query
-    const dataSql = `
+    const dataSql1 = `
             SELECT 
                 o.orderID as id, 
                 o.revision,
@@ -220,6 +220,43 @@ router.get("/orders", async (req, res) => {
             ORDER BY ${sortBy} ${sortDirection}
             LIMIT ? OFFSET ?
         `;
+
+    const dataSql = `
+        SELECT 
+            o.orderID as id, 
+            o.revision,
+            o.clientId, 
+            c.clientName, 
+            c.customerName,
+            o.projectName, 
+            o.orderedBy, 
+            o.orderDate, 
+            o.dueDate, 
+            o.dueTime,
+            o.status, 
+            o.drnum, 
+            o.invoiceNum as invnum, 
+            o.totalAmount,
+            o.amountDisc,
+            o.percentDisc,
+            o.grandTotal,
+            o.amountPaid,
+            o.datePaid,
+            e.name as salesName, 
+            o.orderReference,
+            o.forProd,
+            o.forBill,
+            GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
+        FROM orders o
+        LEFT JOIN client c ON o.clientId = c.id
+        LEFT JOIN employee e ON o.preparedBy = e.id
+        LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
+        LEFT JOIN payments p ON p.payId = pja.payId
+        WHERE ${whereClause}
+        GROUP BY o.orderId
+        ORDER BY ${sortBy} ${sortDirection}
+        LIMIT ? OFFSET ?
+    `;
 
     // Execute data query with proper parameter order
     const [orders] = await pool.query(dataSql, [...params, limit, offset]);

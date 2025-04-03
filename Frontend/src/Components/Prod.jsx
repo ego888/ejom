@@ -16,6 +16,7 @@ import { QRCodeSVG } from "qrcode.react";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import Modal from "./UI/Modal";
+import { formatNumber } from "../utils/orderUtils";
 //import { handlePrintProduction } from "./ProdPrintProduction";
 //import { handlePrintAllDR } from "./ProdPrintAllDR";
 
@@ -895,16 +896,14 @@ function Prod() {
                   >
                     {order.invnum || ""}
                   </td>
-                  <td className="number_right">
-                    {order.grandTotal
-                      ? `₱${order.grandTotal.toLocaleString()}`
-                      : ""}
+                  <td className="text-end">
+                    {order.grandTotal ? formatNumber(order.grandTotal) : ""}
                   </td>
-                  <td>{order.ornum || ""}</td>
-                  <td>
+                  <td>{order.orNums || ""}</td>
+                  <td className="text-end">
                     {order.amountPaid === 0
-                      ? `₱${order.amountPaid.toLocaleString()}`
-                      : ""}
+                      ? ""
+                      : formatNumber(order.amountPaid)}
                   </td>
                   <td>
                     {order.datePaid
