@@ -86,6 +86,29 @@ function Prod() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [amount, setAmount] = useState("");
   const [showRemitModal, setShowRemitModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(() => {
+    return localStorage.getItem("paymentSearchTerm") || "";
+  });
+  const [displaySearchTerm, setDisplaySearchTerm] = useState(() => {
+    return localStorage.getItem("paymentSearchTerm") || "";
+  });
+
+  // Debounced search handler
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      setSearchTerm(term);
+      setCurrentPage(1);
+      localStorage.setItem("paymentSearchTerm", term);
+    }, 500),
+    []
+  );
+
+  // Update handleSearch to use debounce
+  const handleSearch = (e) => {
+    const term = e.target.value.toLowerCase();
+    setDisplaySearchTerm(term);
+    debouncedSearch(term);
+  };
 
   // 1. Move fetchOrderData outside useEffect
   const fetchOrderData = async () => {
@@ -108,9 +131,20 @@ function Prod() {
         statuses: selectedStatuses.join(","),
         sales: selectedSales.length ? selectedSales.join(",") : undefined,
         clients: selectedClients.length ? selectedClients.join(",") : undefined,
-        ...(searchClientName.trim() && {
-          search: searchClientName.trim(),
-          searchFields: ["id", "clientName", "customerName", "orderedBy"],
+        ...(searchTerm.trim() && {
+          search: searchTerm.trim(),
+          searchFields: [
+            "id",
+            "clientName",
+            "customerName",
+            "orderedBy",
+            "drnum",
+            "invnum",
+            "ornum",
+            "salesName",
+            "amount",
+            "orderReference",
+          ],
         }),
       };
 
@@ -207,13 +241,6 @@ function Prod() {
     initializeComponent();
   }, []); // Run once on mount
 
-  // Update handleSearch to use debounce
-  const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    setSearchClientName(term);
-    setCurrentPage(1);
-  };
-
   // Update useEffect dependencies
   useEffect(() => {
     fetchOrderData();
@@ -224,6 +251,7 @@ function Prod() {
     selectedSales,
     selectedStatuses,
     selectedClients,
+    searchTerm,
   ]);
 
   // Sort handler
@@ -261,12 +289,12 @@ function Prod() {
   // Update handleClientSearch to use fetchOrderData
   const handleClientSearch = async (e) => {
     if (e.type === "keydown" && e.key !== "Enter") return;
-    if (e.type === "blur" && searchClientName.trim() === "") return;
+    if (e.type === "blur" && searchTerm.trim() === "") return;
 
     // Update payment info with client name
     setPaymentInfo((prev) => ({
       ...prev,
-      clientName: searchClientName,
+      clientName: searchTerm,
     }));
 
     // Reset to first page when searching
@@ -886,6 +914,39 @@ function Prod() {
           <h3>Payment Processing</h3>
         </div>
 
+        {/* Action Buttons and Search */}
+        <div className="d-flex justify-content-between mb-3">
+          <div className="d-flex gap-2">
+            <Button variant="save" onClick={() => setShowRemitModal(true)}>
+              Payment Summary
+            </Button>
+            {checkPay.size > 0 && (
+              <Button
+                variant="view"
+                onClick={() => setShowAllocationModal(true)}
+              >
+                View Allocations ({checkPay.size})
+              </Button>
+            )}
+          </div>
+          <div className="search-container">
+            <label htmlFor="paymentSearch" className="visually-hidden">
+              Search payments
+            </label>
+            <input
+              id="paymentSearch"
+              name="paymentSearch"
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+              onChange={handleSearch}
+              value={displaySearchTerm}
+              style={{ width: "400px" }}
+              aria-label="Search payments"
+            />
+          </div>
+        </div>
+
         {/* Payment Info Header */}
         <div className="payment-info-header mb-4">
           <div className="row">
@@ -997,20 +1058,7 @@ function Prod() {
         </div>
 
         {/* Add View Allocations and Remit buttons after the payment info header */}
-        <div className="d-flex justify-content-between mb-3">
-          <div className="d-flex gap-2">
-            <Button variant="save" onClick={() => setShowRemitModal(true)}>
-              Remit
-            </Button>
-            {checkPay.size > 0 && (
-              <Button
-                variant="view"
-                onClick={() => setShowAllocationModal(true)}
-              >
-                View Allocations ({checkPay.size})
-              </Button>
-            )}
-          </div>
+        <div className="d-flex justify-content-end mb-3">
           <select
             id="vat-select"
             className="form-input"

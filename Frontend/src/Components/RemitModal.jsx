@@ -246,7 +246,7 @@ function RemitModal({ show, onClose }) {
       <div className="d-flex justify-content-between mb-3">
         <div className="d-flex gap-2">
           <Button variant="save" onClick={handlePrintRemit}>
-            Print Remit
+            Print & Remit
           </Button>
           <Button variant="cancel" onClick={onClose}>
             Close
