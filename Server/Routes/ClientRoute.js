@@ -25,7 +25,7 @@ router.get("/clients/search", verifyUser, async (req, res) => {
 });
 
 // Get all clients with sales person name
-router.get("/client", async (req, res) => {
+router.get("/client", verifyUser, async (req, res) => {
   try {
     const sql = `
         SELECT c.*, e.name as salesName 
@@ -41,7 +41,7 @@ router.get("/client", async (req, res) => {
 });
 
 // Get clients id, clientName, terms
-router.get("/clients", async (req, res) => {
+router.get("/clients", verifyUser, async (req, res) => {
   try {
     const sql = "SELECT id, clientName, customerName, terms FROM client";
     const result = await pool.query(sql);
@@ -53,7 +53,7 @@ router.get("/clients", async (req, res) => {
 });
 
 // Get single client
-router.get("/client/:id", async (req, res) => {
+router.get("/client/:id", verifyUser, async (req, res) => {
   try {
     const id = req.params.id;
     const sql = `
@@ -76,7 +76,7 @@ router.get("/client/:id", async (req, res) => {
   }
 });
 
-router.get("/client-list", async (req, res) => {
+router.get("/client-list", verifyUser, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;

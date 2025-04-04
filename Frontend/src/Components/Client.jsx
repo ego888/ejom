@@ -7,7 +7,7 @@ import ModalAlert from "./UI/ModalAlert";
 import DisplayPage from "./UI/DisplayPage";
 import Pagination from "./UI/Pagination";
 import debounce from "lodash/debounce";
-import { jwtDecode } from "jwt-decode"; // Changed to named import
+import { jwtDecode } from "jwt-decode";
 
 const Client = () => {
   const [clients, setClients] = useState([]);
@@ -52,8 +52,6 @@ const Client = () => {
         }
       });
   };
-  console.log(clients);
-  console.log("Admin is", isAdmin);
 
   // Debounced search handler
   const debouncedSearch = debounce((value) => {

@@ -150,9 +150,30 @@ function App() {
             path="/dashboard/material/edit/:id"
             element={<EditMaterial />}
           />
-          <Route path="/dashboard/client" element={<Client />} />
-          <Route path="/dashboard/client/add" element={<AddClient />} />
-          <Route path="/dashboard/client/edit/:id" element={<EditClient />} />
+          <Route
+            path="/dashboard/client"
+            element={
+              <PrivateRoute>
+                <Client />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard/client/add"
+            element={
+              <PrivateRoute>
+                <AddClient />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard/client/edit/:id"
+            element={
+              <PrivateRoute>
+                <EditClient />
+              </PrivateRoute>
+            }
+          />
           <Route
             path="quotes"
             element={

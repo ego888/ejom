@@ -266,11 +266,11 @@ const Dashboard = () => {
     }
 
     if (permissions.isAccounting) {
-      visibleItems.push(PAYMENT);
+      visibleItems.push(PAYMENT, SOA, CLIENT);
     }
 
     if (permissions.isProduction) {
-      visibleItems.push(PROD, WIPLOG, SOA);
+      visibleItems.push(PROD, WIPLOG, SOA, CLIENT);
     }
 
     if (permissions.isArtist) {
