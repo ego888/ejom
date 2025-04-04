@@ -66,7 +66,7 @@ function RemitModal({ show, onClose }) {
 
     // Create print content
     const printContent = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <div style="font-family: Arial, sans-serif; padding: 20px; font-size: 14px;">
         <h2 style="text-align: center;">Payment Remittance Report</h2>
         <p style="text-align: right;">Date: ${new Date().toLocaleDateString()}</p>
         
