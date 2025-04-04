@@ -107,14 +107,14 @@
   gap: 1rem;
 }
 
-.form-control {
+.reports-form-control {
   font-size: var(--reports-font-size);
   border-color: var(--reports-border-light);
   color: var(--reports-text-color);
   transition: all 0.2s ease;
 }
 
-.form-control:focus {
+.reports-form-control:focus {
   border-color: var(--reports-border-hover);
   box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.15);
 }
