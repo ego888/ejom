@@ -25,6 +25,12 @@ function OrderView() {
     message: "",
     type: "alert",
   });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    specialInst: "",
+    deliveryInst: "",
+    orderReference: "",
+  });
 
   const location = useLocation(); // Get the current route path
   console.log(location);
@@ -132,6 +138,75 @@ function OrderView() {
     navigate("/dashboard/prod_print_one_dr", { state: { orderInfo } });
   };
 
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${ServerIP}/auth/update-special-delivery-reference`,
+        {
+          orderId: id,
+          specialInst: editData.specialInst,
+          deliveryInst: editData.deliveryInst,
+          orderReference: editData.orderReference,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.Status) {
+        setData((prev) => ({
+          ...prev,
+          specialInst: editData.specialInst,
+          deliveryInst: editData.deliveryInst,
+          orderReference: editData.orderReference,
+        }));
+        setIsEditing(false);
+        setAlert({
+          show: true,
+          title: "Success",
+          message: "Order details updated successfully",
+          type: "alert",
+        });
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error,
+          type: "alert",
+        });
+      }
+    } catch (err) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to update order details",
+        type: "alert",
+      });
+    }
+  };
+
+  const handleEditClick = () => {
+    setEditData({
+      specialInst: data.specialInst || "",
+      deliveryInst: data.deliveryInst || "",
+      orderReference: data.orderReference || "",
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
   return (
     <div
       className="prod-page-background"
@@ -155,6 +230,21 @@ function OrderView() {
               <h3>INV # {data.invoiceNum}</h3>
             </div>
             <div className="d-flex gap-2">
+              {" "}
+              {isEditing ? (
+                <>
+                  <Button variant="cancel" onClick={handleCancelEdit}>
+                    Cancel
+                  </Button>
+                  <Button variant="save" onClick={handleSaveChanges}>
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <Button variant="edit" onClick={handleEditClick}>
+                  Edit Details
+                </Button>
+              )}
               {isProdView && (
                 <Button variant="print" onClick={handlePrintDR}>
                   Print DR
@@ -253,9 +343,19 @@ function OrderView() {
                   <label htmlFor="view-order-ref" className="form-label">
                     Order Reference
                   </label>
-                  <div id="view-order-ref" className="form-input">
-                    {data.orderReference || ""}
-                  </div>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="form-input"
+                      name="orderReference"
+                      value={editData.orderReference}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    <div id="view-order-ref" className="form-input">
+                      {data.orderReference || ""}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="col-3 order-info-row">
@@ -303,11 +403,19 @@ function OrderView() {
                   <label htmlFor="view-special-inst" className="form-label">
                     Special Instructions
                   </label>
-                  <textarea
-                    className="form-input multiline"
-                    value={data.specialInst || ""}
-                    readOnly
-                  />
+                  {isEditing ? (
+                    <textarea
+                      className="form-input multiline"
+                      name="specialInst"
+                      value={editData.specialInst}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    <textarea
+                      className="form-input multiline"
+                      value={data.specialInst || ""}
+                    />
+                  )}
                 </div>
               </div>
               <div className="col-6">
@@ -315,11 +423,19 @@ function OrderView() {
                   <label htmlFor="view-delivery-inst" className="form-label">
                     Delivery Instructions
                   </label>
-                  <textarea
-                    className="form-input multiline"
-                    value={data.deliveryInst || ""}
-                    readOnly
-                  />
+                  {isEditing ? (
+                    <textarea
+                      className="form-input multiline"
+                      name="deliveryInst"
+                      value={editData.deliveryInst}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    <textarea
+                      className="form-input multiline"
+                      value={data.deliveryInst || ""}
+                    />
+                  )}
                 </div>
               </div>
               <div className="col-12 mt-2 d-flex">

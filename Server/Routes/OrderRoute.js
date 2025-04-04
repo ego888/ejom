@@ -1898,4 +1898,39 @@ router.get(
   }
 );
 
+// Update special instructions, delivery instructions, and order reference
+router.put(
+  "/update-special-delivery-reference",
+  verifyUser,
+  async (req, res) => {
+    const { orderId, specialInst, deliveryInst, orderReference } = req.body;
+    const userName = req.user.name;
+
+    try {
+      const sql = `
+      UPDATE orders 
+      SET specialInst = ?, 
+          deliveryInst = ?, 
+          orderReference = ?,
+          lastEdited = NOW(),
+          editedBy = ?
+      WHERE orderID = ?
+    `;
+
+      await pool.query(sql, [
+        specialInst,
+        deliveryInst,
+        orderReference,
+        userName,
+        orderId,
+      ]);
+
+      res.json({ Status: true, Message: "Order details updated successfully" });
+    } catch (error) {
+      console.error("Error updating order details:", error);
+      res.json({ Status: false, Error: "Failed to update order details" });
+    }
+  }
+);
+
 export { router as OrderRouter };
