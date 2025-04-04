@@ -67,6 +67,7 @@ const checkRouteAccess = (route, permissions) => {
     case "print_production":
     case "prod_print_dr":
     case "prod_print_one_dr":
+    case "wiplog":
       return permissions.isProduction;
     case "payment":
       return permissions.isAccounting;
@@ -74,8 +75,6 @@ const checkRouteAccess = (route, permissions) => {
       return permissions.isArtist;
     case "printlog":
       return permissions.isOperator;
-    case "wiplog":
-      return permissions.isProduction;
     case "": // dashboard route
     case "material":
     case "employee":
