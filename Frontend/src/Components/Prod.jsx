@@ -17,6 +17,7 @@ import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import Modal from "./UI/Modal";
 import { formatNumber } from "../utils/orderUtils";
+import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 //import { handlePrintProduction } from "./ProdPrintProduction";
 //import { handlePrintAllDR } from "./ProdPrintAllDR";
 
@@ -69,6 +70,9 @@ function Prod() {
   const [showInvModal, setShowInvModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [invNumber, setInvNumber] = useState("");
+  const [showClientInfo, setShowClientInfo] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const hoverTimerRef = useRef(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -644,6 +648,26 @@ function Prod() {
     }
   };
 
+  const handleClientHover = (clientId) => {
+    // Clear any existing timer
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+
+    // Set a new timer for 5 seconds
+    hoverTimerRef.current = setTimeout(() => {
+      setSelectedClientId(clientId);
+      setShowClientInfo(true);
+    }, 1500);
+  };
+
+  const handleClientLeave = () => {
+    // Clear the timer when mouse leaves
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  };
+
   return (
     <div className="prod-theme">
       <div className="prod-page-background px-5">
@@ -848,6 +872,8 @@ function Prod() {
                         clientFilterRef.current.toggleFilterMenu(e);
                       }
                     }}
+                    onMouseEnter={() => handleClientHover(order.clientId)}
+                    onMouseLeave={handleClientLeave}
                     style={{ cursor: "pointer" }}
                   >
                     <div>{order.clientName}</div>
@@ -1000,6 +1026,12 @@ function Prod() {
           }
           setAlert((prev) => ({ ...prev, show: false }));
         }}
+      />
+
+      <ViewCustomerInfo
+        clientId={selectedClientId}
+        show={showClientInfo}
+        onClose={() => setShowClientInfo(false)}
       />
     </div>
   );
