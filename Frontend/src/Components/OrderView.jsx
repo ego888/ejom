@@ -231,20 +231,21 @@ function OrderView() {
             </div>
             <div className="d-flex gap-2">
               {" "}
-              {isEditing ? (
-                <>
-                  <Button variant="cancel" onClick={handleCancelEdit}>
-                    Cancel
+              {isProdView &&
+                (isEditing ? (
+                  <>
+                    <Button variant="cancel" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                    <Button variant="save" onClick={handleSaveChanges}>
+                      Save Changes
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="edit" onClick={handleEditClick}>
+                    Edit Details
                   </Button>
-                  <Button variant="save" onClick={handleSaveChanges}>
-                    Save Changes
-                  </Button>
-                </>
-              ) : (
-                <Button variant="edit" onClick={handleEditClick}>
-                  Edit Details
-                </Button>
-              )}
+                ))}
               {isProdView && (
                 <Button variant="print" onClick={handlePrintDR}>
                   Print DR
