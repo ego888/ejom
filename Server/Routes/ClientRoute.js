@@ -56,7 +56,12 @@ router.get("/clients", async (req, res) => {
 router.get("/client/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const sql = "SELECT * FROM client WHERE id = ?";
+    const sql = `
+      SELECT c.*, e.name as salesName 
+      FROM client c 
+      LEFT JOIN employee e ON c.salesId = e.id
+      WHERE c.id = ?
+    `;
     const result = await pool.query(sql, [id]);
     const clients = result[0];
 

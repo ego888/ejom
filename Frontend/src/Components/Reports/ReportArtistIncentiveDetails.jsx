@@ -219,7 +219,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                         <td>{currentArtist}</td>
                         <td className="text-end">
                           {Number(item.grandTotal)
-                            ? `₱${formatNumber(item.grandTotal)}`
+                            ? formatPeso(item.grandTotal)
                             : ""}
                         </td>
                         <td className="text-center">
@@ -282,13 +282,13 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                         </td>
                         <td className="text-end border-start">
                           {Number(item.totalIncentive)
-                            ? `₱${formatNumber(item.totalIncentive)}`
+                            ? formatPeso(item.totalIncentive)
                             : ""}
                         </td>
                         {isAdmin && (
                           <td className="text-end">
                             {Number(item.maxOrderIncentive)
-                              ? `₱${formatNumber(item.maxOrderIncentive)}`
+                              ? formatPeso(item.maxOrderIncentive)
                               : ""}
                           </td>
                         )}
@@ -309,7 +309,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                           </td>
                           <td className="text-end fw-bold">
                             {Number(subtotal.grandTotal)
-                              ? `₱${formatNumber(subtotal.grandTotal)}`
+                              ? formatPeso(subtotal.grandTotal)
                               : ""}
                           </td>
                           <td className="text-center fw-bold">
@@ -350,13 +350,13 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                           </td>
                           <td className="text-end border-start fw-bold">
                             {Number(subtotal.totalIncentive)
-                              ? `₱${formatNumber(subtotal.totalIncentive)}`
+                              ? formatPeso(subtotal.totalIncentive)
                               : ""}
                           </td>
                           {isAdmin && (
                             <td className="text-end fw-bold">
                               {Number(subtotal.maxOrderIncentive)
-                                ? `₱${formatNumber(subtotal.maxOrderIncentive)}`
+                                ? formatPeso(subtotal.maxOrderIncentive)
                                 : ""}
                             </td>
                           )}
@@ -384,7 +384,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                 </td>
                 <td className="text-end fw-bold">
                   {Number(grandTotals.grandTotal)
-                    ? `₱${formatNumber(grandTotals.grandTotal)}`
+                    ? formatPeso(grandTotals.grandTotal)
                     : ""}
                 </td>
                 <td className="text-center fw-bold">
@@ -425,13 +425,13 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                 </td>
                 <td className="text-end border-start fw-bold">
                   {Number(grandTotals.totalIncentive)
-                    ? `₱${formatNumber(grandTotals.totalIncentive)}`
+                    ? formatPeso(grandTotals.totalIncentive)
                     : ""}
                 </td>
                 {isAdmin && (
                   <td className="text-end fw-bold">
                     {Number(grandTotals.maxOrderIncentive)
-                      ? `₱${formatNumber(grandTotals.maxOrderIncentive)}`
+                      ? formatPeso(grandTotals.maxOrderIncentive)
                       : ""}
                   </td>
                 )}

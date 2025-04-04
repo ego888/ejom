@@ -112,9 +112,7 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                   <tr key={index}>
                     <td>{item.artist}</td>
                     <td className="text-center">{item.orderCount}</td>
-                    <td className="text-end">
-                      ₱{formatNumber(item.totalGrand)}
-                    </td>
+                    <td className="text-end">{formatPeso(item.totalGrand)}</td>
                     <td className="text-center">{item.totalQuantity}</td>
                     <td className="text-center border-start">
                       {Number(item.majorOriginal)
@@ -148,14 +146,12 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                     </td>
                     <td className="text-end border-start">
                       {Number(item.totalIncentive)
-                        ? `₱${formatNumber(item.totalIncentive)}`
+                        ? formatPeso(item.totalIncentive)
                         : ""}
                     </td>
                     {isAdmin && (
                       <td className="text-end">
-                        {!sameGroup
-                          ? `₱${formatNumber(item.maxIncentive)}`
-                          : ""}
+                        {!sameGroup ? formatPeso(item.maxIncentive) : ""}
                       </td>
                     )}
                   </tr>
@@ -177,8 +173,7 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                   {summaryArray.reduce((sum, item) => sum + item.orderCount, 0)}
                 </td>
                 <td className="text-end">
-                  ₱
-                  {formatNumber(
+                  {formatPeso(
                     summaryArray.reduce((sum, item) => sum + item.totalGrand, 0)
                   )}
                 </td>
@@ -229,8 +224,7 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                   )}
                 </td>
                 <td className="text-end border-start">
-                  ₱
-                  {formatNumber(
+                  {formatPeso(
                     summaryArray.reduce(
                       (sum, item) => sum + item.totalIncentive,
                       0
@@ -239,8 +233,7 @@ const ReportArtistIncentiveSummary = ({ data }) => {
                 </td>
                 {isAdmin && (
                   <td className="text-end">
-                    ₱
-                    {formatNumber(
+                    {formatPeso(
                       summaryArray.reduce(
                         (sum, item) => sum + item.maxIncentive,
                         0

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Button from "./UI/Button";
+import { formatNumber, formatDate, formatTime } from "../utils/orderUtils";
 
 const DTRTotalView = ({ entries, batch }) => {
   const [showAllRows, setShowAllRows] = useState(false);
@@ -74,22 +75,6 @@ const DTRTotalView = ({ entries, batch }) => {
     );
 
     setTotals(sortedTotals);
-  };
-
-  const formatTime = (timeString) => {
-    if (!timeString) return "-";
-    return timeString.substring(0, 5);
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB");
-  };
-
-  const formatNumber = (num) => {
-    const value = Number(num || 0);
-    return value > 0 ? value.toFixed(2) : "";
   };
 
   const grandTotal = totals.reduce(

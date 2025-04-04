@@ -207,6 +207,7 @@ export const calculateOrderTotals = (subtotal, discAmount, percentDisc) => {
 
 // Format number helper
 export const formatNumber = (num) => {
+  if (num === null || num === undefined) return 0;
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -278,6 +279,21 @@ export const formatDateTime = (date) => {
       hour12: false,
     })
     .replace(",", "");
+};
+
+export const formatDate = (date) => {
+  return new Date(date)
+    .toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .replace(",", "");
+};
+
+export const formatTime = (timeString) => {
+  if (!timeString) return "-";
+  return timeString.substring(0, 5);
 };
 
 export const validateOrderData = (data) => {
