@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import AddOrderDetails from "./AddOrderDetails";
@@ -14,6 +14,7 @@ import {
   calculateAmount,
   formatNumber,
   formatPeso,
+  formatDate,
   handleApiError,
   calculateTotals,
   calculatePerSqFt,
@@ -26,6 +27,7 @@ import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import StatusDropdown from "./UI/StatusDropdown";
 import Dropdown2 from "./UI/Dropdown2";
+import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -120,6 +122,10 @@ function AddOrder() {
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+
+  const [showClientInfo, setShowClientInfo] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const hoverTimerRef = useRef(null);
 
   const statusOptions = [
     "Open",
@@ -1512,6 +1518,28 @@ function AddOrder() {
     });
   };
 
+  const handleClientHover = (clientId) => {
+    hoverTimerRef.current = setTimeout(() => {
+      setSelectedClientId(clientId);
+      setShowClientInfo(true);
+    }, 1500); // 5 seconds
+  };
+
+  const handleClientLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  };
+
+  // Add cleanup for the timer
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="orders-page-background">
       <div className="px-4 mt-3">
@@ -1553,7 +1581,7 @@ function AddOrder() {
                   )}
                   <Button variant="save" onClick={handleReOrder}>
                     Reorder
-                  </Button>{" "}
+                  </Button>
                   <Button variant="print" onClick={handlePrintOrder}>
                     Print JO
                   </Button>
@@ -1561,6 +1589,15 @@ function AddOrder() {
               )}
               <Button variant="save" onClick={handleSubmit}>
                 {isHeaderSaved ? "Save Edit" : "Save Order"}
+              </Button>
+              <Button
+                variant="view"
+                onClick={() => {
+                  setSelectedClientId(data.clientId);
+                  setShowClientInfo(true);
+                }}
+              >
+                Customer Info
               </Button>
               <Button variant="cancel" onClick={handleCancel}>
                 Cancel
@@ -1668,6 +1705,8 @@ function AddOrder() {
                     value={data.customerName || ""}
                     readOnly
                     tabIndex="-1"
+                    onMouseEnter={() => handleClientHover(data.clientId)}
+                    onMouseLeave={handleClientLeave}
                   />
                 </div>
               </div>
@@ -2703,7 +2742,9 @@ function AddOrder() {
                         <div style={{ width: "100px", textAlign: "right" }}>
                           <small style={{ fontSize: "1rem" }}>Date Paid:</small>
                         </div>
-                        <div>{data.datePaid}</div>
+                        <div style={{ marginLeft: "20px" }}>
+                          {formatDate(data.datePaid) || ""}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -2734,7 +2775,7 @@ function AddOrder() {
                         <div style={{ width: "100px", textAlign: "right" }}>
                           <small style={{ fontSize: "1rem" }}>OR Number:</small>
                         </div>
-                        <div>{data.orNum}</div>
+                        <div>{data.orNum || ""}</div>
                       </div>
                     </td>
                   </tr>
@@ -3038,6 +3079,11 @@ function AddOrder() {
           />
         )}
       </div>
+      <ViewCustomerInfo
+        clientId={selectedClientId}
+        show={showClientInfo}
+        onClose={() => setShowClientInfo(false)}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { formatPeso } from "../utils/orderUtils";
 import StatusBadges from "./UI/StatusBadges";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
+import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 
 function Orders() {
   const navigate = useNavigate();
@@ -56,6 +57,9 @@ function Orders() {
     type: "alert",
     onConfirm: null,
   });
+  const [showClientInfo, setShowClientInfo] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const hoverTimerRef = useRef(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -246,62 +250,27 @@ function Orders() {
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
-  // Handle records per page change
-  // const handleRecordsPerPageChange = (e) => {
-  //   setRecordsPerPage(Number(e.target.value));
-  //   setCurrentPage(1); // Reset to first page
-  // };
+  const handleClientHover = (clientId) => {
+    hoverTimerRef.current = setTimeout(() => {
+      setSelectedClientId(clientId);
+      setShowClientInfo(true);
+    }, 1500); // 5 seconds
+  };
 
-  // const isProdIndeterminate = () => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   const selectedProdStatuses = JSON.parse(
-  //     localStorage.getItem("orderStatusFilter") || "[]"
-  //   ).filter((s) => prodStatuses.includes(s));
-  //   return (
-  //     selectedProdStatuses.length > 0 &&
-  //     selectedProdStatuses.length < prodStatuses.length
-  //   );
-  // };
+  const handleClientLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  };
 
-  // const handleProdCheckbox = (e) => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   let newStatuses;
-  //   if (e.target.checked) {
-  //     newStatuses = [
-  //       ...new Set([
-  //         ...JSON.parse(localStorage.getItem("orderStatusFilter") || "[]"),
-  //         ...prodStatuses,
-  //       ]),
-  //     ];
-  //   } else {
-  //     newStatuses = JSON.parse(
-  //       localStorage.getItem("orderStatusFilter") || "[]"
-  //     ).filter((s) => !prodStatuses.includes(s));
-  //   }
-
-  //   localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
-  //   setIsProdChecked(e.target.checked);
-  //   setIsAllChecked(newStatuses.length === statusOptions.length);
-  // };
-
-  // const isAllIndeterminate = () => {
-  //   return (
-  //     JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length >
-  //       0 &&
-  //     JSON.parse(localStorage.getItem("orderStatusFilter") || "[]").length <
-  //       statusOptions.length
-  //   );
-  // };
-
-  // const handleAllCheckbox = (e) => {
-  //   let newStatuses = [];
-  //   if (e.target.checked) {
-  //     newStatuses = statusOptions.map((s) => s.statusId);
-  //   }
-  //   localStorage.setItem("orderStatusFilter", JSON.stringify(newStatuses));
-  //   setIsAllChecked(e.target.checked);
-  //   setIsProdChecked(e.target.checked);
-  // };
+  // Add cleanup for the timer
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="orders-theme">
@@ -460,6 +429,8 @@ function Orders() {
                         clientFilterRef.current.toggleFilterMenu(e);
                       }
                     }}
+                    onMouseEnter={() => handleClientHover(order.clientId)}
+                    onMouseLeave={handleClientLeave}
                     style={{ cursor: "pointer" }}
                   >
                     <div>{order.clientName}</div>
@@ -562,6 +533,12 @@ function Orders() {
             }
             setAlert((prev) => ({ ...prev, show: false }));
           }}
+        />
+
+        <ViewCustomerInfo
+          clientId={selectedClientId}
+          show={showClientInfo}
+          onClose={() => setShowClientInfo(false)}
         />
       </div>
     </div>

@@ -7,8 +7,13 @@ import Pagination from "./UI/Pagination";
 import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
+import StatusBadges from "./UI/StatusBadges";
 import "./Quotes.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
+import { formatPeso } from "../utils/orderUtils";
+import ModalAlert from "../Components/UI/ModalAlert";
+import Modal from "./UI/Modal";
+import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 
 function Quotes() {
   const navigate = useNavigate();
@@ -44,6 +49,9 @@ function Quotes() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
+  const [showClientInfo, setShowClientInfo] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const hoverTimerRef = useRef(null);
 
   const fetchQuotes = async () => {
     console.log("FETCHING QUOTES with statuses:", selectedStatuses);
@@ -283,6 +291,28 @@ function Quotes() {
     );
   };
 
+  const handleClientHover = (clientId) => {
+    hoverTimerRef.current = setTimeout(() => {
+      setSelectedClientId(clientId);
+      setShowClientInfo(true);
+    }, 1500); // 5 seconds
+  };
+
+  const handleClientLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  };
+
+  // Add cleanup for the timer
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="quote">
       <div className="quote-page-background px-5 ">
@@ -418,6 +448,8 @@ function Quotes() {
                         clientFilterRef.current.toggleFilterMenu(e);
                       }
                     }}
+                    onMouseEnter={() => handleClientHover(quote.clientId)}
+                    onMouseLeave={handleClientLeave}
                     style={{ cursor: "pointer" }}
                   >
                     <div>{quote.clientName}</div>
@@ -545,6 +577,12 @@ function Quotes() {
           />
         </div>
       </div>
+
+      <ViewCustomerInfo
+        clientId={selectedClientId}
+        show={showClientInfo}
+        onClose={() => setShowClientInfo(false)}
+      />
     </div>
   );
 }

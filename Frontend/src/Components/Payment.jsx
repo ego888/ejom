@@ -15,6 +15,7 @@ import ModalAlert from "../Components/UI/ModalAlert";
 import Modal from "./UI/Modal";
 import PaymentAllocationModal from "./PaymentAllocationModal";
 import RemitModal from "./RemitModal";
+import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 
 function Prod() {
   const navigate = useNavigate();
@@ -92,6 +93,9 @@ function Prod() {
   const [displaySearchTerm, setDisplaySearchTerm] = useState(() => {
     return localStorage.getItem("paymentSearchTerm") || "";
   });
+  const [showClientInfo, setShowClientInfo] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const hoverTimerRef = useRef(null);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -907,6 +911,28 @@ function Prod() {
     }
   };
 
+  const handleClientHover = (clientId) => {
+    hoverTimerRef.current = setTimeout(() => {
+      setSelectedClientId(clientId);
+      setShowClientInfo(true);
+    }, 1500); // 5 seconds
+  };
+
+  const handleClientLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  };
+
+  // Add cleanup for the timer
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="payment-theme">
       <div className="payment-page-background px-5">
@@ -1210,6 +1236,8 @@ function Prod() {
                         clientFilterRef.current.toggleFilterMenu(e);
                       }
                     }}
+                    onMouseEnter={() => handleClientHover(order.clientId)}
+                    onMouseLeave={handleClientLeave}
                     style={{ cursor: "pointer" }}
                   >
                     <div>{order.clientName}</div>
@@ -1510,6 +1538,11 @@ function Prod() {
       <RemitModal
         show={showRemitModal}
         onClose={() => setShowRemitModal(false)}
+      />
+      <ViewCustomerInfo
+        clientId={selectedClientId}
+        show={showClientInfo}
+        onClose={() => setShowClientInfo(false)}
       />
     </div>
   );

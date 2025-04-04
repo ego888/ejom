@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import AddQuoteDetails from "./AddQuoteDetails";
@@ -24,6 +24,7 @@ import { ServerIP } from "../config";
 import { debounce } from "lodash";
 import ModalAlert from "./UI/ModalAlert";
 import axiosConfig from "../utils/axiosConfig"; // Import configured axios
+import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 
 function AddQuote() {
   const navigate = useNavigate();
@@ -106,6 +107,10 @@ function AddQuote() {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const [showClientInfo, setShowClientInfo] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const hoverTimerRef = useRef(null);
 
   // Move haveTotalsChanged to the top, before any hooks
   const haveTotalsChanged = (newTotals, savedTotals) => {
@@ -1412,6 +1417,28 @@ function AddQuote() {
     return data.status === "Open" || currentUser.category_id === 1;
   };
 
+  const handleClientHover = (clientId) => {
+    hoverTimerRef.current = setTimeout(() => {
+      setSelectedClientId(clientId);
+      setShowClientInfo(true);
+    }, 1500); // 5 seconds
+  };
+
+  const handleClientLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  };
+
+  // Add cleanup for the timer
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="quote">
       <div className="px-4 mt-3 quote-page-background">
@@ -1521,6 +1548,8 @@ function AddQuote() {
                     value={data.clientName || ""}
                     onChange={handleClientChange}
                     disabled={!isEditMode || !canEdit()}
+                    onMouseEnter={() => handleClientHover(data.clientId)}
+                    onMouseLeave={handleClientLeave}
                   />
                   <datalist id="clientList">
                     {clients.map((client) => (
@@ -2269,6 +2298,12 @@ function AddQuote() {
           }}
           confirmText={alert.confirmText}
           cancelText={alert.cancelText}
+        />
+
+        <ViewCustomerInfo
+          clientId={selectedClientId}
+          show={showClientInfo}
+          onClose={() => setShowClientInfo(false)}
         />
       </div>
     </div>
