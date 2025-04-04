@@ -251,10 +251,10 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
             <div className="col-4">
               <div className="d-flex flex-column">
                 <label htmlFor="view-client" className="form-label">
-                  Last Transaction
+                  Last Payment Amount
                 </label>
                 <div id="view-client" className="form-input">
-                  {formatDate(clientInfo.lastTransaction) || ""}
+                  {formatNumber(clientInfo.lastPaymentAmount) || ""}
                 </div>
               </div>
             </div>
@@ -264,10 +264,20 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
             <div className="col-4">
               <div className="d-flex flex-column">
                 <label htmlFor="view-client" className="form-label">
-                  Last Payment Amount
+                  Last Transaction
                 </label>
                 <div id="view-client" className="form-input">
-                  {formatNumber(clientInfo.lastPaymentAmount) || ""}
+                  {formatDate(clientInfo.lastTransaction) || ""}
+                </div>
+              </div>
+            </div>
+            <div className="col-4">
+              <div className="d-flex flex-column">
+                <label htmlFor="view-client" className="form-label">
+                  Overdue Date
+                </label>
+                <div id="view-client" className="form-input">
+                  {formatDate(clientInfo.overdue) || ""}
                 </div>
               </div>
             </div>
