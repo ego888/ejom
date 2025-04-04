@@ -71,255 +71,260 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
         <div className="alert alert-danger">{error}</div>
       ) : clientInfo ? (
         <div className="p-3">
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Client
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.clientName || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Customer Name
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.customerName || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Contact Person
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.contactPerson || ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Cellphone Number
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.celNo || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Telephone Number
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.telNo || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Fax Number
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.faxNo || ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Email
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.email || ""}
-                </div>
-              </div>
-            </div>
+          <div className="row">
             <div className="col-8">
-              <div className="form-group">
+              <div className="row mb-3">
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Client
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.clientName || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Customer Name
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.customerName || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Contact Person
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.contactPerson || ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Cellphone Number
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.celNo || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Telephone Number
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.telNo || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Fax Number
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.faxNo || ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Email
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.email || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Sales
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.salesName || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Status
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.status || ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      AR Contact
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.arContact || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      AR Email
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.arFaxNo || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      AR Telephone
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.arTelNo || ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      TIN Number
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.tinNumber || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Terms
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {clientInfo.terms || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Credit Limit
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatNumber(clientInfo.creditLimit) || ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Overdue Amount
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatNumber(clientInfo.overdue) || 0}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Overdue Date
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatDate(clientInfo.overdue) || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Last Transaction
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatDate(clientInfo.lastTransaction) || ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Last Payment Amount
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatNumber(clientInfo.lastPaymentAmount) || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Last Payment Date
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatDate(clientInfo.lastPaymentDate) || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Last Updated
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatDate(clientInfo.lastUpdated) || ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-4">
+              <div className="form-group h-100">
                 <label className="form-label">Notes</label>
                 <div
-                  className="form-textarea"
-                  style={{ minHeight: "100px", whiteSpace: "pre-wrap" }}
+                  className="form-textarea overflow-auto"
+                  style={{
+                    verticalAlign: "top",
+                    height: "calc(100vh - 375px)",
+                    minHeight: "300px",
+                    maxHeight: "600px",
+                    whiteSpace: "pre-wrap",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "0.25rem",
+                    padding: "0.375rem 0.75rem",
+                  }}
                 >
                   {clientInfo.notes}
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  AR Contact
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.arContact || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  AR Email
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.arFaxNo || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  AR Telephone
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.arTelNo || ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  TIN Number
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.tinNumber || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Terms
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.terms || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Sales
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.salesName || ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Credit Limit
-                </label>
-                <div id="view-client" className="form-input">
-                  {formatNumber(clientInfo.creditLimit) || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Overdue Amount
-                </label>
-                <div id="view-client" className="form-input">
-                  {formatNumber(clientInfo.overdue) || 0}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Last Payment Amount
-                </label>
-                <div id="view-client" className="form-input">
-                  {formatNumber(clientInfo.lastPaymentAmount) || ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Last Transaction
-                </label>
-                <div id="view-client" className="form-input">
-                  {formatDate(clientInfo.lastTransaction) || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Overdue Date
-                </label>
-                <div id="view-client" className="form-input">
-                  {formatDate(clientInfo.overdue) || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Last Payment Date
-                </label>
-                <div id="view-client" className="form-input">
-                  {formatDate(clientInfo.lastPaymentDate) || ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="row mb-3">
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Status
-                </label>
-                <div id="view-client" className="form-input">
-                  {clientInfo.status || ""}
-                </div>
-              </div>
-            </div>
-            <div className="col-4">
-              <div className="d-flex flex-column">
-                <label htmlFor="view-client" className="form-label">
-                  Last Updated
-                </label>
-                <div id="view-client" className="form-input">
-                  {formatDate(clientInfo.lastUpdated) || ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="d-flex justify-content-end mt-3">
-            <Button variant="cancel" onClick={onClose}>
-              Close
-            </Button>
           </div>
         </div>
       ) : null}
