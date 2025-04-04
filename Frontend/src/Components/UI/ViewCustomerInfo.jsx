@@ -274,7 +274,7 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
                 <label className="form-label">Notes</label>
                 <div
                   className="form-control-plaintext"
-                  style={{ minHeight: "100px", whiteSpace: "nowrap" }}
+                  style={{ minHeight: "100px", whiteSpace: "pre-wrap" }}
                 >
                   {clientInfo.notes}
                 </div>
