@@ -286,7 +286,7 @@ const Dashboard = () => {
     }
 
     if (permissions.isProduction) {
-      visibleItems.push(PROD, WIPLOG, SOA, CLIENT);
+      visibleItems.push(PROD, WIPLOG, SOA, CLIENT, MATERIAL_USAGE_REPORT);
     }
 
     if (permissions.isArtist) {
