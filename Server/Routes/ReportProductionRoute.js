@@ -8,45 +8,52 @@ const router = express.Router();
 router.get("/material-usage", verifyUser, async (req, res) => {
   const { dateFrom, dateTo, groupBy } = req.query;
 
+  console.log("Received parameters:", { dateFrom, dateTo, groupBy });
+
   let groupByClause, selectClause;
   switch (groupBy) {
     case "material":
-      groupByClause = "m.id, m.Material";
-      selectClause = "m.Material";
+      groupByClause = "m.Material";
+      selectClause = "m.Material as materialName";
       break;
     case "materialType":
       groupByClause = "m.materialType";
-      selectClause = "m.materialType";
+      selectClause = "m.materialType as materialType";
       break;
     case "machineType":
       groupByClause = "m.machineType";
-      selectClause = "m.machineType";
+      selectClause = "m.machineType as machineType";
       break;
     default:
-      groupByClause = "m.id, m.materialName";
-      selectClause = "m.materialName";
+      groupByClause = "m.Material";
+      selectClause = "m.Material as materialName";
   }
 
   try {
     const query = `
       SELECT 
         ${selectClause},
-        m.material AS materialName,
-        SUM(od.quantity) AS totalQuantity,
-        SUM(od.materialUsage) AS totalUsage,
-        SUM(od.amount) AS totalAmount
-        FROM orders o
-        JOIN order_details od ON o.orderId = od.orderId
-        JOIN material m ON od.material = m.material
-        WHERE o.orderDate BETWEEN ? AND ?
-        GROUP BY ${groupByClause}
-        ORDER BY ${
-          groupByClause === "m.id, m.materialName"
-            ? "m.materialName"
-            : selectClause
-        }`;
+        SUM(od.quantity) as totalQuantity,
+        SUM(od.materialUsage) as totalUsage,
+        SUM(od.amount) as totalAmount
+      FROM orders o
+      JOIN order_details od ON o.orderId = od.orderId
+      JOIN material m ON od.material = m.Material
+      WHERE o.orderDate BETWEEN ? AND ?
+      GROUP BY ${groupByClause}
+      ORDER BY ${groupByClause}
+    `;
+
+    console.log("Executing query:", query);
+    console.log("With params:", [dateFrom, dateTo]);
 
     const [results] = await pool.query(query, [dateFrom, dateTo]);
+    console.log("Query results:", results);
+
+    // Check if we have any results
+    if (!results || results.length === 0) {
+      console.log("No results found for the given date range");
+    }
 
     res.json({
       Status: true,
@@ -54,6 +61,11 @@ router.get("/material-usage", verifyUser, async (req, res) => {
     });
   } catch (error) {
     console.error("Error in material usage report:", error);
+    console.error("Error details:", {
+      message: error.message,
+      sql: error.sql,
+      code: error.code,
+    });
     res.json({
       Status: false,
       Error: "Failed to fetch material usage data",

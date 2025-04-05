@@ -99,13 +99,20 @@ const MaterialUsageReport = () => {
   const getColumnHeaders = () => {
     switch (groupBy) {
       case "material":
-        return ["Material", "Total Quantity", "Total Usage", "Total Amount"];
+        return [
+          "Material",
+          "Total Quantity",
+          "Total Usage",
+          "Total Amount",
+          "Per Sq Ft",
+        ];
       case "materialType":
         return [
           "Material Type",
           "Total Quantity",
           "Total Usage",
           "Total Amount",
+          "Per Sq Ft",
         ];
       case "machineType":
         return [
@@ -113,9 +120,16 @@ const MaterialUsageReport = () => {
           "Total Quantity",
           "Total Usage",
           "Total Amount",
+          "Per Sq Ft",
         ];
       default:
-        return ["Material", "Total Quantity", "Total Usage", "Total Amount"];
+        return [
+          "Material",
+          "Total Quantity",
+          "Total Usage",
+          "Total Amount",
+          "Per Sq Ft",
+        ];
     }
   };
 
@@ -209,6 +223,11 @@ const MaterialUsageReport = () => {
                     {Number(row.totalAmount) === 0
                       ? ""
                       : formatNumber(row.totalAmount)}
+                  </td>
+                  <td className="text-end">
+                    {Number(row.totalUsage) > 0
+                      ? formatNumber(row.totalAmount / row.totalUsage)
+                      : ""}
                   </td>
                 </tr>
               ))}

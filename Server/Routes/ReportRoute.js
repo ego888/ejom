@@ -16,7 +16,7 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
     // ✅ Define valid group options
     const validGroupOptions = {
       sales: "e.name", // Group by sales rep
-      client: "c.clientName", // Group by client
+      client: "c.customerName", // Group by client
       month: "DATE_FORMAT(o.productionDate, '%Y-%m')", // Group by month
     };
 
