@@ -13,30 +13,6 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
       return res.json({ Status: false, Error: "Date range is required" });
     }
 
-    // Define valid group options
-    // const validGroupOptions = {
-    //   sales: "e.name", // Group by sales rep
-    //   client: "c.clientName", // Group by client
-    //   month: "DATE_FORMAT(o.productionDate, '%Y-%m')", // Group by month
-    // };
-
-    // // Validate groupBy parameter
-    // const groupByColumn = validGroupOptions[groupBy] || null;
-    // const groupNameAlias = groupBy === "month" ? "month" : "name";
-
-    // const sql = `
-    //   SELECT
-    //     ${groupByColumn} as ${groupNameAlias},
-    //     SUM(o.grandTotal) as totalSales,
-    //     COUNT(o.orderId) as orderCount
-    //   FROM orders o
-    //   LEFT JOIN employee e ON o.preparedBy = e.id
-    //   LEFT JOIN client c ON o.clientId = c.id
-    //   WHERE o.status IN ('Prod','Finished','Delivered','Billed','Closed')
-    //     AND o.productionDate BETWEEN ? AND ?
-    //   GROUP BY ${groupByColumn}
-    //   ORDER BY totalSales DESC
-    // `;
     // ✅ Define valid group options
     const validGroupOptions = {
       sales: "e.name", // Group by sales rep

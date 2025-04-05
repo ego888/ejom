@@ -127,7 +127,7 @@ function SOAPrint() {
                 Client:
               </span>
               <span aria-labelledby="client-label" className="value">
-                {client.clientName}
+                {client.customerName}
               </span>
             </div>
             <div className="info-item">

@@ -70,13 +70,24 @@ const SALES_INCENTIVES = {
   icon: "bi-file-plus",
   text: "Sales Incentives",
 };
+const MATERIAL_USAGE_REPORT = {
+  path: "material-usage-report",
+  icon: "bi-box-seam",
+  text: "Material Usage Report",
+};
 
 // Submenu for Reports
 const REPORTS = {
   path: "reports",
   icon: "bi-file-earmark-ruled",
   text: "Reports",
-  subItems: [SALES_REPORT, SOA, ARTIST_INCENTIVES, SALES_INCENTIVES],
+  subItems: [
+    SALES_REPORT,
+    SOA,
+    ARTIST_INCENTIVES,
+    SALES_INCENTIVES,
+    MATERIAL_USAGE_REPORT,
+  ],
 };
 
 // Submenu for Masterfiles
@@ -107,6 +118,11 @@ const MASTERFILES = {
 const REPORTS_SALES = {
   ...REPORTS,
   subItems: [SALES_REPORT, SOA],
+};
+
+const REPORTS_PRODUCTION = {
+  ...REPORTS,
+  subItems: [MATERIAL_USAGE_REPORT],
 };
 
 const DTR = { path: "dtr", icon: "bi-clock-history", text: "DTR" };

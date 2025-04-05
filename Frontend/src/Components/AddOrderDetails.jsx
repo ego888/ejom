@@ -191,6 +191,7 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
   // Update handleInputChange to use the new handlePerSqFtChange
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    console.log("Input Change:", name, value); // Debug log
     if (name === "perSqFt") {
       handlePerSqFtChange(e);
     } else {

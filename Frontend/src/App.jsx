@@ -43,6 +43,7 @@ import SOAPrint from "./Components/Reports/SOAPrint";
 import WIPLog from "./Components/WIPLog";
 import DashSales from "./Components/DashSales";
 import DTR from "./Components/DTR";
+import MaterialUsageReport from "./Components/Reports/MaterialUsageReport";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
@@ -233,6 +234,10 @@ function App() {
           />
           <Route path="wiplog" element={<WIPLog />} />
           <Route path="dashsales" element={<DashSales />} />
+          <Route
+            path="material-usage-report"
+            element={<MaterialUsageReport />}
+          />
         </Route>
       </Routes>
     </BrowserRouter>

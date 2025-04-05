@@ -75,12 +75,12 @@ const checkRouteAccess = (route, permissions) => {
       return permissions.isArtist;
     case "printlog":
       return permissions.isOperator;
-    case "": // dashboard route
     case "material":
     case "employee":
     case "category":
     case "profile":
-      return permissions.categoryId === 1;
+    case "material-usage-report":
+      return permissions.categoryId === 1 || permissions.isProduction;
     default:
       return false;
   }
