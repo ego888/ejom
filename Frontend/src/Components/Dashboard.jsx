@@ -47,6 +47,11 @@ const PRINTLOG = {
   text: "Print Log",
 };
 const PAYMENT = { path: "payment", icon: "bi-cash", text: "Payments" };
+const RECEIVE_PAYMENT = {
+  path: "receive-payment",
+  icon: "bi-cash-coin",
+  text: "Receive Payment",
+};
 const PROFILE = { path: "profile", icon: "bi-person", text: "Profile" };
 
 // Submenu items constants
@@ -257,6 +262,7 @@ const Dashboard = () => {
       ARTISTLOG,
       PRINTLOG,
       PAYMENT,
+      RECEIVE_PAYMENT,
       DTR,
       REPORTS,
       MASTERFILES,

@@ -30,6 +30,7 @@ import Prod from "./Components/Prod";
 import ArtistLog from "./Components/ArtistLog";
 import PrintLog from "./Components/PrintLog";
 import Payment from "./Components/Payment";
+import ReceivePayment from "./Components/ReceivePayment";
 import ProdPrintProduction from "./Components/ProdPrintProduction";
 import ProdPrintDR from "./Components/ProdPrintDR";
 import ProdPrintOneDR from "./Components/ProdPrintOneDR";
@@ -221,6 +222,10 @@ function App() {
           <Route path="/dashboard/artistlog" element={<ArtistLog />}></Route>
           <Route path="/dashboard/printlog" element={<PrintLog />}></Route>
           <Route path="/dashboard/payment" element={<Payment />}></Route>
+          <Route
+            path="/dashboard/receive-payment"
+            element={<ReceivePayment />}
+          ></Route>
           <Route path="/dashboard/dtr" element={<DTR />}></Route>
           <Route path="/dashboard/sales-report" element={<ReportSales />} />
           <Route path="/dashboard/soa" element={<SOA />} />
