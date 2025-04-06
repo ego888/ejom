@@ -131,21 +131,23 @@ function PrintDR({ data }) {
                   </div>
                   <div className="info-section">
                     <div className="info-row">
-                      <div className="info-label text-center">DR No.:</div>
-                      <div className="info-value">{order.drNum || ""}</div>
+                      <div className="info-label text-end">DR No.</div>
+                      <h2 className="info-value" style={{ fontSize: "18px" }}>
+                        <strong>{order.drNum || ""}</strong>
+                      </h2>
                     </div>
                     <div className="info-row">
-                      <div className="info-label text-center">Date:</div>
+                      <div className="info-label text-end">Date:</div>
                       <div className="info-value">{order.drDate || ""}</div>
                     </div>
                     <div className="info-row">
-                      <div className="info-label text-center">Client:</div>
-                      <div className="info-value">{order.customerName}</div>
+                      <div className="info-label text-end">Client:</div>
+                      <div className="info-value" style={{ fontSize: "18px" }}>
+                        <strong>{order.customerName}</strong>
+                      </div>
                     </div>
                     <div className="info-row">
-                      <div className="info-label text-center">
-                        Project Name:
-                      </div>
+                      <div className="info-label text-end">Project Name:</div>
                       <div className="info-value">
                         {order.projectName || ""}
                       </div>
@@ -298,7 +300,7 @@ function PrintDR({ data }) {
               padding: 0.5in;
               position: relative;
               font-family: Arial, sans-serif;
-              font-size: 14px;
+              font-size: 16px;
               page-break-after: always;
               overflow: hidden; /* Prevent content from spilling over */
             }
@@ -308,7 +310,7 @@ function PrintDR({ data }) {
             }
 
             .title {
-              font-size: 18px;
+              font-size: 22px;
               font-weight: bold;
               text-align: center;
             }
@@ -325,24 +327,24 @@ function PrintDR({ data }) {
             .info-row {
               display: flex;
               margin-bottom: 2px;
-              font-size: 14px;
+              font-size: 16px;
             }
 
             .info-label {
               width: 120px;
               font-weight: bold;
-              font-size: 12px;
+              font-size: 16px;
               padding-right: 2px;
             }
 
             .info-value {
               flex: 1;
-              font-size: 14px;
+              font-size: 16px;
             }
 
             .delivery-label {
               font-weight: bold;
-              font-size: 12px;
+              font-size: 16px;
             }
 
             .delivery-instructions {
@@ -351,7 +353,7 @@ function PrintDR({ data }) {
               border: 1px solid rgb(29, 29, 29);
               border-radius: 8px;
               min-height: 60px;
-              font-size: 14px;
+              font-size: 16px;
             }
 
             .dr-table {
@@ -395,7 +397,6 @@ function PrintDR({ data }) {
               border: 1px solid rgb(29, 29, 29);
               border-radius: 8px;
               min-height: 60px;
-              font-size: 14px;
             }
 
             .total-row {
@@ -403,7 +404,6 @@ function PrintDR({ data }) {
               justify-content: space-between;
               margin-bottom: 5px;
               padding: 2px 5px;
-              font-size: 14px;
             }
 
             .total-row.grand-total {
@@ -435,7 +435,7 @@ function PrintDR({ data }) {
               border-top: 1px solid black;
               padding-top: 5px;
               text-align: center;
-              font-size: 12px;
+              font-size: 16px;
             }
 
             .page-footer {
@@ -450,6 +450,7 @@ function PrintDR({ data }) {
 
             .jo-number {
               font-weight: bold;
+              font-size: 18px;
             }
 
             .bottom-section {
