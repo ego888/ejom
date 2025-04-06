@@ -4,7 +4,11 @@ import { ServerIP } from "../../config";
 import Button from "../UI/Button";
 import DateFromTo from "../UI/DateFromTo";
 import ModalAlert from "../UI/ModalAlert";
-import { formatNumber } from "../../utils/orderUtils";
+import {
+  formatNumber,
+  formatDate,
+  formatDateTime,
+} from "../../utils/orderUtils";
 
 const MaterialUsageReport = () => {
   const [dateRange, setDateRange] = useState({
@@ -19,8 +23,8 @@ const MaterialUsageReport = () => {
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     setDateRange({
-      dateFrom: firstDay.toISOString().slice(0, 10),
-      dateTo: lastDay.toISOString().slice(0, 10),
+      dateFrom: formatDate(firstDay),
+      dateTo: formatDate(lastDay),
     });
   }, []);
 
@@ -89,13 +93,6 @@ const MaterialUsageReport = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.open(
-      `/dashboard/print_material_usage?dateFrom=${dateRange.dateFrom}&dateTo=${dateRange.dateTo}&groupBy=${groupBy}`,
-      "_blank"
-    );
-  };
-
   const getColumnHeaders = () => {
     switch (groupBy) {
       case "material":
@@ -131,6 +128,167 @@ const MaterialUsageReport = () => {
           "Per Sq Ft",
         ];
     }
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open("", "_blank");
+
+    // Calculate totals
+    const totals = reportData.reduce(
+      (acc, curr) => ({
+        totalQuantity: acc.totalQuantity + Number(curr.totalQuantity || 0),
+        totalUsage: acc.totalUsage + Number(curr.totalUsage || 0),
+        totalAmount: acc.totalAmount + Number(curr.totalAmount || 0),
+      }),
+      { totalQuantity: 0, totalUsage: 0, totalAmount: 0 }
+    );
+
+    const getReportTitle = () => {
+      switch (groupBy) {
+        case "material":
+          return "Material Usage Report - By Material";
+        case "materialType":
+          return "Material Usage Report - By Material Type";
+        case "machineType":
+          return "Material Usage Report - By Machine Type";
+        default:
+          return "Material Usage Report";
+      }
+    };
+
+    const headers = getColumnHeaders();
+    const title = getReportTitle();
+
+    // Format dates correctly by adjusting for timezone
+    const formatDateForDisplay = (dateString) => {
+      const date = new Date(dateString);
+      // Adjust for timezone offset to get the correct local date
+      const adjustedDate = new Date(
+        date.getTime() - date.getTimezoneOffset() * 60000
+      );
+      return adjustedDate.toISOString().split("T")[0];
+    };
+
+    // Generate the HTML content
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            .print-report { padding: 20px; }
+            .print-header { text-align: center; margin-bottom: 20px; }
+            .print-table { width: 100%; border-collapse: collapse; }
+            .print-table th, .print-table td { 
+              border: 1px solid #ddd; 
+              padding: 8px; 
+              text-align: left;
+            }
+            .print-table th { background-color: #f2f2f2; }
+            .text-end { text-align: right; }
+            .table-active { background-color: #f8f9fa; }
+            @media print {
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-report">
+            <div class="print-header">
+              <h2>${title}</h2>
+              <p>Date Range: ${formatDateForDisplay(
+                dateRange.dateFrom
+              )} to ${formatDateForDisplay(dateRange.dateTo)}</p>
+            </div>
+
+            <table class="print-table">
+              <thead>
+                <tr>
+                  ${headers.map((header) => `<th>${header}</th>`).join("")}
+                </tr>
+              </thead>
+              <tbody>
+                ${reportData
+                  .map(
+                    (row) => `
+                  <tr>
+                    <td>${
+                      groupBy === "material"
+                        ? row.materialName
+                        : groupBy === "materialType"
+                        ? row.materialType
+                        : row.machineType
+                    }</td>
+                    <td class="text-end">${
+                      Number(row.totalQuantity) === 0
+                        ? ""
+                        : formatNumber(row.totalQuantity)
+                    }</td>
+                    <td class="text-end">${
+                      Number(row.totalUsage) === 0
+                        ? ""
+                        : formatNumber(row.totalUsage)
+                    }</td>
+                    <td class="text-end">${
+                      Number(row.totalAmount) === 0
+                        ? ""
+                        : formatNumber(row.totalAmount)
+                    }</td>
+                    <td class="text-end">${
+                      Number(row.totalUsage) > 0
+                        ? formatNumber(row.totalAmount / row.totalUsage)
+                        : ""
+                    }</td>
+                  </tr>
+                `
+                  )
+                  .join("")}
+              </tbody>
+              <tfoot>
+                <tr class="table-active">
+                  <td>Total</td>
+                  <td class="text-end">${formatNumber(
+                    totals.totalQuantity
+                  )}</td>
+                  <td class="text-end">${formatNumber(totals.totalUsage)}</td>
+                  <td class="text-end">${formatNumber(totals.totalAmount)}</td>
+                  <td class="text-end">${
+                    totals.totalUsage > 0
+                      ? formatNumber(totals.totalAmount / totals.totalUsage)
+                      : ""
+                  }</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <script>
+            // Print after a short delay to ensure rendering
+            const printTimer = setTimeout(() => {
+              window.print();
+            }, 100);
+
+            // Handle print completion
+            const handlePrintEvent = () => {
+              setTimeout(() => {
+                window.close();
+              }, 100);
+            };
+
+            window.addEventListener("afterprint", handlePrintEvent);
+
+            // Cleanup
+            window.onunload = function() {
+              clearTimeout(printTimer);
+              window.removeEventListener("afterprint", handlePrintEvent);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (

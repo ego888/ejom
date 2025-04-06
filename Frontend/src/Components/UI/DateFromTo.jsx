@@ -8,17 +8,25 @@ const DateFromTo = ({ onDateChange, className }) => {
   // Set default dates on component mount
   useEffect(() => {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1, 12);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0, 12);
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    setDateFrom(firstDay.toISOString().slice(0, 10));
-    setDateTo(lastDay.toISOString().slice(0, 10));
+    // Format dates without timezone conversion
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const fromDate = formatDate(firstDay);
+    const toDate = formatDate(lastDay);
+
+    setDateFrom(fromDate);
+    setDateTo(toDate);
 
     // Notify parent of initial dates
-    onDateChange?.(
-      firstDay.toISOString().slice(0, 10),
-      lastDay.toISOString().slice(0, 10)
-    );
+    onDateChange?.(fromDate, toDate);
   }, []);
 
   // Date adjustment functions
