@@ -358,6 +358,122 @@ router.get("/payment-allocation", verifyUser, async (req, res) => {
   }
 });
 
+// Get payment allocation
+router.get("/payments", verifyUser, async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "postedDate",
+      sortDirection = "desc",
+      search = "",
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+
+    // Build the base query
+    let query = `
+      SELECT 
+        p.*,
+        GROUP_CONCAT(DISTINCT o.orderId) as orderIds
+      FROM payments p
+      LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
+      LEFT JOIN orders o ON pa.orderId = o.orderId
+    `;
+
+    // Add search conditions if search term exists
+    const searchConditions = [];
+    if (search) {
+      searchConditions.push(`
+        (p.ornum LIKE ? OR 
+        p.payReference LIKE ? OR 
+        p.transactedBy LIKE ? OR 
+        o.clientName LIKE ?)
+      `);
+    }
+
+    if (searchConditions.length > 0) {
+      query += ` WHERE ${searchConditions.join(" OR ")}`;
+    }
+
+    // Add group by
+    query += ` GROUP BY p.payId`;
+
+    // Add sorting
+    const validSortColumns = [
+      "payId",
+      "amount",
+      "payType",
+      "ornum",
+      "payDate",
+      "postedDate",
+      "remittedDate",
+      "transactedBy",
+      "remittedBy",
+      "received",
+      "receivedDate",
+    ];
+
+    const sortColumn = validSortColumns.includes(sortBy)
+      ? sortBy
+      : "postedDate";
+    const sortOrder = sortDirection.toUpperCase() === "ASC" ? "ASC" : "DESC";
+    query += ` ORDER BY ${sortColumn} ${sortOrder}`;
+
+    // Add pagination
+    query += ` LIMIT ? OFFSET ?`;
+
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(DISTINCT p.payId) as total
+      FROM payments p
+      LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
+      LEFT JOIN orders o ON pa.orderId = o.orderId
+      ${
+        searchConditions.length > 0
+          ? `WHERE ${searchConditions.join(" OR ")}`
+          : ""
+      }
+    `;
+
+    // Execute queries
+    const [payments, countResult] = await Promise.all([
+      pool.query(query, [
+        ...(search
+          ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`]
+          : []),
+        parseInt(limit),
+        offset,
+      ]),
+      pool.query(
+        countQuery,
+        search
+          ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`]
+          : []
+      ),
+    ]);
+
+    const total = countResult[0][0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      Status: true,
+      Result: {
+        payments: payments[0],
+        total,
+        totalPages,
+        currentPage: parseInt(page),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching payments:", error);
+    res.status(500).json({
+      Status: false,
+      Error: "Error fetching payments",
+    });
+  }
+});
+
 // Add route to recalculate paid amount
 router.post("/recalculate-paid-amount", verifyUser, async (req, res) => {
   let connection;

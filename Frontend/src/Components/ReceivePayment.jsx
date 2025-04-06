@@ -16,9 +16,10 @@ import Modal from "./UI/Modal";
 import PaymentAllocationModal from "./PaymentAllocationModal";
 import RemitModal from "./RemitModal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
-
-function Prod() {
+import { formatDate, formatDateTime, formatNumber } from "../utils/orderUtils";
+function ReceivePayment() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("receive");
   const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -79,14 +80,12 @@ function Prod() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [initialLoad, setInitialLoad] = useState(true);
-  const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [tempPayId, setTempPayId] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [amount, setAmount] = useState("");
-  const [showRemitModal, setShowRemitModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState(() => {
     return localStorage.getItem("paymentSearchTerm") || "";
   });
@@ -96,6 +95,17 @@ function Prod() {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
+
+  // Add new state variables for payments
+  const [payments, setPayments] = useState([]);
+  const [paymentTotalCount, setPaymentTotalCount] = useState(0);
+  const [paymentTotalPages, setPaymentTotalPages] = useState(0);
+  const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);
+  const [paymentSortConfig, setPaymentSortConfig] = useState({
+    key: "postedDate",
+    direction: "desc",
+  });
+  const [paymentSearchTerm, setPaymentSearchTerm] = useState("");
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -556,88 +566,6 @@ function Prod() {
     return "Please fill in all required fields";
   };
 
-  // Update handlePostPayment to validate OR# first
-  const handlePostPayment = async (result) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Validate OR# if posting directly from form
-      if (!result && !paymentInfo.ornum.trim()) {
-        setModalConfig({
-          title: "Validation Error",
-          message: "Please enter OR#",
-          type: "error",
-          showCancelButton: false,
-          onConfirm: () => setShowModal(false),
-        });
-        setShowModal(true);
-        return;
-      }
-
-      // If result is provided, it means we're posting from the allocation modal
-      if (result) {
-        setSuccessMessage(
-          `Payment of ${formatPeso(result.amount)} posted successfully`
-        );
-        setShowSuccessModal(true);
-        setTempPayId(null);
-        return;
-      }
-
-      // Check if total applied matches header amount
-      const totalApplied = Object.values(orderPayments).reduce(
-        (sum, p) => sum + (p.payment || 0),
-        0
-      );
-
-      // Convert both to numbers
-      const applied = Number(totalApplied);
-      const amount = Number(paymentInfo.amount);
-
-      // Only show warning if applied amount is less than payment amount
-      if (applied < amount) {
-        setAlert({
-          show: true,
-          title: "Payment Amount Mismatch",
-          message: `The total applied amount (${formatPeso(
-            applied
-          )}) is less than the payment amount (${formatPeso(
-            amount
-          )}). Do you want to proceed with this partial payment?`,
-          type: "confirm",
-          showOkButton: true,
-          onConfirm: () => postPaymentToServer(),
-        });
-        return;
-      }
-
-      // If applied amount is greater than payment amount, show error
-      if (applied > amount) {
-        setAlert({
-          show: true,
-          title: "Invalid Payment",
-          message: `The total applied amount (${formatPeso(
-            applied
-          )}) cannot be greater than the payment amount (${formatPeso(
-            amount
-          )}). Please adjust the allocations.`,
-          type: "alert",
-          showOkButton: true,
-        });
-        return;
-      }
-
-      // If amounts match, proceed directly
-      await postPaymentToServer();
-    } catch (error) {
-      setError("Failed to post payment");
-      console.error("Error posting payment:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Function to post payment to server
   const postPaymentToServer = async () => {
     try {
@@ -707,32 +635,6 @@ function Prod() {
     }
   };
 
-  // Add function to check OR#
-  const checkORNumber = async (ornum) => {
-    if (!ornum.trim()) return;
-
-    try {
-      const response = await axios.get(`${ServerIP}/auth/check-ornum`, {
-        params: { ornum },
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
-      if (response.data.exists) {
-        setAlert({
-          show: true,
-          title: "Warning",
-          message: `OR# ${ornum} already exists`,
-          type: "alert",
-          showOkButton: true,
-        });
-
-        document.querySelector('input[placeholder="Enter amount"]').focus();
-      }
-    } catch (error) {
-      console.error("Error checking OR#:", error);
-    }
-  };
-
   useEffect(() => {
     checkForTempPayments();
   }, []);
@@ -784,133 +686,6 @@ function Prod() {
     }
   };
 
-  const handleSavePayment = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Prepare allocations
-      const allocations = Object.entries(orderPayments).map(
-        ([orderId, details]) => ({
-          orderId: parseInt(orderId),
-          amount: details.payment || 0,
-        })
-      );
-
-      // Save to temp tables
-      const response = await axios.post(`${ServerIP}/auth/save-temp-payment`, {
-        payment: paymentInfo,
-        allocations,
-      });
-
-      if (response.data.Status) {
-        setTempPayId(response.data.Result.payId);
-        setShowAllocationModal(true);
-      } else {
-        setError(response.data.Error);
-      }
-    } catch (error) {
-      setError("Failed to save payment");
-      console.error("Error saving payment:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancelPayment = () => {
-    setTempPayId(null);
-    setOrderPayments({});
-    setPaymentInfo({
-      amount: "",
-      payType: "",
-      payReference: "",
-      payDate: "",
-      ornum: "",
-      transactedBy: localStorage.getItem("userName") || "",
-    });
-  };
-
-  const handleAddPayment = async () => {
-    if (!selectedOrder || !amount) {
-      setError("Please select an order and enter an amount");
-      return;
-    }
-
-    if (amount <= 0) {
-      setError("Amount must be greater than 0");
-      return;
-    }
-
-    if (amount > remainingAmount) {
-      setError("Amount cannot exceed remaining payment amount");
-      return;
-    }
-
-    try {
-      // Make sure we have a tempPayId
-      if (!tempPayId) {
-        // First save the payment header
-        const paymentResponse = await axios.post(
-          `${ServerIP}/auth/save-temp-payment`,
-          {
-            payment: {
-              ...paymentInfo,
-              transactedBy: localStorage.getItem("userName") || "unknown",
-            },
-          }
-        );
-
-        if (!paymentResponse.data.Status) {
-          setError(
-            paymentResponse.data.Error || "Failed to save payment header"
-          );
-          return;
-        }
-
-        setTempPayId(paymentResponse.data.Result.payId);
-      }
-
-      // Now save the allocation
-      const response = await axios.post(
-        `${ServerIP}/auth/save-temp-allocation`,
-        {
-          payId: tempPayId,
-          allocation: {
-            orderId: selectedOrder.orderId,
-            amount: parseFloat(amount),
-          },
-        }
-      );
-
-      if (response.data.Status) {
-        // Add to local state
-        setOrderPayments((prev) => ({
-          ...prev,
-          [selectedOrder.orderId]: {
-            payment: parseFloat(amount),
-            wtax: 0, // Could calculate WTax here if needed
-          },
-        }));
-
-        // Update remaining amount
-        setRemainingAmount((prev) => prev - parseFloat(amount));
-
-        // Add to checked orders
-        setCheckPay((prev) => new Set([...prev, selectedOrder.orderId]));
-
-        // Reset form
-        setSelectedOrder(null);
-        setAmount("");
-        setError("");
-      } else {
-        setError(response.data.Error || "Failed to save allocation");
-      }
-    } catch (error) {
-      console.error("Error saving allocation:", error);
-      setError("Failed to save allocation");
-    }
-  };
-
   const handleClientHover = (clientId) => {
     hoverTimerRef.current = setTimeout(() => {
       setSelectedClientId(clientId);
@@ -933,619 +708,656 @@ function Prod() {
     };
   }, []);
 
+  // Add fetchPayments function
+  const fetchPayments = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${ServerIP}/auth/payments`, {
+        params: {
+          page: paymentCurrentPage,
+          limit: recordsPerPage,
+          sortBy: paymentSortConfig.key,
+          sortDirection: paymentSortConfig.direction,
+          search: paymentSearchTerm,
+        },
+      });
+
+      if (response.data.Status) {
+        setPayments(response.data.Result.payments);
+        setPaymentTotalCount(
+          response.data.Result.total || response.data.Result.payments.length
+        );
+
+        // Calculate totalPages if not provided by API
+        const total =
+          response.data.Result.total || response.data.Result.payments.length;
+        const calculatedTotalPages = Math.ceil(total / recordsPerPage);
+        setPaymentTotalPages(calculatedTotalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to fetch payments",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add payment sort handler
+  const handlePaymentSort = (key) => {
+    let direction = "asc";
+    if (
+      paymentSortConfig.key === key &&
+      paymentSortConfig.direction === "asc"
+    ) {
+      direction = "desc";
+    }
+    setPaymentSortConfig({ key, direction });
+    setPaymentCurrentPage(1);
+  };
+
+  // Add payment search handler
+  const handlePaymentSearch = (e) => {
+    const term = e.target.value;
+    setPaymentSearchTerm(term);
+    setPaymentCurrentPage(1);
+  };
+
+  // Add useEffect for payments
+  useEffect(() => {
+    if (activeTab === "payments") {
+      fetchPayments();
+    }
+  }, [
+    activeTab,
+    paymentCurrentPage,
+    recordsPerPage,
+    paymentSortConfig,
+    paymentSearchTerm,
+  ]);
+
   return (
     <div className="payment-theme">
       <div className="payment-page-background px-5">
         <div className="payment-header d-flex justify-content-center">
-          <h3>Payment Processing</h3>
+          <h3>Receive Payment</h3>
         </div>
 
-        {/* Action Buttons and Search */}
-        <div className="d-flex justify-content-between mb-3">
-          <div className="d-flex gap-2">
-            <Button variant="save" onClick={() => setShowRemitModal(true)}>
-              Payment Summary
-            </Button>
-            {checkPay.size > 0 && (
-              <Button
-                variant="view"
-                onClick={() => setShowAllocationModal(true)}
+        {/* Tabs */}
+        <div>
+          <ul className="nav nav-tabs">
+            <li className="nav-item">
+              <button
+                className={`nav-link ${
+                  activeTab === "receive" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("receive")}
               >
-                View Allocations ({checkPay.size})
-              </Button>
-            )}
-          </div>
-          <div className="search-container">
-            <label htmlFor="paymentSearch" className="visually-hidden">
-              Search payments
-            </label>
-            <input
-              id="paymentSearch"
-              name="paymentSearch"
-              type="text"
-              className="form-control form-control-sm"
-              placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-              onChange={handleSearch}
-              value={displaySearchTerm}
-              style={{ width: "400px" }}
-              aria-label="Search payments"
-            />
-          </div>
+                Orders
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${
+                  activeTab === "payments" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("payments")}
+              >
+                Payments
+              </button>
+            </li>
+          </ul>
         </div>
 
-        {/* Payment Info Header */}
-        <div className="payment-info-header mb-4">
-          <div className="row">
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="payment-date">Payment Date</label>
-                <input
-                  id="payment-date"
-                  type="date"
-                  className="form-input"
-                  value={paymentInfo.payDate}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("payDate", e.target.value)
-                  }
-                />
-              </div>
-            </div>
-            <div className="col-md-1">
-              <div className="form-group">
-                <label htmlFor="type">Type</label>
-                <select
-                  id="type"
-                  className="form-input"
-                  value={paymentInfo.payType}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("payType", e.target.value)
-                  }
-                >
-                  {paymentTypes.map((type) => (
-                    <option key={type.payType} value={type.payType}>
-                      {type.payType}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="form-group">
-                <label htmlFor="client">Client</label>
-                <input
-                  id="client"
-                  type="text"
-                  name="clientName"
-                  className="form-input"
-                  value={searchClientName}
-                  onChange={(e) => setSearchClientName(e.target.value)}
-                  onKeyDown={handleClientSearch}
-                  onBlur={handleClientSearch}
-                  placeholder="Enter client name"
-                  list="clientList"
-                  autoComplete="off"
-                />
-                <datalist id="clientList">
-                  {clientList.map((client) => (
-                    <option key={client.id} value={client.clientName}>
-                      {client.customerName}
-                    </option>
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="ornum">OR#</label>
-                <input
-                  id="ornum"
-                  type="text"
-                  className="form-input"
-                  value={paymentInfo.ornum}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("ornum", e.target.value)
-                  }
-                  onBlur={(e) => checkORNumber(e.target.value)}
-                  placeholder="Enter OR#"
-                />
-              </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="amount">Amount</label>
-                <input
-                  id="amount"
-                  type="number"
-                  className="form-input"
-                  value={paymentInfo.amount}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("amount", e.target.value)
-                  }
-                  placeholder="Enter amount"
-                />
-              </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="reference">Reference</label>
-                <input
-                  id="reference"
-                  type="text"
-                  className="form-input"
-                  value={paymentInfo.payReference}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("payReference", e.target.value)
-                  }
-                  placeholder="Enter reference"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Add View Allocations and Remit buttons after the payment info header */}
-        <div className="d-flex justify-content-end mb-3">
-          <select
-            id="vat-select"
-            className="form-input"
-            style={{ width: "250px" }}
-            value={selectedWtax?.WTax}
-            onChange={(e) => {
-              const selected = wtaxTypes.find((w) => w.WTax === e.target.value);
-              setSelectedWtax(selected);
-              // Recalculate WTax for all checked orders when WTax type changes
-              if (selected) {
-                const newOrderPayments = { ...orderPayments };
-                checkPay.forEach((orderId) => {
-                  const payment = newOrderPayments[orderId]?.payment || 0;
-                  const baseAmount =
-                    selected.withVAT === 1
-                      ? payment / (1 + vatRate / 100)
-                      : payment;
-                  const wtaxAmount =
-                    Math.round(baseAmount * (selected.taxRate / 100) * 100) /
-                    100;
-
-                  newOrderPayments[orderId] = {
-                    ...newOrderPayments[orderId],
-                    wtax: wtaxAmount,
-                  };
-                });
-                setOrderPayments(newOrderPayments);
-              }
-            }}
+        {/* Tab Content */}
+        <div className="tab-content">
+          {/* Receive Payment Tab */}
+          <div
+            className={`tab-pane fade ${
+              activeTab === "receive" ? "show active" : ""
+            }`}
           >
-            <option value="">Select WTax Type</option>
-            {wtaxTypes.map((wt) => (
-              <option key={wt.WTax} value={wt.WTax}>
-                {`${wt.WTax} - ${wt.Description}`}
-              </option>
-            ))}
-          </select>
-        </div>
-        {/* Loading indicator */}
-        {loading && (
-          <div className="text-center my-3">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
+            {/* Action Buttons and Search */}
+            <div className="d-flex justify-content-between mb-3">
+              <div className="d-flex gap-2">
+                <Button variant="add">New Payment</Button>
+              </div>
+              <div className="search-container">
+                <label htmlFor="paymentSearch" className="visually-hidden">
+                  Search payments
+                </label>
+                <input
+                  id="paymentSearch"
+                  name="paymentSearch"
+                  type="text"
+                  className="form-control form-control-sm"
+                  placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+                  onChange={handleSearch}
+                  value={displaySearchTerm}
+                  style={{ width: "400px" }}
+                  aria-label="Search payments"
+                />
+              </div>
+            </div>
+
+            {/* Loading indicator */}
+            {loading && (
+              <div className="text-center my-3">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Orders table */}
+            <div className="table-responsive">
+              <SalesFilter
+                ref={salesFilterRef}
+                salesEmployees={salesEmployees}
+                selectedSales={selectedSales}
+                setSelectedSales={setSelectedSales}
+                onFilterUpdate={({ isFilterActive }) =>
+                  setHasSalesFilter(isFilterActive)
+                }
+              />
+              <ClientFilter
+                ref={clientFilterRef}
+                clientList={clientList}
+                selectedClients={selectedClients}
+                setSelectedClients={setSelectedClients}
+                onFilterUpdate={({ isFilterActive }) =>
+                  setHasClientFilter(isFilterActive)
+                }
+              />
+              <table className="table table-hover">
+                <thead className="table table-head">
+                  <tr>
+                    <th
+                      className="text-center"
+                      onClick={() => handleSort("id")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      JO # {getSortIndicator("id")}
+                    </th>
+                    <th
+                      className={`text-center ${
+                        hasClientFilter ? "active-filter" : ""
+                      }`}
+                      onClick={() => handleSort("clientName")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Client {getSortIndicator("clientName")}
+                      {hasClientFilter && (
+                        <span className="filter-indicator filter-icon"></span>
+                      )}
+                    </th>
+                    <th className="text-center">Project Name</th>
+                    <th className="text-center">Ordered By</th>
+                    <th className="text-center">Order Ref</th>
+                    <th
+                      className={`text-center ${
+                        hasSalesFilter ? "active-filter" : ""
+                      }`}
+                      onClick={() => handleSort("salesName")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Sales {getSortIndicator("salesName")}
+                      {hasSalesFilter && (
+                        <span className="filter-indicator filter-icon"></span>
+                      )}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handleSort("status")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Status {getSortIndicator("status")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handleSort("drnum")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      DR# {getSortIndicator("drnum")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handleSort("invnum")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      INV# {getSortIndicator("invnum")}
+                    </th>
+                    <th className="text-center">Grand Total</th>
+                    <th className="text-center">Amount Paid</th>
+                    <th className="text-center">OR#</th>
+                    <th className="text-right">Balance</th>
+                    <th className="text-center">Date Paid</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td
+                        style={{ cursor: "pointer" }}
+                        onClick={() =>
+                          navigate(`/dashboard/payment/view/${order.id}`)
+                        }
+                      >
+                        {order.id}
+                      </td>
+                      <td
+                        className="client-cell"
+                        onClick={(e) => {
+                          if (clientFilterRef.current) {
+                            clientFilterRef.current.toggleFilterMenu(e);
+                          }
+                        }}
+                        onMouseEnter={() => handleClientHover(order.clientId)}
+                        onMouseLeave={handleClientLeave}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div>{order.clientName}</div>
+                        {order.customerName && (
+                          <div className="small text-muted">
+                            {order.customerName}
+                          </div>
+                        )}
+                      </td>
+                      <td>{order.projectName}</td>
+                      <td>{order.orderedBy}</td>
+                      <td>{order.orderReference}</td>
+                      <td
+                        className="client-cell"
+                        onClick={(e) => {
+                          if (salesFilterRef.current) {
+                            salesFilterRef.current.toggleFilterMenu(e);
+                          }
+                        }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        {order.salesName}
+                      </td>
+                      <td className="text-center">
+                        <span className={`status-badge ${order.status}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td>{order.drnum || ""}</td>
+                      <td>{order.invnum || ""}</td>
+                      <td className="number_right">
+                        {order.grandTotal
+                          ? `₱${order.grandTotal.toLocaleString()}`
+                          : ""}
+                      </td>
+                      <td
+                        className="number_right"
+                        style={{ cursor: "pointer" }}
+                        onDoubleClick={async () => {
+                          try {
+                            const response = await axios.post(
+                              `${ServerIP}/auth/recalculate-paid-amount`,
+                              { orderId: order.id }
+                            );
+
+                            if (response.data.Status) {
+                              // Update the order in state
+                              setOrders(
+                                orders.map((o) =>
+                                  o.id === order.id
+                                    ? {
+                                        ...o,
+                                        amountPaid:
+                                          response.data.Result.amountPaid,
+                                      }
+                                    : o
+                                )
+                              );
+
+                              setAlert({
+                                show: true,
+                                title: "Success",
+                                message: "Amount recalculated successfully",
+                                type: "alert",
+                                showOkButton: true,
+                              });
+                            }
+                          } catch (error) {
+                            console.error("Error recalculating amount:", error);
+                            setAlert({
+                              show: true,
+                              title: "Error",
+                              message: "Failed to recalculate amount",
+                              type: "error",
+                              showOkButton: true,
+                            });
+                          }
+                        }}
+                      >
+                        {order.amountPaid > 0
+                          ? `₱${order.amountPaid.toLocaleString()}`
+                          : ""}
+                      </td>
+                      <td>{order.orNums || ""}</td>
+                      <td className="text-right">
+                        {(() => {
+                          const balance =
+                            order.grandTotal -
+                            (order.amountPaid || 0) -
+                            (orderPayments[order.id]?.payment || 0);
+                          return balance > 0 ? formatPeso(balance) : "";
+                        })()}
+                      </td>
+                      <td>
+                        {order.datePaid
+                          ? new Date(order.datePaid).toLocaleDateString()
+                          : ""}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Totals row */}
+                  <tr className="table-info">
+                    <td colSpan="8"></td>
+                    <td className="text-right">
+                      <div
+                        className="position-relative"
+                        onMouseOver={(e) => {
+                          if (!canPost()) {
+                            console.log("Showing tooltip");
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            const message = getTooltipMessage();
+                            // Estimate pixel width based on message length (roughly 8px per character)
+                            const messageWidth = message.length * 10;
+                            // Adjust x position based on message width
+                            const xOffset = messageWidth / 2;
+
+                            setTooltipPosition({
+                              x: rect.left - xOffset,
+                              y: rect.top + window.scrollY + 5,
+                            });
+                            setShowTooltip(true);
+                          }
+                        }}
+                        onMouseLeave={() => setShowTooltip(false)}
+                      ></div>
+                    </td>
+                    <td className="text-right">
+                      <strong>Totals:</strong>
+                    </td>
+                    <td className="text-right">
+                      <strong>
+                        {(() => {
+                          const total = Object.values(orderPayments).reduce(
+                            (sum, p) => sum + (p.payment || 0),
+                            0
+                          );
+                          return total > 0 ? formatPeso(total) : "";
+                        })()}
+                      </strong>
+                    </td>
+                    <td className="text-right">
+                      <strong>
+                        {(() => {
+                          const total = Object.values(orderPayments).reduce(
+                            (sum, p) => sum + (p.wtax || 0),
+                            0
+                          );
+                          return total > 0 ? formatPeso(total) : "";
+                        })()}
+                      </strong>
+                    </td>
+                    <td className="text-right">
+                      <strong>
+                        {remainingAmount > 0 ? formatPeso(remainingAmount) : ""}
+                      </strong>
+                    </td>
+                    <td colSpan="2"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination and Filters Section */}
+            <div className="d-flex justify-content-between align-items-start mt-3">
+              <DisplayPage
+                recordsPerPage={recordsPerPage}
+                setRecordsPerPage={setRecordsPerPage}
+                currentPage={currentPage}
+                totalCount={totalCount}
+                setCurrentPage={setCurrentPage}
+              />
+
+              <StatusBadges
+                statusOptions={statusOptions}
+                selectedStatuses={selectedStatuses}
+                onStatusChange={(newStatuses) => {
+                  setSelectedStatuses(newStatuses);
+                  localStorage.setItem(
+                    "orderStatusFilter",
+                    JSON.stringify(newStatuses)
+                  );
+                  fetchOrderData();
+                }}
+              />
+
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
           </div>
-        )}
-        <div className="table-responsive">
-          <SalesFilter
-            ref={salesFilterRef}
-            salesEmployees={salesEmployees}
-            selectedSales={selectedSales}
-            setSelectedSales={setSelectedSales}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasSalesFilter(isFilterActive)
-            }
-          />
-          <ClientFilter
-            ref={clientFilterRef}
-            clientList={clientList}
-            selectedClients={selectedClients}
-            setSelectedClients={setSelectedClients}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasClientFilter(isFilterActive)
-            }
-          />
-          <table className="table table-hover">
-            <thead className="table table-head">
-              <tr>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("id")}
-                  style={{ cursor: "pointer" }}
-                >
-                  JO # {getSortIndicator("id")}
-                </th>
-                <th
-                  className={`text-center ${
-                    hasClientFilter ? "active-filter" : ""
-                  }`}
-                  onClick={() => handleSort("clientName")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Client {getSortIndicator("clientName")}
-                  {hasClientFilter && (
-                    <span className="filter-indicator filter-icon"></span>
-                  )}
-                </th>
-                <th className="text-center">Project Name</th>
-                <th className="text-center">Ordered By</th>
-                <th className="text-center">Order Ref</th>
-                <th
-                  className={`text-center ${
-                    hasSalesFilter ? "active-filter" : ""
-                  }`}
-                  onClick={() => handleSort("salesName")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Sales {getSortIndicator("salesName")}
-                  {hasSalesFilter && (
-                    <span className="filter-indicator filter-icon"></span>
-                  )}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("status")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Status {getSortIndicator("status")}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("drnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  DR# {getSortIndicator("drnum")}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("invnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  INV# {getSortIndicator("invnum")}
-                </th>
-                <th className="text-center">Grand Total</th>
-                <th className="text-center">Amount Paid</th>
-                <th className="text-center">OR#</th>
-                <th className="text-center">Pay</th>
-                <th className="text-right">Payment</th>
-                <th className="text-right">WTax</th>
-                <th className="text-right">Balance</th>
-                <th className="text-center">Date Paid</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td
-                    style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      navigate(`/dashboard/payment/view/${order.id}`)
-                    }
-                  >
-                    {order.id}
-                  </td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    onMouseEnter={() => handleClientHover(order.clientId)}
-                    onMouseLeave={handleClientLeave}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div>{order.clientName}</div>
-                    {order.customerName && (
-                      <div className="small text-muted">
-                        {order.customerName}
-                      </div>
-                    )}
-                  </td>
-                  <td>{order.projectName}</td>
-                  <td>{order.orderedBy}</td>
-                  <td>{order.orderReference}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.salesName}
-                  </td>
-                  <td className="text-center">
-                    <span className={`status-badge ${order.status}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>{order.drnum || ""}</td>
-                  <td>{order.invnum || ""}</td>
-                  <td className="number_right">
-                    {order.grandTotal
-                      ? `₱${order.grandTotal.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td
-                    className="number_right"
-                    style={{ cursor: "pointer" }}
-                    onDoubleClick={async () => {
-                      try {
-                        const response = await axios.post(
-                          `${ServerIP}/auth/recalculate-paid-amount`,
-                          { orderId: order.id }
-                        );
 
-                        if (response.data.Status) {
-                          // Update the order in state
-                          setOrders(
-                            orders.map((o) =>
-                              o.id === order.id
-                                ? {
-                                    ...o,
-                                    amountPaid: response.data.Result.amountPaid,
-                                  }
-                                : o
-                            )
-                          );
+          {/* Payments Tab */}
+          <div
+            className={`tab-pane fade ${
+              activeTab === "payments" ? "show active" : ""
+            }`}
+          >
+            <div className="d-flex justify-content-between mb-3">
+              <div className="d-flex gap-2">
+                <Button variant="add">New Payment</Button>
+              </div>
+              <div className="search-container">
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  placeholder="Search by OR#, reference, client, transacted by..."
+                  onChange={handlePaymentSearch}
+                  value={paymentSearchTerm}
+                  style={{ width: "400px" }}
+                />
+              </div>
+            </div>
 
-                          setAlert({
-                            show: true,
-                            title: "Success",
-                            message: "Amount recalculated successfully",
-                            type: "alert",
-                            showOkButton: true,
-                          });
-                        }
-                      } catch (error) {
-                        console.error("Error recalculating amount:", error);
-                        setAlert({
-                          show: true,
-                          title: "Error",
-                          message: "Failed to recalculate amount",
-                          type: "error",
-                          showOkButton: true,
-                        });
-                      }
-                    }}
-                  >
-                    {order.amountPaid > 0
-                      ? `₱${order.amountPaid.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td>{order.orNums || ""}</td>
-                  <td className="text-center">
-                    <div className="checkbox-container">
-                      <label
-                        htmlFor={`pay-check-${order.id}`}
-                        className="visually-hidden"
-                      >
-                        Select order {order.id} for payment
-                      </label>
-                      <input
-                        id={`pay-check-${order.id}`}
-                        type="checkbox"
-                        checked={checkPay.has(order.id)}
-                        onChange={() =>
-                          handlePayCheck(
-                            order.id,
-                            (
-                              order.grandTotal - (order.amountPaid || 0)
-                            ).toFixed(2),
-                            order.grandTotal
-                          )
-                        }
-                        disabled={
-                          !canEditPayments() ||
-                          (remainingAmount <= 0 && !checkPay.has(order.id)) ||
-                          order.grandTotal - order.amountPaid <= 0
-                        }
-                      />
-                    </div>
-                  </td>
-                  <td className="text-right">
-                    {canEditPayments() && checkPay.has(order.id) ? (
-                      <input
-                        type="number"
-                        className="form-control form-control-sm text-right"
-                        value={orderPayments[order.id]?.payment || 0}
-                        onChange={(e) =>
-                          handlePaymentChange(
-                            order.id,
-                            "payment",
-                            e.target.value
-                          )
-                        }
-                        min="0"
-                        max={order.grandTotal - (order.amountPaid || 0)}
-                      />
-                    ) : orderPayments[order.id]?.payment > 0 ? (
-                      formatPeso(orderPayments[order.id]?.payment)
-                    ) : (
-                      ""
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {canEditPayments() && checkPay.has(order.id) ? (
-                      <input
-                        type="number"
-                        className="form-control form-control-sm text-right"
-                        value={orderPayments[order.id]?.wtax || 0}
-                        onChange={(e) =>
-                          handlePaymentChange(order.id, "wtax", e.target.value)
-                        }
-                        min="0"
-                      />
-                    ) : orderPayments[order.id]?.wtax > 0 ? (
-                      formatPeso(orderPayments[order.id]?.wtax)
-                    ) : (
-                      ""
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {(() => {
-                      const balance =
-                        order.grandTotal -
-                        (order.amountPaid || 0) -
-                        (orderPayments[order.id]?.payment || 0);
-                      return balance > 0 ? formatPeso(balance) : "";
-                    })()}
-                  </td>
-                  <td>
-                    {order.datePaid
-                      ? new Date(order.datePaid).toLocaleDateString()
-                      : ""}
-                  </td>
-                </tr>
-              ))}
-              {/* Totals row */}
-              <tr className="table-info">
-                <td colSpan="10"></td>
-                <td className="text-right">
-                  <div
-                    className="position-relative"
-                    onMouseOver={(e) => {
-                      if (!canPost()) {
-                        console.log("Showing tooltip");
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const message = getTooltipMessage();
-                        // Estimate pixel width based on message length (roughly 8px per character)
-                        const messageWidth = message.length * 10;
-                        // Adjust x position based on message width
-                        const xOffset = messageWidth / 2;
+            {loading && (
+              <div className="text-center my-3">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            )}
 
-                        setTooltipPosition({
-                          x: rect.left - xOffset,
-                          y: rect.top + window.scrollY + 5,
-                        });
-                        setShowTooltip(true);
-                      }
-                    }}
-                    onMouseLeave={() => setShowTooltip(false)}
-                  >
-                    <Button
-                      variant="save"
-                      size="sm"
-                      onClick={() => handlePostPayment(null)}
-                      disabled={!canPost()}
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead className="table table-head">
+                  <tr>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("payId")}
+                      style={{ cursor: "pointer" }}
                     >
-                      Post Payment
-                    </Button>
-                  </div>
-                </td>
-                <td className="text-right">
-                  <strong>Totals:</strong>
-                </td>
-                <td className="text-right">
-                  <strong>
-                    {(() => {
-                      const total = Object.values(orderPayments).reduce(
-                        (sum, p) => sum + (p.payment || 0),
-                        0
-                      );
-                      return total > 0 ? formatPeso(total) : "";
-                    })()}
-                  </strong>
-                </td>
-                <td className="text-right">
-                  <strong>
-                    {(() => {
-                      const total = Object.values(orderPayments).reduce(
-                        (sum, p) => sum + (p.wtax || 0),
-                        0
-                      );
-                      return total > 0 ? formatPeso(total) : "";
-                    })()}
-                  </strong>
-                </td>
-                <td className="text-right">
-                  <strong>
-                    {remainingAmount > 0 ? formatPeso(remainingAmount) : ""}
-                  </strong>
-                </td>
-                <td colSpan="2"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                      Payment ID{" "}
+                      {paymentSortConfig.key === "payId" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("payDate")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Payment Date{" "}
+                      {paymentSortConfig.key === "payDate" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("amount")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Amount{" "}
+                      {paymentSortConfig.key === "amount" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("payType")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Type{" "}
+                      {paymentSortConfig.key === "payType" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("ornum")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      OR#{" "}
+                      {paymentSortConfig.key === "ornum" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("payReference")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Reference{" "}
+                      {paymentSortConfig.key === "payReference" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("transactedBy")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Transacted By{" "}
+                      {paymentSortConfig.key === "transactedBy" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("postedDate")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Posted Date{" "}
+                      {paymentSortConfig.key === "postedDate" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("remittedDate")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Remitted Date{" "}
+                      {paymentSortConfig.key === "remittedDate" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("receivedBy")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Received By{" "}
+                      {paymentSortConfig.key === "receivedBy" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="text-center"
+                      onClick={() => handlePaymentSort("receivedDate")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Received Date{" "}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((payment) => (
+                    <tr key={payment.payId}>
+                      <td className="text-center">{payment.payId}</td>
+                      <td className="text-center">
+                        {payment.payDate ? formatDate(payment.payDate) : ""}
+                      </td>
+                      <td className="text-right">
+                        {formatPeso(payment.amount)}
+                      </td>
+                      <td className="text-center">{payment.payType}</td>
+                      <td className="text-center">{payment.ornum}</td>
+                      <td className="text-center">
+                        {payment.payReference || ""}
+                      </td>
+                      <td className="text-center">{payment.transactedBy}</td>
+                      <td className="text-center">
+                        {payment.postedDate
+                          ? formatDateTime(payment.postedDate)
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {payment.remittedDate
+                          ? formatDateTime(payment.remittedDate)
+                          : ""}
+                      </td>
+                      <td className="text-center">{payment.receivedBy}</td>
+                      <td className="text-center">
+                        {payment.receivedDate
+                          ? formatDateTime(payment.receivedDate)
+                          : ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Pagination and Filters Section */}
-        <div className="d-flex justify-content-between align-items-start mt-3">
-          <DisplayPage
-            recordsPerPage={recordsPerPage}
-            setRecordsPerPage={setRecordsPerPage}
-            currentPage={currentPage}
-            totalCount={totalCount}
-            setCurrentPage={setCurrentPage}
-          />
-
-          <StatusBadges
-            statusOptions={statusOptions}
-            selectedStatuses={selectedStatuses}
-            onStatusChange={(newStatuses) => {
-              setSelectedStatuses(newStatuses);
-              localStorage.setItem(
-                "orderStatusFilter",
-                JSON.stringify(newStatuses)
-              );
-              fetchOrderData();
-            }}
-          />
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <DisplayPage
+                recordsPerPage={recordsPerPage}
+                setRecordsPerPage={setRecordsPerPage}
+                currentPage={paymentCurrentPage}
+                totalCount={paymentTotalCount}
+                setCurrentPage={setPaymentCurrentPage}
+              />
+              <Pagination
+                currentPage={paymentCurrentPage}
+                totalPages={paymentTotalPages}
+                onPageChange={setPaymentCurrentPage}
+              />
+            </div>
+          </div>
         </div>
       </div>
+
       <ModalAlert
         show={alert.show}
         title={alert.title}
         message={alert.message}
         type={alert.type}
-        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
-        onConfirm={() => {
-          if (alert.onConfirm) {
-            alert.onConfirm();
-          }
-          setAlert((prev) => ({ ...prev, show: false }));
-        }}
+        onClose={() => setAlert({ ...alert, show: false })}
+        onConfirm={alert.onConfirm}
       />
-      <Modal
-        variant="tooltip"
-        show={showTooltip && !canPost()}
-        position={tooltipPosition}
-      >
-        <div className="text-center">{getTooltipMessage()}</div>
-      </Modal>
-      <PaymentAllocationModal
-        show={showAllocationModal}
-        onClose={() => setShowAllocationModal(false)}
-        paymentInfo={paymentInfo}
-        orderPayments={orderPayments}
-        orders={orders}
-        onPostPayment={handlePostPayment}
-        onCancelPayment={handleCancelPayment}
-      />
-      <RemitModal
-        show={showRemitModal}
-        onClose={() => setShowRemitModal(false)}
-      />
+
+      {/* Client Info Modal */}
       <ViewCustomerInfo
-        clientId={selectedClientId}
         show={showClientInfo}
-        onClose={() => setShowClientInfo(false)}
+        onHide={() => setShowClientInfo(false)}
+        clientId={selectedClientId}
       />
     </div>
   );
 }
 
-export default Prod;
+export default ReceivePayment;
