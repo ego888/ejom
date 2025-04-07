@@ -301,7 +301,7 @@ const Dashboard = () => {
     }
 
     if (permissions.isOperator) {
-      visibleItems.push(PRINTLOG);
+      visibleItems.push(PRINTLOG, WIPLOG);
     }
 
     return visibleItems;
