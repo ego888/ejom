@@ -1466,7 +1466,7 @@ function AddOrder() {
 
   // Function to handle Cancel/navigation back to orders list
   const handleCancel = () => {
-    navigate("/dashboard/orders");
+    navigate("/dashboard/orders", { state: { refresh: true } });
   };
 
   // Add ESC key event listener

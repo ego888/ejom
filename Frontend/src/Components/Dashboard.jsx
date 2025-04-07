@@ -21,7 +21,7 @@ const DASHBOARD = { path: "", icon: "bi-speedometer2", text: "Dashboard" };
 const DASHSALES = {
   path: "dashsales",
   icon: "bi-speedometer2",
-  text: "Dashboard",
+  text: "Sales Dashboard",
 };
 const QUOTES = {
   path: "quotes",
