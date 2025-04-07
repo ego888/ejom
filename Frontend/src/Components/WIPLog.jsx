@@ -89,6 +89,12 @@ function WIPLog() {
                     placeholder="Enter JO #"
                     value={finishedOrderId}
                     onChange={(e) => setFinishedOrderId(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleFinishedSubmit(e);
+                      }
+                    }}
                     autoComplete="off"
                   />
                   <button className="btn btn-primary" type="submit">
@@ -112,6 +118,12 @@ function WIPLog() {
                     placeholder="Enter JO #"
                     value={deliverOrderId}
                     onChange={(e) => setDeliverOrderId(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleDeliverSubmit(e);
+                      }
+                    }}
                     autoComplete="off"
                   />
                   <button className="btn btn-primary" type="submit">
@@ -135,6 +147,12 @@ function WIPLog() {
                     placeholder="Enter JO #"
                     value={billedOrderId}
                     onChange={(e) => setBilledOrderId(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleBilledSubmit(e);
+                      }
+                    }}
                     autoComplete="off"
                   />
                   <button className="btn btn-primary" type="submit">
