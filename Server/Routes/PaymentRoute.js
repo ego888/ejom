@@ -360,6 +360,7 @@ router.get("/payment-allocation", verifyUser, async (req, res) => {
 
 // Get payment allocation
 router.get("/payments", verifyUser, async (req, res) => {
+  let connection;
   try {
     const {
       page = 1,
@@ -368,98 +369,86 @@ router.get("/payments", verifyUser, async (req, res) => {
       sortDirection = "desc",
       search = "",
     } = req.query;
-
     const offset = (page - 1) * limit;
 
-    // Build the base query
+    connection = await pool.getConnection();
+
     let query = `
       SELECT 
-        p.*,
+        p.payId,
+        p.amount,
+        p.payType,
+        p.ornum,
+        p.payReference,
+        DATE_FORMAT(p.payDate, '%Y-%m-%d') as payDate,
+        DATE_FORMAT(p.postedDate, '%Y-%m-%d %H:%i:%s') as postedDate,
+        DATE_FORMAT(p.remittedDate, '%Y-%m-%d %H:%i:%s') as remittedDate,
+        p.transactedBy,
+        p.remittedBy,
+        p.received,
+        p.receivedBy,
+        DATE_FORMAT(p.receivedDate, '%Y-%m-%d %H:%i:%s') as receivedDate,
         GROUP_CONCAT(DISTINCT o.orderId) as orderIds
       FROM payments p
       LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
       LEFT JOIN orders o ON pa.orderId = o.orderId
     `;
 
-    // Add search conditions if search term exists
-    const searchConditions = [];
-    if (search) {
-      searchConditions.push(`
-        (p.ornum LIKE ? OR 
-        p.payReference LIKE ? OR 
-        p.transactedBy LIKE ? OR 
-        o.clientName LIKE ?)
-      `);
-    }
-
-    if (searchConditions.length > 0) {
-      query += ` WHERE ${searchConditions.join(" OR ")}`;
-    }
-
-    // Add group by
-    query += ` GROUP BY p.payId`;
-
-    // Add sorting
-    const validSortColumns = [
-      "payId",
-      "amount",
-      "payType",
-      "ornum",
-      "payDate",
-      "postedDate",
-      "remittedDate",
-      "transactedBy",
-      "remittedBy",
-      "received",
-      "receivedDate",
-    ];
-
-    const sortColumn = validSortColumns.includes(sortBy)
-      ? sortBy
-      : "postedDate";
-    const sortOrder = sortDirection.toUpperCase() === "ASC" ? "ASC" : "DESC";
-    query += ` ORDER BY ${sortColumn} ${sortOrder}`;
-
-    // Add pagination
-    query += ` LIMIT ? OFFSET ?`;
-
-    // Get total count
-    const countQuery = `
+    let countQuery = `
       SELECT COUNT(DISTINCT p.payId) as total
       FROM payments p
       LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
       LEFT JOIN orders o ON pa.orderId = o.orderId
-      ${
-        searchConditions.length > 0
-          ? `WHERE ${searchConditions.join(" OR ")}`
-          : ""
-      }
     `;
 
-    // Execute queries
-    const [payments, countResult] = await Promise.all([
-      pool.query(query, [
-        ...(search
-          ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`]
-          : []),
-        parseInt(limit),
-        offset,
-      ]),
-      pool.query(
-        countQuery,
-        search
-          ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`]
-          : []
-      ),
-    ]);
+    if (search) {
+      const searchCondition = `
+        WHERE (
+          p.ornum LIKE ? OR 
+          p.payReference LIKE ? OR 
+          p.transactedBy LIKE ?
+        )
+      `;
+      query += searchCondition;
+      countQuery += searchCondition;
+    }
 
-    const total = countResult[0][0].total;
+    query += `
+      GROUP BY p.payId 
+      ORDER BY ${
+        sortBy === "received" ? "p.received" : `p.${sortBy}`
+      } ${sortDirection} 
+      LIMIT ? OFFSET ?
+    `;
+
+    const searchParam = `%${search}%`;
+    const [payments] = await connection.query(
+      query,
+      search
+        ? [
+            searchParam,
+            searchParam,
+            searchParam,
+            parseInt(limit),
+            parseInt(offset),
+          ]
+        : [parseInt(limit), parseInt(offset)]
+    );
+
+    console.log("Payments query result:", payments);
+
+    const [totalResult] = await connection.query(
+      countQuery,
+      search ? [searchParam, searchParam, searchParam] : []
+    );
+
+    const total = totalResult[0].total;
     const totalPages = Math.ceil(total / limit);
 
-    res.json({
+    return res.json({
       Status: true,
       Result: {
-        payments: payments[0],
+        payments,
         total,
         totalPages,
         currentPage: parseInt(page),
@@ -467,10 +456,14 @@ router.get("/payments", verifyUser, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching payments:", error);
-    res.status(500).json({
+    return res.status(500).json({
       Status: false,
-      Error: "Error fetching payments",
+      Error: "Failed to fetch payments: " + error.message,
     });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
@@ -1134,6 +1127,163 @@ router.post("/remit-payment", verifyUser, async (req, res) => {
     });
   } finally {
     if (connection) connection.release();
+  }
+});
+
+// Toggle payment received status
+router.post("/toggle-payment-received", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payId, received } = req.body;
+
+    if (!payId || received === undefined) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Missing required fields: payId, received",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update payment received status
+    await connection.query(
+      `UPDATE payments 
+       SET received = ? 
+       WHERE payId = ?`,
+      [received ? 1 : 0, payId]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Message: `Payment marked as ${received ? "received" : "not received"}`,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error toggling payment received status:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to update payment received status: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+router.get("/total-per-payment-type", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    const [results] = await connection.query(
+      `SELECT 
+        p.payType,
+        COUNT(p.payId) as count,
+        SUM(p.amount) as totalAmount
+       FROM payments p
+       WHERE p.received = 1
+       GROUP BY p.payType
+       ORDER BY p.payType ASC`
+    );
+
+    return res.json({
+      Status: true,
+      Result: results,
+    });
+  } catch (error) {
+    console.error("Error fetching payment type totals:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch payment type totals: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Confirm payment receipts
+router.post("/confirm-payment-receipt", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payIds, receivedBy } = req.body;
+
+    console.log("Received request:", { payIds, receivedBy });
+
+    if (
+      !payIds ||
+      !Array.isArray(payIds) ||
+      payIds.length === 0 ||
+      !receivedBy
+    ) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Payment IDs array and receivedBy are required",
+      });
+    }
+
+    connection = await pool.getConnection();
+
+    // Get all orders associated with these payments before starting transaction
+    const [orders] = await connection.query(
+      `SELECT DISTINCT o.orderId, o.grandTotal, o.amountPaid
+       FROM orders o
+       JOIN paymentJoAllocation pa ON o.orderId = pa.orderId
+       WHERE pa.payId IN (${payIds.map(() => "?").join(",")})`,
+      [...payIds]
+    );
+
+    await connection.beginTransaction();
+
+    try {
+      // Update all payments with receipt details
+      const updateQuery = `UPDATE payments 
+                          SET received = 0, 
+                              receivedBy = ?, 
+                              receivedDate = NOW() 
+                          WHERE payId IN (${payIds.map(() => "?").join(",")})`;
+
+      console.log("Update query:", updateQuery);
+      console.log("Parameters:", [receivedBy, ...payIds]);
+
+      await connection.query(updateQuery, [receivedBy, ...payIds]);
+
+      // Check each order and update status if fully paid
+      for (const order of orders) {
+        if (parseFloat(order.grandTotal) <= parseFloat(order.amountPaid)) {
+          await connection.query(
+            `UPDATE orders 
+             SET status = 'Closed',
+                 closeDate = NOW()
+             WHERE orderId = ?`,
+            [order.orderId]
+          );
+        }
+      }
+
+      await connection.commit();
+
+      return res.json({
+        Status: true,
+        Message: `${payIds.length} payment(s) confirmed as received`,
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error("Transaction error:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error confirming payment receipts:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to confirm payment receipts: " + error.message,
+      Details: error.sqlMessage || "No SQL error details available",
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

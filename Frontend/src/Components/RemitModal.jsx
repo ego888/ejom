@@ -73,14 +73,16 @@ function RemitModal({ show, onClose }) {
         <h3>Summary</h3>
         <table style="width: 40%; border-collapse: collapse; margin-bottom: 20px;">
           <tr>
-            <th style="border: 1px solid #ddd; padding: 8px;">Payment Type</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Count</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Total Amount</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Payment Type</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Count</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Total Amount</th>
           </tr>
           ${Object.entries(groupedPayments)
             .map(
-              ([type, typePayments]) => `
-            <tr>
+              ([type, typePayments], index) => `
+            <tr style="background-color: ${
+              index % 2 === 0 ? "#ffffff" : "#f8f9fa"
+            };">
               <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${type}</td>
               <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
                 typePayments.length
@@ -92,7 +94,7 @@ function RemitModal({ show, onClose }) {
           `
             )
             .join("")}
-          <tr>
+          <tr style="background-color: #e9ecef;">
             <td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Total</strong></td>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
               totalAmount
@@ -101,28 +103,30 @@ function RemitModal({ show, onClose }) {
         </table>
 
         <h3>Detailed Report</h3>
-        <table style="width: 100%; border-collapse: collapse; table-stripe">
+        <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <th style="border: 1px solid #ddd; padding: 8px;">Pay ID</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">JO #</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Client</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Order Total</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Amount Applied</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">OR#</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Date</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Type</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Amount</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Reference</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Transacted By</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Posted Date</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Pay ID</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">JO #</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Client</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Order Total</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Amount Applied</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">OR#</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Date</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Type</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Amount</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Reference</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Transacted By</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Posted Date</th>
           </tr>
           ${Object.entries(groupedPayments)
             .map(
               ([type, typePayments]) => `
             ${typePayments
               .map(
-                (payment) => `
-              <tr>
+                (payment, index) => `
+              <tr style="background-color: ${
+                index % 2 === 0 ? "#ffffff" : "#f8f9fa"
+              };">
                 <td style="border: 1px solid #ddd; padding: 8px;">${
                   payment.payId
                 }</td>
@@ -163,16 +167,17 @@ function RemitModal({ show, onClose }) {
             `
               )
               .join("")}
-            <tr style="background-color: #f8f9fa;">
-              <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Subtotal for ${type}</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
-                typePayments.reduce((sum, p) => sum + Number(p.grandTotal), 0)
-              )}</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
-                calculateSubtotal(typePayments)
-              )}</strong></td>
-              <td colspan="7" style="border: 1px solid #ddd; padding: 8px;"></td>
-            </tr>
+            
+              <tr style="background-color: #e9ecef;">
+                <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Subtotal for ${type}</strong></td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
+                  typePayments.reduce((sum, p) => sum + Number(p.grandTotal), 0)
+                )}</strong></td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
+                  calculateSubtotal(typePayments)
+                )}</strong></td>
+                <td colspan="7" style="border: 1px solid #ddd; padding: 8px;"></td>
+              </tr>
           `
             )
             .join("")}

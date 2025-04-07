@@ -23,6 +23,11 @@ const DASHSALES = {
   icon: "bi-speedometer2",
   text: "Sales Dashboard",
 };
+const DASHPROD = {
+  path: "dashprod",
+  icon: "bi-speedometer2",
+  text: "Production Dashboard",
+};
 const QUOTES = {
   path: "quotes",
   icon: "bi-file-earmark-text",
@@ -255,6 +260,7 @@ const Dashboard = () => {
     const allNavItems = [
       DASHBOARD,
       DASHSALES,
+      DASHPROD,
       QUOTES,
       ORDERS,
       CLIENT,
@@ -293,7 +299,14 @@ const Dashboard = () => {
     }
 
     if (permissions.isProduction) {
-      visibleItems.push(PROD, WIPLOG, SOA, CLIENT, MATERIAL_USAGE_REPORT);
+      visibleItems.push(
+        DASHPROD,
+        PROD,
+        WIPLOG,
+        SOA,
+        CLIENT,
+        MATERIAL_USAGE_REPORT
+      );
     }
 
     if (permissions.isArtist) {

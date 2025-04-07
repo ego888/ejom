@@ -43,6 +43,7 @@ import ReportSalesIncentives from "./Components/Reports/ReportSalesIncentives";
 import SOAPrint from "./Components/Reports/SOAPrint";
 import WIPLog from "./Components/WIPLog";
 import DashSales from "./Components/DashSales";
+import DashProd from "./Components/DashProd";
 import DTR from "./Components/DTR";
 import MaterialUsageReport from "./Components/Reports/MaterialUsageReport";
 
@@ -243,6 +244,7 @@ function App() {
             path="material-usage-report"
             element={<MaterialUsageReport />}
           />
+          <Route path="dashprod" element={<DashProd />} />
         </Route>
       </Routes>
     </BrowserRouter>
