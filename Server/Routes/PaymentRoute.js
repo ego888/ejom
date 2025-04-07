@@ -368,12 +368,31 @@ router.get("/payments", verifyUser, async (req, res) => {
       sortBy = "postedDate",
       sortDirection = "desc",
       search = "",
+      includeReceived = "false",
     } = req.query;
     const offset = (page - 1) * limit;
 
     connection = await pool.getConnection();
 
-    let query = `
+    // Build where clause
+    let whereConditions = ["1=1"]; // Always true condition to start
+    let params = [];
+
+    if (includeReceived === "false") {
+      whereConditions.push("p.receivedBy IS NULL");
+    }
+
+    if (search) {
+      whereConditions.push(
+        "(p.ornum LIKE ? OR p.payReference LIKE ? OR p.transactedBy LIKE ?)"
+      );
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Main data query
+    const dataSql = `
       SELECT 
         p.payId,
         p.amount,
@@ -387,60 +406,28 @@ router.get("/payments", verifyUser, async (req, res) => {
         p.remittedBy,
         p.received,
         p.receivedBy,
-        DATE_FORMAT(p.receivedDate, '%Y-%m-%d %H:%i:%s') as receivedDate,
-        GROUP_CONCAT(DISTINCT o.orderId) as orderIds
+        DATE_FORMAT(p.receivedDate, '%Y-%m-%d %H:%i:%s') as receivedDate
       FROM payments p
-      LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
-      LEFT JOIN orders o ON pa.orderId = o.orderId
-    `;
-
-    let countQuery = `
-      SELECT COUNT(DISTINCT p.payId) as total
-      FROM payments p
-      LEFT JOIN paymentJoAllocation pa ON p.payId = pa.payId
-      LEFT JOIN orders o ON pa.orderId = o.orderId
-    `;
-
-    if (search) {
-      const searchCondition = `
-        WHERE (
-          p.ornum LIKE ? OR 
-          p.payReference LIKE ? OR 
-          p.transactedBy LIKE ?
-        )
-      `;
-      query += searchCondition;
-      countQuery += searchCondition;
-    }
-
-    query += `
-      GROUP BY p.payId 
-      ORDER BY ${
-        sortBy === "received" ? "p.received" : `p.${sortBy}`
-      } ${sortDirection} 
+      WHERE ${whereClause}
+      ORDER BY p.${sortBy} ${sortDirection}
       LIMIT ? OFFSET ?
     `;
+    console.log("dataSQL:", dataSql);
 
-    const searchParam = `%${search}%`;
-    const [payments] = await connection.query(
-      query,
-      search
-        ? [
-            searchParam,
-            searchParam,
-            searchParam,
-            parseInt(limit),
-            parseInt(offset),
-          ]
-        : [parseInt(limit), parseInt(offset)]
-    );
+    // Count query
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM payments p
+      WHERE ${whereClause}
+    `;
 
-    console.log("Payments query result:", payments);
-
-    const [totalResult] = await connection.query(
-      countQuery,
-      search ? [searchParam, searchParam, searchParam] : []
-    );
+    // Execute queries
+    const [payments] = await connection.query(dataSql, [
+      ...params,
+      parseInt(limit),
+      parseInt(offset),
+    ]);
+    const [totalResult] = await connection.query(countSql, params);
 
     const total = totalResult[0].total;
     const totalPages = Math.ceil(total / limit);

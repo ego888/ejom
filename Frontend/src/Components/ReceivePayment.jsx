@@ -109,6 +109,9 @@ function ReceivePayment() {
   const [paymentTypeTotals, setPaymentTypeTotals] = useState([]);
   const [selectedPayments, setSelectedPayments] = useState([]);
 
+  // Add new state for include received filter
+  const [includeReceived, setIncludeReceived] = useState(false);
+
   // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((term) => {
@@ -725,24 +728,20 @@ function ReceivePayment() {
   const fetchPayments = async () => {
     try {
       const response = await axios.get(
-        `${ServerIP}/auth/payments?page=${paymentCurrentPage}&limit=${recordsPerPage}&sortBy=${paymentSortConfig.key}&sortDirection=${paymentSortConfig.direction}&search=${paymentSearchTerm}`
+        `${ServerIP}/auth/payments?page=${paymentCurrentPage}&limit=${recordsPerPage}&sortBy=${
+          paymentSortConfig.key
+        }&sortDirection=${
+          paymentSortConfig.direction
+        }&search=${paymentSearchTerm}&includeReceived=${
+          includeReceived ? "true" : "false"
+        }`
       );
 
+      console.log("Payments API Response:", response.data.Result);
       if (response.data.Status) {
-        console.log("Payments API Response:", response.data.Result);
-        console.log("Payment Total Pages:", response.data.Result.totalPages);
         setPayments(response.data.Result.payments);
         setPaymentTotalCount(response.data.Result.total);
-        setPaymentTotalPages(
-          response.data.Result.totalPages ||
-            Math.ceil(response.data.Result.total / recordsPerPage)
-        );
-
-        // Initialize selectedPayments with received payments
-        const receivedPayments = response.data.Result.payments
-          .filter((payment) => payment.received === 1)
-          .map((payment) => payment.payId);
-        setSelectedPayments(receivedPayments);
+        setPaymentTotalPages(response.data.Result.totalPages);
       } else {
         setAlert({
           show: true,
@@ -795,6 +794,7 @@ function ReceivePayment() {
     recordsPerPage,
     paymentSortConfig,
     paymentSearchTerm,
+    includeReceived,
   ]);
 
   // Add this function near the other payment handlers
@@ -954,25 +954,26 @@ function ReceivePayment() {
   };
 
   // Add this to the payments table row
-  const handlePaymentSelect = async (payId, checked) => {
+  const handlePaymentSelect = async (payment, checked) => {
     try {
-      const token = localStorage.getItem("token");
       const response = await axios.post(
         `${ServerIP}/auth/toggle-payment-received`,
         {
-          payId: payId,
+          payId: payment.payId,
           received: checked ? 1 : 0,
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
       );
 
       if (response.data.Status) {
-        // Update the payment in the state
+        // Update the local state to reflect the new payment status
         setPayments((prevPayments) =>
           prevPayments.map((p) =>
-            p.payId === payId
+            p.payId === payment.payId
               ? {
                   ...p,
                   received: checked ? 1 : 0,
@@ -982,13 +983,11 @@ function ReceivePayment() {
         );
 
         // Update selected payments
-        setSelectedPayments((prev) => {
-          if (checked) {
-            return [...prev, payId];
-          } else {
-            return prev.filter((id) => id !== payId);
-          }
-        });
+        setSelectedPayments((prev) =>
+          checked
+            ? [...prev, payment.payId]
+            : prev.filter((id) => id !== payment.payId)
+        );
 
         // Refresh payment type totals
         await fetchPaymentTypeTotals();
@@ -997,18 +996,24 @@ function ReceivePayment() {
           show: true,
           title: "Error",
           message: response.data.Error || "Failed to update payment status",
-          type: "error",
+          type: "alert",
         });
       }
     } catch (error) {
-      console.error("Error toggling payment received status:", error);
+      console.error("Error updating payment status:", error);
       setAlert({
         show: true,
         title: "Error",
         message: "Failed to update payment status",
-        type: "error",
+        type: "alert",
       });
     }
+  };
+
+  // Add handler for includeReceived checkbox
+  const handleIncludeReceivedChange = (e) => {
+    setIncludeReceived(e.target.checked);
+    setPaymentCurrentPage(1); // Reset to first page when toggling filter
   };
 
   return (
@@ -1389,7 +1394,7 @@ function ReceivePayment() {
             }`}
           >
             <div className="d-flex justify-content-between mb-3">
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 align-items-center">
                 <Button
                   variant="add"
                   onClick={handleConfirmPaymentReceipt}
@@ -1397,12 +1402,24 @@ function ReceivePayment() {
                 >
                   Confirm Payment Receipt
                 </Button>
+                <div className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="includeReceived"
+                    checked={includeReceived}
+                    onChange={handleIncludeReceivedChange}
+                  />
+                  <label className="form-check-label" htmlFor="includeReceived">
+                    Include received
+                  </label>
+                </div>
               </div>
               <div className="search-container">
                 <input
                   type="text"
                   className="form-control form-control-sm"
-                  placeholder="Search by OR#, reference, client, transacted by..."
+                  placeholder="Search by payId, OR#, reference, transacted by..."
                   onChange={handlePaymentSearch}
                   value={paymentSearchTerm}
                   style={{ width: "400px" }}
@@ -1591,15 +1608,14 @@ function ReceivePayment() {
                       <td className="text-right">
                         {formatPeso(payment.amount)}
                       </td>
-                      <td className="text-center">
+                      <td>
                         <input
                           type="checkbox"
-                          checked={selectedPayments.includes(payment.payId)}
+                          checked={payment.received === 1}
                           onChange={(e) =>
-                            handlePaymentSelect(payment.payId, e.target.checked)
+                            handlePaymentSelect(payment, e.target.checked)
                           }
                           disabled={payment.receivedBy !== null}
-                          className="form-check-input"
                         />
                       </td>
                       <td className="text-center">{payment.payType}</td>
