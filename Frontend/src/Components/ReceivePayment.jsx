@@ -1522,9 +1522,7 @@ function ReceivePayment() {
                     >
                       Select{" "}
                       {paymentSortConfig.key === "received" &&
-                      paymentSortConfig.direction === "asc"
-                        ? "↑"
-                        : "↓"}
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
                     <th
                       className="text-center"
