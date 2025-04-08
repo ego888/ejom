@@ -80,6 +80,7 @@ const checkRouteAccess = (route, permissions) => {
     case "employee":
     case "category":
     case "profile":
+    case "check-order-total":
     case "material-usage-report":
       return permissions.categoryId === 1 || permissions.isProduction;
     default:

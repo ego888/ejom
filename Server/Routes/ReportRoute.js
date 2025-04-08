@@ -406,4 +406,34 @@ router.get("/soa-details", verifyUser, async (req, res) => {
   }
 });
 
+// Check Order Totals
+router.get("/check-order-total", verifyUser, async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        o.orderId AS order_id,
+        o.totalAmount AS total_in_orders,
+        IFNULL(SUM(od.amount), 0) AS total_in_details
+      FROM 
+        orders o
+      LEFT JOIN 
+        order_details od ON o.orderId = od.orderId
+      GROUP BY 
+        o.orderId, o.totalAmount
+      HAVING 
+        total_in_orders != total_in_details
+    `;
+
+    const [results] = await pool.query(sql);
+
+    return res.json({
+      Status: true,
+      Result: results,
+    });
+  } catch (error) {
+    console.error("Error in check-order-total:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
+});
+
 export { router as ReportRouter };

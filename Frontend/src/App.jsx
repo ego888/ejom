@@ -37,9 +37,10 @@ import ProdPrintOneDR from "./Components/ProdPrintOneDR";
 import EmployeeLogin from "./Components/EmployeeLogin";
 import axios from "./utils/axiosConfig";
 import ReportSales from "./Components/Reports/ReportSales";
-import SOA from "./Components/Reports/SOA";
 import ReportArtistIncentives from "./Components/Reports/ReportArtistIncentives";
 import ReportSalesIncentives from "./Components/Reports/ReportSalesIncentives";
+import ReportCheckTotal from "./Components/Reports/ReportCheckTotal";
+import SOA from "./Components/Reports/SOA";
 import SOAPrint from "./Components/Reports/SOAPrint";
 import WIPLog from "./Components/WIPLog";
 import DashSales from "./Components/DashSales";
@@ -245,6 +246,7 @@ function App() {
             element={<MaterialUsageReport />}
           />
           <Route path="dashprod" element={<DashProd />} />
+          <Route path="check-order-total" element={<ReportCheckTotal />} />
         </Route>
       </Routes>
     </BrowserRouter>

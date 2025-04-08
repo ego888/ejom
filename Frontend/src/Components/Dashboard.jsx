@@ -86,6 +86,11 @@ const MATERIAL_USAGE_REPORT = {
   icon: "bi-box-seam",
   text: "Material Usage Report",
 };
+const CHECK_ORDER_TOTAL = {
+  path: "check-order-total",
+  icon: "bi-box-seam",
+  text: "Check Order Total",
+};
 
 // Submenu for Reports
 const REPORTS = {
@@ -98,6 +103,7 @@ const REPORTS = {
     ARTIST_INCENTIVES,
     SALES_INCENTIVES,
     MATERIAL_USAGE_REPORT,
+    CHECK_ORDER_TOTAL,
   ],
 };
 
