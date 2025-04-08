@@ -19,7 +19,7 @@ import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import { formatDate, formatDateTime, formatNumber } from "../utils/orderUtils";
 function ReceivePayment() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("receive");
+  const [activeTab, setActiveTab] = useState("payments");
   const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -1029,21 +1029,21 @@ function ReceivePayment() {
             <li className="nav-item">
               <button
                 className={`nav-link ${
-                  activeTab === "receive" ? "active" : ""
-                }`}
-                onClick={() => setActiveTab("receive")}
-              >
-                Orders
-              </button>
-            </li>
-            <li className="nav-item">
-              <button
-                className={`nav-link ${
                   activeTab === "payments" ? "active" : ""
                 }`}
                 onClick={() => setActiveTab("payments")}
               >
                 Payments
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${
+                  activeTab === "receive" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("receive")}
+              >
+                Orders
               </button>
             </li>
           </ul>
@@ -1059,7 +1059,7 @@ function ReceivePayment() {
             {/* Action Buttons and Search */}
             <div className="d-flex justify-content-between mb-3">
               <div className="d-flex gap-2">
-                <Button variant="add">New Payment (remove this)</Button>
+                {/* <Button variant="add">New Payment (remove this)</Button> */}
               </div>
               <div className="search-container">
                 <label htmlFor="paymentSearch" className="visually-hidden">

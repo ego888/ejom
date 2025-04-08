@@ -54,60 +54,81 @@ function ReportCheckTotal() {
     }
   };
 
+  const handleOrderClick = (orderId, event) => {
+    if (event.button === 2) {
+      // Right click
+      window.open(`/dashboard/orders/edit/${orderId}`, "_blank");
+    } else {
+      navigate(`/dashboard/orders/edit/${orderId}`);
+    }
+  };
+
+  const handleContextMenu = (event) => {
+    event.preventDefault();
+  };
+
   if (loading) {
-    return <div className="text-center">Loading...</div>;
+    return (
+      <div className="text-center my-3">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container-fluid">
-      <div className="row">
-        <div className="col-12">
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Order Total Discrepancies</h3>
-            </div>
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-bordered table-striped">
-                  <thead>
-                    <tr>
-                      <th>Order ID</th>
-                      <th>Total in Orders</th>
-                      <th>Total in Details</th>
-                      <th>Difference</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.map((item, index) => (
-                      <tr key={index}>
-                        <td>{item.order_id}</td>
-                        <td className="number_right">
-                          {formatPeso(item.total_in_orders)}
-                        </td>
-                        <td className="number_right">
-                          {formatPeso(item.total_in_details)}
-                        </td>
-                        <td className="number_right">
-                          {formatPeso(
-                            item.total_in_orders - item.total_in_details
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {data.length === 0 && (
-                      <tr>
-                        <td colSpan="4" className="text-center">
-                          No discrepancies found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="px-5 mt-3">
+      <div className="d-flex justify-content-center">
+        <h3>Order Total Discrepancies</h3>
       </div>
+
+      {data.length > 0 && (
+        <div className="mt-3" style={{ maxWidth: "350px", margin: "0 auto" }}>
+          <table className="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th className="text-center">Order ID</th>
+                <th className="text-center">Total in Orders</th>
+                <th className="text-center">Total in Details</th>
+                <th className="text-center">Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((item, index) => (
+                <tr key={index}>
+                  <td className="text-center">
+                    <button
+                      className="btn btn-link p-0"
+                      onClick={(e) => handleOrderClick(item.order_id, e)}
+                      onContextMenu={handleContextMenu}
+                      onMouseDown={(e) => handleOrderClick(item.order_id, e)}
+                      style={{ textDecoration: "none" }}
+                    >
+                      {item.order_id}
+                    </button>
+                  </td>
+                  <td className="text-end">
+                    {formatPeso(item.total_in_orders)}
+                  </td>
+                  <td className="text-end">
+                    {formatPeso(item.total_in_details)}
+                  </td>
+                  <td className="text-end">
+                    {formatPeso(item.total_in_orders - item.total_in_details)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {data.length === 0 && (
+        <div className="text-center mt-3">
+          <p>No discrepancies found</p>
+        </div>
+      )}
 
       <ModalAlert
         show={alert.show}
