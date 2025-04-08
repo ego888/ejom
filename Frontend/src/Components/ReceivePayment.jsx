@@ -10,13 +10,10 @@ import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
 import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
-import { formatPeso } from "../utils/orderUtils";
+import { formatPeso, formatDate, formatDateTime } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
-// import Modal from "./UI/Modal";
-// import PaymentAllocationModal from "./PaymentAllocationModal";
-// import RemitModal from "./RemitModal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
-import { formatDate, formatDateTime, formatNumber } from "../utils/orderUtils";
+
 function ReceivePayment() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("payments");
@@ -44,8 +41,6 @@ function ReceivePayment() {
     return saved ? JSON.parse(saved) : [];
   });
   const [selectedSales, setSelectedSales] = useState([]);
-  const [isProdChecked, setIsProdChecked] = useState(false);
-  const [isAllChecked, setIsAllChecked] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
@@ -53,10 +48,10 @@ function ReceivePayment() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
-  const [paymentTypes, setPaymentTypes] = useState([]);
+  // const [paymentTypes, setPaymentTypes] = useState([]);
   const [paymentInfo, setPaymentInfo] = useState({
     clientName: "",
-    payDate: new Date().toISOString().split("T")[0], // Format as YYYY-MM-DD
+    payDate: new Date().toISOString().split("T")[0],
     payType: "CASH",
     amount: "",
     payReference: "",
@@ -65,11 +60,9 @@ function ReceivePayment() {
   const [remainingAmount, setRemainingAmount] = useState(0);
   const [checkPay, setCheckPay] = useState(new Set());
   const [orderPayments, setOrderPayments] = useState({});
-  const [wtaxTypes, setWtaxTypes] = useState([]);
-  const [selectedWtax, setSelectedWtax] = useState(null);
-  const [vatRate, setVatRate] = useState(0);
-  const [showModal, setShowModal] = useState(false);
-  const [modalConfig, setModalConfig] = useState({});
+  // const [wtaxTypes, setWtaxTypes] = useState([]);
+  // const [selectedWtax, setSelectedWtax] = useState(null);
+  // const [vatRate, setVatRate] = useState(0);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -79,13 +72,8 @@ function ReceivePayment() {
   });
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [initialLoad, setInitialLoad] = useState(true);
   const [tempPayId, setTempPayId] = useState(null);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [amount, setAmount] = useState("");
   const [searchTerm, setSearchTerm] = useState(() => {
     return localStorage.getItem("paymentSearchTerm") || "";
   });
@@ -96,7 +84,7 @@ function ReceivePayment() {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
 
-  // Add new state variables for payments
+  // Payment state variables
   const [payments, setPayments] = useState([]);
   const [paymentTotalCount, setPaymentTotalCount] = useState(0);
   const [paymentTotalPages, setPaymentTotalPages] = useState(0);
@@ -108,8 +96,6 @@ function ReceivePayment() {
   const [paymentSearchTerm, setPaymentSearchTerm] = useState("");
   const [paymentTypeTotals, setPaymentTypeTotals] = useState([]);
   const [selectedPayments, setSelectedPayments] = useState([]);
-
-  // Add new state for include received filter
   const [includeReceived, setIncludeReceived] = useState(false);
 
   // Debounced search handler
@@ -192,18 +178,18 @@ function ReceivePayment() {
       try {
         const [
           statusResponse,
-          wtaxResponse,
-          paymentTypesResponse,
+          // wtaxResponse,
+          // paymentTypesResponse,
           clientResponse,
           salesResponse,
-          vatResponse,
+          // vatResponse,
         ] = await Promise.all([
           axios.get(`${ServerIP}/auth/order-statuses`),
-          axios.get(`${ServerIP}/auth/wtax-types`),
-          axios.get(`${ServerIP}/auth/payment-types`),
+          // axios.get(`${ServerIP}/auth/wtax-types`),
+          // axios.get(`${ServerIP}/auth/payment-types`),
           axios.get(`${ServerIP}/auth/clients`),
           axios.get(`${ServerIP}/auth/sales_employees`),
-          axios.get(`${ServerIP}/auth/jomcontrol/VAT`),
+          // axios.get(`${ServerIP}/auth/jomcontrol/VAT`),
         ]);
 
         // Handle all responses
@@ -220,7 +206,6 @@ function ReceivePayment() {
               .slice(2, 6)
               .map((s) => s.statusId);
             setSelectedStatuses(prodStatuses);
-            setIsProdChecked(true);
             localStorage.setItem(
               "orderStatusFilter",
               JSON.stringify(prodStatuses)
@@ -228,22 +213,22 @@ function ReceivePayment() {
           }
         }
 
-        if (wtaxResponse.data.Status) {
-          setWtaxTypes(wtaxResponse.data.Result);
-          // Set V2 as default WTax type
-          const defaultWTax = wtaxResponse.data.Result.find(
-            (wt) => wt.WTax === "V2"
-          );
-          if (defaultWTax) {
-            setSelectedWtax(defaultWTax);
-          }
-        }
+        // if (wtaxResponse.data.Status) {
+        //   setWtaxTypes(wtaxResponse.data.Result);
+        //   // Set V2 as default WTax type
+        //   const defaultWTax = wtaxResponse.data.Result.find(
+        //     (wt) => wt.WTax === "V2"
+        //   );
+        //   if (defaultWTax) {
+        //     setSelectedWtax(defaultWTax);
+        //   }
+        // }
 
-        if (vatResponse.data.Status) {
-          setVatRate(vatResponse.data.Result.vatPercent);
-        }
-        if (paymentTypesResponse.data.Status)
-          setPaymentTypes(paymentTypesResponse.data.Result);
+        // if (vatResponse.data.Status) {
+        //   setVatRate(vatResponse.data.Result.vatPercent);
+        // }
+        // if (paymentTypesResponse.data.Status)
+        //   setPaymentTypes(paymentTypesResponse.data.Result);
         if (clientResponse.data.Status)
           setClientList(clientResponse.data.Result);
         if (salesResponse.data.Status)
@@ -306,77 +291,77 @@ function ReceivePayment() {
   };
 
   // Update handleClientSearch to use fetchOrderData
-  const handleClientSearch = async (e) => {
-    if (e.type === "keydown" && e.key !== "Enter") return;
-    if (e.type === "blur" && searchTerm.trim() === "") return;
+  // const handleClientSearch = async (e) => {
+  //   if (e.type === "keydown" && e.key !== "Enter") return;
+  //   if (e.type === "blur" && searchTerm.trim() === "") return;
 
-    // Update payment info with client name
-    setPaymentInfo((prev) => ({
-      ...prev,
-      clientName: searchTerm,
-    }));
+  //   // Update payment info with client name
+  //   setPaymentInfo((prev) => ({
+  //     ...prev,
+  //     clientName: searchTerm,
+  //   }));
 
-    // Reset to first page when searching
-    setCurrentPage(1);
+  //   // Reset to first page when searching
+  //   setCurrentPage(1);
 
-    // Fetch data using main function
-    await fetchOrderData();
-  };
+  //   // Fetch data using main function
+  //   await fetchOrderData();
+  // };
 
   // Add useEffect to focus on client name input when component mounts
-  useEffect(() => {
-    const clientNameInput = document.querySelector('input[name="clientName"]');
-    if (clientNameInput) {
-      clientNameInput.focus();
-    }
-  }, []);
+  // useEffect(() => {
+  //   const clientNameInput = document.querySelector('input[name="clientName"]');
+  //   if (clientNameInput) {
+  //     clientNameInput.focus();
+  //   }
+  // }, []);
 
   // Add debounced save function
-  const debouncedSavePayment = useCallback(
-    debounce(async (paymentData) => {
-      try {
-        // Only save if we have all required fields
-        if (
-          paymentData.payDate &&
-          paymentData.payType &&
-          paymentData.amount > 0 &&
-          paymentData.transactedBy
-        ) {
-          const response = await axios.post(
-            `${ServerIP}/auth/save-temp-payment`,
-            {
-              payment: paymentData,
-            }
-          );
+  // const debouncedSavePayment = useCallback(
+  //   debounce(async (paymentData) => {
+  //     try {
+  //       // Only save if we have all required fields
+  //       if (
+  //         paymentData.payDate &&
+  //         paymentData.payType &&
+  //         paymentData.amount > 0 &&
+  //         paymentData.transactedBy
+  //       ) {
+  //         const response = await axios.post(
+  //           `${ServerIP}/auth/save-temp-payment`,
+  //           {
+  //             payment: paymentData,
+  //           }
+  //         );
 
-          if (response.data.Status) {
-            setTempPayId(response.data.Result.payId);
-          }
-        }
-      } catch (error) {
-        console.error("Error saving temp payment:", error);
-      }
-    }, 1000),
-    []
-  );
+  //         if (response.data.Status) {
+  //           setTempPayId(response.data.Result.payId);
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error("Error saving temp payment:", error);
+  //     }
+  //   }, 1000),
+  //   []
+  // );
 
-  const handlePaymentInfoChange = (field, value) => {
-    const updatedPaymentInfo = {
-      ...paymentInfo,
-      [field]: value || "", // Convert null to empty string
-      transactedBy: localStorage.getItem("userName") || "",
-    };
+  // const handlePaymentInfoChange = (field, value) => {
+  //   const updatedPaymentInfo = {
+  //     ...paymentInfo,
+  //     [field]: value || "", // Convert null to empty string
+  //     transactedBy: localStorage.getItem("userName") || "",
+  //   };
 
-    setPaymentInfo(updatedPaymentInfo);
+  //   setPaymentInfo(updatedPaymentInfo);
 
-    // Update remaining amount when total amount changes
-    if (field === "amount") {
-      setRemainingAmount(Number(value || 0));
-    }
+  //   // Update remaining amount when total amount changes
+  //   if (field === "amount") {
+  //     setRemainingAmount(Number(value || 0));
+  //   }
 
-    // Call debounced save function
-    debouncedSavePayment(updatedPaymentInfo);
-  };
+  //   // Call debounced save function
+  //   debouncedSavePayment(updatedPaymentInfo);
+  // };
 
   // Add function to check if payment inputs should be enabled
   const canEditPayments = () => {
@@ -389,171 +374,171 @@ function ReceivePayment() {
   };
 
   // Update handlePayCheck to use save-temp-allocation
-  const handlePayCheck = async (orderId, orderAmount, orderTotal) => {
-    if (!canEditPayments()) return;
+  // const handlePayCheck = async (orderId, orderAmount, orderTotal) => {
+  //   if (!canEditPayments()) return;
 
-    console.log("passed orderTotal", orderTotal);
-    console.log("passed orderAmount", orderAmount);
+  //   console.log("passed orderTotal", orderTotal);
+  //   console.log("passed orderAmount", orderAmount);
 
-    const newCheckPay = new Set(checkPay);
-    const newOrderPayments = { ...orderPayments };
+  //   const newCheckPay = new Set(checkPay);
+  //   const newOrderPayments = { ...orderPayments };
 
-    // Calculate current total payments
-    const currentTotal = Object.values(newOrderPayments).reduce(
-      (sum, p) => sum + (p.payment || 0),
-      0
-    );
+  //   // Calculate current total payments
+  //   const currentTotal = Object.values(newOrderPayments).reduce(
+  //     (sum, p) => sum + (p.payment || 0),
+  //     0
+  //   );
 
-    if (newCheckPay.has(orderId)) {
-      // Uncheck: Remove payment and add amount back to remaining
-      newCheckPay.delete(orderId);
-      const removedPayment = newOrderPayments[orderId]?.payment || 0;
-      setRemainingAmount((prev) => prev + removedPayment);
-      delete newOrderPayments[orderId];
+  //   if (newCheckPay.has(orderId)) {
+  //     // Uncheck: Remove payment and add amount back to remaining
+  //     newCheckPay.delete(orderId);
+  //     const removedPayment = newOrderPayments[orderId]?.payment || 0;
+  //     setRemainingAmount((prev) => prev + removedPayment);
+  //     delete newOrderPayments[orderId];
 
-      // Delete from temp allocation if tempPayId exists
-      if (tempPayId) {
-        try {
-          await axios.post(`${ServerIP}/auth/delete-temp-allocation`, {
-            payId: tempPayId,
-            orderId: orderId,
-          });
-        } catch (error) {
-          console.error("Error deleting temp allocation:", error);
-        }
-      }
-    } else {
-      // Check: Calculate and apply new payment
-      const availableAmount = Math.min(remainingAmount, orderAmount);
-      console.log("orderID", orderId);
-      console.log("Available Amount 1:", availableAmount);
-      console.log("Order Total 1:", orderTotal);
-      console.log("Order Balance 1:", orderAmount);
-      console.log("Remaining Amount 1:", remainingAmount);
-      if (availableAmount > 0) {
-        let wtaxAmount = 0;
-        let paymentAmount = availableAmount;
+  //     // Delete from temp allocation if tempPayId exists
+  //     if (tempPayId) {
+  //       try {
+  //         await axios.post(`${ServerIP}/auth/delete-temp-allocation`, {
+  //           payId: tempPayId,
+  //           orderId: orderId,
+  //         });
+  //       } catch (error) {
+  //         console.error("Error deleting temp allocation:", error);
+  //       }
+  //     }
+  //   } else {
+  //     // Check: Calculate and apply new payment
+  //     const availableAmount = Math.min(remainingAmount, orderAmount);
+  //     console.log("orderID", orderId);
+  //     console.log("Available Amount 1:", availableAmount);
+  //     console.log("Order Total 1:", orderTotal);
+  //     console.log("Order Balance 1:", orderAmount);
+  //     console.log("Remaining Amount 1:", remainingAmount);
+  //     if (availableAmount > 0) {
+  //       let wtaxAmount = 0;
+  //       let paymentAmount = availableAmount;
 
-        // Calculate WTax if selected
-        console.log("Selected WTax:", selectedWtax);
-        if (selectedWtax) {
-          if (selectedWtax.withVAT === 1) {
-            const baseAmount = orderTotal / (1 + vatRate / 100);
-            wtaxAmount =
-              Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
-            if (availableAmount >= orderAmount) {
-              paymentAmount = orderAmount - wtaxAmount;
-            } else {
-              paymentAmount = availableAmount;
-            }
-          } else {
-            wtaxAmount =
-              Math.round(orderAmount * (selectedWtax.taxRate / 100) * 100) /
-              100;
-          }
-        }
-        console.log("Available Amount:", availableAmount);
-        console.log("Order Total:", orderTotal);
-        console.log("Order Balance:", orderAmount);
-        console.log("Payment Amount:", paymentAmount);
+  //       // Calculate WTax if selected
+  //       console.log("Selected WTax:", selectedWtax);
+  //       if (selectedWtax) {
+  //         if (selectedWtax.withVAT === 1) {
+  //           const baseAmount = orderTotal / (1 + vatRate / 100);
+  //           wtaxAmount =
+  //             Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
+  //           if (availableAmount >= orderAmount) {
+  //             paymentAmount = orderAmount - wtaxAmount;
+  //           } else {
+  //             paymentAmount = availableAmount;
+  //           }
+  //         } else {
+  //           wtaxAmount =
+  //             Math.round(orderAmount * (selectedWtax.taxRate / 100) * 100) /
+  //             100;
+  //         }
+  //       }
+  //       console.log("Available Amount:", availableAmount);
+  //       console.log("Order Total:", orderTotal);
+  //       console.log("Order Balance:", orderAmount);
+  //       console.log("Payment Amount:", paymentAmount);
 
-        // Ensure we don't exceed the input amount
-        if (currentTotal + paymentAmount <= paymentInfo.amount) {
-          newCheckPay.add(orderId);
-          newOrderPayments[orderId] = {
-            payment: paymentAmount,
-            wtax: wtaxAmount,
-          };
-          // Update remaining amount based on payment only
-          setRemainingAmount((prev) => prev - paymentAmount);
+  //       // Ensure we don't exceed the input amount
+  //       if (currentTotal + paymentAmount <= paymentInfo.amount) {
+  //         newCheckPay.add(orderId);
+  //         newOrderPayments[orderId] = {
+  //           payment: paymentAmount,
+  //           wtax: wtaxAmount,
+  //         };
+  //         // Update remaining amount based on payment only
+  //         setRemainingAmount((prev) => prev - paymentAmount);
 
-          // Save to temp allocation if tempPayId exists
-          if (tempPayId && paymentAmount > 0) {
-            try {
-              await axios.post(`${ServerIP}/auth/save-temp-allocation`, {
-                payId: tempPayId,
-                allocation: {
-                  orderId: orderId,
-                  amount: paymentAmount,
-                },
-              });
-            } catch (error) {
-              console.error("Error saving temp allocation:", error);
-            }
-          }
-        }
-      }
-    }
+  //         // Save to temp allocation if tempPayId exists
+  //         if (tempPayId && paymentAmount > 0) {
+  //           try {
+  //             await axios.post(`${ServerIP}/auth/save-temp-allocation`, {
+  //               payId: tempPayId,
+  //               allocation: {
+  //                 orderId: orderId,
+  //                 amount: paymentAmount,
+  //               },
+  //             });
+  //           } catch (error) {
+  //             console.error("Error saving temp allocation:", error);
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
 
-    setCheckPay(newCheckPay);
-    setOrderPayments(newOrderPayments);
-  };
+  //   setCheckPay(newCheckPay);
+  //   setOrderPayments(newOrderPayments);
+  // };
 
   // Also update the WTax change handler
-  useEffect(() => {
-    if (selectedWtax && checkPay.size > 0) {
-      const newOrderPayments = { ...orderPayments };
-      let totalRemainingAmount = paymentInfo.amount;
+  // useEffect(() => {
+  //   if (selectedWtax && checkPay.size > 0) {
+  //     const newOrderPayments = { ...orderPayments };
+  //     let totalRemainingAmount = paymentInfo.amount;
 
-      // Recalculate all payments
-      checkPay.forEach((orderId) => {
-        const order = orders.find((o) => o.id === orderId);
-        if (!order) return;
+  //     // Recalculate all payments
+  //     checkPay.forEach((orderId) => {
+  //       const order = orders.find((o) => o.id === orderId);
+  //       if (!order) return;
 
-        const orderAmount = order.grandTotal - (order.amountPaid || 0);
-        let wtaxAmount = 0;
-        let paymentAmount = orderAmount;
+  //       const orderAmount = order.grandTotal - (order.amountPaid || 0);
+  //       let wtaxAmount = 0;
+  //       let paymentAmount = orderAmount;
 
-        // Calculate WTax and adjust payment
-        if (orderAmount <= totalRemainingAmount) {
-          const baseAmount =
-            selectedWtax.withVAT === 1
-              ? orderAmount / (1 + vatRate / 100)
-              : orderAmount;
-          wtaxAmount =
-            Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
-          paymentAmount = orderAmount - wtaxAmount;
-        } else {
-          paymentAmount = totalRemainingAmount;
-        }
+  //       // Calculate WTax and adjust payment
+  //       if (orderAmount <= totalRemainingAmount) {
+  //         const baseAmount =
+  //           selectedWtax.withVAT === 1
+  //             ? orderAmount / (1 + vatRate / 100)
+  //             : orderAmount;
+  //         wtaxAmount =
+  //           Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
+  //         paymentAmount = orderAmount - wtaxAmount;
+  //       } else {
+  //         paymentAmount = totalRemainingAmount;
+  //       }
 
-        newOrderPayments[orderId] = {
-          payment: paymentAmount,
-          wtax: wtaxAmount,
-        };
-        totalRemainingAmount -= paymentAmount;
-      });
+  //       newOrderPayments[orderId] = {
+  //         payment: paymentAmount,
+  //         wtax: wtaxAmount,
+  //       };
+  //       totalRemainingAmount -= paymentAmount;
+  //     });
 
-      setOrderPayments(newOrderPayments);
-      setRemainingAmount(totalRemainingAmount);
-    }
-  }, [selectedWtax, vatRate, orders, paymentInfo.amount]);
+  //     setOrderPayments(newOrderPayments);
+  //     setRemainingAmount(totalRemainingAmount);
+  //   }
+  // }, [selectedWtax, vatRate, orders, paymentInfo.amount]);
 
   // Add handler for payment/wtax changes
-  const handlePaymentChange = (orderId, field, value) => {
-    const numValue = Number(value);
-    const newOrderPayments = { ...orderPayments };
-    const oldPayment = newOrderPayments[orderId]?.payment || 0;
+  // const handlePaymentChange = (orderId, field, value) => {
+  //   const numValue = Number(value);
+  //   const newOrderPayments = { ...orderPayments };
+  //   const oldPayment = newOrderPayments[orderId]?.payment || 0;
 
-    if (field === "payment") {
-      // Calculate max allowed payment
-      const maxPayment = remainingAmount + oldPayment;
-      const payment = Math.min(numValue, maxPayment);
+  //   if (field === "payment") {
+  //     // Calculate max allowed payment
+  //     const maxPayment = remainingAmount + oldPayment;
+  //     const payment = Math.min(numValue, maxPayment);
 
-      newOrderPayments[orderId] = {
-        ...newOrderPayments[orderId],
-        payment,
-      };
-      setRemainingAmount(maxPayment - payment);
-    } else if (field === "wtax") {
-      newOrderPayments[orderId] = {
-        ...newOrderPayments[orderId],
-        wtax: numValue,
-      };
-    }
+  //     newOrderPayments[orderId] = {
+  //       ...newOrderPayments[orderId],
+  //       payment,
+  //     };
+  //     setRemainingAmount(maxPayment - payment);
+  //   } else if (field === "wtax") {
+  //     newOrderPayments[orderId] = {
+  //       ...newOrderPayments[orderId],
+  //       wtax: numValue,
+  //     };
+  //   }
 
-    setOrderPayments(newOrderPayments);
-  };
+  //   setOrderPayments(newOrderPayments);
+  // };
 
   // Update canPost to check for OR#
   const canPost = () => {
@@ -572,124 +557,128 @@ function ReceivePayment() {
   };
 
   // Function to post payment to server
-  const postPaymentToServer = async () => {
-    try {
-      // Ensure all numeric values are properly converted
-      const payload = {
-        payment: {
-          amount: Number(paymentInfo.amount),
-          payType: paymentInfo.payType,
-          payReference: paymentInfo.payReference,
-          payDate: paymentInfo.payDate,
-          ornum: paymentInfo.ornum,
-          transactedBy: localStorage.getItem("userName"),
-        },
-        allocations: Object.entries(orderPayments).map(
-          ([orderId, details]) => ({
-            orderId: Number(orderId),
-            amount: Number(details.payment || 0),
-          })
-        ),
-      };
+  // const postPaymentToServer = async () => {
+  //   try {
+  //     // Ensure all numeric values are properly converted
+  //     const payload = {
+  //       payment: {
+  //         amount: Number(paymentInfo.amount),
+  //         payType: paymentInfo.payType,
+  //         payReference: paymentInfo.payReference,
+  //         payDate: paymentInfo.payDate,
+  //         ornum: paymentInfo.ornum,
+  //         transactedBy: localStorage.getItem("userName"),
+  //       },
+  //       allocations: Object.entries(orderPayments).map(
+  //         ([orderId, details]) => ({
+  //           orderId: Number(orderId),
+  //           amount: Number(details.payment || 0),
+  //         })
+  //       ),
+  //     };
 
-      console.log("Sending payment payload:", JSON.stringify(payload, null, 2));
-      const response = await axios.post(
-        `${ServerIP}/auth/post-payment`,
-        payload
-      );
+  //     console.log("Sending payment payload:", JSON.stringify(payload, null, 2));
+  //     const response = await axios.post(
+  //       `${ServerIP}/auth/post-payment`,
+  //       payload
+  //     );
 
-      if (response.data.Status) {
-        setSuccessMessage(
-          `Payment of ${formatPeso(paymentInfo.amount)} posted successfully`
-        );
-        setShowSuccessModal(true);
+  //     if (response.data.Status) {
+  //       setAlert({
+  //         show: true,
+  //         title: "Success",
+  //         message: `Payment of ${formatPeso(
+  //           paymentInfo.amount
+  //         )} posted successfully`,
+  //         type: "alert",
+  //       });
 
-        // Clear all payment-related state
-        setOrderPayments({});
-        setRemainingAmount(0);
-        setCheckPay(new Set());
-        setTempPayId(null);
-        setPaymentInfo({
-          amount: "",
-          payType: "",
-          payReference: "",
-          payDate: new Date().toISOString().split("T")[0],
-          ornum: "",
-          transactedBy: localStorage.getItem("userName") || "",
-        });
+  //       // Clear all payment-related state
+  //       setOrderPayments({});
+  //       setRemainingAmount(0);
+  //       setCheckPay(new Set());
+  //       setTempPayId(null);
+  //       setPaymentInfo({
+  //         amount: "",
+  //         payType: "",
+  //         payReference: "",
+  //         payDate: new Date().toISOString().split("T")[0],
+  //         ornum: "",
+  //         transactedBy: localStorage.getItem("userName") || "",
+  //       });
 
-        // Refresh order data
-        fetchOrderData();
-      } else {
-        setError(response.data.Error);
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      let errorMessage = "Failed to post payment";
+  //       // Refresh order data
+  //       fetchOrderData();
+  //     } else {
+  //       setError(response.data.Error);
+  //     }
+  //   } catch (error) {
+  //     console.error("Payment error:", error);
+  //     let errorMessage = "Failed to post payment";
 
-      if (error.code === "ERR_CONNECTION_REFUSED") {
-        errorMessage =
-          "Unable to connect to server. Please check if the server is running.";
-      } else if (error.response?.data?.Error) {
-        errorMessage = error.response.data.Error;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+  //     if (error.code === "ERR_CONNECTION_REFUSED") {
+  //       errorMessage =
+  //         "Unable to connect to server. Please check if the server is running.";
+  //     } else if (error.response?.data?.Error) {
+  //       errorMessage = error.response.data.Error;
+  //     } else if (error.message) {
+  //       errorMessage = error.message;
+  //     }
 
-      setError(errorMessage);
-    }
-  };
+  //     setError(errorMessage);
+  //   }
+  // };
 
-  useEffect(() => {
-    checkForTempPayments();
-  }, []);
+  // useEffect(() => {
+  //   checkForTempPayments();
+  // }, []);
 
-  const checkForTempPayments = async () => {
-    try {
-      const response = await axios.get(`${ServerIP}/auth/check-temp-payments`);
-      if (response.data.Status && response.data.hasTempPayments) {
-        const tempPayment = response.data.tempPayments[0];
-        setPaymentInfo({
-          payId: tempPayment.payId,
-          amount: tempPayment.amount || "",
-          payType: tempPayment.payType || "",
-          payReference: tempPayment.payReference || "",
-          payDate: tempPayment.payDate
-            ? new Date(tempPayment.payDate).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
-          ornum: tempPayment.ornum || "",
-          transactedBy: tempPayment.transactedBy || "",
-        });
-        setTempPayId(tempPayment.payId);
-        setRemainingAmount(Number(tempPayment.amount || 0));
+  // const checkForTempPayments = async () => {
+  //   try {
+  //     const response = await axios.get(`${ServerIP}/auth/check-temp-payments`);
+  //     if (response.data.Status && response.data.hasTempPayments) {
+  //       const tempPayment = response.data.tempPayments[0];
+  //       setPaymentInfo({
+  //         payId: tempPayment.payId,
+  //         amount: tempPayment.amount || "",
+  //         payType: tempPayment.payType || "",
+  //         payReference: tempPayment.payReference || "",
+  //         payDate: tempPayment.payDate
+  //           ? new Date(tempPayment.payDate).toISOString().split("T")[0]
+  //           : new Date().toISOString().split("T")[0],
+  //         ornum: tempPayment.ornum || "",
+  //         transactedBy: tempPayment.transactedBy || "",
+  //       });
+  //       setTempPayId(tempPayment.payId);
+  //       setRemainingAmount(Number(tempPayment.amount || 0));
 
-        // If there are allocations, fetch them
-        if (tempPayment.allocationCount > 0) {
-          const allocationResponse = await axios.get(
-            `${ServerIP}/auth/view-allocation`,
-            {
-              params: { payId: tempPayment.payId },
-            }
-          );
-          if (allocationResponse.data.Status) {
-            const allocations =
-              allocationResponse.data.paymentAllocation.allocations;
-            const newOrderPayments = {};
-            allocations.forEach((allocation) => {
-              newOrderPayments[allocation.orderId] = {
-                payment: Number(allocation.amountApplied || 0),
-                wtax: 0,
-              };
-            });
-            setOrderPayments(newOrderPayments);
-            setCheckPay(new Set(allocations.map((a) => a.orderId)));
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error checking temp payments:", error);
-    }
-  };
+  //       // If there are allocations, fetch them
+  //       if (tempPayment.allocationCount > 0) {
+  //         const allocationResponse = await axios.get(
+  //           `${ServerIP}/auth/view-allocation`,
+  //           {
+  //             params: { payId: tempPayment.payId },
+  //           }
+  //         );
+  //         if (allocationResponse.data.Status) {
+  //           const allocations =
+  //             allocationResponse.data.paymentAllocation.allocations;
+  //           const newOrderPayments = {};
+  //           allocations.forEach((allocation) => {
+  //             newOrderPayments[allocation.orderId] = {
+  //               payment: Number(allocation.amountApplied || 0),
+  //               wtax: 0,
+  //             };
+  //           });
+  //           setOrderPayments(newOrderPayments);
+  //           setCheckPay(new Set(allocations.map((a) => a.orderId)));
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Error checking temp payments:", error);
+  //   }
+  // };
 
   const handleClientHover = (clientId) => {
     hoverTimerRef.current = setTimeout(() => {
