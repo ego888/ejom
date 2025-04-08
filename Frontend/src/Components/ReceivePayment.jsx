@@ -12,9 +12,9 @@ import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import { formatPeso } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
-import Modal from "./UI/Modal";
-import PaymentAllocationModal from "./PaymentAllocationModal";
-import RemitModal from "./RemitModal";
+// import Modal from "./UI/Modal";
+// import PaymentAllocationModal from "./PaymentAllocationModal";
+// import RemitModal from "./RemitModal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import { formatDate, formatDateTime, formatNumber } from "../utils/orderUtils";
 function ReceivePayment() {
@@ -856,6 +856,7 @@ function ReceivePayment() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      console.log("response.data.Result", response.data.Result);
 
       if (response.data.Status) {
         setPaymentTypeTotals(response.data.Result);
@@ -898,11 +899,11 @@ function ReceivePayment() {
         return;
       }
 
-      if (!selectedPayments || selectedPayments.length === 0) {
+      if (!paymentTypeTotals || paymentTypeTotals.length === 0) {
         setAlert({
           show: true,
           title: "Error",
-          message: "Please select at least one payment to confirm",
+          message: "No payments to confirm",
           type: "error",
         });
         return;
@@ -1015,6 +1016,31 @@ function ReceivePayment() {
     setIncludeReceived(e.target.checked);
     setPaymentCurrentPage(1); // Reset to first page when toggling filter
   };
+
+  // Add function to fetch checked payments
+  const fetchCheckedPayments = async () => {
+    try {
+      const response = await axios.get(`${ServerIP}/auth/checked-payments`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.data.Status) {
+        setSelectedPayments(response.data.Result);
+      }
+    } catch (error) {
+      console.error("Error fetching checked payments:", error);
+    }
+  };
+
+  // Update useEffect to fetch checked payments
+  useEffect(() => {
+    if (activeTab === "payments") {
+      fetchCheckedPayments();
+      fetchPaymentTypeTotals();
+    }
+  }, [activeTab]);
 
   return (
     <div className="payment-theme">

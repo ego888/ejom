@@ -1274,4 +1274,26 @@ router.post("/confirm-payment-receipt", verifyUser, async (req, res) => {
   }
 });
 
+// Get checked payments
+router.get("/checked-payments", verifyUser, async (req, res) => {
+  try {
+    const sql = `
+      SELECT payId 
+      FROM payments 
+      WHERE received = 1 
+      AND receivedBy IS NULL
+    `;
+
+    const [results] = await pool.query(sql);
+
+    return res.json({
+      Status: true,
+      Result: results.map((row) => row.payId),
+    });
+  } catch (error) {
+    console.error("Error in checked-payments:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
+});
+
 export { router as PaymentRouter };
