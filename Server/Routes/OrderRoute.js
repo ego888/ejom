@@ -1310,7 +1310,7 @@ router.post(
 
       // Verify user has permission to add detail to this order
       const [orderCheck] = await connection.query(
-        "SELECT preparedBy FROM orders WHERE orderID = ?",
+        "SELECT preparedBy, amountDisc, percentDisc FROM orders WHERE orderID = ?",
         [data.orderId]
       );
 
@@ -1331,6 +1331,46 @@ router.post(
 
       const sql = "INSERT INTO order_details SET ?";
       const [result] = await connection.query(sql, data);
+
+      // After inserting, calculate new order totals
+      const [orderDetails] = await connection.query(
+        "SELECT amount, printHrs FROM order_details WHERE orderId = ?",
+        [data.orderId]
+      );
+
+      // Calculate total amount
+      let totalAmount = 0;
+      let totalHrs = 0;
+
+      orderDetails.forEach((detail) => {
+        totalAmount += parseFloat(detail.amount || 0);
+        totalHrs += parseFloat(detail.printHrs || 0);
+      });
+
+      // Get existing discount values
+      const amountDisc = parseFloat(orderCheck[0].amountDisc || 0);
+      const percentDisc = parseFloat(orderCheck[0].percentDisc || 0);
+
+      // Calculate grand total considering discounts
+      let discountValue = amountDisc;
+      if (percentDisc > 0) {
+        // If percent discount is set, recalculate amount discount
+        discountValue = (totalAmount * percentDisc) / 100;
+      }
+
+      const grandTotal = totalAmount - discountValue;
+
+      // Update the order with new totals
+      await connection.query(
+        `UPDATE orders 
+         SET totalAmount = ?, 
+             grandTotal = ?,
+             totalHrs = ?,
+             lastEdited = NOW(),
+             editedBy = ?
+         WHERE orderID = ?`,
+        [totalAmount, grandTotal, totalHrs, req.user.name, data.orderId]
+      );
 
       await connection.commit();
       return res.json({ Status: true, Result: result });

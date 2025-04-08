@@ -200,23 +200,6 @@ function AddOrder() {
             ...prev,
             totalHrs: totals.totalHrs,
           }));
-
-          // Update order with new totalHrs
-          const orderUpdateData = {
-            lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
-            editedBy: localStorage.getItem("userName"),
-            totalHrs: totals.totalHrs,
-          };
-
-          axios
-            .put(
-              `${ServerIP}/auth/orders/${orderId || id}/update_edited_info`,
-              orderUpdateData,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            )
-            .catch((err) => handleApiError(err, "Update Order Info"));
         } else {
           setAlert({
             show: true,
@@ -638,6 +621,10 @@ function AddOrder() {
             lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
             editedBy: localStorage.getItem("userName"),
             totalHrs: totals.totalHrs,
+            totalAmount: data.totalAmount || 0,
+            amountDisc: data.amountDisc || 0,
+            percentDisc: data.percentDisc || 0,
+            grandTotal: data.grandTotal || 0,
           };
 
           axios.put(
@@ -679,6 +666,10 @@ function AddOrder() {
           lastEdited: currentDateTime,
           editedBy: localStorage.getItem("userName"),
           totalHrs: totals.totalHrs,
+          totalAmount: totals.subtotal || 0,
+          amountDisc: data.amountDisc || 0,
+          percentDisc: data.percentDisc || 0,
+          grandTotal: totals.grandTotal || 0,
         };
 
         // Update order first, then delete detail
@@ -822,7 +813,17 @@ function AddOrder() {
       }
       // Recalculate perSqFt when unitPrice changes
       else if (field === "unitPrice") {
-        const perSqFt = calculatePerSqFt(value, currentDetail.squareFeet || 0);
+        // Only calculate perSqFt if squareFeet exists and is not zero
+        // Otherwise, just use the unitPrice directly without calculating perSqFt
+        let perSqFt = 0;
+
+        if (
+          currentDetail.squareFeet &&
+          parseFloat(currentDetail.squareFeet) > 0
+        ) {
+          perSqFt = calculatePerSqFt(value, currentDetail.squareFeet);
+        }
+
         const amount = calculateAmount(
           value,
           currentDetail.discount || 0,
