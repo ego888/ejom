@@ -12,6 +12,9 @@ import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import { formatPeso } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
+import Modal from "./UI/Modal";
+import PaymentAllocationModal from "./PaymentAllocationModal";
+import RemitModal from "./RemitModal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import { formatDate, formatDateTime, formatNumber } from "../utils/orderUtils";
 function ReceivePayment() {
@@ -34,13 +37,15 @@ function ReceivePayment() {
           direction: "desc",
         };
   });
+  const [searchClientName, setSearchClientName] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
     const saved = localStorage.getItem("orderStatusFilter");
     return saved ? JSON.parse(saved) : [];
   });
   const [selectedSales, setSelectedSales] = useState([]);
-  const [setIsProdChecked] = useState(false);
+  const [isProdChecked, setIsProdChecked] = useState(false);
+  const [isAllChecked, setIsAllChecked] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
@@ -1671,7 +1676,7 @@ function ReceivePayment() {
       {/* Client Info Modal */}
       <ViewCustomerInfo
         show={showClientInfo}
-        onHide={() => setShowClientInfo(false)}
+        onClose={() => setShowClientInfo(false)}
         clientId={selectedClientId}
       />
     </div>
