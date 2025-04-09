@@ -78,7 +78,7 @@ function WIPLog() {
 
       <div className="row g-4">
         <div className="col-md-12">
-          <div className="card" style={{ backgroundColor: "#9c27b0" }}>
+          <div className="card status-badge Finished">
             <div className="card-body">
               <h5 className="card-title">Mark as Finished</h5>
               <form onSubmit={handleFinishedSubmit}>
@@ -107,7 +107,7 @@ function WIPLog() {
         </div>
 
         <div className="col-md-12">
-          <div className="card" style={{ backgroundColor: "#3f51b5" }}>
+          <div className="card status-badge Delivered">
             <div className="card-body">
               <h5 className="card-title">Mark as Delivered</h5>
               <form onSubmit={handleDeliverSubmit}>
@@ -136,7 +136,7 @@ function WIPLog() {
         </div>
 
         <div className="col-md-12">
-          <div className="card" style={{ backgroundColor: "#ff00aa" }}>
+          <div className="card status-badge Billed">
             <div className="card-body">
               <h5 className="card-title">Mark as Billed</h5>
               <form onSubmit={handleBilledSubmit}>

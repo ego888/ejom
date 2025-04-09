@@ -150,7 +150,7 @@ const DashSales = () => {
       {/* Order Status Cards */}
       <div className="row g-3 mb-4">
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-open">
+          <div className="dashboard-card status-badge Open">
             <div className="card-value">{orderStats.open}</div>
             <div className="card-label">Open Orders</div>
             <Link to="/dashboard/orders" className="stretched-link" />
@@ -158,7 +158,7 @@ const DashSales = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-printed">
+          <div className="dashboard-card status-badge Printed">
             <div className="card-value">{orderStats.printed}</div>
             <div className="card-label">Printed Orders</div>
             <Link to="/dashboard/orders" className="stretched-link" />
@@ -166,7 +166,7 @@ const DashSales = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-prod">
+          <div className="dashboard-card status-badge Prod">
             <div className="card-value">{orderStats.prod}</div>
             <div className="card-label">In Production</div>
             <Link to="/dashboard/prod" className="stretched-link" />
@@ -174,7 +174,7 @@ const DashSales = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-finished">
+          <div className="dashboard-card status-badge Finished">
             <div className="card-value">{orderStats.finished}</div>
             <div className="card-label">Finished</div>
             <Link to="/dashboard/prod" className="stretched-link" />
@@ -182,7 +182,7 @@ const DashSales = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-delivered">
+          <div className="dashboard-card status-badge Delivered">
             <div className="card-value">{orderStats.delivered}</div>
             <div className="card-label">Delivered</div>
             <Link to="/dashboard/orders" className="stretched-link" />
@@ -190,7 +190,7 @@ const DashSales = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-total">
+          <div className="dashboard-card status-badge default">
             <div className="card-value">{orderStats.billed}</div>
             <div className="card-label">Total Billed</div>
             <Link to="/dashboard/orders" className="stretched-link" />

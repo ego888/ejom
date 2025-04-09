@@ -81,7 +81,7 @@ const DashProd = () => {
   const fetchOverdueProductions = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${ServerIP}/auth/overdue_productions`, {
+      const response = await axios.get(`${ServerIP}/auth/total-wip`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -96,7 +96,7 @@ const DashProd = () => {
   const fetchMonthlyProduction = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${ServerIP}/auth/monthly_production`, {
+      const response = await axios.get(`${ServerIP}/auth/total-billed`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -139,17 +139,9 @@ const DashProd = () => {
       <h2 className="mb-4">Production Dashboard</h2>
 
       {/* Production Status Cards */}
-      <div className="row g-3 mb-4">
+      <div className="row g-3 mb-4 justify-content-center">
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-printed">
-            <div className="card-value">{productionStats.printed}</div>
-            <div className="card-label">Printed Orders</div>
-            <Link to="/dashboard/printlog" className="stretched-link" />
-          </div>
-        </div>
-
-        <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-prod">
+          <div className="dashboard-card status-badge Prod">
             <div className="card-value">{productionStats.inProduction}</div>
             <div className="card-label">In Production</div>
             <Link to="/dashboard/prod" className="stretched-link" />
@@ -157,7 +149,7 @@ const DashProd = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-finished">
+          <div className="dashboard-card status-badge Finished">
             <div className="card-value">{productionStats.finished}</div>
             <div className="card-label">Finished</div>
             <Link to="/dashboard/prod" className="stretched-link" />
@@ -165,7 +157,7 @@ const DashProd = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-delivered">
+          <div className="dashboard-card status-badge Delivered">
             <div className="card-value">{productionStats.delivered}</div>
             <div className="card-label">Delivered</div>
             <Link to="/dashboard/orders" className="stretched-link" />
@@ -173,7 +165,7 @@ const DashProd = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-billed">
+          <div className="dashboard-card status-badge Billed">
             <div className="card-value">{productionStats.billed}</div>
             <div className="card-label">Billed</div>
             <Link to="/dashboard/payment" className="stretched-link" />
@@ -181,7 +173,7 @@ const DashProd = () => {
         </div>
 
         <div className="col-md-4 col-lg-2">
-          <div className="dashboard-card dashboard-total">
+          <div className="dashboard-card status-badge default">
             <div className="card-value">{productionStats.total}</div>
             <div className="card-label">Total Orders</div>
             <Link to="/dashboard/orders" className="stretched-link" />
@@ -192,13 +184,13 @@ const DashProd = () => {
       {/* Production Performance Charts */}
       <div className="row mb-4">
         <div className="col-12">
-          <h4 className="mb-3">{getCurrentMonth()} Production Performance</h4>
+          <h4 className="mb-3">Production Amount Status</h4>
         </div>
 
         {/* Production Volume Chart */}
         <div className="col-md-6">
           <div className="dashboard-section p-4" style={{ minHeight: "250px" }}>
-            <h5 className="text-center mb-3">Production Volume</h5>
+            <h5 className="text-center mb-3">Total WIP</h5>
             <SalesGauge
               value={monthlyProduction.totalProduction}
               maxValue={1000}
@@ -213,7 +205,7 @@ const DashProd = () => {
         {/* Billing Performance Chart */}
         <div className="col-md-6">
           <div className="dashboard-section p-4" style={{ minHeight: "250px" }}>
-            <h5 className="text-center mb-3">Billing Performance</h5>
+            <h5 className="text-center mb-3">Total Billed</h5>
             <SalesGauge
               value={monthlyProduction.totalBilled}
               maxValue={2500000}

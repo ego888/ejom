@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { formatPeso } from "../../utils/orderUtils";
+import { formatPeso, formatNumber } from "../../utils/orderUtils";
 import { handleApiError } from "../../utils/handleApiError";
 import { useNavigate } from "react-router-dom";
 import ModalAlert from "../UI/ModalAlert";
@@ -85,10 +85,12 @@ function ReportCheckTotal() {
 
       {data.length > 0 && (
         <div className="mt-3" style={{ maxWidth: "350px", margin: "0 auto" }}>
-          <table className="table table-striped align-middle">
+          <table className="table table-striped justify-content-center">
             <thead>
               <tr>
                 <th className="text-center">Order ID</th>
+                <th className="text-center">Status</th>
+                <th className="text-center">Paid</th>
                 <th className="text-center">Total in Orders</th>
                 <th className="text-center">Total in Details</th>
                 <th className="text-center">Difference</th>
@@ -108,14 +110,20 @@ function ReportCheckTotal() {
                       {item.order_id}
                     </button>
                   </td>
+                  <td className="text-center">
+                    <span className={`status-badge ${item.status}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="text-end">{formatNumber(item.amountPaid)}</td>
                   <td className="text-end">
-                    {formatPeso(item.total_in_orders)}
+                    {formatNumber(item.total_in_orders)}
                   </td>
                   <td className="text-end">
-                    {formatPeso(item.total_in_details)}
+                    {formatNumber(item.total_in_details)}
                   </td>
                   <td className="text-end">
-                    {formatPeso(item.total_in_orders - item.total_in_details)}
+                    {formatNumber(item.total_in_orders - item.total_in_details)}
                   </td>
                 </tr>
               ))}

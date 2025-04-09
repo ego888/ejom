@@ -412,6 +412,8 @@ router.get("/check-order-total", verifyUser, async (req, res) => {
     const sql = `
       SELECT 
         o.orderId AS order_id,
+        o.status,
+        o.amountPaid,
         o.totalAmount AS total_in_orders,
         IFNULL(SUM(od.amount), 0) AS total_in_details
       FROM 
