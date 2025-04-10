@@ -3,7 +3,7 @@ export const validateDetail = (detail) => {
   const errors = {};
 
   // If either width or height exists, all dimension-related fields are required
-  if (detail.width || detail.height) {
+  if (detail.width != 0 && detail.height != 0) {
     if (!detail.width || detail.width <= 0) {
       errors.width = "Width is required";
     }

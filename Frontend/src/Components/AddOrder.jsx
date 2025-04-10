@@ -881,6 +881,7 @@ function AddOrder() {
     const updatedDetail = editedValues[detailId];
     const errors = validateDetail(updatedDetail);
 
+    console.log("Errors:", errors);
     if (Object.keys(errors).length > 0) {
       setEditErrors({ ...editErrors, [detailId]: errors });
       return;
