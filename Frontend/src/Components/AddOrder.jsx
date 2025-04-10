@@ -883,7 +883,17 @@ function AddOrder() {
 
     console.log("Errors:", errors);
     if (Object.keys(errors).length > 0) {
-      setEditErrors({ ...editErrors, [detailId]: errors });
+      // Convert errors object to a readable message string
+      const errorMessage = Object.entries(errors)
+        .map(([field, message]) => `${field}: ${message}`)
+        .join("\n");
+
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: errorMessage,
+        type: "alert",
+      });
       return;
     }
 
@@ -972,13 +982,20 @@ function AddOrder() {
         } else {
           setAlert({
             show: true,
-            title: "Validation Error",
-            message: detailResult.data.Error,
+            title: "Error",
+            message: detailResult.data.Error || "Failed to save order detail",
             type: "alert",
           });
         }
       })
-      .catch((err) => handleApiError(err, navigate));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: err.message || "Failed to save order detail",
+          type: "alert",
+        });
+      });
   };
 
   useEffect(() => {
