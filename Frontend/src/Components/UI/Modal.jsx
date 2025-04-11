@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import "./Modal.css";
 import Button from "./Button";
 
@@ -26,6 +26,8 @@ import Button from "./Button";
  *     - `"lg"` → Large modal (800px)
  *     - `"xl"` → Extra large modal (1140px)
  *     - `"full"` → Full screen modal
+ * @param {boolean} closeOnOutsideClick - Controls whether the modal closes when clicking outside the modal.
+ * @param {boolean} closeOnEsc - Controls whether the modal closes when the ESC key is pressed.
  *
  * ## Example Usage:
  *
@@ -72,7 +74,30 @@ const Modal = ({
   className = "",
   id,
   size = "md", // "sm" | "md" | "lg" | "xl" | "full"
+  closeOnOutsideClick = true,
+  closeOnEsc = true,
 }) => {
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (show && closeOnEsc) {
+      const handleEsc = (event) => {
+        if (event.key === "Escape") {
+          onClose?.();
+        }
+      };
+
+      document.addEventListener("keydown", handleEsc);
+      return () => document.removeEventListener("keydown", handleEsc);
+    }
+  }, [show, closeOnEsc, onClose]);
+
+  const handleBackdropClick = (event) => {
+    if (closeOnOutsideClick && event.target === modalRef.current) {
+      onClose?.();
+    }
+  };
+
   if (!show) return null;
 
   if (variant === "tooltip") {
@@ -91,10 +116,12 @@ const Modal = ({
 
   return (
     <div
+      ref={modalRef}
       className="modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby={`modal-title-${id}`}
+      onClick={handleBackdropClick}
     >
       <div className={`modal-container modal-${size}`}>
         <div className={`modal-content ${className}`}>
@@ -102,13 +129,13 @@ const Modal = ({
             <h5 className="modal-title" id={`modal-title-${id}`}>
               {title}
             </h5>
-            {/* <Button
+            <Button
               variant="cancel"
               iconOnly
               size="sm"
               onClick={onClose}
               aria-label="Close modal"
-            /> */}
+            />
           </div>
           <div className="modal-body">{children}</div>
           {footer && <div className="modal-footer">{footer}</div>}

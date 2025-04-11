@@ -18,6 +18,8 @@ import axios from "../utils/axiosConfig"; // Import configured axios
 import Modal from "./UI/Modal";
 import { formatNumber } from "../utils/orderUtils";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
+import InvoiceModal from "./UI/InvoiceModal";
+import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
 //import { handlePrintProduction } from "./ProdPrintProduction";
 //import { handlePrintAllDR } from "./ProdPrintAllDR";
 
@@ -69,10 +71,12 @@ function Prod() {
   });
   const [showInvModal, setShowInvModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [invNumber, setInvNumber] = useState("");
   const [showClientInfo, setShowClientInfo] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
+  const [orderId, setOrderId] = useState(null);
+  const [showInvDetailsModal, setShowInvDetailsModal] = useState(false);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -560,91 +564,8 @@ function Prod() {
     ];
     if (billableStatuses.includes(order.status)) {
       setSelectedOrderId(order.id);
-      setInvNumber("");
+      setOrderId(order.id);
       setShowInvModal(true);
-    }
-  };
-
-  const handleInvSubmit = async () => {
-    if (!invNumber.trim()) {
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Please enter an invoice number",
-        type: "error",
-      });
-      return;
-    }
-
-    try {
-      // First check if the invoice number already exists
-      const checkResponse = await axios.get(
-        `${ServerIP}/auth/check-invoice-exists/${invNumber.trim()}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-
-      if (checkResponse.data.Status && checkResponse.data.exists) {
-        // Invoice number already exists, show confirmation dialog
-        const existingOrders = checkResponse.data.orders;
-        let orderInfo = "";
-
-        // Format existing order information
-        existingOrders.forEach((order) => {
-          orderInfo += `Order ID: ${order.orderID}, Project: ${order.projectName}\n`;
-        });
-
-        setAlert({
-          show: true,
-          title: "Warning",
-          message: `Invoice number ${invNumber.trim()} already exists for:\n${orderInfo}\nDo you want to continue?`,
-          type: "confirm",
-          onConfirm: () => updateInvoiceNumber(),
-        });
-        return;
-      }
-
-      // If it doesn't exist or user confirmed, proceed with update
-      updateInvoiceNumber();
-    } catch (error) {
-      handleApiError(error, setAlert);
-    }
-  };
-
-  // Function to update invoice number
-  const updateInvoiceNumber = async () => {
-    try {
-      const response = await axios.put(
-        `${ServerIP}/auth/update_order_invoice`,
-        {
-          orderId: selectedOrderId,
-          invNumber: invNumber.trim(),
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-
-      if (response.data.Status) {
-        setAlert({
-          show: true,
-          title: "Success",
-          message: "Invoice number updated successfully",
-          type: "alert",
-        });
-        fetchOrders(); // Refresh the orders list
-        setShowInvModal(false);
-      } else {
-        setAlert({
-          show: true,
-          title: "Error",
-          message: response.data.Error,
-          type: "error",
-        });
-      }
-    } catch (error) {
-      handleApiError(error, setAlert);
     }
   };
 
@@ -667,6 +588,41 @@ function Prod() {
       clearTimeout(hoverTimerRef.current);
     }
   };
+
+  const handleInvHover = (order) => {
+    if (
+      ["Open", "Printed", "Prod", "Finished", "Delivered", "Billed"].includes(
+        order.status
+      )
+    ) {
+      // Clear any existing timer
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+
+      // Set a new timer for 1.5 seconds
+      hoverTimerRef.current = setTimeout(() => {
+        setSelectedOrderForDetails(order);
+        setShowInvDetailsModal(true);
+      }, 1500);
+    }
+  };
+
+  const handleInvLeave = () => {
+    // Only clear the timer, don't close the modal
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  };
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="prod-theme">
@@ -907,6 +863,8 @@ function Prod() {
                   <td>{order.drnum || ""}</td>
                   <td
                     onClick={() => handleInvClick(order)}
+                    onMouseEnter={() => handleInvHover(order)}
+                    onMouseLeave={handleInvLeave}
                     style={{
                       cursor: [
                         "Open",
@@ -984,35 +942,24 @@ function Prod() {
         </div>
       </div>
 
-      <Modal
+      <InvoiceModal
         show={showInvModal}
-        onHide={() => setShowInvModal(false)}
-        title="Enter Invoice Number"
-        footer={
-          <div className="d-flex justify-content-end gap-2">
-            <Button variant="cancel" onClick={() => setShowInvModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="save" onClick={handleInvSubmit}>
-              Save
-            </Button>
-          </div>
-        }
-      >
-        <div className="mb-3">
-          <label htmlFor="invNumber" className="form-label">
-            Invoice Number
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            id="invNumber"
-            value={invNumber}
-            onChange={(e) => setInvNumber(e.target.value)}
-            autoFocus
-          />
-        </div>
-      </Modal>
+        onClose={() => setShowInvModal(false)}
+        orderId={orderId}
+        grandTotal={orders.find((order) => order.id === orderId)?.grandTotal}
+        onSave={() => {
+          // Handle successful save
+          setShowInvModal(false);
+          // Refresh your data if needed
+          fetchOrders();
+        }}
+      />
+
+      <InvoiceDetailsModal
+        show={showInvDetailsModal}
+        onClose={() => setShowInvDetailsModal(false)}
+        orderId={selectedOrderForDetails?.id}
+      />
 
       <ModalAlert
         show={alert.show}
