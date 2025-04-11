@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { formatPeso, formatNumber } from "../utils/orderUtils";
 
 // Constants for DR printing
-const ROWS_PER_PAGE = 7; // Number of rows to display per page
+const ROWS_PER_PAGE = 6; // Number of rows to display per page
 
 function PrintDR({ data }) {
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -295,9 +295,9 @@ function PrintDR({ data }) {
             }
 
             .dr-page {
-              width: 8.3in;
-              height: 5.6in;
-              padding: 0.5in;
+              width: 8.5in;
+              height: 5.5in;
+              padding: 0.25in;
               position: relative;
               font-family: Arial, sans-serif;
               font-size: 16px;
@@ -380,12 +380,12 @@ function PrintDR({ data }) {
 
             .dr-table th:nth-child(2),
             .dr-table td:nth-child(2) {
-              width: 20%;  /* Fixed width for Size column */
+              width: 25%;  /* Fixed width for Size column */
             }
 
             .dr-table th:nth-child(3),
             .dr-table td:nth-child(3) {
-              width: 70%;  /* Fixed width for Material-Description column */
+              width: 60%;  /* Fixed width for Material-Description column */
             }
               
             .text-center {
@@ -440,7 +440,7 @@ function PrintDR({ data }) {
 
             .page-footer {
               position: absolute;
-              bottom: 0.25in;
+              bottom: 0in;
               left: 0.5in;
               right: 0.5in;
               display: flex;
@@ -457,7 +457,7 @@ function PrintDR({ data }) {
               display: flex;
               justify-content: space-between;
               align-items: flex-start;
-              margin-top: 5px;
+              margin-top: 20px;
               gap: 10px;
               position: relative;
             }
