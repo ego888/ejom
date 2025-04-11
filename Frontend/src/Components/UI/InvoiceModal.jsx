@@ -32,7 +32,7 @@ function InvoiceModal({ show, onClose, orderId, onSave, grandTotal }) {
   const fetchPrefixes = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${ServerIP}/invoice_prefixes`, {
+      const response = await axios.get(`${ServerIP}/auth/invoice_prefixes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
