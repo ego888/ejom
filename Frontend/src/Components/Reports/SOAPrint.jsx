@@ -97,6 +97,15 @@ function SOAPrint() {
     0
   );
 
+  const getInvoiceDisplay = (item) => {
+    if (item.invoiceNumbers) {
+      // If invoiceNumber exists, it means it's a new invoice format
+      return item.invoiceNumbers;
+    }
+    // Fallback to old invoiceNum if invoiceNumber doesn't exist
+    return item.invoiceNum || "";
+  };
+
   return (
     <div className="print-quote-page">
       <div className="print-quote-container">
@@ -163,9 +172,9 @@ function SOAPrint() {
             {soaData.map((item, index) => (
               <tr key={index} className={index % 2 === 0 ? "row-gray" : ""}>
                 <td>{new Date(item.productionDate).toLocaleDateString()}</td>
-                <td>{item.orderId}</td>
+                <td>{item.drNum}</td>
+                <td>{getInvoiceDisplay(item)}</td>
                 <td>{item.orderReference || ""}</td>
-                <td>{item.customerRef || ""}</td>
                 <td>{item.projectName}</td>
                 <td className="text-right">{formatPeso(item.grandTotal)}</td>
                 <td className="text-right">{formatPeso(item.amountPaid)}</td>

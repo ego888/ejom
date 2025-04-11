@@ -367,32 +367,37 @@ router.get("/soa-details", verifyUser, async (req, res) => {
     }
 
     const sql = `
-      SELECT 
-        o.orderId,
-        c.clientName,
-        o.terms,
-        o.orderReference,
-        o.projectName,
-        e.name as preparedBy,
-        o.totalAmount,
-        o.percentDisc,
-        o.amountDisc,
-        o.grandTotal,
-        o.amountPaid,
-        (o.grandTotal - o.amountPaid) as balance,
-        o.datePaid,
-        o.productionDate,
-        o.status
-      FROM orders o
-      JOIN client c ON o.clientId = c.id
-      LEFT JOIN employee e ON o.preparedBy = e.id
-      WHERE o.clientId = ?
-        AND ${statusCondition}
-        ${dateCondition ? `AND ${dateCondition}` : ""}
-        AND o.status != 'Cancel'
-        AND (o.grandTotal - o.amountPaid) > 0
-      ORDER BY o.productionDate
-    `;
+    SELECT 
+      o.orderId,
+      c.clientName,
+      o.terms,
+      o.orderReference,
+      o.projectName,
+      e.name AS preparedBy,
+      o.drNum,
+      o.invoiceNum,
+      GROUP_CONCAT(i.invoiceNumber ORDER BY i.invoiceNumber SEPARATOR ', ') AS invoiceNumbers,
+      o.totalAmount,
+      o.percentDisc,
+      o.amountDisc,
+      o.grandTotal,
+      o.amountPaid,
+      (o.grandTotal - o.amountPaid) AS balance,
+      o.datePaid,
+      o.productionDate,
+      o.status
+    FROM orders o
+    JOIN client c ON o.clientId = c.id
+    LEFT JOIN invoice i ON o.orderId = i.orderId
+    LEFT JOIN employee e ON o.preparedBy = e.id
+    WHERE o.clientId = ?
+      AND ${statusCondition}
+      ${dateCondition ? `AND ${dateCondition}` : ""}
+      AND o.status != 'Cancel'
+      AND (o.grandTotal - o.amountPaid) > 0
+    GROUP BY o.orderId
+    ORDER BY o.productionDate
+  `;
 
     const [results] = await pool.query(sql, [clientId]);
 
