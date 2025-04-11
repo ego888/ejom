@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { formatPeso, formatNumber } from "../utils/orderUtils";
 
 // Constants for DR printing
-const ROWS_PER_PAGE = 6; // Number of rows to display per page
+const ROWS_PER_PAGE = 8; // Number of rows to display per page
 
 function PrintDR({ data }) {
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -163,7 +163,7 @@ function PrintDR({ data }) {
                       <th className="text-center">Qty</th>
                       <th className="text-center">Size</th>
                       <th className="text-center">Material - Description</th>
-                      <th className="text-center">Unit Price</th>
+                      <th className="text-center">Price</th>
                       {order.order_details?.some(
                         (detail) => Number(detail.discount) !== 0
                       ) && <th className="text-center">Discount</th>}
@@ -369,7 +369,6 @@ function PrintDR({ data }) {
             }
 
             .dr-table th {
-              background-color: #f0f0f0;
               font-weight: bold;
             }
 
