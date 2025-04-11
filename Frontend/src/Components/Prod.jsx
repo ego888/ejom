@@ -294,38 +294,38 @@ function Prod() {
   };
 
   // Handle records per page change
-  const handleRecordsPerPageChange = (e) => {
-    setRecordsPerPage(Number(e.target.value));
-    setCurrentPage(1); // Reset to first page
-  };
+  // const handleRecordsPerPageChange = (e) => {
+  //   setRecordsPerPage(Number(e.target.value));
+  //   setCurrentPage(1); // Reset to first page
+  // };
 
-  const isProdIndeterminate = () => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    const selectedProdStatuses = selectedStatuses.filter((s) =>
-      prodStatuses.includes(s)
-    );
-    return (
-      selectedProdStatuses.length > 0 &&
-      selectedProdStatuses.length < prodStatuses.length
-    );
-  };
+  // const isProdIndeterminate = () => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
+  //     prodStatuses.includes(s)
+  //   );
+  //   return (
+  //     selectedProdStatuses.length > 0 &&
+  //     selectedProdStatuses.length < prodStatuses.length
+  //   );
+  // };
 
-  const handleProdCheckbox = (e) => {
-    const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-    let newStatuses;
-    if (e.target.checked) {
-      newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-    } else {
-      newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
-    }
+  // const handleProdCheckbox = (e) => {
+  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
+  //   let newStatuses;
+  //   if (e.target.checked) {
+  //     newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
+  //   } else {
+  //     newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
+  //   }
 
-    setSelectedStatuses(newStatuses);
-    setIsProdChecked(e.target.checked);
-    setIsAllChecked(newStatuses.length === statusOptions.length);
+  //   setSelectedStatuses(newStatuses);
+  //   setIsProdChecked(e.target.checked);
+  //   setIsAllChecked(newStatuses.length === statusOptions.length);
 
-    // Save to localStorage
-    localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  };
+  //   // Save to localStorage
+  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
+  // };
 
   // const isAllIndeterminate = () => {
   //   return (

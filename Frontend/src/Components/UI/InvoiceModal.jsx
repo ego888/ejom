@@ -152,20 +152,20 @@ function InvoiceModal({ show, onClose, orderId, onSave, grandTotal }) {
       }
 
       // First check if invoice number exists
-      const checkResponse = await axios.get(`${ServerIP}/auth/check_invoice`, {
-        params: { invoicePrefix, invoiceNumber },
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // const checkResponse = await axios.get(`${ServerIP}/auth/check_invoice`, {
+      //   params: { invoicePrefix, invoiceNumber },
+      //   headers: { Authorization: `Bearer ${token}` },
+      // });
 
-      if (checkResponse.data.Status && checkResponse.data.exists) {
-        setAlert({
-          show: true,
-          title: "Error",
-          message: "Invoice number already exists",
-          type: "alert",
-        });
-        return;
-      }
+      // if (checkResponse.data.Status && checkResponse.data.exists) {
+      //   setAlert({
+      //     show: true,
+      //     title: "Error",
+      //     message: "Invoice number already exists",
+      //     type: "alert",
+      //   });
+      //   return;
+      // }
 
       // Save invoice
       const saveResponse = await axios.post(
