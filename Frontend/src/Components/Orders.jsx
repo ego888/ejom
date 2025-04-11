@@ -13,6 +13,7 @@ import StatusBadges from "./UI/StatusBadges";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
+import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
 
 function Orders() {
   const navigate = useNavigate();
@@ -70,6 +71,8 @@ function Orders() {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
+  const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
 
   // Add useEffect to sync state with localStorage on mount
   useEffect(() => {
@@ -528,7 +531,17 @@ function Orders() {
                     </span>
                   </td>
                   <td>{order.drnum || ""}</td>
-                  <td>{order.invnum || ""}</td>
+                  <td
+                    onClick={() => {
+                      if (order.invnum) {
+                        setSelectedOrderForDetails(order);
+                        setShowInvoiceDetails(true);
+                      }
+                    }}
+                    style={{ cursor: order.invnum ? "pointer" : "default" }}
+                  >
+                    {order.invnum || ""}
+                  </td>
                   <td className="number_right">
                     {order.grandTotal ? formatPeso(order.grandTotal) : ""}
                   </td>
@@ -608,6 +621,12 @@ function Orders() {
           clientId={selectedClientId}
           show={showClientInfo}
           onClose={() => setShowClientInfo(false)}
+        />
+
+        <InvoiceDetailsModal
+          show={showInvoiceDetails}
+          onClose={() => setShowInvoiceDetails(false)}
+          orderId={selectedOrderForDetails?.id}
         />
       </div>
     </div>

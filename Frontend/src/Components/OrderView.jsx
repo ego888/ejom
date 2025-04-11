@@ -1,5 +1,5 @@
 import axios from "../utils/axiosConfig";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Button from "./UI/Button";
 import { BiRectangle } from "react-icons/bi";
@@ -10,6 +10,11 @@ import { formatNumber, formatPeso, handleApiError } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import PaymentHistory from "./PaymentHistory";
+import { formatDateTime } from "../utils/orderUtils";
+import PaymentAllocation from "./PaymentAllocation";
+import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
 
 function OrderView() {
   const navigate = useNavigate();
@@ -31,6 +36,7 @@ function OrderView() {
     deliveryInst: "",
     orderReference: "",
   });
+  const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
 
   const location = useLocation(); // Get the current route path
   console.log(location);
@@ -227,7 +233,17 @@ function OrderView() {
               <h3>DR # {data.drNum}</h3>
             </div>
             <div className="m-0">
-              <h3>INV # {data.invoiceNum}</h3>
+              <h3
+                className="cursor-pointer"
+                onClick={() => {
+                  if (data.invoiceNum) {
+                    setShowInvoiceDetails(true);
+                  }
+                }}
+                style={{ cursor: data.invoiceNum ? "pointer" : "default" }}
+              >
+                INV # {data.invoiceNum}
+              </h3>
             </div>
             <div className="d-flex gap-2">
               {" "}
@@ -780,6 +796,12 @@ function OrderView() {
           message={alert.message}
           type={alert.type}
           onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        />
+
+        <InvoiceDetailsModal
+          show={showInvoiceDetails}
+          onClose={() => setShowInvoiceDetails(false)}
+          orderId={id}
         />
       </div>
     </div>

@@ -16,6 +16,7 @@ import Modal from "./UI/Modal";
 import PaymentAllocationModal from "./PaymentAllocationModal";
 import RemitModal from "./RemitModal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
+import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
 
 function Prod() {
   const navigate = useNavigate();
@@ -96,6 +97,8 @@ function Prod() {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
+  const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -1267,7 +1270,18 @@ function Prod() {
                     </span>
                   </td>
                   <td>{order.drnum || ""}</td>
-                  <td>{order.invnum || ""}</td>
+                  <td
+                    className="cursor-pointer"
+                    onClick={() => {
+                      if (order.invnum) {
+                        setSelectedOrderId(order.id);
+                        setShowInvoiceDetails(true);
+                      }
+                    }}
+                    style={{ cursor: order.invnum ? "pointer" : "default" }}
+                  >
+                    {order.invnum || ""}
+                  </td>
                   <td className="number_right">
                     {order.grandTotal
                       ? `₱${order.grandTotal.toLocaleString()}`
@@ -1543,6 +1557,11 @@ function Prod() {
         clientId={selectedClientId}
         show={showClientInfo}
         onClose={() => setShowClientInfo(false)}
+      />
+      <InvoiceDetailsModal
+        show={showInvoiceDetails}
+        onClose={() => setShowInvoiceDetails(false)}
+        orderId={selectedOrderId}
       />
     </div>
   );

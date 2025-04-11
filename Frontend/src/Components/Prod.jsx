@@ -862,20 +862,15 @@ function Prod() {
                   </td>
                   <td>{order.drnum || ""}</td>
                   <td
-                    onClick={() => handleInvClick(order)}
+                    onClick={() => {
+                      if (order.invnum) {
+                        handleInvClick(order);
+                      }
+                    }}
                     onMouseEnter={() => handleInvHover(order)}
                     onMouseLeave={handleInvLeave}
                     style={{
-                      cursor: [
-                        "Open",
-                        "Printed",
-                        "Prod",
-                        "Finished",
-                        "Delivered",
-                        "Billed",
-                      ].includes(order.status)
-                        ? "pointer"
-                        : "default",
+                      cursor: order.invnum ? "pointer" : "default",
                     }}
                   >
                     {order.invnum || ""}
