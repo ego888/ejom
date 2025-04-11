@@ -376,7 +376,7 @@ router.get("/soa-details", verifyUser, async (req, res) => {
       e.name AS preparedBy,
       o.drNum,
       o.invoiceNum,
-      GROUP_CONCAT(i.invoiceNumber ORDER BY i.invoiceNumber SEPARATOR ', ') AS invoiceNumbers,
+      GROUP_CONCAT(CONCAT(i.invoicePrefix, i.invoiceNumber) ORDER BY i.invoiceNumber SEPARATOR ', ') AS invoiceNumbers,
       o.totalAmount,
       o.percentDisc,
       o.amountDisc,
