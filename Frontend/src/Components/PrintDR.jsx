@@ -295,7 +295,7 @@ function PrintDR({ data }) {
             }
 
             .dr-page {
-              width: 8.5in;
+              width: 8.3in;
               height: 5.5in;
               padding: 0.25in;
               position: relative;
