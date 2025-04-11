@@ -392,9 +392,7 @@ function PrintDR({ data }) {
             }
 
             .totals-section {
-              padding: 5px;
-              border: 1px solid rgb(29, 29, 29);
-              border-radius: 8px;
+              padding-right: 10px;
               min-height: 60px;
             }
 
@@ -407,8 +405,6 @@ function PrintDR({ data }) {
 
             .total-row.grand-total {
               font-weight: bold;
-              border-top: 1px solid rgb(29, 29, 29);
-              margin-top: 5px;
               padding-top: 5px;
             }
 
