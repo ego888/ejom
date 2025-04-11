@@ -863,9 +863,7 @@ function Prod() {
                   <td>{order.drnum || ""}</td>
                   <td
                     onClick={() => {
-                      if (order.invnum) {
-                        handleInvClick(order);
-                      }
+                      handleInvClick(order);
                     }}
                     onMouseEnter={() => handleInvHover(order)}
                     onMouseLeave={handleInvLeave}
