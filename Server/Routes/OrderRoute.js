@@ -188,38 +188,39 @@ router.get("/orders", async (req, res) => {
     const whereClause = whereConditions.join(" AND ");
 
     // Main data query
-    const dataSql1 = `
-            SELECT 
-                o.orderID as id, 
-                o.revision,
-                o.clientId, 
-                c.clientName, 
-                c.customerName,
-                o.projectName, 
-                o.orderedBy, 
-                o.orderDate, 
-                o.dueDate, 
-                o.dueTime,
-                o.status, 
-                o.drnum, 
-                o.invoiceNum as invnum, 
-                o.totalAmount,
-                o.amountDisc,
-                o.percentDisc,
-                o.grandTotal,
-                o.amountPaid,
-                o.datePaid,
-                e.name as salesName, 
-                o.orderReference,
-                o.forProd,
-                o.forBill
-            FROM orders o
-            LEFT JOIN client c ON o.clientId = c.id
-            LEFT JOIN employee e ON o.preparedBy = e.id
-            WHERE ${whereClause}
-            ORDER BY ${sortBy} ${sortDirection}
-            LIMIT ? OFFSET ?
-        `;
+    // const dataSql1 = `
+    //         SELECT
+    //             o.orderID as id,
+    //             o.revision,
+    //             o.clientId,
+    //             c.clientName,
+    //             c.customerName,
+    //             o.projectName,
+    //             o.orderedBy,
+    //             o.orderDate,
+    //             o.dueDate,
+    //             o.dueTime,
+    //             o.status,
+    //             o.drnum,
+    //             o.invoiceNum as invnum,
+    //             o.totalAmount,
+    //             o.amountDisc,
+    //             o.percentDisc,
+    //             o.grandTotal,
+    //             o.amountPaid,
+    //             o.datePaid,
+    //             e.name as salesName,
+    //             o.orderReference,
+    //             o.forProd,
+    //             o.forBill,
+    //             o.productionDate,
+    //         FROM orders o
+    //         LEFT JOIN client c ON o.clientId = c.id
+    //         LEFT JOIN employee e ON o.preparedBy = e.id
+    //         WHERE ${whereClause}
+    //         ORDER BY ${sortBy} ${sortDirection}
+    //         LIMIT ? OFFSET ?
+    //     `;
 
     const dataSql = `
         SELECT 
@@ -246,6 +247,7 @@ router.get("/orders", async (req, res) => {
             o.orderReference,
             o.forProd,
             o.forBill,
+            o.productionDate,
             GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
         FROM orders o
         LEFT JOIN client c ON o.clientId = c.id

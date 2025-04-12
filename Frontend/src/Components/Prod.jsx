@@ -16,7 +16,7 @@ import { QRCodeSVG } from "qrcode.react";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import Modal from "./UI/Modal";
-import { formatNumber } from "../utils/orderUtils";
+import { formatNumber, formatDate } from "../utils/orderUtils";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import InvoiceModal from "./UI/InvoiceModal";
 import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
@@ -722,6 +722,7 @@ function Prod() {
                 >
                   JO # {getSortIndicator("id")}
                 </th>
+                <th className="text-center">Prod Date</th>
                 <th
                   className={`text-center ${
                     hasClientFilter ? "active-filter" : ""
@@ -821,6 +822,7 @@ function Prod() {
                     {order.id}
                     {order.revision > 0 && `-${order.revision}`}
                   </td>
+                  <td>{formatDate(order.productionDate)}</td>
                   <td
                     className="client-cell"
                     onClick={(e) => {

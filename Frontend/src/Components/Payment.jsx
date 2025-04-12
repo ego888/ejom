@@ -10,7 +10,7 @@ import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
 import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
-import { formatPeso } from "../utils/orderUtils";
+import { formatPeso, formatDate } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
 import Modal from "./UI/Modal";
 import PaymentAllocationModal from "./PaymentAllocationModal";
@@ -1163,6 +1163,7 @@ function Prod() {
                 >
                   JO # {getSortIndicator("id")}
                 </th>
+                <th className="text-center">Prod Date</th>
                 <th
                   className={`text-center ${
                     hasClientFilter ? "active-filter" : ""
@@ -1232,6 +1233,7 @@ function Prod() {
                   >
                     {order.id}
                   </td>
+                  <td>{formatDate(order.productionDate)}</td>
                   <td
                     className="client-cell"
                     onClick={(e) => {

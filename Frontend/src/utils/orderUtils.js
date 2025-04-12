@@ -291,14 +291,19 @@ export const formatDateTime = (date) => {
 //     .replace(",", "");
 // };
 // Format dates without timezone conversion
-export const formatDate = (date) => {
-  const d = new Date(date);
+export const formatDate = (input) => {
+  if (!input) return ""; // Return empty string for null, undefined, or empty input
+
+  const d = new Date(input);
+
   if (isNaN(d.getTime())) {
-    throw new Error(`Invalid date passed to formatDate: ${date}`);
+    throw new Error(`Invalid date passed to formatDate: ${input}`);
   }
+
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
+
   return `${year}-${month}-${day}`;
 };
 

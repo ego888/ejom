@@ -7,7 +7,7 @@ import Pagination from "./UI/Pagination";
 import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
-import { formatPeso } from "../utils/orderUtils";
+import { formatPeso, formatDate } from "../utils/orderUtils";
 //import "./Orders.css";
 import StatusBadges from "./UI/StatusBadges";
 import ModalAlert from "./UI/ModalAlert";
@@ -419,6 +419,7 @@ function Orders() {
                 >
                   JO # {getSortIndicator("id")}
                 </th>
+                <th className="text-center">Order Date</th>
                 <th
                   className={`text-center ${
                     hasClientFilter ? "active-filter" : ""
@@ -494,6 +495,7 @@ function Orders() {
                     {order.id}
                     {order.revision > 0 && `-${order.revision}`}
                   </td>
+                  <td>{formatDate(order.orderDate)}</td>
                   <td
                     className="client-cell"
                     onClick={(e) => {
