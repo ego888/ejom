@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
 
 const EditClient = () => {
   const [client, setClient] = useState({
@@ -25,6 +26,13 @@ const EditClient = () => {
   });
   const [salesPeople, setSalesPeople] = useState([]);
   const [paymentTerms, setPaymentTerms] = useState([]);
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+  });
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -353,6 +361,19 @@ const EditClient = () => {
           </div>
         </form>
       </div>
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        onConfirm={() => {
+          if (alert.onConfirm) {
+            alert.onConfirm();
+          }
+          setAlert((prev) => ({ ...prev, show: false }));
+        }}
+      />
     </div>
   );
 };
