@@ -53,6 +53,7 @@ function Quotes() {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
+  const [clickTimer, setClickTimer] = useState(null);
 
   const fetchQuotes = async () => {
     console.log("FETCHING QUOTES with statuses:", selectedStatuses);
@@ -321,7 +322,7 @@ function Quotes() {
     hoverTimerRef.current = setTimeout(() => {
       setSelectedClientId(clientId);
       setShowClientInfo(true);
-    }, 1500); // 5 seconds
+    }); // 5 seconds
   };
 
   const handleClientLeave = () => {
@@ -338,6 +339,35 @@ function Quotes() {
       }
     };
   }, []);
+
+  const handleClientClick = (clientId, e) => {
+    if (clickTimer === null) {
+      // First click, wait to see if it's a double click
+      setClickTimer(
+        setTimeout(() => {
+          // Single click action
+          if (clientFilterRef.current) {
+            clientFilterRef.current.toggleFilterMenu(e);
+          }
+          setClickTimer(null);
+        }, 250) // 250ms delay to detect double click
+      );
+    } else {
+      // Second click within 250ms, it's a double click
+      clearTimeout(clickTimer);
+      setClickTimer(null);
+      handleClientHover(clientId);
+    }
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+      }
+    };
+  }, [clickTimer]);
 
   return (
     <div className="quote">
@@ -487,13 +517,7 @@ function Quotes() {
                     <td>{quote.quoteDate}</td>
                     <td
                       className="client-cell"
-                      onClick={(e) => {
-                        if (clientFilterRef.current) {
-                          clientFilterRef.current.toggleFilterMenu(e);
-                        }
-                      }}
-                      onMouseEnter={() => handleClientHover(quote.clientId)}
-                      onMouseLeave={handleClientLeave}
+                      onClick={(e) => handleClientClick(quote.clientId, e)}
                       style={{ cursor: "pointer" }}
                     >
                       <div>{quote.clientName}</div>

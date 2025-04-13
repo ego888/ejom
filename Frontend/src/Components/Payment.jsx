@@ -99,6 +99,7 @@ function Prod() {
   const hoverTimerRef = useRef(null);
   const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [clickTimer, setClickTimer] = useState(null);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -918,7 +919,7 @@ function Prod() {
     hoverTimerRef.current = setTimeout(() => {
       setSelectedClientId(clientId);
       setShowClientInfo(true);
-    }, 1500); // 5 seconds
+    }); // 5 seconds
   };
 
   const handleClientLeave = () => {
@@ -935,6 +936,35 @@ function Prod() {
       }
     };
   }, []);
+
+  const handleClientClick = (clientId, e) => {
+    if (clickTimer === null) {
+      // First click, wait to see if it's a double click
+      setClickTimer(
+        setTimeout(() => {
+          // Single click action
+          if (clientFilterRef.current) {
+            clientFilterRef.current.toggleFilterMenu(e);
+          }
+          setClickTimer(null);
+        }, 250) // 250ms delay to detect double click
+      );
+    } else {
+      // Second click within 250ms, it's a double click
+      clearTimeout(clickTimer);
+      setClickTimer(null);
+      handleClientHover(clientId);
+    }
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+      }
+    };
+  }, [clickTimer]);
 
   return (
     <div className="payment-theme">
@@ -1254,13 +1284,7 @@ function Prod() {
                     <td>{formatDate(order.productionDate)}</td>
                     <td
                       className="client-cell"
-                      onClick={(e) => {
-                        if (clientFilterRef.current) {
-                          clientFilterRef.current.toggleFilterMenu(e);
-                        }
-                      }}
-                      onMouseEnter={() => handleClientHover(order.clientId)}
-                      onMouseLeave={handleClientLeave}
+                      onClick={(e) => handleClientClick(order.clientId, e)}
                       style={{ cursor: "pointer" }}
                     >
                       <div>{order.clientName}</div>
