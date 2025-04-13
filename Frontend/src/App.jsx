@@ -34,6 +34,7 @@ import ReceivePayment from "./Components/ReceivePayment";
 import ProdPrintProduction from "./Components/ProdPrintProduction";
 import ProdPrintDR from "./Components/ProdPrintDR";
 import ProdPrintOneDR from "./Components/ProdPrintOneDR";
+import Billing from "./Components/Billing";
 import EmployeeLogin from "./Components/EmployeeLogin";
 import axios from "./utils/axiosConfig";
 import ReportSales from "./Components/Reports/ReportSales";
@@ -247,6 +248,14 @@ function App() {
           />
           <Route path="dashprod" element={<DashProd />} />
           <Route path="check-order-total" element={<ReportCheckTotal />} />
+          <Route
+            path="billing"
+            element={
+              <PrivateRoute>
+                <Billing />
+              </PrivateRoute>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>

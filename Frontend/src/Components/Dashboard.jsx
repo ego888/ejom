@@ -11,6 +11,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import { jwtDecode } from "jwt-decode";
 import AddOrder from "./AddOrder";
+import Billing from "./Billing";
 import "./Dashboard.css";
 import { ServerIP } from "../config";
 import logo from "../assets/Go Large logo 2009C2 small.jpg";
@@ -36,6 +37,7 @@ const QUOTES = {
 const ORDERS = { path: "orders", icon: "bi-cart", text: "Orders" };
 const CLIENT = { path: "client", icon: "bi-building", text: "Clients" };
 const PROD = { path: "prod", icon: "bi-gear", text: "Prod" };
+const BILLING = { path: "billing", icon: "bi-receipt", text: "Billing" };
 const WIPLOG = {
   path: "wiplog",
   icon: "bi-clipboard-check",
@@ -262,68 +264,48 @@ const Dashboard = () => {
 
   // Get visible menu items based on user permissions
   const getVisibleMenuItems = () => {
-    // All menu items
-    const allNavItems = [
-      DASHBOARD,
-      DASHSALES,
-      DASHPROD,
-      QUOTES,
-      ORDERS,
-      CLIENT,
-      PROD,
-      WIPLOG,
-      ARTISTLOG,
-      PRINTLOG,
-      PAYMENT,
-      RECEIVE_PAYMENT,
-      DTR,
-      REPORTS,
-      MASTERFILES,
-      PROFILE,
-    ];
+    const items = [];
 
-    // Admin can access everything
-    if (permissions.categoryId === 1) {
-      return allNavItems;
-    }
-
-    // Non-active users can't access anything
-    if (!permissions.isActive) {
-      return [];
-    }
-
-    // Filter items based on user role using switch cases
-    let visibleItems = [];
-
-    // Add role-specific items
-    if (permissions.isSales) {
-      visibleItems.push(DASHSALES, QUOTES, ORDERS, CLIENT, SALES_REPORT, SOA);
-    }
-
-    if (permissions.isAccounting) {
-      visibleItems.push(PAYMENT, SOA, CLIENT);
-    }
-
-    if (permissions.isProduction) {
-      visibleItems.push(
+    if (permissions.isAdmin) {
+      items.push(
+        DASHBOARD,
+        DASHSALES,
+        DASHPROD,
+        QUOTES,
+        ORDERS,
+        CLIENT,
+        PROD,
+        BILLING,
+        WIPLOG,
+        ARTISTLOG,
+        PRINTLOG,
+        PAYMENT,
+        RECEIVE_PAYMENT,
+        REPORTS,
+        MASTERFILES,
+        DTR
+      );
+    } else if (permissions.isSales) {
+      items.push(DASHSALES, QUOTES, ORDERS, CLIENT, REPORTS_SALES);
+    } else if (permissions.isAccounting) {
+      items.push(ORDERS, CLIENT, PAYMENT, RECEIVE_PAYMENT, BILLING, SOA);
+    } else if (permissions.isProduction) {
+      items.push(
         DASHPROD,
         PROD,
         WIPLOG,
-        SOA,
-        CLIENT,
-        MATERIAL_USAGE_REPORT
+        ARTISTLOG,
+        PRINTLOG,
+        REPORTS_PRODUCTION
       );
+    } else if (permissions.isArtist) {
+      items.push(ARTISTLOG);
+    } else if (permissions.isOperator) {
+      items.push(PRINTLOG);
     }
 
-    if (permissions.isArtist) {
-      visibleItems.push(ARTISTLOG);
-    }
-
-    if (permissions.isOperator) {
-      visibleItems.push(PRINTLOG, WIPLOG);
-    }
-
-    return visibleItems;
+    items.push(PROFILE);
+    return items;
   };
 
   // Add function to determine initial route

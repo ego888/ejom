@@ -176,4 +176,170 @@ router.get("/invoices/:orderId", verifyUser, async (req, res) => {
   }
 });
 
+// Get billing data with pagination and search
+router.get("/billing", verifyUser, async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      sortBy = "invoiceNumber",
+      sortDirection = "desc",
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const searchParam = `%${search}%`;
+
+    // Base query for invoices with order details
+    let query = `
+      SELECT 
+        i.invoicePrefix,
+        i.invoiceNumber,
+        i.invoiceAmount,
+        i.invoiceRemarks,
+        o.orderId,
+        o.productionDate,
+        c.clientName,
+        c.customerName,
+        o.projectName,
+        o.orderedBy,
+        o.status,
+        o.drNum,
+        o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
+        o.preparedBy,
+        o.orderReference,
+        e.name as preparedByName
+      FROM invoice i
+      LEFT JOIN orders o ON i.orderId = o.orderID
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE 1=1
+    `;
+
+    // Add search conditions
+    if (search) {
+      query += `
+        AND (
+          CONCAT(i.invoicePrefix, i.invoiceNumber) LIKE ? OR
+          o.orderId LIKE ? OR
+          o.clientName LIKE ? OR
+          o.customerName LIKE ? OR
+          o.projectName LIKE ? OR
+          o.orderedBy LIKE ? OR
+          o.drNum LIKE ?
+        )
+      `;
+    }
+
+    // Add sorting
+    const validSortColumns = [
+      "invoiceNumber",
+      "invoiceAmount",
+      "orderID",
+      "productionDate",
+      "clientName",
+      "customerName",
+      "projectName",
+      "orderedBy",
+      "status",
+      "drNum",
+      "grandTotal",
+      "amountPaid",
+      "datePaid",
+    ];
+
+    const safeSortBy = validSortColumns.includes(sortBy)
+      ? sortBy
+      : "invoiceNumber";
+    const safeSortDirection =
+      sortDirection.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+    query += ` ORDER BY ${safeSortBy} ${safeSortDirection}`;
+
+    // Add pagination
+    query += ` LIMIT ? OFFSET ?`;
+
+    // Get total count for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM invoice i
+      LEFT JOIN orders o ON i.orderId = o.orderID
+      WHERE 1=1
+      ${
+        search
+          ? `
+        AND (
+          CONCAT(i.invoicePrefix, i.invoiceNumber) LIKE ? OR
+          o.orderId LIKE ? OR
+          o.clientName LIKE ? OR
+          o.customerName LIKE ? OR
+          o.projectName LIKE ? OR
+          o.orderedBy LIKE ? OR
+          o.drNum LIKE ?
+        )
+      `
+          : ""
+      }
+    `;
+
+    // Execute queries
+    const [data] = await pool.query(
+      query,
+      search
+        ? [
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+            parseInt(limit),
+            offset,
+          ]
+        : [parseInt(limit), offset]
+    );
+
+    const [countResult] = await pool.query(
+      countQuery,
+      search
+        ? [
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+            searchParam,
+          ]
+        : []
+    );
+
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    return res.json({
+      Status: true,
+      Result: {
+        data,
+        pagination: {
+          total,
+          totalPages,
+          currentPage: parseInt(page),
+          limit: parseInt(limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching billing data:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch billing data",
+      Details: error.message,
+    });
+  }
+});
+
 export default router;
