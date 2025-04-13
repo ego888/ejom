@@ -1,4 +1,4 @@
-import updateClientAging from './jobs/updateClientAging.js';
+import updateClientAging from './utils/updateClientAging.js';
 
 try {
   await updateClientAging();
