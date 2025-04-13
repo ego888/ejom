@@ -32,7 +32,7 @@ async function updateClientAging() {
     }
 
     if (!agingMap.has(clientId)) {
-      agingMap.set(clientId, { "31-60": 0, "61-90": 0, moreThan90: 0 });
+      agingMap.set(clientId, { "31-60": 0, "61-90": 0, over90: 0 });
     }
 
     const clientAging = agingMap.get(clientId);
@@ -42,7 +42,7 @@ async function updateClientAging() {
     } else if (days >= 61 && days <= 90) {
       clientAging["61-90"] += balance;
     } else if (days > 90) {
-      clientAging.moreThan90 += balance;
+      clientAging.over90 += balance;
     }
 
     console.log(
@@ -95,25 +95,18 @@ async function updateClientAging() {
     console.log(`Updating client ${clientId} with:`);
     console.log(`  31-60: ${aging["31-60"]}`);
     console.log(`  61-90: ${aging["61-90"]}`);
-    console.log(`  >90  : ${aging.moreThan90}`);
+    console.log(`  >90  : ${aging.over90}`);
     console.log(`  overdue: ${overdue}`);
     console.log(`  hold   : ${hold}`);
 
     const [result] = await db.query(
       `
       UPDATE client
-      SET \`31-60\` = ?, \`61-90\` = ?, \`moreThan90\` = ?,
+      SET \`31-60\` = ?, \`61-90\` = ?, \`over90\` = ?,
           overdue = ?, hold = ?
       WHERE id = ?
       `,
-      [
-        aging["31-60"],
-        aging["61-90"],
-        aging.moreThan90,
-        overdue,
-        hold,
-        clientId,
-      ]
+      [aging["31-60"], aging["61-90"], aging.over90, overdue, hold, clientId]
     );
 
     console.log(
