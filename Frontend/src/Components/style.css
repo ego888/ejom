@@ -20,6 +20,10 @@ html {
   --font-size-base: 12px;
   --line-height-base: 1.5;
   --border-radius: 4px;
+  --bs-table-danger-bg: #ffebed;
+  --bs-table-danger-striped-bg: #fadbde;
+  --bs-table-warning-bg: #fff4d0;
+  --bs-table-warning-striped-bg: #ffe8b3;
 }
 
 /* Existing styles */
@@ -521,4 +525,15 @@ datalist option:hover {
 
 .modal .btn-close {
   display: none !important;
+}
+
+/* Custom Bootstrap table colors */
+.table-danger {
+  --bs-table-bg: var(--bs-table-danger-bg);
+  --bs-table-striped-bg: var(--bs-table-danger-striped-bg);
+}
+
+.table-warning {
+  --bs-table-bg: var(--bs-table-warning-bg);
+  --bs-table-striped-bg: var(--bs-table-warning-striped-bg);
 }

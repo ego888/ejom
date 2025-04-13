@@ -621,71 +621,71 @@ function processDTRData(data, existingEmployees = new Map()) {
 }
 
 // Create tables if they don't exist
-async function setupDTRTables() {
-  let connection;
-  try {
-    connection = await pool.getConnection();
-    console.log("Setting up DTR tables...");
+// async function setupDTRTables() {
+//   let connection;
+//   try {
+//     connection = await pool.getConnection();
+//     console.log("Setting up DTR tables...");
 
-    // Create DTR Batches table - use uppercase table names to match existing
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS DTRBatches (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        batchName VARCHAR(100) NOT NULL,
-        periodStart DATE NOT NULL,
-        periodEnd DATE NOT NULL,
-        fileCount INT DEFAULT 0,
-        entryCount INT DEFAULT 0,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-    console.log("DTRBatches table created or verified");
+//     // Create DTR Batches table - use uppercase table names to match existing
+//     await connection.query(`
+//       CREATE TABLE IF NOT EXISTS DTRBatches (
+//         id INT AUTO_INCREMENT PRIMARY KEY,
+//         batchName VARCHAR(100) NOT NULL,
+//         periodStart DATE NOT NULL,
+//         periodEnd DATE NOT NULL,
+//         fileCount INT DEFAULT 0,
+//         entryCount INT DEFAULT 0,
+//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+//       )
+//     `);
+//     console.log("DTRBatches table created or verified");
 
-    // Create DTR Entries table - use uppercase table names to match existing
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS DTREntries (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        batchId INT NOT NULL,
-        empId VARCHAR(50) NOT NULL,
-        empName VARCHAR(100) NOT NULL,
-        date DATE NOT NULL,
-        day VARCHAR(10) NOT NULL,
-        timeIn VARCHAR(20),
-        timeOut VARCHAR(20),
-        state VARCHAR(50),
-        hours DECIMAL(10,2) DEFAULT 0,
-        overtime DECIMAL(10,2) DEFAULT 0,
-        specialHours DECIMAL(10,2) DEFAULT 0,
-        remarks VARCHAR(255),
-        processed INT DEFAULT 0,
-        deleteRecord INT DEFAULT 0,
-        editedIn INT DEFAULT 0,
-        editedOut INT DEFAULT 0,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (batchId) REFERENCES DTRBatches(id) ON DELETE CASCADE
-      )
-    `);
-    console.log("DTREntries table created or verified");
+//     // Create DTR Entries table - use uppercase table names to match existing
+//     await connection.query(`
+//       CREATE TABLE IF NOT EXISTS DTREntries (
+//         id INT AUTO_INCREMENT PRIMARY KEY,
+//         batchId INT NOT NULL,
+//         empId VARCHAR(50) NOT NULL,
+//         empName VARCHAR(100) NOT NULL,
+//         date DATE NOT NULL,
+//         day VARCHAR(10) NOT NULL,
+//         timeIn VARCHAR(20),
+//         timeOut VARCHAR(20),
+//         state VARCHAR(50),
+//         hours DECIMAL(10,2) DEFAULT 0,
+//         overtime DECIMAL(10,2) DEFAULT 0,
+//         specialHours DECIMAL(10,2) DEFAULT 0,
+//         remarks VARCHAR(255),
+//         processed INT DEFAULT 0,
+//         deleteRecord INT DEFAULT 0,
+//         editedIn INT DEFAULT 0,
+//         editedOut INT DEFAULT 0,
+//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//         FOREIGN KEY (batchId) REFERENCES DTRBatches(id) ON DELETE CASCADE
+//       )
+//     `);
+//     console.log("DTREntries table created or verified");
 
-    return true;
-  } catch (error) {
-    console.error("Error setting up DTR tables:", error);
-    throw error;
-  } finally {
-    if (connection) connection.release();
-  }
-}
+//     return true;
+//   } catch (error) {
+//     console.error("Error setting up DTR tables:", error);
+//     throw error;
+//   } finally {
+//     if (connection) connection.release();
+//   }
+// }
 
 // Call setupDTRTables immediately when this module is loaded
-(async () => {
-  try {
-    await setupDTRTables();
-    console.log("DTR database setup complete");
-  } catch (err) {
-    console.error("Failed to set up DTR database:", err);
-  }
-})();
+// (async () => {
+//   try {
+//     await setupDTRTables();
+//     console.log("DTR database setup complete");
+//   } catch (err) {
+//     console.error("Failed to set up DTR database:", err);
+//   }
+// })();
 
 // Route to upload DTR files
 router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {

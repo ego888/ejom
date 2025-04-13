@@ -52,8 +52,8 @@ function Orders() {
   });
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedSales, setSelectedSales] = useState([]);
-  const [isProdChecked, setIsProdChecked] = useState(false);
-  const [isAllChecked, setIsAllChecked] = useState(false);
+  // const [isProdChecked, setIsProdChecked] = useState(false);
+  // const [isAllChecked, setIsAllChecked] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
@@ -484,94 +484,107 @@ function Orders() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td
-                    style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      navigate(`/dashboard/orders/edit/${order.id}`)
-                    }
-                  >
-                    {order.id}
-                    {order.revision > 0 && `-${order.revision}`}
-                  </td>
-                  <td>{formatDate(order.orderDate)}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
+              {orders.map((order, index) => {
+                const currentDate = new Date();
+                const holdDate = new Date(order.hold);
+                const overdueDate = new Date(order.overdue);
+
+                const rowClass =
+                  currentDate > holdDate
+                    ? "table-danger"
+                    : currentDate > overdueDate
+                    ? "table-warning"
+                    : "";
+
+                return (
+                  <tr key={index} className={rowClass}>
+                    <td
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        navigate(`/dashboard/orders/edit/${order.id}`)
                       }
-                    }}
-                    onMouseEnter={() => handleClientHover(order.clientId)}
-                    onMouseLeave={handleClientLeave}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div>{order.clientName}</div>
-                    {order.customerName && (
-                      <div className="small text-muted">
-                        {order.customerName}
-                      </div>
-                    )}
-                  </td>
-                  <td>{order.projectName}</td>
-                  <td>{order.orderedBy}</td>
-                  {/* <td>
-                  {order.orderDate
-                    ? new Date(order.orderDate).toLocaleDateString()
-                    : ""}
-                </td> */}
-                  <td>
-                    {order.dueDate
-                      ? new Date(order.dueDate).toLocaleDateString()
+                    >
+                      {order.id}
+                      {order.revision > 0 && `-${order.revision}`}
+                    </td>
+                    <td>{formatDate(order.orderDate)}</td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (clientFilterRef.current) {
+                          clientFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      onMouseEnter={() => handleClientHover(order.clientId)}
+                      onMouseLeave={handleClientLeave}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div>{order.clientName}</div>
+                      {order.customerName && (
+                        <div className="small text-muted">
+                          {order.customerName}
+                        </div>
+                      )}
+                    </td>
+                    <td>{order.projectName}</td>
+                    <td>{order.orderedBy}</td>
+                    {/* <td>
+                    {order.orderDate
+                      ? new Date(order.orderDate).toLocaleDateString()
                       : ""}
-                  </td>
-                  <td>{order.dueTime || ""}</td>
-                  <td className="text-center">
-                    <span className={`status-badge ${order.status}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>{order.drnum || ""}</td>
-                  <td
-                    onClick={() => {
-                      if (order.invnum) {
-                        setSelectedOrderForDetails(order);
-                        setShowInvoiceDetails(true);
-                      }
-                    }}
-                    style={{ cursor: order.invnum ? "pointer" : "default" }}
-                  >
-                    {order.invnum || ""}
-                  </td>
-                  <td className="number_right">
-                    {order.grandTotal ? formatPeso(order.grandTotal) : ""}
-                  </td>
-                  <td>{order.orNums || ""}</td>
-                  <td className="number_right">
-                    {Number(order.amountPaid) === 0
-                      ? ""
-                      : formatPeso(order.amountPaid)}
-                  </td>
-                  <td>
-                    {order.datePaid
-                      ? new Date(order.datePaid).toLocaleDateString()
-                      : ""}
-                  </td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.salesName}
-                  </td>
-                  <td>{order.orderReference}</td>
-                </tr>
-              ))}
+                  </td> */}
+                    <td>
+                      {order.dueDate
+                        ? new Date(order.dueDate).toLocaleDateString()
+                        : ""}
+                    </td>
+                    <td>{order.dueTime || ""}</td>
+                    <td className="text-center">
+                      <span className={`status-badge ${order.status}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td>{order.drnum || ""}</td>
+                    <td
+                      onClick={() => {
+                        if (order.invnum) {
+                          setSelectedOrderForDetails(order);
+                          setShowInvoiceDetails(true);
+                        }
+                      }}
+                      style={{ cursor: order.invnum ? "pointer" : "default" }}
+                    >
+                      {order.invnum || ""}
+                    </td>
+                    <td className="number_right">
+                      {order.grandTotal ? formatPeso(order.grandTotal) : ""}
+                    </td>
+                    <td>{order.orNums || ""}</td>
+                    <td className="number_right">
+                      {Number(order.amountPaid) === 0
+                        ? ""
+                        : formatPeso(order.amountPaid)}
+                    </td>
+                    <td>
+                      {order.datePaid
+                        ? new Date(order.datePaid).toLocaleDateString()
+                        : ""}
+                    </td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (salesFilterRef.current) {
+                          salesFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {order.salesName}
+                    </td>
+                    <td>{order.orderReference}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

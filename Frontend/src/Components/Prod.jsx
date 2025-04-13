@@ -789,120 +789,140 @@ function Prod() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td>
-                    <div className="checkbox-container">
-                      <label
-                        htmlFor={`prod-check-${order.id}`}
-                        className="visually-hidden"
-                      >
-                        Mark order {order.id} for production
-                      </label>
-                      <input
-                        id={`prod-check-${order.id}`}
-                        type="checkbox"
-                        checked={order.forProd || false}
-                        onChange={(e) =>
-                          handleForProdChange(order.id, e.target.checked)
-                        }
-                        hidden={
-                          !(
-                            order.status === "Open" ||
-                            order.status === "Printed"
-                          )
-                        }
-                      />
-                    </div>
-                  </td>
-                  <td
-                    style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/dashboard/prod/view/${order.id}`)}
-                  >
-                    {order.id}
-                    {order.revision > 0 && `-${order.revision}`}
-                  </td>
-                  <td>{formatDate(order.productionDate)}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    onMouseEnter={() => handleClientHover(order.clientId)}
-                    onMouseLeave={handleClientLeave}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div>{order.clientName}</div>
-                    {order.customerName && (
-                      <div className="small text-muted">
-                        {order.customerName}
+              {orders.map((order) => {
+                const currentDate = new Date();
+                currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
+
+                // Safely handle hold and overdue dates
+                const holdDate = order.hold ? new Date(order.hold) : null;
+                const overdueDate = order.overdue
+                  ? new Date(order.overdue)
+                  : null;
+
+                // Only apply styling if dates are valid
+                const rowClass =
+                  holdDate && currentDate > holdDate
+                    ? "table-danger"
+                    : overdueDate && currentDate > overdueDate
+                    ? "table-warning"
+                    : "";
+
+                return (
+                  <tr key={order.id} className={rowClass}>
+                    <td>
+                      <div className="checkbox-container">
+                        <label
+                          htmlFor={`prod-check-${order.id}`}
+                          className="visually-hidden"
+                        >
+                          Mark order {order.id} for production
+                        </label>
+                        <input
+                          id={`prod-check-${order.id}`}
+                          type="checkbox"
+                          checked={order.forProd || false}
+                          onChange={(e) =>
+                            handleForProdChange(order.id, e.target.checked)
+                          }
+                          hidden={
+                            !(
+                              order.status === "Open" ||
+                              order.status === "Printed"
+                            )
+                          }
+                        />
                       </div>
-                    )}
-                  </td>
-                  <td>{order.projectName}</td>
-                  <td>{order.orderedBy}</td>
-                  {/* <td>
-                    {order.orderDate
-                      ? new Date(order.orderDate).toLocaleDateString()
-                      : ""}
-                  </td> */}
-                  <td>
-                    {order.dueDate
-                      ? new Date(order.dueDate).toLocaleDateString()
-                      : ""}
-                  </td>
-                  <td>{order.dueTime || ""}</td>
-                  <td className="text-center">
-                    <span
-                      className={`status-badge ${order.status}`}
-                      style={{ cursor: "default" }}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>{order.drnum || ""}</td>
-                  <td
-                    onClick={() => {
-                      handleInvClick(order);
-                    }}
-                    onMouseEnter={() => handleInvHover(order)}
-                    onMouseLeave={handleInvLeave}
-                    style={{
-                      cursor: order.invnum ? "pointer" : "default",
-                    }}
-                  >
-                    {order.invnum || ""}
-                  </td>
-                  <td className="text-end">
-                    {order.grandTotal ? formatNumber(order.grandTotal) : ""}
-                  </td>
-                  <td>{order.orNums || ""}</td>
-                  <td className="text-end">
-                    {order.amountPaid === 0
-                      ? ""
-                      : formatNumber(order.amountPaid)}
-                  </td>
-                  <td>
-                    {order.datePaid
-                      ? new Date(order.datePaid).toLocaleDateString()
-                      : ""}
-                  </td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
+                    </td>
+                    <td
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        navigate(`/dashboard/orders/edit/${order.id}`)
                       }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.salesName}
-                  </td>
-                  <td>{order.orderReference}</td>
-                </tr>
-              ))}
+                    >
+                      {order.id}
+                    </td>
+                    <td>{formatDate(order.productionDate)}</td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (clientFilterRef.current) {
+                          clientFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      onMouseEnter={() => handleClientHover(order.clientId)}
+                      onMouseLeave={handleClientLeave}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div>{order.clientName}</div>
+                      {order.customerName && (
+                        <div className="small text-muted">
+                          {order.customerName}
+                        </div>
+                      )}
+                    </td>
+                    <td>{order.projectName}</td>
+                    <td>{order.orderedBy}</td>
+                    {/* <td>
+                      {order.orderDate
+                        ? new Date(order.orderDate).toLocaleDateString()
+                        : ""}
+                    </td> */}
+                    <td>
+                      {order.dueDate
+                        ? new Date(order.dueDate).toLocaleDateString()
+                        : ""}
+                    </td>
+                    <td>{order.dueTime || ""}</td>
+                    <td className="text-center">
+                      <span
+                        className={`status-badge ${order.status}`}
+                        style={{ cursor: "default" }}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+                    <td>{order.drnum || ""}</td>
+                    <td
+                      onClick={() => {
+                        handleInvClick(order);
+                      }}
+                      onMouseEnter={() => handleInvHover(order)}
+                      onMouseLeave={handleInvLeave}
+                      style={{
+                        cursor: order.invnum ? "pointer" : "default",
+                      }}
+                    >
+                      {order.invnum || ""}
+                    </td>
+                    <td className="text-end">
+                      {order.grandTotal ? formatNumber(order.grandTotal) : ""}
+                    </td>
+                    <td>{order.orNums || ""}</td>
+                    <td className="text-end">
+                      {order.amountPaid === 0
+                        ? ""
+                        : formatNumber(order.amountPaid)}
+                    </td>
+                    <td>
+                      {order.datePaid
+                        ? new Date(order.datePaid).toLocaleDateString()
+                        : ""}
+                    </td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (salesFilterRef.current) {
+                          salesFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {order.salesName}
+                    </td>
+                    <td>{order.orderReference}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

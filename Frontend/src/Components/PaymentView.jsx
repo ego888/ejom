@@ -14,6 +14,7 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import PaymentHistory from "./PaymentHistory";
 import { formatDateTime } from "../utils/orderUtils";
 import PaymentAllocation from "./PaymentAllocation";
+import { getClientBackgroundStyle } from "../utils/clientOverdueStyle";
 
 function OrderView() {
   const navigate = useNavigate();
@@ -185,28 +186,54 @@ function OrderView() {
 
           <div className="d-flex order-header-container">
             <div className="row g-0 flex-grow-1 order-content">
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Order Date</label>
                   <div className="form-input">{data.orderDate || ""}</div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Prepared By</label>
                   <div className="form-input">{data.preparedByName || ""}</div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Terms</label>
                   <div className="form-input">{data.terms || ""}</div>
                 </div>
               </div>
+              <div className="col-3 order-info-row">
+                <div className="d-flex flex-column">
+                  <label className="form-label">DR Date</label>
+                  <div className="form-input">
+                    {new Date(data.drDate).toLocaleDateString() || ""}
+                  </div>
+                </div>
+              </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Client</label>
+                  <label
+                    htmlFor="client"
+                    className="form-label"
+                    style={getClientBackgroundStyle(data)}
+                  >
+                    Client
+                  </label>
                   <div className="form-input">{data.clientName || ""}</div>
+                </div>
+              </div>
+              <div className="col-8 order-info-row">
+                <div className="d-flex flex-column">
+                  <label
+                    htmlFor="client"
+                    className="form-label"
+                    style={getClientBackgroundStyle(data)}
+                  >
+                    Customer Name
+                  </label>
+                  <div className="form-input">{data.customerName || ""}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
@@ -215,14 +242,6 @@ function OrderView() {
                   <div className="form-input">{data.projectName || ""}</div>
                 </div>
               </div>{" "}
-              <div className="col-4 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">DR Date</label>
-                  <div className="form-input">
-                    {new Date(data.drDate).toLocaleDateString() || ""}
-                  </div>
-                </div>
-              </div>
               <div className="col-4 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Ordered By</label>
@@ -241,13 +260,13 @@ function OrderView() {
                   <div className="form-input">{data.cellNumber || ""}</div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-2 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Due Date</label>
                   <div className="form-input">{data.dueDate || ""}</div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-2 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Due Time</label>
                   <div className="form-input">{data.dueTime || ""}</div>

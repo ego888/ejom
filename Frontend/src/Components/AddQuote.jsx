@@ -25,6 +25,7 @@ import { debounce } from "lodash";
 import ModalAlert from "./UI/ModalAlert";
 import axiosConfig from "../utils/axiosConfig"; // Import configured axios
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
+import { getClientBackgroundStyle } from "../utils/clientOverdueStyle";
 
 function AddQuote() {
   const navigate = useNavigate();
@@ -255,30 +256,30 @@ function AddQuote() {
       .catch((err) => console.log(err));
   };
 
-  const fetchClients = async () => {
-    try {
-      const response = await axiosConfig.get(`${ServerIP}/auth/client`);
-      if (response.data.Status) {
-        const result = response.data.Result || [];
-        setClients(result);
-      } else {
-        setAlert({
-          show: true,
-          title: "Error",
-          message: response.data.Error || "Failed to fetch clients",
-          type: "alert",
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching clients:", err);
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Failed to fetch clients. Please try again.",
-        type: "alert",
-      });
-    }
-  };
+  // const fetchClients = async () => {
+  //   try {
+  //     const response = await axiosConfig.get(`${ServerIP}/auth/client`);
+  //     if (response.data.Status) {
+  //       const result = response.data.Result || [];
+  //       setClients(result);
+  //     } else {
+  //       setAlert({
+  //         show: true,
+  //         title: "Error",
+  //         message: response.data.Error || "Failed to fetch clients",
+  //         type: "alert",
+  //       });
+  //     }
+  //   } catch (err) {
+  //     console.error("Error fetching clients:", err);
+  //     setAlert({
+  //       show: true,
+  //       title: "Error",
+  //       message: "Failed to fetch clients. Please try again.",
+  //       type: "alert",
+  //     });
+  //   }
+  // };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -394,6 +395,8 @@ function AddQuote() {
               clientId: parseInt(quoteData.clientId),
               clientName: quoteData.clientName || "",
               customerName: quoteData.customerName || "",
+              hold: quoteData.hold || "",
+              overdue: quoteData.overdue || "",
               projectName: quoteData.projectName || "",
               preparedBy: quoteData.preparedBy || "",
               quoteDate:
@@ -1537,7 +1540,11 @@ function AddQuote() {
 
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label htmlFor="clientId" className="form-label">
+                  <label
+                    htmlFor="clientId"
+                    className={`form-label`}
+                    style={getClientBackgroundStyle(data)}
+                  >
                     Client <span className="text-danger">*</span>
                   </label>
                   <input
@@ -1565,7 +1572,11 @@ function AddQuote() {
               </div>
               <div className="col-8">
                 <div className="d-flex flex-column">
-                  <label htmlFor="customerName" className="form-label">
+                  <label
+                    htmlFor="customerName"
+                    className="form-label"
+                    style={getClientBackgroundStyle(data)}
+                  >
                     Customer Name
                   </label>
                   <input

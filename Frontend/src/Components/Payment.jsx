@@ -1153,7 +1153,7 @@ function Prod() {
               setHasClientFilter(isFilterActive)
             }
           />
-          <table className="table table-hover">
+          <table className="table table-hover table-striped">
             <thead className="table table-head">
               <tr>
                 <th
@@ -1223,204 +1223,228 @@ function Prod() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td
-                    style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      navigate(`/dashboard/payment/view/${order.id}`)
-                    }
-                  >
-                    {order.id}
-                  </td>
-                  <td>{formatDate(order.productionDate)}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    onMouseEnter={() => handleClientHover(order.clientId)}
-                    onMouseLeave={handleClientLeave}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div>{order.clientName}</div>
-                    {order.customerName && (
-                      <div className="small text-muted">
-                        {order.customerName}
-                      </div>
-                    )}
-                  </td>
-                  <td>{order.projectName}</td>
-                  <td>{order.orderedBy}</td>
-                  <td>{order.orderReference}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.salesName}
-                  </td>
-                  <td className="text-center">
-                    <span className={`status-badge ${order.status}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>{order.drnum || ""}</td>
-                  <td
-                    className="cursor-pointer"
-                    onClick={() => {
-                      if (order.invnum) {
-                        setSelectedOrderId(order.id);
-                        setShowInvoiceDetails(true);
-                      }
-                    }}
-                    style={{ cursor: order.invnum ? "pointer" : "default" }}
-                  >
-                    {order.invnum || ""}
-                  </td>
-                  <td className="number_right">
-                    {order.grandTotal
-                      ? `₱${order.grandTotal.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td
-                    className="number_right"
-                    style={{ cursor: "pointer" }}
-                    onDoubleClick={async () => {
-                      try {
-                        const response = await axios.post(
-                          `${ServerIP}/auth/recalculate-paid-amount`,
-                          { orderId: order.id }
-                        );
+              {orders.map((order) => {
+                const currentDate = new Date();
+                currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
 
-                        if (response.data.Status) {
-                          // Update the order in state
-                          setOrders(
-                            orders.map((o) =>
-                              o.id === order.id
-                                ? {
-                                    ...o,
-                                    amountPaid: response.data.Result.amountPaid,
-                                  }
-                                : o
-                            )
+                // Safely handle hold and overdue dates
+                const holdDate = order.hold ? new Date(order.hold) : null;
+                const overdueDate = order.overdue
+                  ? new Date(order.overdue)
+                  : null;
+
+                // Only apply styling if dates are valid
+                const rowClass =
+                  holdDate && currentDate > holdDate
+                    ? "table-danger"
+                    : overdueDate && currentDate > overdueDate
+                    ? "table-warning"
+                    : "";
+
+                return (
+                  <tr key={order.id} className={rowClass}>
+                    <td
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        navigate(`/dashboard/payment/view/${order.id}`)
+                      }
+                    >
+                      {order.id}
+                    </td>
+                    <td>{formatDate(order.productionDate)}</td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (clientFilterRef.current) {
+                          clientFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      onMouseEnter={() => handleClientHover(order.clientId)}
+                      onMouseLeave={handleClientLeave}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div>{order.clientName}</div>
+                      {order.customerName && (
+                        <div className="small text-muted">
+                          {order.customerName}
+                        </div>
+                      )}
+                    </td>
+                    <td>{order.projectName}</td>
+                    <td>{order.orderedBy}</td>
+                    <td>{order.orderReference}</td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (salesFilterRef.current) {
+                          salesFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {order.salesName}
+                    </td>
+                    <td className="text-center">
+                      <span className={`status-badge ${order.status}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td>{order.drnum || ""}</td>
+                    <td
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (order.invnum) {
+                          setSelectedOrderId(order.id);
+                          setShowInvoiceDetails(true);
+                        }
+                      }}
+                      style={{ cursor: order.invnum ? "pointer" : "default" }}
+                    >
+                      {order.invnum || ""}
+                    </td>
+                    <td className="number_right">
+                      {order.grandTotal
+                        ? `₱${order.grandTotal.toLocaleString()}`
+                        : ""}
+                    </td>
+                    <td
+                      className="number_right"
+                      style={{ cursor: "pointer" }}
+                      onDoubleClick={async () => {
+                        try {
+                          const response = await axios.post(
+                            `${ServerIP}/auth/recalculate-paid-amount`,
+                            { orderId: order.id }
                           );
 
+                          if (response.data.Status) {
+                            // Update the order in state
+                            setOrders(
+                              orders.map((o) =>
+                                o.id === order.id
+                                  ? {
+                                      ...o,
+                                      amountPaid:
+                                        response.data.Result.amountPaid,
+                                    }
+                                  : o
+                              )
+                            );
+
+                            setAlert({
+                              show: true,
+                              title: "Success",
+                              message: "Amount recalculated successfully",
+                              type: "alert",
+                              showOkButton: true,
+                            });
+                          }
+                        } catch (error) {
+                          console.error("Error recalculating amount:", error);
                           setAlert({
                             show: true,
-                            title: "Success",
-                            message: "Amount recalculated successfully",
-                            type: "alert",
+                            title: "Error",
+                            message: "Failed to recalculate amount",
+                            type: "error",
                             showOkButton: true,
                           });
                         }
-                      } catch (error) {
-                        console.error("Error recalculating amount:", error);
-                        setAlert({
-                          show: true,
-                          title: "Error",
-                          message: "Failed to recalculate amount",
-                          type: "error",
-                          showOkButton: true,
-                        });
-                      }
-                    }}
-                  >
-                    {order.amountPaid > 0
-                      ? `₱${order.amountPaid.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td>{order.orNums || ""}</td>
-                  <td className="text-center">
-                    <div className="checkbox-container">
-                      <label
-                        htmlFor={`pay-check-${order.id}`}
-                        className="visually-hidden"
-                      >
-                        Select order {order.id} for payment
-                      </label>
-                      <input
-                        id={`pay-check-${order.id}`}
-                        type="checkbox"
-                        checked={checkPay.has(order.id)}
-                        onChange={() =>
-                          handlePayCheck(
-                            order.id,
-                            (
-                              order.grandTotal - (order.amountPaid || 0)
-                            ).toFixed(2),
-                            order.grandTotal
-                          )
-                        }
-                        disabled={
-                          !canEditPayments() ||
-                          (remainingAmount <= 0 && !checkPay.has(order.id)) ||
-                          order.grandTotal - order.amountPaid <= 0
-                        }
-                      />
-                    </div>
-                  </td>
-                  <td className="text-right">
-                    {canEditPayments() && checkPay.has(order.id) ? (
-                      <input
-                        type="number"
-                        className="form-control form-control-sm text-right"
-                        value={orderPayments[order.id]?.payment || 0}
-                        onChange={(e) =>
-                          handlePaymentChange(
-                            order.id,
-                            "payment",
-                            e.target.value
-                          )
-                        }
-                        min="0"
-                        max={order.grandTotal - (order.amountPaid || 0)}
-                      />
-                    ) : orderPayments[order.id]?.payment > 0 ? (
-                      formatPeso(orderPayments[order.id]?.payment)
-                    ) : (
-                      ""
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {canEditPayments() && checkPay.has(order.id) ? (
-                      <input
-                        type="number"
-                        className="form-control form-control-sm text-right"
-                        value={orderPayments[order.id]?.wtax || 0}
-                        onChange={(e) =>
-                          handlePaymentChange(order.id, "wtax", e.target.value)
-                        }
-                        min="0"
-                      />
-                    ) : orderPayments[order.id]?.wtax > 0 ? (
-                      formatPeso(orderPayments[order.id]?.wtax)
-                    ) : (
-                      ""
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {(() => {
-                      const balance =
-                        order.grandTotal -
-                        (order.amountPaid || 0) -
-                        (orderPayments[order.id]?.payment || 0);
-                      return balance > 0 ? formatPeso(balance) : "";
-                    })()}
-                  </td>
-                  <td>
-                    {order.datePaid
-                      ? new Date(order.datePaid).toLocaleDateString()
-                      : ""}
-                  </td>
-                </tr>
-              ))}
+                      }}
+                    >
+                      {order.amountPaid > 0
+                        ? `₱${order.amountPaid.toLocaleString()}`
+                        : ""}
+                    </td>
+                    <td>{order.orNums || ""}</td>
+                    <td className="text-center">
+                      <div className="checkbox-container">
+                        <label
+                          htmlFor={`pay-check-${order.id}`}
+                          className="visually-hidden"
+                        >
+                          Select order {order.id} for payment
+                        </label>
+                        <input
+                          id={`pay-check-${order.id}`}
+                          type="checkbox"
+                          checked={checkPay.has(order.id)}
+                          onChange={() =>
+                            handlePayCheck(
+                              order.id,
+                              (
+                                order.grandTotal - (order.amountPaid || 0)
+                              ).toFixed(2),
+                              order.grandTotal
+                            )
+                          }
+                          disabled={
+                            !canEditPayments() ||
+                            (remainingAmount <= 0 && !checkPay.has(order.id)) ||
+                            order.grandTotal - order.amountPaid <= 0
+                          }
+                        />
+                      </div>
+                    </td>
+                    <td className="text-right">
+                      {canEditPayments() && checkPay.has(order.id) ? (
+                        <input
+                          type="number"
+                          className="form-control form-control-sm text-right"
+                          value={orderPayments[order.id]?.payment || 0}
+                          onChange={(e) =>
+                            handlePaymentChange(
+                              order.id,
+                              "payment",
+                              e.target.value
+                            )
+                          }
+                          min="0"
+                          max={order.grandTotal - (order.amountPaid || 0)}
+                        />
+                      ) : orderPayments[order.id]?.payment > 0 ? (
+                        formatPeso(orderPayments[order.id]?.payment)
+                      ) : (
+                        ""
+                      )}
+                    </td>
+                    <td className="text-right">
+                      {canEditPayments() && checkPay.has(order.id) ? (
+                        <input
+                          type="number"
+                          className="form-control form-control-sm text-right"
+                          value={orderPayments[order.id]?.wtax || 0}
+                          onChange={(e) =>
+                            handlePaymentChange(
+                              order.id,
+                              "wtax",
+                              e.target.value
+                            )
+                          }
+                          min="0"
+                        />
+                      ) : orderPayments[order.id]?.wtax > 0 ? (
+                        formatPeso(orderPayments[order.id]?.wtax)
+                      ) : (
+                        ""
+                      )}
+                    </td>
+                    <td className="text-right">
+                      {(() => {
+                        const balance =
+                          order.grandTotal -
+                          (order.amountPaid || 0) -
+                          (orderPayments[order.id]?.payment || 0);
+                        return balance > 0 ? formatPeso(balance) : "";
+                      })()}
+                    </td>
+                    <td>
+                      {order.datePaid
+                        ? new Date(order.datePaid).toLocaleDateString()
+                        : ""}
+                    </td>
+                  </tr>
+                );
+              })}
               {/* Totals row */}
               <tr className="table-info">
                 <td colSpan="10"></td>

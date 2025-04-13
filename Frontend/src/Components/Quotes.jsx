@@ -14,6 +14,7 @@ import { formatPeso } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
 import Modal from "./UI/Modal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
+import { getClientBackgroundStyle } from "../utils/clientOverdueStyle";
 
 function Quotes() {
   const navigate = useNavigate();
@@ -75,7 +76,32 @@ function Quotes() {
       console.log("QUOTES RESPONSE:", response.data);
 
       if (response.data.Status) {
-        setQuotes(response.data.Result.quotes || []);
+        // Process quotes to ensure hold and overdue dates are properly set
+        const processedQuotes = response.data.Result.quotes.map((quote) => {
+          // If hold or overdue dates are missing, fetch them from the client data
+          if (!quote.hold || !quote.overdue) {
+            return axios
+              .get(`${ServerIP}/auth/client/${quote.clientId}`)
+              .then((clientResponse) => {
+                if (clientResponse.data.Status) {
+                  const clientData = clientResponse.data.Result;
+                  return {
+                    ...quote,
+                    hold: clientData.hold || null,
+                    overdue: clientData.overdue || null,
+                  };
+                }
+                return quote;
+              })
+              .catch(() => quote); // If client fetch fails, return original quote
+          }
+          return Promise.resolve(quote);
+        });
+
+        // Wait for all client data fetches to complete
+        const quotesWithDates = await Promise.all(processedQuotes);
+
+        setQuotes(quotesWithDates);
         setTotalCount(response.data.Result.total || 0);
         setTotalPages(response.data.Result.totalPages || 0);
       } else {
@@ -430,67 +456,80 @@ function Quotes() {
               </tr>
             </thead>
             <tbody>
-              {quotes.map((quote) => (
-                <tr key={quote.id}>
-                  <td
-                    style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      navigate(`/dashboard/quotes/edit/${quote.id}`)
-                    }
-                  >
-                    {quote.id}
-                  </td>
-                  <td>{quote.quoteDate}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
+              {quotes.map((quote) => {
+                const currentDate = new Date();
+                const holdDate = new Date(quote.hold);
+                const overdueDate = new Date(quote.overdue);
+
+                const rowClass =
+                  currentDate > holdDate
+                    ? "table-danger"
+                    : currentDate > overdueDate
+                    ? "table-warning"
+                    : "";
+
+                return (
+                  <tr key={quote.id} className={rowClass}>
+                    <td
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        navigate(`/dashboard/quotes/edit/${quote.id}`)
                       }
-                    }}
-                    onMouseEnter={() => handleClientHover(quote.clientId)}
-                    onMouseLeave={handleClientLeave}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div>{quote.clientName}</div>
-                    {quote.customerName && (
-                      <div className="small text-muted">
-                        {quote.customerName}
-                      </div>
-                    )}
-                  </td>
-                  <td>{quote.projectName}</td>
-                  <td>{quote.orderedBy}</td>
-                  <td>
-                    {quote.dueDate
-                      ? new Date(quote.dueDate).toLocaleDateString()
-                      : ""}
-                  </td>
-                  <td>{quote.dueTime || ""}</td>
-                  <td className="text-center">
-                    <span className={`status-badge ${quote.status}`}>
-                      {quote.status}
-                    </span>
-                  </td>
-                  <td className="number_right">
-                    {quote.grandTotal
-                      ? `₱${quote.grandTotal.toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {quote.salesName}
-                  </td>
-                  <td>{quote.refId}</td>
-                </tr>
-              ))}
+                    >
+                      {quote.id}
+                    </td>
+                    <td>{quote.quoteDate}</td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (clientFilterRef.current) {
+                          clientFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      onMouseEnter={() => handleClientHover(quote.clientId)}
+                      onMouseLeave={handleClientLeave}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div>{quote.clientName}</div>
+                      {quote.customerName && (
+                        <div className="small text-muted">
+                          {quote.customerName}
+                        </div>
+                      )}
+                    </td>
+                    <td>{quote.projectName}</td>
+                    <td>{quote.orderedBy}</td>
+                    <td>
+                      {quote.dueDate
+                        ? new Date(quote.dueDate).toLocaleDateString()
+                        : ""}
+                    </td>
+                    <td>{quote.dueTime || ""}</td>
+                    <td className="text-center">
+                      <span className={`status-badge ${quote.status}`}>
+                        {quote.status}
+                      </span>
+                    </td>
+                    <td className="number_right">
+                      {quote.grandTotal
+                        ? `₱${quote.grandTotal.toLocaleString()}`
+                        : ""}
+                    </td>
+                    <td
+                      className="client-cell"
+                      onClick={(e) => {
+                        if (salesFilterRef.current) {
+                          salesFilterRef.current.toggleFilterMenu(e);
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {quote.salesName}
+                    </td>
+                    <td>{quote.refId}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

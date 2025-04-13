@@ -155,9 +155,11 @@ router.get("/quote/:id", async (req, res) => {
       q.*,
       DATE_FORMAT(q.quoteDate, '%Y-%m-%d') as quoteDate,
       DATE_FORMAT(q.dueDate, '%Y-%m-%d') as dueDate,
-        DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastEdited,
-        c.clientName,
-        e.name as PreparedBy
+      DATE_FORMAT(q.lastEdited, '%Y-%m-%d %H:%i:%s') as lastEdited,
+      c.clientName,
+      c.hold,
+      c.overdue,
+      e.name as PreparedBy
     FROM quotes q
     LEFT JOIN client c ON q.clientId = c.id
     LEFT JOIN employee e ON q.preparedBy = e.id

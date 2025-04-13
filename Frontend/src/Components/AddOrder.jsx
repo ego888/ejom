@@ -28,6 +28,7 @@ import axios from "../utils/axiosConfig"; // Import configured axios
 import StatusDropdown from "./UI/StatusDropdown";
 import Dropdown2 from "./UI/Dropdown2";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
+import { getClientBackgroundStyle } from "../utils/clientOverdueStyle";
 
 function AddOrder() {
   const navigate = useNavigate();
@@ -223,35 +224,28 @@ function AddOrder() {
 
     const fetchData = async () => {
       try {
-        const [clientsRes, salesRes, artistsRes] = await Promise.all([
-          axios.get(`${ServerIP}/auth/clients`, config),
-          axios.get(`${ServerIP}/auth/sales_employees`, config),
-          axios.get(`${ServerIP}/auth/artists`, config),
-        ]);
+        const [orderResponse, salesResponse, artistResponse] =
+          await Promise.all([
+            axios.get(`/auth/order/${id}`),
+            axios.get("/auth/employee/sales"),
+            axios.get("/auth/employee/artist"),
+          ]);
 
-        if (!isMounted) return;
-
-        if (clientsRes.data.Status) {
-          setClients(clientsRes.data.Result);
-        }
-        if (salesRes.data.Status) {
-          setSalesEmployees(salesRes.data.Result);
-        }
-        if (artistsRes.data.Status) {
-          setArtists(artistsRes.data.Result);
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        setAlert({
-          show: true,
-          title: "Error",
-          message: "Failed to fetch initial data",
-          type: "alert",
-        });
+        const orderData = orderResponse.data.Result[0];
+        setOrder(orderData);
+        setClient(orderData); // Use the client data from the order response
+        setSales(salesResponse.data.Result);
+        setArtist(artistResponse.data.Result);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setLoading(false);
       }
     };
 
-    fetchData();
+    if (id) {
+      fetchData();
+    }
 
     // Set current user
     if (token) {
@@ -265,7 +259,7 @@ function AddOrder() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1163,12 +1157,22 @@ function AddOrder() {
         if (result.data.Status) {
           const clientData = result.data.Result;
           console.log("Complete client data:", clientData);
-          setData((prev) => ({
-            ...prev,
-            clientId: id,
-            terms: clientData.terms,
-            customerName: clientData.customerName, // Add this line to update the customer name
-          }));
+          console.log("Hold date from API:", clientData.hold);
+          console.log("Overdue date from API:", clientData.overdue);
+
+          setData((prev) => {
+            console.log("Previous data:", prev);
+            const newData = {
+              ...prev,
+              clientId: id,
+              terms: clientData.terms,
+              customerName: clientData.customerName,
+              hold: clientData.hold,
+              overdue: clientData.overdue,
+            };
+            console.log("New data being set:", newData);
+            return newData;
+          });
         }
       })
       .catch((err) => handleApiError(err, navigate));
@@ -1685,7 +1689,11 @@ function AddOrder() {
               </div>
               <div className="col-4">
                 <div className="d-flex flex-column">
-                  <label htmlFor="clientId" className="form-label">
+                  <label
+                    htmlFor="clientId"
+                    className={`form-label`}
+                    style={getClientBackgroundStyle(data)}
+                  >
                     Client <span className="text-danger">*</span>
                   </label>
                   <Dropdown2
@@ -1714,7 +1722,11 @@ function AddOrder() {
               </div>
               <div className="col-8">
                 <div className="d-flex flex-column">
-                  <label htmlFor="customerName" className="form-label">
+                  <label
+                    htmlFor="customerName"
+                    className="form-label"
+                    style={getClientBackgroundStyle(data)}
+                  >
                     Customer Name
                   </label>
                   <input

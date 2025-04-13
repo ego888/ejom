@@ -229,6 +229,8 @@ router.get("/orders", async (req, res) => {
             o.clientId, 
             c.clientName, 
             c.customerName,
+            c.hold,
+            c.overdue,
             o.projectName, 
             o.orderedBy, 
             o.orderDate, 
@@ -311,6 +313,8 @@ router.get("/order/:id", async (req, res) => {
       DATE_FORMAT(o.readyDate, '%Y-%m-%d %H:%i:%s') as readyDate,
       c.clientName,
       c.customerName,
+      c.hold,
+      c.overdue,
       e.name as preparedByName,
       e2.name as graphicsByName
     FROM orders o
@@ -485,6 +489,8 @@ router.get("/orders-details-forprod", async (req, res) => {
         o.dueTime,
         c.clientName,
         c.customerName,
+        c.overdue,
+        c.hold,
         od.quantity,
         od.width,
         od.height,

@@ -13,6 +13,7 @@ async function updateClientAging() {
 
   const agingMap = new Map();
 
+  // Group orders by client and bucket them by age
   for (const order of orders) {
     const { orderId, clientId, grandTotal, amountPaid, productionDate } = order;
     if (!clientId || !productionDate) {
@@ -54,51 +55,69 @@ async function updateClientAging() {
     return;
   }
 
+  // Update each client with their aging values + warning/hold dates
   for (const [clientId, aging] of agingMap.entries()) {
+    // Get client terms and days
     const [clientRows] = await db.query(
-      `SELECT warningDate, holdDate FROM client WHERE id = ?`,
+      `SELECT c.overdue, c.hold, c.terms, pt.days as termsDays
+       FROM client c
+       LEFT JOIN paymentTerms pt ON c.terms = pt.terms
+       WHERE c.id = ?`,
       [clientId]
     );
     const client = clientRows[0] || {};
 
-    let warningDate = client.warningDate;
-    let holdDate = client.holdDate;
+    // Get oldest unpaid production date
+    const [oldestUnpaid] = await db.query(
+      `SELECT MIN(productionDate) as oldestProdDate
+       FROM orders
+       WHERE clientId = ? AND status IN ('Delivered', 'Billed') AND (grandTotal - amountPaid) > 0`,
+      [clientId]
+    );
 
-    const overdue = aging["61-90"] > 0 || aging.moreThan90 > 0;
+    const oldestProductionDate = oldestUnpaid[0]?.oldestProdDate
+      ? new Date(oldestUnpaid[0].oldestProdDate)
+      : null;
 
-    if (overdue) {
-      if (!client.warningDate) warningDate = now;
-      if (!client.holdDate) {
-        holdDate = new Date();
-        holdDate.setDate(now.getDate() + 7);
-      }
+    let overdue = null;
+    let hold = null;
 
-      console.log(`Updating client ${clientId} with:`);
-      console.log(`  31-60: ${aging["31-60"]}`);
-      console.log(`  61-90: ${aging["61-90"]}`);
-      console.log(`  >90  : ${aging.moreThan90}`);
-      console.log(`  warningDate: ${warningDate}`);
-      console.log(`  holdDate   : ${holdDate}`);
-    } else {
-      warningDate = null;
-      holdDate = null;
+    if (oldestProductionDate) {
+      // overdue = oldest unpaid productionDate + terms.days
+      overdue = new Date(oldestProductionDate);
+      overdue.setDate(overdue.getDate() + client.termsDays);
+
+      // hold = overdue + 7 days
+      hold = new Date(overdue);
+      hold.setDate(overdue.getDate() + 7);
     }
+
+    console.log(`Updating client ${clientId} with:`);
+    console.log(`  31-60: ${aging["31-60"]}`);
+    console.log(`  61-90: ${aging["61-90"]}`);
+    console.log(`  >90  : ${aging.moreThan90}`);
+    console.log(`  overdue: ${overdue}`);
+    console.log(`  hold   : ${hold}`);
 
     const [result] = await db.query(
       `
       UPDATE client
       SET \`31-60\` = ?, \`61-90\` = ?, \`moreThan90\` = ?,
-          warningDate = ?, holdDate = ?
+          overdue = ?, hold = ?
       WHERE id = ?
-    `,
+      `,
       [
         aging["31-60"],
         aging["61-90"],
         aging.moreThan90,
-        overdue ? warningDate : null,
-        overdue ? holdDate : null,
+        overdue,
+        hold,
         clientId,
       ]
+    );
+
+    console.log(
+      `→ Client ${clientId} updated. Rows affected: ${result.affectedRows}`
     );
   }
 

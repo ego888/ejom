@@ -57,7 +57,26 @@ router.get("/client/:id", verifyUser, async (req, res) => {
   try {
     const id = req.params.id;
     const sql = `
-      SELECT c.*, e.name as salesName
+      SELECT 
+        c.id,
+        c.clientName,
+        c.customerName,
+        c.contact,
+        c.telNo,
+        c.faxNo,
+        c.celNo,
+        c.email,
+        c.arContact,
+        c.arTelNo,
+        c.arFaxNo,
+        c.tinNumber,
+        c.notes,
+        c.terms,
+        c.salesId,
+        c.creditLimit,
+        c.hold,
+        c.overdue,
+        e.name as salesName
       FROM client c 
       LEFT JOIN employee e ON c.salesId = e.id
       WHERE c.id = ?
@@ -68,6 +87,14 @@ router.get("/client/:id", verifyUser, async (req, res) => {
     if (clients.length === 0) {
       return res.json({ Status: false, Error: "Client not found" });
     }
+
+    // Add debug logging
+    console.log("Client data from database:", {
+      id: clients[0].id,
+      clientName: clients[0].clientName,
+      hold: clients[0].hold,
+      overdue: clients[0].overdue,
+    });
 
     return res.json({ Status: true, Result: clients[0] });
   } catch (err) {
