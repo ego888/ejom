@@ -342,4 +342,25 @@ router.get("/billing", verifyUser, async (req, res) => {
   }
 });
 
+// Get total amount for a specific invoice number
+router.get(
+  "/billing-invoice-total/:invoicePrefix/:invoiceNumber",
+  verifyUser,
+  async (req, res) => {
+    try {
+      const { invoicePrefix, invoiceNumber } = req.params;
+      const query = `
+      SELECT SUM(invoiceAmount) as total_amount
+      FROM invoice
+      WHERE invoicePrefix = ? AND invoiceNumber = ?
+    `;
+      const [result] = await pool.query(query, [invoicePrefix, invoiceNumber]);
+      res.json({ Status: true, Result: result[0]?.total_amount || 0 });
+    } catch (error) {
+      console.error("Error fetching invoice total:", error);
+      res.json({ Status: false, Error: error.message });
+    }
+  }
+);
+
 export default router;

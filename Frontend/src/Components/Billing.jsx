@@ -9,6 +9,8 @@ import StatusBadges from "./UI/StatusBadges";
 import { formatPeso, formatNumber, formatDate } from "../utils/orderUtils";
 import "./style.css";
 import "./Billing.css";
+import Modal from "./UI/Modal";
+
 function Billing() {
   const navigate = useNavigate();
   const [billing, setBilling] = useState([]);
@@ -22,6 +24,10 @@ function Billing() {
     key: "invoiceNumber",
     direction: "desc",
   });
+  const [showInvoiceTotalModal, setShowInvoiceTotalModal] = useState(false);
+  const [selectedInvoiceTotal, setSelectedInvoiceTotal] = useState(null);
+  const [hoverTimer, setHoverTimer] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     fetchBilling();
@@ -74,6 +80,47 @@ function Billing() {
       return sortConfig.direction === "asc" ? " ↑" : " ↓";
     }
     return "";
+  };
+
+  const handleInvoiceHover = async (invoicePrefix, invoiceNumber, event) => {
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+    }
+
+    // Get mouse position
+    const rect = event.target.getBoundingClientRect();
+    setTooltipPosition({
+      x: event.clientX + 15,
+      y: event.clientY,
+    });
+
+    const timer = setTimeout(async () => {
+      try {
+        const response = await axios.get(
+          `${ServerIP}/auth/billing-invoice-total/${invoicePrefix}/${invoiceNumber}`
+        );
+        console.log("Invoice total response", response.data);
+        if (response.data.Status) {
+          setSelectedInvoiceTotal(response.data.Result);
+          setShowInvoiceTotalModal(true);
+        } else {
+          console.error("Error fetching invoice total:", response.data.Error);
+          setSelectedInvoiceTotal(0);
+        }
+      } catch (error) {
+        console.error("Error fetching invoice total:", error);
+        setSelectedInvoiceTotal(0);
+      }
+    }, 500);
+
+    setHoverTimer(timer);
+  };
+
+  const handleInvoiceLeave = () => {
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+    }
+    setShowInvoiceTotalModal(false);
   };
 
   return (
@@ -163,7 +210,17 @@ function Billing() {
                   <tr
                     key={`${item.invoicePrefix}-${item.invoiceNumber}-${item.orderID}-${index}`}
                   >
-                    <td>
+                    <td
+                      onMouseEnter={(event) =>
+                        handleInvoiceHover(
+                          item.invoicePrefix,
+                          item.invoiceNumber,
+                          event
+                        )
+                      }
+                      onMouseLeave={handleInvoiceLeave}
+                      style={{ cursor: "pointer" }}
+                    >
                       {isFirstOccurrence
                         ? `${item.invoicePrefix}${item.invoiceNumber}`
                         : null}
@@ -221,6 +278,20 @@ function Billing() {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      <Modal
+        variant="tooltip"
+        show={showInvoiceTotalModal}
+        onClose={() => setShowInvoiceTotalModal(false)}
+        title="Invoice Total"
+        position={tooltipPosition}
+      >
+        <div className="p-3">
+          <div className="text-center">
+            Total Amount: {formatPeso(selectedInvoiceTotal)}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
