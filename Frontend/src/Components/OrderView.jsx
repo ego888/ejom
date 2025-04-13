@@ -636,52 +636,74 @@ function OrderView() {
                 </tr>
               </thead>
               <tbody>
-                {orderDetails.map((detail) => (
-                  <tr
-                    key={`${detail.orderId}_${detail.displayOrder}`}
-                    className={detail.noPrint === 1 ? "no-print" : ""}
-                  >
-                    <td className="centered-cell">
-                      {Number(detail.quantity).toLocaleString()}
-                    </td>
-                    <td className="centered-cell">{detail.width}</td>
-                    <td className="centered-cell">{detail.height}</td>
-                    <td className="centered-cell">{detail.unit}</td>
-                    <td className="centered-cell">{detail.material}</td>
-                    <td className="centered-cell">{detail.perSqFt}</td>
-                    <td className="numeric-cell">
-                      {formatNumber(detail.unitPrice)}
-                    </td>
-                    <td className="numeric-cell">
-                      {formatNumber(detail.discount)}
-                    </td>
-                    <td className="numeric-cell">
-                      {formatNumber(detail.amount)}
-                    </td>
-                    <td>{detail.itemDescription}</td>
-                    <td>{detail.remarks}</td>
-                    <td className="text-center">
-                      <Button
-                        variant="view"
-                        iconOnly
-                        size="sm"
-                        icon={<BiRectangle size={14} />}
-                        onMouseOver={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setTooltipPosition({
-                            x: rect.left + 25,
-                            y: rect.top + window.scrollY - 82,
-                          });
-                          setTooltipDetail(detail);
-                          setShowAllowanceTooltip(true);
-                        }}
-                        onMouseLeave={() => {
-                          setShowAllowanceTooltip(false);
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {orderDetails.map((detail) => {
+                  const currentDate = new Date();
+                  currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
+
+                  // Safely handle hold and overdue dates
+                  const holdDate = detail.hold ? new Date(detail.hold) : null;
+                  const overdueDate = detail.overdue
+                    ? new Date(detail.overdue)
+                    : null;
+
+                  // Only apply styling if dates are valid
+                  const rowClass =
+                    holdDate && currentDate > holdDate
+                      ? "table-danger"
+                      : overdueDate && currentDate > overdueDate
+                      ? "table-warning"
+                      : "";
+
+                  return (
+                    <tr
+                      key={`${detail.orderId}_${detail.displayOrder}`}
+                      className={`${rowClass} ${
+                        detail.noPrint === 1 ? "no-print" : ""
+                      }`}
+                    >
+                      <td className="centered-cell">
+                        {Number(detail.quantity).toLocaleString()}
+                      </td>
+                      <td className="centered-cell">{detail.width}</td>
+                      <td className="centered-cell">{detail.height}</td>
+                      <td className="centered-cell">{detail.unit}</td>
+                      <td className="centered-cell">{detail.material}</td>
+                      <td className="centered-cell">{detail.perSqFt}</td>
+                      <td className="numeric-cell">
+                        {formatNumber(detail.unitPrice)}
+                      </td>
+                      <td className="numeric-cell">
+                        {formatNumber(detail.discount)}
+                      </td>
+                      <td className="numeric-cell">
+                        {formatNumber(detail.amount)}
+                      </td>
+                      <td>{detail.itemDescription}</td>
+                      <td>{detail.remarks}</td>
+                      <td className="text-center">
+                        <Button
+                          variant="view"
+                          iconOnly
+                          size="sm"
+                          icon={<BiRectangle size={14} />}
+                          onMouseOver={(e) => {
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            setTooltipPosition({
+                              x: rect.left + 25,
+                              y: rect.top + window.scrollY - 82,
+                            });
+                            setTooltipDetail(detail);
+                            setShowAllowanceTooltip(true);
+                          }}
+                          onMouseLeave={() => {
+                            setShowAllowanceTooltip(false);
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
                 <tr style={{ borderTop: "2px solid lightgrey" }}>
                   <td colSpan="8" className="text-end pe-2">
                     Subtotal:

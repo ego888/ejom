@@ -155,6 +155,21 @@ function OrderView() {
     document.getElementById("other-info-tab").click();
   };
 
+  const currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
+
+  // Safely handle hold and overdue dates
+  const holdDate = data.hold ? new Date(data.hold) : null;
+  const overdueDate = data.overdue ? new Date(data.overdue) : null;
+
+  // Only apply styling if dates are valid
+  const rowClass =
+    holdDate && currentDate > holdDate
+      ? "table-danger"
+      : overdueDate && currentDate > overdueDate
+      ? "table-warning"
+      : "";
+
   return (
     <div
       className="prod-page-background"
@@ -489,7 +504,9 @@ function OrderView() {
                     {orderDetails.map((detail) => (
                       <tr
                         key={`${detail.orderId}_${detail.displayOrder}`}
-                        className={detail.noPrint === 1 ? "no-print" : ""}
+                        className={`${rowClass} ${
+                          detail.noPrint === 1 ? "no-print" : ""
+                        }`}
                       >
                         <td className="centered-cell">
                           {Number(detail.quantity).toLocaleString()}

@@ -490,14 +490,14 @@ function Orders() {
                 const overdueDate = new Date(order.overdue);
 
                 const rowClass =
-                  currentDate > holdDate
+                  currentDate > holdDate && order.hold
                     ? "table-danger"
-                    : currentDate > overdueDate
+                    : currentDate > overdueDate && order.overdue
                     ? "table-warning"
                     : "";
 
                 return (
-                  <tr key={index} className={rowClass}>
+                  <tr key={order.id} className={rowClass}>
                     <td
                       style={{ cursor: "pointer" }}
                       onClick={() =>

@@ -458,13 +458,19 @@ function Quotes() {
             <tbody>
               {quotes.map((quote) => {
                 const currentDate = new Date();
-                const holdDate = new Date(quote.hold);
-                const overdueDate = new Date(quote.overdue);
+                currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
 
+                // Safely handle hold and overdue dates
+                const holdDate = quote.hold ? new Date(quote.hold) : null;
+                const overdueDate = quote.overdue
+                  ? new Date(quote.overdue)
+                  : null;
+
+                // Only apply styling if dates are valid
                 const rowClass =
-                  currentDate > holdDate
+                  holdDate && currentDate > holdDate
                     ? "table-danger"
-                    : currentDate > overdueDate
+                    : overdueDate && currentDate > overdueDate
                     ? "table-warning"
                     : "";
 
