@@ -359,7 +359,7 @@ const SOA = () => {
                   <td className="text-end">Total:</td>
                   <td className="text-end">
                     {formatPeso(
-                      reportData.reduce(
+                      filteredData().reduce(
                         (sum, row) => sum + (Number(row.production) || 0),
                         0
                       )
@@ -367,7 +367,7 @@ const SOA = () => {
                   </td>
                   <td className="text-end">
                     {formatPeso(
-                      reportData.reduce(
+                      filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_0_30) || 0),
                         0
                       )
@@ -375,7 +375,7 @@ const SOA = () => {
                   </td>
                   <td className="text-end">
                     {formatPeso(
-                      reportData.reduce(
+                      filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_31_60) || 0),
                         0
                       )
@@ -383,7 +383,7 @@ const SOA = () => {
                   </td>
                   <td className="text-end">
                     {formatPeso(
-                      reportData.reduce(
+                      filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_61_90) || 0),
                         0
                       )
@@ -391,7 +391,7 @@ const SOA = () => {
                   </td>
                   <td className="text-end">
                     {formatPeso(
-                      reportData.reduce(
+                      filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_over_90) || 0),
                         0
                       )
@@ -399,7 +399,7 @@ const SOA = () => {
                   </td>
                   <td className="text-end">
                     {formatPeso(
-                      reportData.reduce(
+                      filteredData().reduce(
                         (sum, row) => sum + (Number(row.total_ar) || 0),
                         0
                       )
