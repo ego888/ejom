@@ -866,10 +866,11 @@ function Prod() {
                     <td
                       style={{ cursor: "pointer" }}
                       onClick={() =>
-                        navigate(`/dashboard/orders/edit/${order.id}`)
+                        navigate(`/dashboard/prod/view/${order.id}`)
                       }
                     >
                       {order.id}
+                      {order.revision > 0 && `-${order.revision}`}
                     </td>
                     <td>{formatDate(order.productionDate)}</td>
                     <td

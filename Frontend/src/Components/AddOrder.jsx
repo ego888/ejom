@@ -128,6 +128,9 @@ function AddOrder() {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
 
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const statusOptions = [
     "Open",
     "Printed",
@@ -226,16 +229,19 @@ function AddOrder() {
       try {
         const [orderResponse, salesResponse, artistResponse] =
           await Promise.all([
-            axios.get(`/auth/order/${id}`),
-            axios.get("/auth/employee/sales"),
-            axios.get("/auth/employee/artist"),
+            axios.get(`${ServerIP}/auth/order/${id}`, config),
+            axios.get(`${ServerIP}/auth/sales_employees`, config),
+            axios.get(`${ServerIP}/auth/artists`, config),
           ]);
 
+        console.log("SALES", salesResponse);
+
+        console.log("ARTIST", artistResponse);
         const orderData = orderResponse.data.Result[0];
         setOrder(orderData);
         setClient(orderData); // Use the client data from the order response
-        setSales(salesResponse.data.Result);
-        setArtist(artistResponse.data.Result);
+        setSalesEmployees(salesResponse.data.Result);
+        setArtists(artistResponse.data.Result);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
