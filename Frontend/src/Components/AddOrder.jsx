@@ -213,6 +213,9 @@ function AddOrder() {
       .catch((err) => handleApiError(err, "Fetch Order Details"));
   };
 
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     let isMounted = true;
     const token = localStorage.getItem("token");
@@ -224,10 +227,10 @@ function AddOrder() {
 
     const fetchData = async () => {
       try {
-        if (!id) {
-          setLoading(false);
-          return;
-        }
+        // if (!id) {
+        //   setLoading(false);
+        //   return;
+        // }
 
         const [orderResponse, salesResponse, artistResponse, clientsResponse] =
           await Promise.all([
@@ -264,9 +267,7 @@ function AddOrder() {
       }
     };
 
-    if (id) {
-      fetchData();
-    }
+    fetchData();
 
     // Set current user
     if (token) {
