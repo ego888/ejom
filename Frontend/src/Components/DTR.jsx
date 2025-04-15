@@ -126,9 +126,9 @@ const DTR = () => {
       console.log(`Exporting batch: ${batch.id} - ${batch.batchName}`);
 
       // Fetch all the entries for this batch
-      const response = await axios.get(
-        `${ServerIP}/auth/dtr/export/${batch.id}`
-      );
+      const response = await Promise.all([
+        axios.get(`${ServerIP}/auth/dtr/export/${batch.id}`),
+      ]);
 
       if (
         !response.data.Status ||
