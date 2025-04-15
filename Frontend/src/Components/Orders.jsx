@@ -516,18 +516,32 @@ function Orders() {
             <tbody>
               {orders.map((order, index) => {
                 const currentDate = new Date();
-                const holdDate = new Date(order.hold);
-                const overdueDate = new Date(order.overdue);
+                const holdDate = new Date(order.holdDate);
+                // const overdueDate = new Date(order.overdue);
+                const warningDate = new Date(order.warningDate);
+                console.log("warningDate", warningDate);
 
                 const rowClass =
-                  currentDate > holdDate && order.hold
+                  currentDate > holdDate && order.holdDate
                     ? "table-danger"
-                    : currentDate > overdueDate && order.overdue
+                    : currentDate > warningDate && order.warningDate
                     ? "table-warning"
                     : "";
 
                 return (
-                  <tr key={order.id} className={rowClass}>
+                  <tr
+                    key={order.id}
+                    className={rowClass}
+                    style={{
+                      fontWeight:
+                        new Date() > new Date(order.warningDate) &&
+                        order.grandTotal > order.amountPaid &&
+                        (order.status === "Delivered" ||
+                          order.status === "Billed")
+                          ? "bold"
+                          : "normal",
+                    }}
+                  >
                     <td
                       style={{ cursor: "pointer" }}
                       onClick={() =>

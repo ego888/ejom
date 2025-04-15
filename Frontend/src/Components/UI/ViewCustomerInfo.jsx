@@ -262,17 +262,17 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
                 <div className="col-4">
                   <div className="d-flex flex-column">
                     <label htmlFor="view-client" className="form-label">
-                      Last Transaction
+                      Hold Date
                     </label>
                     <div id="view-client" className="form-input">
-                      {formatDate(clientInfo.lastTransaction) || ""}
+                      {formatDate(clientInfo.hold) || ""}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="row mb-3">
-                <div className="col-4">
+                <div className="col-3">
                   <div className="d-flex flex-column">
                     <label htmlFor="view-client" className="form-label">
                       Last Payment Amount
@@ -282,7 +282,7 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
                     </div>
                   </div>
                 </div>
-                <div className="col-4">
+                <div className="col-3">
                   <div className="d-flex flex-column">
                     <label htmlFor="view-client" className="form-label">
                       Last Payment Date
@@ -292,13 +292,24 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
                     </div>
                   </div>
                 </div>
-                <div className="col-4">
+                <div className="col-3">
                   <div className="d-flex flex-column">
                     <label htmlFor="view-client" className="form-label">
                       Last Updated
                     </label>
                     <div id="view-client" className="form-input">
                       {formatDate(clientInfo.lastUpdated) || ""}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-3">
+                  <div className="d-flex flex-column">
+                    <label htmlFor="view-client" className="form-label">
+                      Last Transaction
+                    </label>
+                    <div id="view-client" className="form-input">
+                      {formatDate(clientInfo.lastTransaction) || ""}
                     </div>
                   </div>
                 </div>
