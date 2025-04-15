@@ -302,9 +302,7 @@ const DTRTotalView = ({ entries, batch, holidays }) => {
     XLSX.utils.book_append_sheet(wb, wsSummary, "DTR Summary");
 
     // Generate filename with batch name and date
-    const filename = `${batch.batchName}_${
-      new Date().toISOString().split("T")[0]
-    }.xlsx`;
+    const filename = `${batch.batchName}.xlsx`;
 
     // Save the file
     XLSX.writeFile(wb, filename);

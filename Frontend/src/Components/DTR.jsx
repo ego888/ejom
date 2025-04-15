@@ -4,7 +4,7 @@ import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
 import "./DTR.css";
-import DTRUploader from "./DTRUploader";
+// import DTRUploader from "./DTRUploader";
 import DTRBatchList from "./DTRBatchList";
 import DTRSummaryReport from "./DTRSummaryReport";
 import DTRDetailReport from "./DTRDetailReport";
@@ -262,11 +262,14 @@ const DTR = () => {
     // Don't generate a new name if editing an existing batch
     if (isEditingExistingBatch) return;
 
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${(now.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")}`;
-    setBatchName(`DTR Batch ${formattedDate}`);
+    const formatDate = (date) => {
+      const d = new Date(date);
+      return `${d.getFullYear()}${(d.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
+    };
+
+    setBatchName(`DTR ${formatDate(periodStart)}-${formatDate(periodEnd)}`);
   };
 
   const resetUploadForm = () => {
@@ -462,6 +465,43 @@ const DTR = () => {
                 <form onSubmit={handleUpload}>
                   <div className="row mb-3">
                     <div className="col-md-12">
+                      <div className="row mb-3">
+                        <div className="col-md-6">
+                          <div className="mb-3">
+                            <label
+                              htmlFor="period-start"
+                              className="form-label"
+                            >
+                              Period Start:
+                            </label>
+                            <input
+                              id="period-start"
+                              type="date"
+                              value={periodStart}
+                              onChange={(e) => setPeriodStart(e.target.value)}
+                              className="form-control"
+                              required
+                              readOnly={isEditingExistingBatch}
+                            />
+                          </div>
+                        </div>
+                        <div className="col-md-6">
+                          <div className="mb-3">
+                            <label htmlFor="period-end" className="form-label">
+                              Period End:
+                            </label>
+                            <input
+                              id="period-end"
+                              type="date"
+                              value={periodEnd}
+                              onChange={(e) => setPeriodEnd(e.target.value)}
+                              className="form-control"
+                              required
+                              readOnly={isEditingExistingBatch}
+                            />
+                          </div>
+                        </div>
+                      </div>
                       <div className="mb-3">
                         <label htmlFor="batch-name" className="form-label">
                           Batch Name:
@@ -489,41 +529,6 @@ const DTR = () => {
                             </Button>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="row mb-3">
-                    <div className="col-md-6">
-                      <div className="mb-3">
-                        <label htmlFor="period-start" className="form-label">
-                          Period Start:
-                        </label>
-                        <input
-                          id="period-start"
-                          type="date"
-                          value={periodStart}
-                          onChange={(e) => setPeriodStart(e.target.value)}
-                          className="form-control"
-                          required
-                          readOnly={isEditingExistingBatch}
-                        />
-                      </div>
-                    </div>
-                    <div className="col-md-6">
-                      <div className="mb-3">
-                        <label htmlFor="period-end" className="form-label">
-                          Period End:
-                        </label>
-                        <input
-                          id="period-end"
-                          type="date"
-                          value={periodEnd}
-                          onChange={(e) => setPeriodEnd(e.target.value)}
-                          className="form-control"
-                          required
-                          readOnly={isEditingExistingBatch}
-                        />
                       </div>
                     </div>
                   </div>

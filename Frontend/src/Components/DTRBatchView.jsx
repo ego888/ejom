@@ -1207,9 +1207,6 @@ const DTRBatchView = ({ batch, onBack }) => {
       <Button variant="view" onClick={handleCalculateHours} disabled={loading}>
         Calculate Hours
       </Button>
-      {/* <Button variant="add" onClick={handleSundayHoliday} disabled={loading}>
-        Sunday/Holiday
-      </Button> */}
       <Button
         variant="danger"
         onClick={handleReset}
