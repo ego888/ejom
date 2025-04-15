@@ -296,7 +296,8 @@ const Dashboard = () => {
         WIPLOG,
         ARTISTLOG,
         PRINTLOG,
-        REPORTS_PRODUCTION
+        REPORTS_PRODUCTION,
+        SOA
       );
     } else if (permissions.isArtist) {
       items.push(ARTISTLOG);
