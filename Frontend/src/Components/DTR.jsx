@@ -38,7 +38,9 @@ const DTR = () => {
     setError(null);
     try {
       console.log("Fetching batches from:", `${ServerIP}/auth/dtr/batches`);
-      const response = await axios.get(`${ServerIP}/auth/dtr/batches`);
+      const response = await Promise.all([
+        axios.get(`${ServerIP}/auth/dtr/batches`),
+      ]);
       console.log("Batch response:", response.data);
 
       // Always initialize with an empty array if we get no batches
