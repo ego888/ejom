@@ -1258,21 +1258,31 @@ function Prod() {
                 currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
 
                 // Safely handle hold and overdue dates
-                const holdDate = order.hold ? new Date(order.hold) : null;
-                const overdueDate = order.overdue
-                  ? new Date(order.overdue)
-                  : null;
+                const holdDate = new Date(order.holdDate);
+                const warningDate = new Date(order.warningDate);
+                console.log("warningDate", warningDate);
 
-                // Only apply styling if dates are valid
                 const rowClass =
-                  holdDate && currentDate > holdDate
+                  currentDate > holdDate && order.holdDate
                     ? "table-danger"
-                    : overdueDate && currentDate > overdueDate
+                    : currentDate > warningDate && order.warningDate
                     ? "table-warning"
                     : "";
 
                 return (
-                  <tr key={order.id} className={rowClass}>
+                  <tr
+                    key={order.id}
+                    className={rowClass}
+                    style={{
+                      fontWeight:
+                        new Date() > new Date(order.warningDate) &&
+                        order.grandTotal > order.amountPaid &&
+                        (order.status === "Delivered" ||
+                          order.status === "Billed")
+                          ? "bold"
+                          : "normal",
+                    }}
+                  >
                     <td
                       style={{ cursor: "pointer" }}
                       onClick={() =>

@@ -517,7 +517,6 @@ function Orders() {
               {orders.map((order, index) => {
                 const currentDate = new Date();
                 const holdDate = new Date(order.holdDate);
-                // const overdueDate = new Date(order.overdue);
                 const warningDate = new Date(order.warningDate);
                 console.log("warningDate", warningDate);
 
