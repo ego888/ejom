@@ -162,151 +162,149 @@ const DTRTotalView = ({ entries, batch, holidays }) => {
     // Define number format for 2 decimal places, hiding zeros
     const numberFormat = "0.00;-0.00;;@";
 
-    if (showAllRows) {
-      // Export detailed view
-      const detailedData = totals.flatMap((employee) => {
-        const employeeRows = employee.entries.map((entry) => ({
-          ID: entry.empId,
-          Name: entry.empName,
-          "Effective Hours": entry.effectiveHours,
-          "Effective OT": entry.effectiveOT,
-          Date: formatDate(entry.date),
-          Day: entry.day,
-          "Time In": formatTime(entry.timeIn),
-          "Time Out": formatTime(entry.timeOut),
-          Hours: entry.hours,
-          OT: entry.overtime,
-          "Sun Hours": entry.sundayHours,
-          "Sun OT": entry.sundayOT,
-          "Holiday Hours": entry.holidayHours,
-          "Holiday OT": entry.holidayOT,
-          "Holiday Type": entry.holidayType,
-          "Night Diff": entry.nightDifferential,
-          Remarks: entry.remarks,
-        }));
+    // Export detailed view
+    const detailedData = totals.flatMap((employee) => {
+      const employeeRows = employee.entries.map((entry) => ({
+        ID: entry.empId,
+        Name: entry.empName,
+        "Effective Hours": entry.effectiveHours,
+        "Effective OT": entry.effectiveOT,
+        Date: formatDate(entry.date),
+        Day: entry.day,
+        "Time In": formatTime(entry.timeIn),
+        "Time Out": formatTime(entry.timeOut),
+        Hours: entry.hours,
+        OT: entry.overtime,
+        "Sun Hours": entry.sundayHours,
+        "Sun OT": entry.sundayOT,
+        "Holiday Hours": entry.holidayHours,
+        "Holiday OT": entry.holidayOT,
+        "Holiday Type": entry.holidayType,
+        "Night Diff": entry.nightDifferential,
+        Remarks: entry.remarks,
+      }));
 
-        // Add employee totals row
-        employeeRows.push({
-          ID: employee.empId,
-          Name: employee.empName,
-          "Effective Hours": employee.totals.effectiveHours,
-          "Effective OT": employee.totals.effectiveOT,
-          Date: "TOTAL",
-          Day: "",
-          "Time In": "",
-          "Time Out": "",
-          Hours: employee.totals.hours,
-          OT: employee.totals.overtime,
-          "Sun Hours": employee.totals.sundayHours,
-          "Sun OT": employee.totals.sundayOT,
-          "Holiday Hours": employee.totals.holidayHours,
-          "Holiday OT": employee.totals.holidayOT,
-          "Holiday Type": "",
-          "Night Diff": employee.totals.nightDifferential,
-          Remarks: `Period Hours: ${employee.totals.periodHours}`,
-        });
-
-        return employeeRows;
-      });
-
-      // Add grand total row
-      detailedData.push({
-        ID: "",
-        Name: "GRAND TOTAL",
-        "Effective Hours": grandTotal.effectiveHours,
-        "Effective OT": grandTotal.effectiveOT,
-        Date: "",
-        Day: "",
-        "Time In": "",
-        "Time Out": "",
-        Hours: grandTotal.hours,
-        OT: grandTotal.overtime,
-        "Sun Hours": grandTotal.sundayHours,
-        "Sun OT": grandTotal.sundayOT,
-        "Holiday Hours": grandTotal.holidayHours,
-        "Holiday OT": grandTotal.holidayOT,
-        "Holiday Type": "",
-        "Night Diff": grandTotal.nightDifferential,
-        Remarks: `Period Hours: ${grandTotal.periodHours}`,
-      });
-
-      const ws = XLSX.utils.json_to_sheet(detailedData);
-
-      // Set number format for numeric columns
-      const numericColumns = ["C", "D", "H", "I", "J", "K", "L", "M", "O"];
-      const range = XLSX.utils.decode_range(ws["!ref"]);
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const col = XLSX.utils.encode_col(C);
-        if (numericColumns.includes(col)) {
-          for (let R = range.s.r; R <= range.e.r; ++R) {
-            const cell_address = { c: C, r: R };
-            const cell_ref = XLSX.utils.encode_cell(cell_address);
-            if (ws[cell_ref]) {
-              ws[cell_ref].z = numberFormat;
-            }
-          }
-        }
-      }
-
-      XLSX.utils.book_append_sheet(wb, ws, "DTR Details");
-    } else {
-      // Export summary view
-      const summaryData = totals.map((employee) => ({
+      // Add employee totals row
+      employeeRows.push({
         ID: employee.empId,
         Name: employee.empName,
         "Effective Hours": employee.totals.effectiveHours,
         "Effective OT": employee.totals.effectiveOT,
+        Date: "TOTAL",
+        Day: "",
+        "Time In": "",
+        "Time Out": "",
         Hours: employee.totals.hours,
         OT: employee.totals.overtime,
         "Sun Hours": employee.totals.sundayHours,
         "Sun OT": employee.totals.sundayOT,
         "Holiday Hours": employee.totals.holidayHours,
         "Holiday OT": employee.totals.holidayOT,
+        "Holiday Type": "",
         "Night Diff": employee.totals.nightDifferential,
-        "Period Hours": employee.totals.periodHours,
-      }));
-
-      // Add grand total row
-      summaryData.push({
-        ID: "",
-        Name: "GRAND TOTAL",
-        "Effective Hours": grandTotal.effectiveHours,
-        "Effective OT": grandTotal.effectiveOT,
-        Hours: grandTotal.hours,
-        OT: grandTotal.overtime,
-        "Sun Hours": grandTotal.sundayHours,
-        "Sun OT": grandTotal.sundayOT,
-        "Holiday Hours": grandTotal.holidayHours,
-        "Holiday OT": grandTotal.holidayOT,
-        "Night Diff": grandTotal.nightDifferential,
-        "Period Hours": grandTotal.periodHours,
+        Remarks: `Period Hours: ${employee.totals.periodHours}`,
       });
 
-      const ws = XLSX.utils.json_to_sheet(summaryData);
+      return employeeRows;
+    });
 
-      // Set number format for numeric columns
-      const numericColumns = ["C", "D", "E", "F", "G", "H", "I", "J", "K"];
-      const range = XLSX.utils.decode_range(ws["!ref"]);
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const col = XLSX.utils.encode_col(C);
-        if (numericColumns.includes(col)) {
-          for (let R = range.s.r; R <= range.e.r; ++R) {
-            const cell_address = { c: C, r: R };
-            const cell_ref = XLSX.utils.encode_cell(cell_address);
-            if (ws[cell_ref]) {
-              ws[cell_ref].z = numberFormat;
-            }
+    // Add grand total row
+    detailedData.push({
+      ID: "",
+      Name: "GRAND TOTAL",
+      "Effective Hours": grandTotal.effectiveHours,
+      "Effective OT": grandTotal.effectiveOT,
+      Date: "",
+      Day: "",
+      "Time In": "",
+      "Time Out": "",
+      Hours: grandTotal.hours,
+      OT: grandTotal.overtime,
+      "Sun Hours": grandTotal.sundayHours,
+      "Sun OT": grandTotal.sundayOT,
+      "Holiday Hours": grandTotal.holidayHours,
+      "Holiday OT": grandTotal.holidayOT,
+      "Holiday Type": "",
+      "Night Diff": grandTotal.nightDifferential,
+      Remarks: `Period Hours: ${grandTotal.periodHours}`,
+    });
+
+    const wsDetail = XLSX.utils.json_to_sheet(detailedData);
+
+    // Set number format for numeric columns in detail view
+    const detailNumericColumns = ["C", "D", "H", "I", "J", "K", "L", "M", "O"];
+    const detailRange = XLSX.utils.decode_range(wsDetail["!ref"]);
+    for (let C = detailRange.s.c; C <= detailRange.e.c; ++C) {
+      const col = XLSX.utils.encode_col(C);
+      if (detailNumericColumns.includes(col)) {
+        for (let R = detailRange.s.r; R <= detailRange.e.r; ++R) {
+          const cell_address = { c: C, r: R };
+          const cell_ref = XLSX.utils.encode_cell(cell_address);
+          if (wsDetail[cell_ref]) {
+            wsDetail[cell_ref].z = numberFormat;
           }
         }
       }
-
-      XLSX.utils.book_append_sheet(wb, ws, "DTR Summary");
     }
+
+    // Export summary view
+    const summaryData = totals.map((employee) => ({
+      ID: employee.empId,
+      Name: employee.empName,
+      "Effective Hours": employee.totals.effectiveHours,
+      "Effective OT": employee.totals.effectiveOT,
+      Hours: employee.totals.hours,
+      OT: employee.totals.overtime,
+      "Sun Hours": employee.totals.sundayHours,
+      "Sun OT": employee.totals.sundayOT,
+      "Holiday Hours": employee.totals.holidayHours,
+      "Holiday OT": employee.totals.holidayOT,
+      "Night Diff": employee.totals.nightDifferential,
+      "Period Hours": employee.totals.periodHours,
+    }));
+
+    // Add grand total row
+    summaryData.push({
+      ID: "",
+      Name: "GRAND TOTAL",
+      "Effective Hours": grandTotal.effectiveHours,
+      "Effective OT": grandTotal.effectiveOT,
+      Hours: grandTotal.hours,
+      OT: grandTotal.overtime,
+      "Sun Hours": grandTotal.sundayHours,
+      "Sun OT": grandTotal.sundayOT,
+      "Holiday Hours": grandTotal.holidayHours,
+      "Holiday OT": grandTotal.holidayOT,
+      "Night Diff": grandTotal.nightDifferential,
+      "Period Hours": grandTotal.periodHours,
+    });
+
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+    // Set number format for numeric columns in summary view
+    const summaryNumericColumns = ["C", "D", "E", "F", "G", "H", "I", "J", "K"];
+    const summaryRange = XLSX.utils.decode_range(wsSummary["!ref"]);
+    for (let C = summaryRange.s.c; C <= summaryRange.e.c; ++C) {
+      const col = XLSX.utils.encode_col(C);
+      if (summaryNumericColumns.includes(col)) {
+        for (let R = summaryRange.s.r; R <= summaryRange.e.r; ++R) {
+          const cell_address = { c: C, r: R };
+          const cell_ref = XLSX.utils.encode_cell(cell_address);
+          if (wsSummary[cell_ref]) {
+            wsSummary[cell_ref].z = numberFormat;
+          }
+        }
+      }
+    }
+
+    // Add both sheets to the workbook
+    XLSX.utils.book_append_sheet(wb, wsDetail, "DTR Details");
+    XLSX.utils.book_append_sheet(wb, wsSummary, "DTR Summary");
 
     // Generate filename with batch name and date
     const filename = `${batch.batchName}_${
       new Date().toISOString().split("T")[0]
-    }${!showAllRows ? "S" : ""}.xlsx`;
+    }.xlsx`;
 
     // Save the file
     XLSX.writeFile(wb, filename);
