@@ -214,6 +214,14 @@ export const formatNumber = (num) => {
   }).format(num);
 };
 
+export const formatNumberZ = (num) => {
+  if (num === null || num === undefined || Number(num) === 0) return "";
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
 {
   /* USAGE:
   <span className="number_right peso">

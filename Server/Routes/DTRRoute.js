@@ -1062,7 +1062,7 @@ router.get("/export/:batchId", async (req, res) => {
        DATE_FORMAT(date, '%Y-%m-%d') as date, 
        DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut, 
        day, time, rawState, timeIn, timeOut, state, 
-       hours, overtime, sundayHours, sundayOT, nightDifferential,
+       hours, overtime, sundayHours, sundayOT, holidayHours, holidayOT, holidayType, nightDifferential,
        processed, deleteRecord, editedIn, editedOut, remarks
        FROM DTREntries 
        WHERE batchId = ? 
@@ -1868,6 +1868,9 @@ router.post("/update-special-hours/:batchId", async (req, res) => {
       SET 
         sundayHours = ?,
         sundayOT = ?,
+        holidayHours = ?,
+        holidayOT = ?,
+        holidayType = ?,
         nightDifferential = ?,
         hours = ?,
         overtime = ?
@@ -1877,6 +1880,9 @@ router.post("/update-special-hours/:batchId", async (req, res) => {
     const [result] = await pool.query(sql, [
       entry.sundayHours || 0,
       entry.sundayOT || 0,
+      entry.holidayHours || 0,
+      entry.holidayOT || 0,
+      entry.holidayType || "",
       entry.nightDifferential || 0,
       entry.hours || 0,
       entry.overtime || 0,
@@ -1981,7 +1987,7 @@ router.post("/reset-entries/:batchId", async (req, res) => {
 
     await connection.beginTransaction();
     await connection.query(
-      `UPDATE DTREntries SET processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
+      `UPDATE DTREntries SET processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, holidayHours = 0, holidayOT = 0, holidayType = '', nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
       [batchId]
     );
     await connection.commit();
@@ -1995,5 +2001,130 @@ router.post("/reset-entries/:batchId", async (req, res) => {
     connection.release();
   }
 });
+
+// Get holidays API endpoint
+router.get("/holidays", async (req, res) => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    const [holidays] = await connection.query(
+      "SELECT * FROM DTRHolidays ORDER BY holidayDate"
+    );
+    res.json({
+      Status: true,
+      Holidays: holidays,
+    });
+  } catch (error) {
+    console.error("Error fetching holidays:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to fetch holidays: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Helper function to check if a date is a holiday
+// const isHoliday = async (connection, date) => {
+//   const [holidays] = await connection.query(
+//     "SELECT * FROM Holidays WHERE holidayDate = ?",
+//     [date]
+//   );
+//   return holidays.length > 0 ? holidays[0] : null;
+// };
+
+// Modified handleSundayHoliday function
+// const handleSundayHoliday = async (connection, entry) => {
+//   try {
+//     const date = new Date(entry.date);
+//     const day = date.getDay();
+//     const holiday = await isHoliday(connection, entry.date);
+
+//     if (holiday) {
+//       // If it's a holiday, move hours to holidayHours and overtime to holidayOT
+//       entry.holidayHours = entry.hours;
+//       entry.holidayOT = entry.overtime;
+//       entry.holidayType = holiday.holidayType;
+//       entry.hours = 0;
+//       entry.overtime = 0;
+//     } else if (day === 0) {
+//       // If it's Sunday and not a holiday
+//       entry.sundayHours = entry.hours;
+//       entry.sundayOT = entry.overtime;
+//       entry.hours = 0;
+//       entry.overtime = 0;
+//     }
+
+//     return entry;
+//   } catch (error) {
+//     console.error("Error in handleSundayHoliday:", error);
+//     throw error;
+//   }
+// };
+
+// Add route to update holiday hours
+// router.post("/update-holiday-hours/:batchId", async (req, res) => {
+//   let connection;
+//   try {
+//     const { batchId } = req.params;
+//     const { entries } = req.body;
+
+//     if (!entries || !Array.isArray(entries)) {
+//       return res.status(400).json({
+//         Status: false,
+//         Error: "Invalid entries data",
+//       });
+//     }
+
+//     connection = await pool.getConnection();
+//     await connection.beginTransaction();
+
+//     // Update each entry
+//     for (const entry of entries) {
+//       await connection.query(
+//         `
+//         UPDATE DTREntries
+//         SET
+//           holidayHours = ?,
+//           holidayOT = ?,
+//           holidayType = ?,
+//           hours = 0,
+//           overtime = 0,
+//           remarks = IF(
+//             INSTR(remarks, 'HOLIDAY') = 0,
+//             CONCAT('HOLIDAY, ', remarks),
+//             remarks
+//           )
+//         WHERE id = ? AND batchId = ? AND processed = 1 AND deleteRecord = 0
+//       `,
+//         [
+//           entry.holidayHours,
+//           entry.holidayOT,
+//           entry.holidayType,
+//           entry.id,
+//           batchId,
+//         ]
+//       );
+//     }
+
+//     await connection.commit();
+
+//     res.json({
+//       Status: true,
+//       Message: "Successfully updated holiday hours",
+//       UpdatedCount: entries.length,
+//     });
+//   } catch (error) {
+//     if (connection) await connection.rollback();
+//     console.error("Error updating holiday hours:", error);
+//     res.status(500).json({
+//       Status: false,
+//       Error: `Failed to update holiday hours: ${error.message}`,
+//     });
+//   } finally {
+//     if (connection) connection.release();
+//   }
+// });
 
 export const DTRRouter = router;

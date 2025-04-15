@@ -5,6 +5,7 @@ import Button from "./UI/Button";
 import ModalAlert from "./UI/ModalAlert";
 import Modal from "react-bootstrap/Modal";
 import DTRTotalView from "./DTRTotalView";
+import "./DTRBatchView.css";
 
 const getDayColor = (day) => {
   switch (day?.toLowerCase()) {
@@ -50,7 +51,7 @@ const formatTime = (timeString) => {
 
 const DTRBatchView = ({ batch, onBack }) => {
   const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
@@ -88,12 +89,18 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [showChangeNameModal, setShowChangeNameModal] = useState(false);
   const [newName, setNewName] = useState("");
   const contextMenuRef = useRef(null);
+  const [holidays, setHolidays] = useState([]);
+  const [alert, setAlert] = useState({
+    show: false,
+    title: "",
+    message: "",
+    variant: "success",
+  });
 
   useEffect(() => {
-    if (batch?.id) {
-      fetchBatchData(batch.id);
-    }
-  }, [batch?.id]);
+    fetchHolidays();
+    fetchEntries();
+  }, [batch]);
 
   useEffect(() => {
     // Load hide deleted preference from localStorage
@@ -132,23 +139,29 @@ const DTRBatchView = ({ batch, onBack }) => {
     };
   }, []);
 
-  const fetchBatchData = async (batchId) => {
-    setLoading(true);
-    setError(null);
-
+  const fetchHolidays = async () => {
     try {
-      const response = await axios.get(
-        `${ServerIP}/auth/dtr/export/${batchId}`
-      );
-      console.log("FETCH BATCH DATA:", response.data.Entries[0]);
+      const response = await axios.get(`${ServerIP}/auth/dtr/holidays`);
       if (response.data.Status) {
-        setEntries(response.data.Entries);
-      } else {
-        setError(response.data.Error || "Failed to fetch batch data");
+        setHolidays(response.data.Holidays);
       }
     } catch (err) {
-      console.error("Error fetching batch data:", err);
-      setError("Failed to load batch details. Please try again later.");
+      console.error("Error fetching holidays:", err);
+    }
+  };
+
+  const fetchEntries = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `${ServerIP}/auth/dtr/export/${batch.id}`
+      );
+      if (response.data.Status) {
+        setEntries(response.data.Entries);
+      }
+    } catch (err) {
+      setError("Failed to load DTR entries");
+      console.error("Error fetching entries:", err);
     } finally {
       setLoading(false);
     }
@@ -235,7 +248,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         `${ServerIP}/auth/dtr/reset-entries/${batch.id}`
       );
       if (response.data.Status) {
-        await fetchBatchData(batch.id);
+        await fetchEntries();
       } else {
         setError(response.data.Error || "Failed to reset entries");
       }
@@ -461,7 +474,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       }
 
       // Final refresh after all processing is complete
-      await fetchBatchData(batch.id);
+      await fetchEntries();
       setCurrentIndex(0);
     } catch (error) {
       console.error("Error in analyze process:", error);
@@ -522,7 +535,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       }
 
       // Refresh the data
-      await fetchBatchData(batch.id);
+      await fetchEntries();
 
       // Reset modal state
       setShowConfirmModal(false);
@@ -628,7 +641,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       }
 
       // Refresh data after all processing is complete
-      await fetchBatchData(batch.id);
+      await fetchEntries();
     } catch (error) {
       console.error("Error in delete repeat process:", error);
       setError("Failed to process repeating records. Please try again.");
@@ -704,13 +717,14 @@ const DTRBatchView = ({ batch, onBack }) => {
       }
 
       // Refresh data after all calculations are complete
-      await fetchBatchData(batch.id);
+      await fetchEntries();
     } catch (error) {
       console.error("Error calculating hours:", error);
       setError("Failed to calculate hours. Please try again.");
     } finally {
       setLoading(false);
     }
+    handleSundayHoliday();
   };
 
   const handleTimeClick = (entry, type, event) => {
@@ -901,7 +915,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       );
 
       if (response.data.Status) {
-        await fetchBatchData(batch.id);
+        await fetchEntries();
       } else {
         setError(response.data.Error || "Failed to add entry");
       }
@@ -940,7 +954,7 @@ const DTRBatchView = ({ batch, onBack }) => {
             },
           ],
         });
-        await fetchBatchData(batch.id);
+        await fetchEntries();
       } else if (action === "changeName") {
         setNewName(contextMenuEntry.empName);
         setShowChangeNameModal(true);
@@ -969,7 +983,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         await axios.post(`${ServerIP}/auth/dtr/change-name/${batch.id}`, {
           entries: entriesToUpdate,
         });
-        await fetchBatchData(batch.id);
+        await fetchEntries();
       }
       setShowChangeNameModal(false);
     } catch (error) {
@@ -1039,7 +1053,10 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const handleSundayHoliday = async () => {
     try {
-      // Process entries one at a time
+      setLoading(true);
+      setError(null);
+
+      // First process Sunday entries
       for (const entry of entries) {
         // Skip if entry is deleted
         if (entry.deleteRecord) continue;
@@ -1048,49 +1065,41 @@ const DTRBatchView = ({ batch, onBack }) => {
         if (entry.timeIn && entry.timeOut) {
           let sundayHours = 0;
           let sundayOT = 0;
+          let holidayHours = 0;
+          let holidayOT = 0;
+          let holidayType = "";
           let nightDifferential = 0;
+
+          // Check if the date is a holiday
+          const entryDate = new Date(entry.date);
+          const holiday = holidays.find(
+            (h) =>
+              new Date(h.holidayDate).toDateString() ===
+              entryDate.toDateString()
+          );
 
           // For Sunday entries, move regular hours to sundayHours and OT to sundayOT
           if (entry.day?.toLowerCase() === "sun") {
-            sundayHours = Number(entry.hours) || 0;
-            sundayOT = Number(entry.overtime) || 0;
+            if (holiday) {
+              holidayHours = Number(entry.hours);
+              holidayOT = Number(entry.overtime);
+              holidayType = `Sunday ${holiday.holidayType}`;
+            } else {
+              sundayHours = Number(entry.hours);
+              sundayOT = Number(entry.overtime);
+            }
             // Clear regular hours and OT for Sundays
             entry.hours = 0;
             entry.overtime = 0;
+          } else if (holiday) {
+            // For non-Sunday holidays
+            holidayHours = Number(entry.hours);
+            holidayOT = Number(entry.overtime);
+            holidayType = holiday.holidayType;
+            // Clear regular hours and OT for holidays
+            entry.hours = 0;
+            entry.overtime = 0;
           }
-
-          // Calculate night differential (10 PM - 6 AM)
-          const timeIn = new Date(`2000-01-01T${entry.timeIn}`);
-          const timeOut = new Date(`2000-01-01T${entry.timeOut}`);
-
-          // If timeOut is earlier than timeIn, assume it's next day
-          if (timeOut < timeIn) {
-            timeOut.setDate(timeOut.getDate() + 1);
-          }
-
-          const nightStart = new Date(`2000-01-01T22:00:00`);
-          const nightEnd = new Date(`2000-01-02T06:00:00`);
-          let nightHours = 0;
-
-          // Check if work period overlaps with night differential period
-          if (timeIn < nightEnd || timeOut > nightStart) {
-            const effectiveStart = timeIn > nightStart ? timeIn : nightStart;
-            const effectiveEnd = timeOut < nightEnd ? timeOut : nightEnd;
-
-            if (effectiveEnd > effectiveStart) {
-              nightHours = (effectiveEnd - effectiveStart) / (1000 * 60 * 60);
-            }
-
-            // If work spans midnight
-            if (timeOut > nightEnd && timeIn < nightStart) {
-              nightHours =
-                (nightEnd - new Date(`2000-01-02T00:00:00`)) /
-                  (1000 * 60 * 60) +
-                (timeOut - nightStart) / (1000 * 60 * 60);
-            }
-          }
-
-          nightDifferential = nightHours;
 
           // Update the database one entry at a time
           const response = await axios.post(
@@ -1101,6 +1110,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                 sundayHours:
                   sundayHours > 0 ? Number(sundayHours.toFixed(2)) : 0,
                 sundayOT: sundayOT > 0 ? Number(sundayOT.toFixed(2)) : 0,
+                holidayHours:
+                  holidayHours > 0 ? Number(holidayHours.toFixed(2)) : 0,
+                holidayOT: holidayOT > 0 ? Number(holidayOT.toFixed(2)) : 0,
+                holidayType: holidayType || "",
                 nightDifferential:
                   nightDifferential > 0
                     ? Number(nightDifferential.toFixed(2))
@@ -1118,10 +1131,18 @@ const DTRBatchView = ({ batch, onBack }) => {
       }
 
       // After all entries are processed, refresh the data
-      await fetchBatchData(batch.id);
+      await fetchEntries();
+      setAlert({
+        show: true,
+        title: "Success",
+        message: "Successfully processed Sunday and holiday hours",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error processing Sunday/Holiday hours:", error);
       setError("Failed to process Sunday/Holiday hours. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1141,7 +1162,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         batch.periodStart = newStartDate;
         batch.periodEnd = newEndDate;
         // Refresh the data to recalculate totals
-        await fetchBatchData(batch.id);
+        await fetchEntries();
       } else {
         setError(response.data.Error || "Failed to update period dates");
       }
@@ -1186,9 +1207,9 @@ const DTRBatchView = ({ batch, onBack }) => {
       <Button variant="view" onClick={handleCalculateHours} disabled={loading}>
         Calculate Hours
       </Button>
-      <Button variant="add" onClick={handleSundayHoliday} disabled={loading}>
+      {/* <Button variant="add" onClick={handleSundayHoliday} disabled={loading}>
         Sunday/Holiday
-      </Button>
+      </Button> */}
       <Button
         variant="danger"
         onClick={handleReset}
@@ -1218,6 +1239,22 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   return (
     <div className="dtr-batch-view">
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      )}
+
+      <ModalAlert
+        show={alert.show}
+        title={alert.title}
+        message={alert.message}
+        type="alert"
+        onClose={() => setAlert({ ...alert, show: false })}
+      />
+
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
           <h3>Batch Details: {batch.batchName}</h3>
@@ -1403,6 +1440,26 @@ const DTRBatchView = ({ batch, onBack }) => {
                     >
                       Sun OT {getSortIndicator("sundayOT")}
                     </th>
+
+                    <th
+                      onClick={() => handleSort("holidayHours")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Hol Hrs {getSortIndicator("holidayHours")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("holidayOT")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Hol OT {getSortIndicator("holidayOT")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("holidayType")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Hol Type {getSortIndicator("holidayType")}
+                    </th>
+
                     <th
                       onClick={() => handleSort("nightDifferential")}
                       style={{ cursor: "pointer", textAlign: "center" }}
@@ -1425,7 +1482,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                     };
 
                     return (
-                      <tr key={entry.id || index}>
+                      <tr
+                        key={entry.id || index}
+                        className={entry.holidayHours > 0 ? "holiday-row" : ""}
+                      >
                         <td style={rowStyle}>{entry.empId}</td>
                         <td style={rowStyle}>{entry.empName}</td>
                         <td style={rowStyle}>{entry.day}</td>
@@ -1521,6 +1581,17 @@ const DTRBatchView = ({ batch, onBack }) => {
                             : ""}
                         </td>
                         <td style={rowStyle}>
+                          {Number(entry.holidayHours || 0) > 0
+                            ? Number(entry.holidayHours).toFixed(2)
+                            : ""}
+                        </td>
+                        <td style={rowStyle}>
+                          {Number(entry.holidayOT || 0) > 0
+                            ? Number(entry.holidayOT).toFixed(2)
+                            : ""}
+                        </td>
+                        <td style={rowStyle}>{entry.holidayType || ""}</td>
+                        <td style={rowStyle}>
                           {Number(entry.nightDifferential || 0) > 0
                             ? Number(entry.nightDifferential).toFixed(2)
                             : ""}
@@ -1537,7 +1608,11 @@ const DTRBatchView = ({ batch, onBack }) => {
           )}
         </>
       ) : (
-        <DTRTotalView entries={sortedEntries} batch={batch} />
+        <DTRTotalView
+          entries={sortedEntries}
+          batch={batch}
+          holidays={holidays}
+        />
       )}
 
       <ModalAlert

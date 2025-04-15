@@ -1,33 +1,51 @@
 import React, { useState, useEffect } from "react";
 import Button from "./UI/Button";
-import { formatNumber, formatDate, formatTime } from "../utils/orderUtils";
+import {
+  formatNumber,
+  formatNumberZ,
+  formatDate,
+  formatTime,
+} from "../utils/orderUtils";
+import * as XLSX from "xlsx";
 
-const DTRTotalView = ({ entries, batch }) => {
+const DTRTotalView = ({ entries, batch, holidays }) => {
   const [showAllRows, setShowAllRows] = useState(false);
   const [totals, setTotals] = useState([]);
 
   useEffect(() => {
     calculateTotals();
-  }, [entries]);
+  }, [entries, holidays]);
 
-  const calculatePeriodHours = () => {
-    const startDate = new Date(batch.periodStart);
-    const endDate = new Date(batch.periodEnd);
+  const calculatePeriodHours = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
     let totalDays = 0;
-    let currentDate = new Date(startDate);
+    let currentDate = new Date(start);
 
-    while (currentDate <= endDate) {
-      if (currentDate.getDay() !== 0) {
+    // Convert holidays to date strings for comparison
+    const holidayDates = holidays.map((holiday) =>
+      new Date(holiday.holidayDate).toDateString()
+    );
+
+    while (currentDate <= end) {
+      // Skip Sundays and holidays
+      if (
+        currentDate.getDay() !== 0 &&
+        !holidayDates.includes(currentDate.toDateString())
+      ) {
         totalDays++;
       }
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    return totalDays * 8;
+    return totalDays * 8; // 8 hours per day
   };
 
   const calculateTotals = () => {
-    const periodHours = calculatePeriodHours();
+    const periodHours = calculatePeriodHours(
+      batch.periodStart,
+      batch.periodEnd
+    );
 
     const employeeGroups = entries.reduce((groups, entry) => {
       if (entry.deleteRecord) return groups;
@@ -43,6 +61,9 @@ const DTRTotalView = ({ entries, batch }) => {
             overtime: 0,
             sundayHours: 0,
             sundayOT: 0,
+            holidayHours: 0,
+            holidayOT: 0,
+            holidayType: "",
             nightDifferential: 0,
             periodHours,
             effectiveHours: 0,
@@ -57,6 +78,9 @@ const DTRTotalView = ({ entries, batch }) => {
       groups[empKey].totals.overtime += Number(entry.overtime || 0);
       groups[empKey].totals.sundayHours += Number(entry.sundayHours || 0);
       groups[empKey].totals.sundayOT += Number(entry.sundayOT || 0);
+      groups[empKey].totals.holidayHours += Number(entry.holidayHours || 0);
+      groups[empKey].totals.holidayOT += Number(entry.holidayOT || 0);
+      groups[empKey].totals.holidayType = entry.holidayType || "";
       groups[empKey].totals.nightDifferential += Number(
         entry.nightDifferential || 0
       );
@@ -83,6 +107,8 @@ const DTRTotalView = ({ entries, batch }) => {
       overtime: total.overtime + employee.totals.overtime,
       sundayHours: total.sundayHours + employee.totals.sundayHours,
       sundayOT: total.sundayOT + employee.totals.sundayOT,
+      holidayHours: total.holidayHours + employee.totals.holidayHours,
+      holidayOT: total.holidayOT + employee.totals.holidayOT,
       nightDifferential:
         total.nightDifferential + employee.totals.nightDifferential,
       effectiveHours: total.effectiveHours + employee.totals.effectiveHours,
@@ -94,10 +120,12 @@ const DTRTotalView = ({ entries, batch }) => {
       overtime: 0,
       sundayHours: 0,
       sundayOT: 0,
+      holidayHours: 0,
+      holidayOT: 0,
       nightDifferential: 0,
       effectiveHours: 0,
       effectiveOT: 0,
-      periodHours: calculatePeriodHours(),
+      periodHours: calculatePeriodHours(batch.periodStart, batch.periodEnd),
     }
   );
 
@@ -122,10 +150,172 @@ const DTRTotalView = ({ entries, batch }) => {
     }
   };
 
+  const formatNumber = (value) => {
+    const num = Number(value);
+    return num === 0 ? null : Number(num.toFixed(2));
+  };
+
+  const saveToXLS = () => {
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Define number format for 2 decimal places, hiding zeros
+    const numberFormat = "0.00;-0.00;;@";
+
+    if (showAllRows) {
+      // Export detailed view
+      const detailedData = totals.flatMap((employee) => {
+        const employeeRows = employee.entries.map((entry) => ({
+          ID: entry.empId,
+          Name: entry.empName,
+          "Effective Hours": entry.effectiveHours,
+          "Effective OT": entry.effectiveOT,
+          Date: formatDate(entry.date),
+          Day: entry.day,
+          "Time In": formatTime(entry.timeIn),
+          "Time Out": formatTime(entry.timeOut),
+          Hours: entry.hours,
+          OT: entry.overtime,
+          "Sun Hours": entry.sundayHours,
+          "Sun OT": entry.sundayOT,
+          "Holiday Hours": entry.holidayHours,
+          "Holiday OT": entry.holidayOT,
+          "Holiday Type": entry.holidayType,
+          "Night Diff": entry.nightDifferential,
+          Remarks: entry.remarks,
+        }));
+
+        // Add employee totals row
+        employeeRows.push({
+          ID: employee.empId,
+          Name: employee.empName,
+          "Effective Hours": employee.totals.effectiveHours,
+          "Effective OT": employee.totals.effectiveOT,
+          Date: "TOTAL",
+          Day: "",
+          "Time In": "",
+          "Time Out": "",
+          Hours: employee.totals.hours,
+          OT: employee.totals.overtime,
+          "Sun Hours": employee.totals.sundayHours,
+          "Sun OT": employee.totals.sundayOT,
+          "Holiday Hours": employee.totals.holidayHours,
+          "Holiday OT": employee.totals.holidayOT,
+          "Holiday Type": "",
+          "Night Diff": employee.totals.nightDifferential,
+          Remarks: `Period Hours: ${employee.totals.periodHours}`,
+        });
+
+        return employeeRows;
+      });
+
+      // Add grand total row
+      detailedData.push({
+        ID: "",
+        Name: "GRAND TOTAL",
+        "Effective Hours": grandTotal.effectiveHours,
+        "Effective OT": grandTotal.effectiveOT,
+        Date: "",
+        Day: "",
+        "Time In": "",
+        "Time Out": "",
+        Hours: grandTotal.hours,
+        OT: grandTotal.overtime,
+        "Sun Hours": grandTotal.sundayHours,
+        "Sun OT": grandTotal.sundayOT,
+        "Holiday Hours": grandTotal.holidayHours,
+        "Holiday OT": grandTotal.holidayOT,
+        "Holiday Type": "",
+        "Night Diff": grandTotal.nightDifferential,
+        Remarks: `Period Hours: ${grandTotal.periodHours}`,
+      });
+
+      const ws = XLSX.utils.json_to_sheet(detailedData);
+
+      // Set number format for numeric columns
+      const numericColumns = ["C", "D", "H", "I", "J", "K", "L", "M", "O"];
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const col = XLSX.utils.encode_col(C);
+        if (numericColumns.includes(col)) {
+          for (let R = range.s.r; R <= range.e.r; ++R) {
+            const cell_address = { c: C, r: R };
+            const cell_ref = XLSX.utils.encode_cell(cell_address);
+            if (ws[cell_ref]) {
+              ws[cell_ref].z = numberFormat;
+            }
+          }
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, "DTR Details");
+    } else {
+      // Export summary view
+      const summaryData = totals.map((employee) => ({
+        ID: employee.empId,
+        Name: employee.empName,
+        "Effective Hours": employee.totals.effectiveHours,
+        "Effective OT": employee.totals.effectiveOT,
+        Hours: employee.totals.hours,
+        OT: employee.totals.overtime,
+        "Sun Hours": employee.totals.sundayHours,
+        "Sun OT": employee.totals.sundayOT,
+        "Holiday Hours": employee.totals.holidayHours,
+        "Holiday OT": employee.totals.holidayOT,
+        "Night Diff": employee.totals.nightDifferential,
+        "Period Hours": employee.totals.periodHours,
+      }));
+
+      // Add grand total row
+      summaryData.push({
+        ID: "",
+        Name: "GRAND TOTAL",
+        "Effective Hours": grandTotal.effectiveHours,
+        "Effective OT": grandTotal.effectiveOT,
+        Hours: grandTotal.hours,
+        OT: grandTotal.overtime,
+        "Sun Hours": grandTotal.sundayHours,
+        "Sun OT": grandTotal.sundayOT,
+        "Holiday Hours": grandTotal.holidayHours,
+        "Holiday OT": grandTotal.holidayOT,
+        "Night Diff": grandTotal.nightDifferential,
+        "Period Hours": grandTotal.periodHours,
+      });
+
+      const ws = XLSX.utils.json_to_sheet(summaryData);
+
+      // Set number format for numeric columns
+      const numericColumns = ["C", "D", "E", "F", "G", "H", "I", "J", "K"];
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const col = XLSX.utils.encode_col(C);
+        if (numericColumns.includes(col)) {
+          for (let R = range.s.r; R <= range.e.r; ++R) {
+            const cell_address = { c: C, r: R };
+            const cell_ref = XLSX.utils.encode_cell(cell_address);
+            if (ws[cell_ref]) {
+              ws[cell_ref].z = numberFormat;
+            }
+          }
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, "DTR Summary");
+    }
+
+    // Generate filename with batch name and date
+    const filename = `${batch.batchName}_${
+      new Date().toISOString().split("T")[0]
+    }${!showAllRows ? "S" : ""}.xlsx`;
+
+    // Save the file
+    XLSX.writeFile(wb, filename);
+  };
+
   return (
     <div className="dtr-total-view">
       <div className="mb-3">
-        <div className="form-check">
+        <div className="form-check d-flex gap-2">
           <input
             type="checkbox"
             className="form-check-input"
@@ -136,6 +326,9 @@ const DTRTotalView = ({ entries, batch }) => {
           <label className="form-check-label" htmlFor="showAllRows">
             Show all entries
           </label>
+          <Button variant="print" onClick={saveToXLS}>
+            Save XLS
+          </Button>
         </div>
       </div>
 
@@ -159,6 +352,9 @@ const DTRTotalView = ({ entries, batch }) => {
               <th className="text-center">OT</th>
               <th className="text-center">Sun Hrs</th>
               <th className="text-center">Sun OT</th>
+              <th className="text-center">Holiday Hrs</th>
+              <th className="text-center">Holiday OT</th>
+              <th className="text-center">Holiday Type</th>
               <th className="text-center">Night Diff</th>
               {showAllRows && <th className="text-center">Remarks</th>}
             </tr>
@@ -177,33 +373,44 @@ const DTRTotalView = ({ entries, batch }) => {
                     };
 
                     return (
-                      <tr key={entry.id} style={rowStyle}>
+                      <tr
+                        key={entry.id}
+                        style={rowStyle}
+                        className={entry.holidayHours > 0 ? "holiday-row" : ""}
+                      >
                         <td style={rowStyle}>{entry.empId}</td>
                         <td style={rowStyle}>{entry.empName}</td>
                         <td style={rowStyle} className="text-end">
-                          {formatNumber(entry.effectiveHours)}
+                          {formatNumberZ(entry.effectiveHours)}
                         </td>
                         <td style={rowStyle} className="text-end">
-                          {formatNumber(entry.effectiveOT)}
+                          {formatNumberZ(entry.effectiveOT)}
                         </td>
                         <td style={rowStyle}>{formatDate(entry.date)}</td>
                         <td style={rowStyle}>{entry.day}</td>
                         <td style={rowStyle}>{formatTime(entry.timeIn)}</td>
                         <td style={rowStyle}>{formatTime(entry.timeOut)}</td>
                         <td style={rowStyle} className="text-end">
-                          {formatNumber(entry.hours)}
+                          {formatNumberZ(entry.hours)}
                         </td>
                         <td style={rowStyle} className="text-end">
-                          {formatNumber(entry.overtime)}
+                          {formatNumberZ(entry.overtime)}
                         </td>
                         <td style={rowStyle} className="text-end">
-                          {formatNumber(entry.sundayHours)}
+                          {formatNumberZ(entry.sundayHours)}
                         </td>
                         <td style={rowStyle} className="text-end">
-                          {formatNumber(entry.sundayOT)}
+                          {formatNumberZ(entry.sundayOT)}
                         </td>
                         <td style={rowStyle} className="text-end">
-                          {formatNumber(entry.nightDifferential)}
+                          {formatNumberZ(entry.holidayHours)}
+                        </td>
+                        <td style={rowStyle} className="text-end">
+                          {formatNumberZ(entry.holidayOT)}
+                        </td>
+                        <td style={rowStyle}>{entry.holidayType}</td>
+                        <td style={rowStyle} className="text-end">
+                          {formatNumberZ(entry.nightDifferential)}
                         </td>
                         {showAllRows && (
                           <td style={rowStyle}>{entry.remarks}</td>
@@ -211,14 +418,20 @@ const DTRTotalView = ({ entries, batch }) => {
                       </tr>
                     );
                   })}
-                <tr className="table-info">
+                <tr
+                  className="table-info"
+                  style={{
+                    borderTop: "2px solid #000",
+                    borderBottom: "2px solid #000",
+                  }}
+                >
                   <td>{employee.empId}</td>
                   <td>{employee.empName}</td>
                   <td className="text-end fw-bold">
-                    {formatNumber(employee.totals.effectiveHours)}
+                    {formatNumberZ(employee.totals.effectiveHours)}
                   </td>
                   <td className="text-end fw-bold">
-                    {formatNumber(employee.totals.effectiveOT)}
+                    {formatNumberZ(employee.totals.effectiveOT)}
                   </td>
                   {showAllRows && (
                     <td colSpan="4" className="text-center">
@@ -226,48 +439,68 @@ const DTRTotalView = ({ entries, batch }) => {
                     </td>
                   )}
                   <td className="text-end">
-                    {formatNumber(employee.totals.hours)}
+                    {formatNumberZ(employee.totals.hours)}
                   </td>
                   <td className="text-end">
-                    {formatNumber(employee.totals.overtime)}
+                    {formatNumberZ(employee.totals.overtime)}
                   </td>
                   <td className="text-end">
-                    {formatNumber(employee.totals.sundayHours)}
+                    {formatNumberZ(employee.totals.sundayHours)}
                   </td>
                   <td className="text-end">
-                    {formatNumber(employee.totals.sundayOT)}
+                    {formatNumberZ(employee.totals.sundayOT)}
                   </td>
                   <td className="text-end">
-                    {formatNumber(employee.totals.nightDifferential)}
+                    {formatNumberZ(employee.totals.holidayHours)}
+                  </td>
+                  <td className="text-end">
+                    {formatNumberZ(employee.totals.holidayOT)}
+                  </td>
+                  <td className="text-end">
+                    {/* {formatNumber(employee.totals.holidayType)} */}
+                  </td>
+                  <td className="text-end">
+                    {formatNumberZ(employee.totals.nightDifferential)}
                   </td>
                   {showAllRows && <td></td>}
                 </tr>
               </React.Fragment>
             ))}
             <tr className="table-dark">
-              <td colSpan={showAllRows ? 6 : 2} className="text-center fw-bold">
+              <td colSpan={showAllRows ? 2 : 2} className="text-center fw-bold">
                 Grand Total (Period Hours: {grandTotal.periodHours})
               </td>
               <td className="text-end fw-bold">
-                {formatNumber(grandTotal.hours)}
+                {formatNumberZ(grandTotal.effectiveHours)}
               </td>
               <td className="text-end fw-bold">
-                {formatNumber(grandTotal.overtime)}
+                {formatNumberZ(grandTotal.effectiveOT)}
+              </td>
+              {showAllRows && <td colSpan={4} className="text-center"></td>}
+
+              <td className="text-end fw-bold">
+                {formatNumberZ(grandTotal.hours)}
               </td>
               <td className="text-end fw-bold">
-                {formatNumber(grandTotal.sundayHours)}
+                {formatNumberZ(grandTotal.overtime)}
               </td>
               <td className="text-end fw-bold">
-                {formatNumber(grandTotal.sundayOT)}
+                {formatNumberZ(grandTotal.sundayHours)}
               </td>
               <td className="text-end fw-bold">
-                {formatNumber(grandTotal.nightDifferential)}
+                {formatNumberZ(grandTotal.sundayOT)}
               </td>
               <td className="text-end fw-bold">
-                {formatNumber(grandTotal.effectiveHours)}
+                {formatNumberZ(grandTotal.holidayHours)}
               </td>
               <td className="text-end fw-bold">
-                {formatNumber(grandTotal.effectiveOT)}
+                {formatNumberZ(grandTotal.holidayOT)}
+              </td>
+              <td className="text-end fw-bold">
+                {/* {formatNumber(grandTotal.holidayType)} */}
+              </td>
+              <td className="text-end fw-bold">
+                {formatNumberZ(grandTotal.nightDifferential)}
               </td>
               {showAllRows && <td></td>}
             </tr>
