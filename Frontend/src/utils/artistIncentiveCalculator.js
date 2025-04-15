@@ -15,6 +15,7 @@ export const calculateArtistIncentive = (orders, settings) => {
     }
     remarks = "";
 
+    console.log("order", order);
     // Skip incentive if no incentive or below minimum
     if (
       order.noIncentive ||
@@ -56,7 +57,10 @@ export const calculateArtistIncentive = (orders, settings) => {
     }
 
     // Calculate amounts
-    const halfRate = Number(order.perSqFt) < Number(settings.HalfIncentiveSqFt);
+    const halfRate =
+      Number(order.perSqFt) < Number(settings.HalfIncentiveSqFt) &&
+      order.materialName.slice(0, 2) != "DS";
+
     const rateMultiplier = halfRate ? 0.5 : 1;
     if (halfRate) {
       remarks = remarks ? remarks + ", Half rate" : "Half rate";

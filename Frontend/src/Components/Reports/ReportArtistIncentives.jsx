@@ -6,6 +6,7 @@ import Button from "../UI/Button";
 import ReportArtistIncentiveDetails from "./ReportArtistIncentiveDetails";
 import ReportArtistIncentiveSummary from "./ReportArtistIncentiveSummary";
 import { calculateArtistIncentive } from "../../utils/artistIncentiveCalculator";
+import * as XLSX from "xlsx";
 import "./Reports.css";
 
 const ReportArtistIncentives = () => {
@@ -89,19 +90,60 @@ const ReportArtistIncentives = () => {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (!reportData) return;
+
+    const data = reportData.orders.map((item) => ({
+      "Order ID": item.orderId,
+      Date: new Date(item.productionDate).toLocaleDateString(),
+      Client: item.clientName,
+      Material: item.materialName,
+      Artist: item.artistIncentive || "Unknown",
+      "Grand Total": item.grandTotal,
+      Quantity: item.quantity,
+      "Per SqFt": item.perSqFt,
+      "Major Original": item.originalMajor,
+      "Major Adjusted": item.adjustedMajor,
+      "Major Amount": item.majorAmount,
+      "Minor Original": item.originalMinor,
+      "Minor Adjusted": item.adjustedMinor,
+      "Minor Amount": item.minorAmount,
+      "Total Incentive": item.totalIncentive,
+      "Max Order Incentive": item.maxOrderIncentive,
+      Remarks: item.remarks || "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Artist Incentives");
+
+    // Generate filename with date range
+    const filename = `Artist_Incentives_${dateFrom}_to_${dateTo}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  };
+
   return (
     <div className="reports-content">
       <div className="d-flex justify-content-center pt-4">
         <h3>Artist Incentives Report</h3>
       </div>
       <div className="d-flex justify-content-between mb-3">
-        <Button
-          variant="add"
-          onClick={handleGenerateReport}
-          disabled={!dateFrom || !dateTo}
-        >
-          Calculate
-        </Button>
+        <div className="d-flex gap-2">
+          <Button
+            variant="add"
+            onClick={handleGenerateReport}
+            disabled={!dateFrom || !dateTo}
+          >
+            Calculate
+          </Button>
+          <Button
+            variant="print"
+            onClick={handleExportToExcel}
+            disabled={!reportData}
+          >
+            Save as XLS
+          </Button>
+        </div>
       </div>
 
       <div className="reports-filters">

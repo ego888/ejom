@@ -154,7 +154,7 @@ router.get("/artist-incentive", verifyUser, async (req, res) => {
       JOIN material m ON od.material = m.Material
       JOIN client c ON o.clientId = c.id
       WHERE o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
-        AND TRIM(o.status) IN ('Delivered', 'Billed', 'Closed')
+        AND TRIM(o.status) IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
         AND m.noIncentive = 0 AND od.amount > 0
       ORDER BY o.orderId
     `;
