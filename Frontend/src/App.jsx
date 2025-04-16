@@ -48,6 +48,7 @@ import DashSales from "./Components/DashSales";
 import DashProd from "./Components/DashProd";
 import DTR from "./Components/DTR";
 import MaterialUsageReport from "./Components/Reports/MaterialUsageReport";
+import PaymentInquiry from "./Components/PaymentInquiry";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
@@ -208,6 +209,10 @@ function App() {
           <Route
             path="/dashboard/payment/view/:id"
             element={<PaymentView />}
+          ></Route>
+          <Route
+            path="/dashboard/payment-inquiry"
+            element={<PaymentInquiry />}
           ></Route>
           <Route
             path="/dashboard/artistlog/view/:id"

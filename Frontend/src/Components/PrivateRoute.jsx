@@ -74,6 +74,7 @@ const checkRouteAccess = (route, permissions) => {
       return permissions.isProduction || permissions.isAccounting;
     case "payment":
     case "receive-payment":
+    case "payment-inquiry":
       return permissions.isAccounting;
     case "artistlog":
       return permissions.isArtist;

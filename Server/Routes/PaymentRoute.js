@@ -1298,23 +1298,118 @@ router.get("/checked-payments", verifyUser, async (req, res) => {
 
 // Get all payments
 router.get("/all-payments", verifyUser, async (req, res) => {
+  let connection;
   try {
-    const sql = `
-      SELECT p.*, o.projectName, o.grandTotal, o.amountPaid
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "payId",
+      sortDirection = "desc",
+      search = "",
+      includeReceived = "false",
+    } = req.query;
+    const offset = (page - 1) * limit;
+
+    connection = await pool.getConnection();
+
+    // Build where clause
+    let whereConditions = ["1=1"]; // Always true condition to start
+    let params = [];
+
+    if (includeReceived === "false") {
+      whereConditions.push("p.receivedBy IS NULL");
+    }
+
+    if (search) {
+      whereConditions.push(
+        "(p.ornum LIKE ? OR p.payReference LIKE ? OR p.transactedBy LIKE ? OR o.projectName LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ?)"
+      );
+      params.push(
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`
+      );
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Main data query
+    const dataSql = `
+      SELECT 
+        p.payId,
+        p.amount,
+        p.payType,
+        p.ornum,
+        p.payReference,
+        DATE_FORMAT(p.payDate, '%Y-%m-%d') as payDate,
+        DATE_FORMAT(p.postedDate, '%Y-%m-%d %H:%i:%s') as postedDate,
+        p.transactedBy,
+        p.receivedBy,
+        DATE_FORMAT(p.receivedDate, '%Y-%m-%d %H:%i:%s') as receivedDate,
+        o.orderId,
+        o.projectName,
+        o.orderReference,
+        o.grandTotal,
+        o.amountPaid,
+        DATE_FORMAT(o.orderDate, '%Y-%m-%d') as orderDate,
+        o.invoiceNum,
+        c.clientName,
+        c.customerName,
+        e.name as preparedBy
       FROM payments p
       JOIN paymentJoAllocation pa ON p.payId = pa.payId
       JOIN orders o ON pa.orderId = o.orderId
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+      ORDER BY p.${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
     `;
 
-    const [results] = await pool.query(sql);
+    // Count query
+    const countSql = `
+      SELECT COUNT(DISTINCT p.payId) as total
+      FROM payments p
+      JOIN paymentJoAllocation pa ON p.payId = pa.payId
+      JOIN orders o ON pa.orderId = o.orderId
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
+
+    // Execute queries
+    const [payments] = await connection.query(dataSql, [
+      ...params,
+      parseInt(limit),
+      parseInt(offset),
+    ]);
+    const [totalResult] = await connection.query(countSql, params);
+
+    const total = totalResult[0].total;
+    const totalPages = Math.ceil(total / limit);
 
     return res.json({
       Status: true,
-      Result: results.map((row) => row.payId),
+      Result: {
+        payments,
+        total,
+        totalPages,
+        currentPage: parseInt(page),
+      },
     });
   } catch (error) {
-    console.error("Error in checked-payments:", error);
-    return res.json({ Status: false, Error: error.message });
+    console.error("Error fetching payments:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch payments: " + error.message,
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

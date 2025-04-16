@@ -16,6 +16,7 @@ import "./Dashboard.css";
 import { ServerIP } from "../config";
 import logo from "../assets/Go Large logo 2009C2 small.jpg";
 import ProfileUpdateModal from "./UI/ProfileUpdateModal";
+import PaymentInquiry from "./PaymentInquiry";
 
 // Menu item constants
 const DASHBOARD = { path: "", icon: "bi-speedometer2", text: "Dashboard" };
@@ -54,6 +55,11 @@ const PRINTLOG = {
   text: "Print Log",
 };
 const PAYMENT = { path: "payment", icon: "bi-cash", text: "Payments" };
+const PAYMENT_INQUIRY = {
+  path: "payment-inquiry",
+  icon: "bi-bank",
+  text: "Payments Inquiry",
+};
 const RECEIVE_PAYMENT = {
   path: "receive-payment",
   // icon: "bi-cash-coin",
@@ -280,6 +286,7 @@ const Dashboard = () => {
         ARTISTLOG,
         PRINTLOG,
         PAYMENT,
+        PAYMENT_INQUIRY,
         RECEIVE_PAYMENT,
         REPORTS,
         MASTERFILES,
@@ -288,7 +295,15 @@ const Dashboard = () => {
     } else if (permissions.isSales) {
       items.push(DASHSALES, QUOTES, ORDERS, CLIENT, REPORTS_SALES);
     } else if (permissions.isAccounting) {
-      items.push(ORDERS, CLIENT, PAYMENT, RECEIVE_PAYMENT, BILLING, SOA);
+      items.push(
+        ORDERS,
+        CLIENT,
+        PAYMENT,
+        RECEIVE_PAYMENT,
+        PAYMENT_INQUIRY,
+        BILLING,
+        SOA
+      );
     } else if (permissions.isProduction) {
       items.push(
         DASHPROD,
@@ -413,6 +428,14 @@ const Dashboard = () => {
                     </li>
                   );
                 })}
+                {permissions.isAccounting && (
+                  <li className="nav-item">
+                    <Link to="/payment-inquiry" className="nav-link">
+                      <i className="nav-icon fas fa-search"></i>
+                      <p>Payment Inquiry</p>
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <a
                     href="#"
