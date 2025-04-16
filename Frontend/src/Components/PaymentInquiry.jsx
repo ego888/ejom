@@ -10,7 +10,7 @@ import {
 import ModalAlert from "./UI/ModalAlert";
 import DisplayPage from "./UI/DisplayPage";
 import Pagination from "./UI/Pagination";
-import { handleApiError } from "../utils/handleApiError";
+// import { handleApiError } from "../utils/handleApiError";
 
 function PaymentInquiry() {
   const [payments, setPayments] = useState([]);
@@ -57,7 +57,7 @@ function PaymentInquiry() {
         throw new Error(response.data.Error);
       }
     } catch (error) {
-      handleApiError(error, setAlert);
+      //   handleApiError(error, setAlert);
     } finally {
       setLoading(false);
     }
@@ -84,27 +84,31 @@ function PaymentInquiry() {
 
   // Add this function to group payments by payId
   const groupPaymentsByPayId = (payments) => {
-    const grouped = {};
+    const groupedMap = new Map();
+
     payments.forEach((payment) => {
-      if (!grouped[payment.payId]) {
-        grouped[payment.payId] = {
+      if (!groupedMap.has(payment.payId)) {
+        groupedMap.set(payment.payId, {
           ...payment,
           orders: [],
-        };
+        });
       }
-      grouped[payment.payId].orders.push({
+
+      groupedMap.get(payment.payId).orders.push({
         orderId: payment.orderId,
         projectName: payment.projectName,
         orderReference: payment.orderReference,
         grandTotal: payment.grandTotal,
         amountPaid: payment.amountPaid,
         orderDate: payment.orderDate,
-        invnum: payment.invnum,
+        invnum: payment.invoiceNum,
         clientName: payment.clientName,
         customerName: payment.customerName,
       });
     });
-    return Object.values(grouped);
+
+    // Return in the original SQL order
+    return Array.from(groupedMap.values());
   };
 
   return (

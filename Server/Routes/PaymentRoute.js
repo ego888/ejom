@@ -1322,21 +1322,25 @@ router.get("/all-payments", verifyUser, async (req, res) => {
 
     if (search) {
       whereConditions.push(
-        "(p.ornum LIKE ? OR p.payReference LIKE ? OR p.transactedBy LIKE ? OR o.projectName LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ?)"
+        "(p.payId LIKE ? OR p.ornum LIKE ? OR p.payReference LIKE ? OR p.transactedBy LIKE ? OR o.projectName LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ?)"
       );
+      const searchParam = `%${search}%`;
       params.push(
-        `%${search}%`,
-        `%${search}%`,
-        `%${search}%`,
-        `%${search}%`,
-        `%${search}%`,
-        `%${search}%`
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam
       );
     }
 
     const whereClause = whereConditions.join(" AND ");
 
     // Main data query
+    const sortColumn = sortBy === "payId" ? "" : `, p.${sortBy}`;
+
     const dataSql = `
       SELECT 
         p.payId,
@@ -1359,14 +1363,23 @@ router.get("/all-payments", verifyUser, async (req, res) => {
         c.clientName,
         c.customerName,
         e.name as preparedBy
-      FROM payments p
+      FROM (
+        SELECT DISTINCT p.payId${sortColumn}
+        FROM payments p
+        JOIN paymentJoAllocation pa ON p.payId = pa.payId
+        JOIN orders o ON pa.orderId = o.orderId
+        LEFT JOIN client c ON o.clientId = c.id
+        LEFT JOIN employee e ON o.preparedBy = e.id
+        WHERE ${whereClause}
+        ORDER BY p.${sortBy} ${sortDirection}
+        LIMIT ? OFFSET ?
+      ) sorted
+      JOIN payments p ON p.payId = sorted.payId
       JOIN paymentJoAllocation pa ON p.payId = pa.payId
       JOIN orders o ON pa.orderId = o.orderId
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
-      WHERE ${whereClause}
       ORDER BY p.${sortBy} ${sortDirection}
-      LIMIT ? OFFSET ?
     `;
 
     // Count query
