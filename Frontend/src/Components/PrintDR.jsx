@@ -9,7 +9,7 @@ import { formatPeso, formatNumber } from "../utils/orderUtils";
 // Constants for DR printing
 const ROWS_PER_PAGE = 8; // Number of rows to display per page
 
-function PrintDR({ data }) {
+function PrintDR({ data, showAmounts = true }) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [alert, setAlert] = useState({
     show: false,
@@ -163,11 +163,15 @@ function PrintDR({ data }) {
                       <th className="text-center">Qty</th>
                       <th className="text-center">Size</th>
                       <th className="text-center">Material - Description</th>
-                      <th className="text-center">Price</th>
-                      {order.order_details?.some(
-                        (detail) => Number(detail.discount) !== 0
-                      ) && <th className="text-center">Discount</th>}
-                      <th className="text-center">Amount</th>
+                      {showAmounts && (
+                        <>
+                          <th className="text-center">Price</th>
+                          {order.order_details?.some(
+                            (detail) => Number(detail.discount) !== 0
+                          ) && <th className="text-center">Discount</th>}
+                          <th className="text-center">Amount</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -197,21 +201,25 @@ function PrintDR({ data }) {
                                 ? " - " + detail.itemDescription
                                 : ""}
                             </td>
-                            <td className="text-end">
-                              {detail.unitPrice !== 0
-                                ? formatNumber(detail.unitPrice)
-                                : ""}
-                            </td>
-                            {Number(detail.discount) !== 0 && (
-                              <td className="text-end">
-                                {formatNumber(detail.discount)}
-                              </td>
+                            {showAmounts && (
+                              <>
+                                <td className="text-end">
+                                  {detail.unitPrice !== 0
+                                    ? formatNumber(detail.unitPrice)
+                                    : ""}
+                                </td>
+                                {Number(detail.discount) !== 0 && (
+                                  <td className="text-end">
+                                    {formatNumber(detail.discount)}
+                                  </td>
+                                )}
+                                <td className="text-end">
+                                  {detail.amount !== 0
+                                    ? formatNumber(detail.amount)
+                                    : ""}
+                                </td>
+                              </>
                             )}
-                            <td className="text-end">
-                              {detail.amount !== 0
-                                ? formatNumber(detail.amount)
-                                : ""}
-                            </td>
                           </tr>
                         );
                       })}
@@ -226,44 +234,50 @@ function PrintDR({ data }) {
                     <div className="delivery-label">Delivery Instructions:</div>
                     <div className="info-value">{order.deliveryInst || ""}</div>
                   </div>
-                  <div className="right-section">
-                    <div className="totals-section">
-                      {Number(order.amountDisc) === 0 ? (
-                        <div className="total-row grand-total">
-                          <div className="total-label">Grand Total:</div>
-                          <div className="total-value">
-                            {formatPeso(order.grandTotal)}
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="total-row">
-                            <div className="total-label">Total Amount:</div>
-                            <div className="total-value">
-                              {formatNumber(order.totalAmount)}
-                            </div>
-                          </div>
-                          <div className="total-row">
-                            <div className="total-label">Amount Discount:</div>
-                            <div className="total-value">
-                              {formatNumber(order.amountDisc)}
-                            </div>
-                          </div>
+                  {showAmounts && (
+                    <div className="right-section">
+                      <div className="totals-section">
+                        {Number(order.amountDisc) === 0 ? (
                           <div className="total-row grand-total">
                             <div className="total-label">Grand Total:</div>
                             <div className="total-value">
                               {formatPeso(order.grandTotal)}
                             </div>
                           </div>
-                        </>
-                      )}
-                    </div>
-                    <div className="signature-section">
-                      <div className="signature-block">
-                        <div className="signature-line">Received by / Date</div>
+                        ) : (
+                          <>
+                            <div className="total-row">
+                              <div className="total-label">Total Amount:</div>
+                              <div className="total-value">
+                                {formatNumber(order.totalAmount)}
+                              </div>
+                            </div>
+                            <div className="total-row">
+                              <div className="total-label">
+                                Amount Discount:
+                              </div>
+                              <div className="total-value">
+                                {formatNumber(order.amountDisc)}
+                              </div>
+                            </div>
+                            <div className="total-row grand-total">
+                              <div className="total-label">Grand Total:</div>
+                              <div className="total-value">
+                                {formatPeso(order.grandTotal)}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="signature-section">
+                        <div className="signature-block">
+                          <div className="signature-line">
+                            Received by / Date
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 

@@ -1296,4 +1296,26 @@ router.get("/checked-payments", verifyUser, async (req, res) => {
   }
 });
 
+// Get all payments
+router.get("/all-payments", verifyUser, async (req, res) => {
+  try {
+    const sql = `
+      SELECT p.*, o.projectName, o.grandTotal, o.amountPaid
+      FROM payments p
+      JOIN paymentJoAllocation pa ON p.payId = pa.payId
+      JOIN orders o ON pa.orderId = o.orderId
+    `;
+
+    const [results] = await pool.query(sql);
+
+    return res.json({
+      Status: true,
+      Result: results.map((row) => row.payId),
+    });
+  } catch (error) {
+    console.error("Error in checked-payments:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
+});
+
 export { router as PaymentRouter };

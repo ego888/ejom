@@ -15,6 +15,8 @@ function ProdPrintOneDR() {
     message: "",
     type: "alert",
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,6 +96,8 @@ function ProdPrintOneDR() {
           message: error.message || "Failed to prepare order for printing",
           type: "alert",
         });
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -129,20 +133,36 @@ function ProdPrintOneDR() {
   };
 
   return (
-    <>
-      {orderData &&
-        (console.log("orderData", orderData),
-        (
-          <PrintDR data={orderData.orderData} onAfterPrint={handleAfterPrint} />
-        ))}
-      <ModalAlert
-        show={alert.show}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
-      />
-    </>
+    <div className="container-fluid">
+      {loading ? (
+        <div className="text-center">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="alert alert-danger">{error}</div>
+      ) : (
+        <>
+          {orderData &&
+            (console.log("orderData", orderData),
+            (
+              <PrintDR
+                data={orderData.orderData}
+                showAmounts={location.state?.orderInfo?.showAmounts ?? true}
+                onAfterPrint={handleAfterPrint}
+              />
+            ))}
+          <ModalAlert
+            show={alert.show}
+            title={alert.title}
+            message={alert.message}
+            type={alert.type}
+            onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+          />
+        </>
+      )}
+    </div>
   );
 }
 

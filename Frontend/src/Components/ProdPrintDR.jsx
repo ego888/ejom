@@ -118,48 +118,9 @@ function ProdPrintDR() {
     fetchData();
   }, [navigate]);
 
-  // const handleConfirmPrint = async () => {
-  //   try {
-  //     if (!orderData) return;
-
-  //     const token = localStorage.getItem("token");
-  //     const response = await axios.put(
-  //       `${ServerIP}/auth/update_orders_drnum`,
-  //       { orders: orderData.drUpdateData.orders },
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     if (!response.data.Status) {
-  //       throw new Error(response.data.Error || "Failed to update DR numbers");
-  //     }
-
-  //     setAlert({
-  //       show: true,
-  //       title: "Success",
-  //       message: "DR numbers have been successfully updated",
-  //       type: "alert",
-  //     });
-
-  //     // Navigate back after showing success message
-  //     setTimeout(() => navigate(-1), 1500);
-  //   } catch (error) {
-  //     setAlert({
-  //       show: true,
-  //       title: "Error",
-  //       message: error.message || "Failed to update DR numbers",
-  //       type: "alert",
-  //     });
-  //   }
-  // };
-
   return (
     <>
-      {orderData && <PrintDR data={orderData.orderData} />}
+      {orderData && <PrintDR data={orderData.orderData} showAmounts={true} />}
       <ModalAlert
         show={alert.show}
         title={alert.title}

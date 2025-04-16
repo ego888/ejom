@@ -114,7 +114,7 @@ function OrderView() {
   }, [id, navigate]);
 
   // Add function to handle DR printing
-  const handlePrintDR = () => {
+  const handlePrintDR = (showAmounts = true) => {
     const orderInfo = {
       orderId: data.orderId,
       clientName: data.clientName,
@@ -139,6 +139,7 @@ function OrderView() {
       totalAmount: data.totalAmount,
       amountDisc: data.amountDisc,
       grandTotal: data.grandTotal,
+      showAmounts: showAmounts,
     };
 
     navigate("/dashboard/prod_print_one_dr", { state: { orderInfo } });
@@ -263,9 +264,14 @@ function OrderView() {
                   </Button>
                 ))}
               {isProdView && (
-                <Button variant="print" onClick={handlePrintDR}>
-                  Print DR
-                </Button>
+                <>
+                  <Button variant="print" onClick={() => handlePrintDR(true)}>
+                    Print DR ₱
+                  </Button>
+                  <Button variant="print" onClick={() => handlePrintDR(false)}>
+                    Print DR
+                  </Button>
+                </>
               )}
               <Button variant="cancel" onClick={() => navigate(-1)}>
                 Back
