@@ -1260,7 +1260,6 @@ function Prod() {
                 // Safely handle hold and overdue dates
                 const holdDate = new Date(order.holdDate);
                 const warningDate = new Date(order.warningDate);
-                console.log("warningDate", warningDate);
 
                 const rowClass =
                   currentDate > holdDate && order.holdDate
