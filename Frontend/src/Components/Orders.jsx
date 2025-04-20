@@ -518,7 +518,6 @@ function Orders() {
                 const currentDate = new Date();
                 const holdDate = new Date(order.holdDate);
                 const warningDate = new Date(order.warningDate);
-                console.log("warningDate", warningDate);
 
                 const rowClass =
                   currentDate > holdDate && order.holdDate
