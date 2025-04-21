@@ -19,6 +19,7 @@ import {
   calculateTotals,
   calculatePerSqFt,
   calculatePrintHrs,
+  autoExpandTextarea,
 } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import Input from "./UI/Input";
@@ -760,6 +761,19 @@ function AddOrder() {
     setEditedValues({
       [`${detail.Id}`]: editedDetail,
     });
+
+    // Use setTimeout to ensure the textareas are rendered before calling autoExpandTextarea
+    setTimeout(() => {
+      const itemDescriptionTextarea = document.querySelector(
+        `textarea[data-id="${detail.Id}-itemDescription"]`
+      );
+      const remarksTextarea = document.querySelector(
+        `textarea[data-id="${detail.Id}-remarks"]`
+      );
+
+      if (itemDescriptionTextarea) autoExpandTextarea(itemDescriptionTextarea);
+      if (remarksTextarea) autoExpandTextarea(remarksTextarea);
+    }, 0);
   };
 
   const handleFinish = () => {
@@ -2155,7 +2169,7 @@ function AddOrder() {
                     <th>Qty</th>
                     <th>Width</th>
                     <th>Height</th>
-                    <th>Unit Measure</th>
+                    <th>Unit</th>
                     <th>Material</th>
                     <th>Per Sq Ft</th>
                     <th>Price</th>
@@ -2406,7 +2420,8 @@ function AddOrder() {
                             </td>
                             <td>
                               <textarea
-                                className="form-input detail"
+                                className="form-input autosize"
+                                data-id={`${detail.Id}-itemDescription`}
                                 value={
                                   editedValues[uniqueId]?.itemDescription ||
                                   detail.itemDescription
@@ -2417,9 +2432,7 @@ function AddOrder() {
                                     "itemDescription",
                                     e.target.value
                                   );
-                                  e.target.style.height = "31px";
-                                  e.target.style.height =
-                                    e.target.scrollHeight + "px";
+                                  autoExpandTextarea(e.target);
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter" && e.shiftKey) {
@@ -2441,6 +2454,7 @@ function AddOrder() {
                                       "itemDescription",
                                       newValue
                                     );
+                                    autoExpandTextarea(e.target);
 
                                     // Set cursor position after the inserted newline and ensure focus stays on the textarea
                                     setTimeout(() => {
@@ -2462,7 +2476,8 @@ function AddOrder() {
                             </td>
                             <td>
                               <textarea
-                                className="form-input detail"
+                                className="form-input autosize"
+                                data-id={`${detail.Id}-remarks`}
                                 value={
                                   editedValues[uniqueId]?.remarks ||
                                   detail.remarks
@@ -2473,9 +2488,7 @@ function AddOrder() {
                                     "remarks",
                                     e.target.value
                                   );
-                                  e.target.style.height = "31px";
-                                  e.target.style.height =
-                                    e.target.scrollHeight + "px";
+                                  autoExpandTextarea(e.target);
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter" && e.shiftKey) {
@@ -2497,6 +2510,7 @@ function AddOrder() {
                                       "remarks",
                                       newValue
                                     );
+                                    autoExpandTextarea(e.target);
 
                                     // Set cursor position after the inserted newline and ensure focus stays on the textarea
                                     setTimeout(() => {
@@ -2693,6 +2707,7 @@ function AddOrder() {
                               {detail.itemDescription}
                             </td>
                             <td
+                              className="multiline-cell"
                               style={{
                                 whiteSpace: "pre-line",
                                 cursor: canEdit() ? "pointer" : "default",

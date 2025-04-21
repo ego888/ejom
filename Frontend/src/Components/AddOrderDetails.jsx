@@ -15,6 +15,7 @@ import {
   validateOrderData,
   calculatePerSqFt,
   calculatePrintHrs,
+  autoExpandTextarea,
 } from "../utils/orderUtils";
 import { useNavigate, useParams } from "react-router-dom";
 import ModalAlert from "./UI/ModalAlert";
@@ -482,13 +483,41 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   <label htmlFor="itemDescription" className="visually-hidden">
                     Description
                   </label>
-                  <input
+                  <textarea
                     id="itemDescription"
-                    type="text"
-                    className="form-input detail"
+                    className="form-input autosize"
                     name="itemDescription"
                     value={detail.itemDescription}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      autoExpandTextarea(e.target);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && e.shiftKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const cursorPosition = e.target.selectionStart;
+                        const currentValue = e.target.value;
+                        const newValue =
+                          currentValue.substring(0, cursorPosition) +
+                          "\n" +
+                          currentValue.substring(cursorPosition);
+
+                        handleInputChange({
+                          target: { name: "itemDescription", value: newValue },
+                        });
+                        autoExpandTextarea(e.target);
+
+                        // Set cursor position after the inserted newline
+                        setTimeout(() => {
+                          e.target.focus();
+                          e.target.selectionStart = cursorPosition + 1;
+                          e.target.selectionEnd = cursorPosition + 1;
+                        }, 0);
+                        return false;
+                      }
+                    }}
+                    rows="1"
                     aria-label="Description"
                   />
                 </td>
@@ -556,13 +585,41 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                   <label htmlFor="remarks" className="visually-hidden">
                     Remarks
                   </label>
-                  <input
+                  <textarea
                     id="remarks"
-                    type="text"
-                    className="form-input detail"
+                    className="form-input autosize"
                     name="remarks"
                     value={detail.remarks}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      autoExpandTextarea(e.target);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && e.shiftKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const cursorPosition = e.target.selectionStart;
+                        const currentValue = e.target.value;
+                        const newValue =
+                          currentValue.substring(0, cursorPosition) +
+                          "\n" +
+                          currentValue.substring(cursorPosition);
+
+                        handleInputChange({
+                          target: { name: "remarks", value: newValue },
+                        });
+                        autoExpandTextarea(e.target);
+
+                        // Set cursor position after the inserted newline
+                        setTimeout(() => {
+                          e.target.focus();
+                          e.target.selectionStart = cursorPosition + 1;
+                          e.target.selectionEnd = cursorPosition + 1;
+                        }, 0);
+                        return false;
+                      }
+                    }}
+                    rows="1"
                     aria-label="Remarks"
                   />
                 </td>

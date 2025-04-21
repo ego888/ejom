@@ -132,8 +132,9 @@ a:hover {
 
 /* Style for multiline fields */
 .form-input.multiline {
-  min-height: 70px;
-  align-items: flex-start;
+  min-height: 22px;
+  resize: none; /* prevent manual resizing if you only want auto */
+  overflow: hidden; /* hide scrollbar */
   white-space: pre-wrap;
 }
 
@@ -156,6 +157,23 @@ a:hover {
 .form-select:focus {
   border-color: var(--primary-color);
   outline: none;
+}
+
+/* Auto-expanding textarea styles */
+.form-input.autosize {
+  min-height: 31px;
+  height: auto;
+  resize: none;
+  overflow-y: hidden;
+  transition: height 0.1s ease-out;
+  padding: 6px 12px;
+  line-height: 1.5;
+}
+
+.form-input.autosize:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 .centered-cell {
@@ -273,97 +291,6 @@ a:hover {
   min-width: 90px;
   height: 100%;
 }
-
-/* Status badge styles A 
-.status-badge {
-  padding: 0.35em 0.65em;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 0.25rem;
-  color: white;
-}
-
-.status-badge.Open {
-  background-color: #0066ff;
-}
-.status-badge.Printed {
-  background-color: #0d9dfd;
-}
-.status-badge.Prod,
-.status-badge.Requote {
-  background-color: #52b084;
-}
-
-.status-badge.Finished {
-  background-color: #3aae78;
-}
-.status-badge.Delivered {
-  background-color: #27b171;
-}
-.status-badge.Billed {
-  background-color: #00924e;
-}
-.status-badge.Close,
-.status-badge.Closed {
-  background-color: #198754;
-}
-.status-badge.Loss,
-.status-badge.Cancel {
-  background-color: #dc3545;
-}
-*/
-
-/* Status badges style B 
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.status-badge.Open {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-badge.Printed {
-  background-color: #e3f2fd;
-  color: #1565c0;
-}
-
-.status-badge.Prod {
-  background-color: #fff3e0;
-  color: #e65100;
-}
-
-.status-badge.Finished {
-  background-color: #f3e5f5;
-  color: #6a1b9a;
-}
-
-.status-badge.Delivered {
-  background-color: #e8eaf6;
-  color: #283593;
-}
-
-.status-badge.Billed,
-.status-badge.Requote {
-  background-color: #e0f2f1;
-  color: #00695c;
-}
-
-.status-badge.Closed {
-  background-color: #e1eed7;
-  color: #198754;
-}
-
-.status-badge.Cancel {
-  background-color: #ffebee;
-  color: #b71c1c;
-}
-*/
 
 /* Status badge styles A */
 .status-badge {

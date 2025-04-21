@@ -323,3 +323,14 @@ export const formatTime = (timeString) => {
 export const validateOrderData = (data) => {
   // ... existing code ...
 };
+
+/**
+ * Automatically expands a textarea to fit its content
+ * @param {HTMLTextAreaElement} textarea - The textarea element to expand
+ */
+export const autoExpandTextarea = (textarea) => {
+  // Reset height to auto to get the correct scrollHeight
+  textarea.style.height = "auto";
+  // Set the height to scrollHeight to fit the content
+  textarea.style.height = textarea.scrollHeight + "px";
+};
