@@ -2601,7 +2601,7 @@ function AddOrder() {
                                     cursor: canEdit() ? "pointer" : "default",
                                   }}
                                 >
-                                  {detail.displayOrder}
+                                  .
                                 </span>
                               )}
                             </td>
