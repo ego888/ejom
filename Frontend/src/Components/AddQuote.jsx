@@ -2114,7 +2114,10 @@ function AddQuote() {
                                   setTempDisplayOrder(detail.displayOrder);
                                 }}
                               >
-                                {detail.displayOrder}
+                                {" "}
+                                {editingDisplayOrder
+                                  ? detail.displayOrder
+                                  : "."}
                               </div>
                             )}
                           </td>
