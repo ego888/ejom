@@ -1420,18 +1420,18 @@ function AddQuote() {
     return data.status === "Open" || currentUser.category_id === 1;
   };
 
-  const handleClientHover = (clientId) => {
-    hoverTimerRef.current = setTimeout(() => {
-      setSelectedClientId(clientId);
-      setShowClientInfo(true);
-    }, 1500); // 5 seconds
-  };
+  // const handleClientHover = (clientId) => {
+  //   hoverTimerRef.current = setTimeout(() => {
+  //     setSelectedClientId(clientId);
+  //     setShowClientInfo(true);
+  //   }, 1500); // 5 seconds
+  // };
 
-  const handleClientLeave = () => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-    }
-  };
+  // const handleClientLeave = () => {
+  //   if (hoverTimerRef.current) {
+  //     clearTimeout(hoverTimerRef.current);
+  //   }
+  // };
 
   // Add cleanup for the timer
   useEffect(() => {
@@ -1555,8 +1555,6 @@ function AddQuote() {
                     value={data.clientName || ""}
                     onChange={handleClientChange}
                     disabled={!isEditMode || !canEdit()}
-                    onMouseEnter={() => handleClientHover(data.clientId)}
-                    onMouseLeave={handleClientLeave}
                   />
                   <datalist id="clientList">
                     {clients.map((client) => (
