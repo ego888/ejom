@@ -576,6 +576,8 @@ router.get("/view-allocation", verifyUser, async (req, res) => {
     // Then get all allocations with complete order details
     const [allocations] = await connection.query(
       `SELECT 
+        pa.id,
+        pa.payId,
         pa.orderId,
         pa.amountApplied,
         o.projectName,
@@ -1350,7 +1352,9 @@ router.get("/all-payments", verifyUser, async (req, res) => {
         p.payReference,
         DATE_FORMAT(p.payDate, '%Y-%m-%d') as payDate,
         DATE_FORMAT(p.postedDate, '%Y-%m-%d %H:%i:%s') as postedDate,
+        DATE_FORMAT(p.remittedDate, '%Y-%m-%d %H:%i:%s') as remittedDate,
         p.transactedBy,
+        p.remittedBy,
         p.receivedBy,
         DATE_FORMAT(p.receivedDate, '%Y-%m-%d %H:%i:%s') as receivedDate,
         o.orderId,
@@ -1423,6 +1427,258 @@ router.get("/all-payments", verifyUser, async (req, res) => {
     if (connection) {
       connection.release();
     }
+  }
+});
+
+// Update allocation in temp tables
+router.post("/update-temp-allocation", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payId, allocation } = req.body;
+
+    // Input validation
+    if (!payId) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Payment ID is required",
+      });
+    }
+
+    if (!allocation || !allocation.orderId || !allocation.amount) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Allocation data is required (orderId and amount)",
+      });
+    }
+
+    // Validate amount is a positive number
+    const amount = parseFloat(allocation.amount);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Allocation amount must be a positive number",
+      });
+    }
+
+    // Get database connection first
+    connection = await pool.getConnection();
+
+    // Check if payment exists
+    const [existingPayment] = await connection.query(
+      `SELECT payId FROM tempPayments WHERE payId = ?`,
+      [payId]
+    );
+
+    if (existingPayment.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        Status: false,
+        Error: "Temp payment not found",
+      });
+    }
+
+    // Check if order exists
+    const [existingOrder] = await connection.query(
+      `SELECT orderId FROM orders WHERE orderId = ?`,
+      [allocation.orderId]
+    );
+
+    if (existingOrder.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        Status: false,
+        Error: "Order not found",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    // Update allocation if exists, otherwise insert
+    await connection.query(
+      `UPDATE tempPaymentAllocation 
+       SET amountApplied = ?
+       WHERE payId = ? AND orderId = ?`,
+      [amount, payId, allocation.orderId]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Message: "Allocation updated in temp tables",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating temp allocation:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to update temp allocation: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Get orders with temp payment allocations
+router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || "";
+    const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
+    const sales = req.query.sales ? req.query.sales.split(",") : [];
+    const clients = req.query.clients ? req.query.clients.split(",") : [];
+    let sortBy = req.query.sortBy || "orderID";
+    let sortDirection = req.query.sortDirection || "desc";
+
+    // Build where clause
+    let whereConditions = ["1=1"]; // Always true condition to start
+    let params = [];
+
+    if (search) {
+      whereConditions.push(
+        "(o.orderID LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
+      );
+      const searchParam = `%${search}%`;
+      params.push(
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam
+      );
+    }
+
+    if (statuses.length) {
+      whereConditions.push(`o.status IN (?)`);
+      params.push(statuses);
+    }
+
+    if (sales.length) {
+      whereConditions.push(`o.preparedBy IN (?)`);
+      params.push(sales);
+    }
+
+    if (clients.length) {
+      whereConditions.push(`c.clientName IN (?)`);
+      params.push(clients);
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Main data query with temp allocations - Fixed GROUP BY issue
+    const dataSql = `
+      SELECT 
+        o.orderID as id, 
+        o.revision,
+        o.clientId, 
+        c.clientName, 
+        c.customerName,
+        c.hold AS holdDate,
+        c.overdue AS warningDate,
+        o.projectName, 
+        o.orderedBy, 
+        o.orderDate, 
+        o.dueDate, 
+        o.dueTime,
+        o.status, 
+        o.drnum, 
+        o.invoiceNum as invnum, 
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
+        e.name as salesName, 
+        o.orderReference,
+        o.forProd,
+        o.forBill,
+        o.productionDate,
+        COALESCE(pmt.orNums, '') as orNums,
+        MAX(tpa.amountApplied) as tempPayment,
+        MAX(CASE WHEN tpa.amountApplied IS NOT NULL THEN 1 ELSE 0 END) as isChecked
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN (
+        SELECT 
+          pja.orderId,
+          GROUP_CONCAT(DISTINCT p.orNum SEPARATOR ', ') AS orNums
+        FROM paymentJoAllocation pja 
+        JOIN payments p ON p.payId = pja.payId
+        GROUP BY pja.orderId
+      ) pmt ON pmt.orderId = o.orderId
+      LEFT JOIN tempPaymentAllocation tpa ON tpa.orderId = o.orderId
+      WHERE ${whereClause}
+      GROUP BY 
+        o.orderID,
+        o.revision,
+        o.clientId,
+        c.clientName,
+        c.customerName,
+        c.hold,
+        c.overdue,
+        o.projectName,
+        o.orderedBy,
+        o.orderDate,
+        o.dueDate,
+        o.dueTime,
+        o.status,
+        o.drnum,
+        o.invoiceNum,
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
+        e.name,
+        o.orderReference,
+        o.forProd,
+        o.forBill,
+        o.productionDate,
+        pmt.orNums
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
+    `;
+
+    // Count query
+    const countSql = `
+      SELECT COUNT(DISTINCT o.orderID) as total
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
+
+    // Execute queries
+    const [orders] = await pool.query(dataSql, [...params, limit, offset]);
+    const [countResults] = await pool.query(countSql, params);
+    const countResult = countResults[0];
+
+    return res.json({
+      Status: true,
+      Result: {
+        orders,
+        total: countResult.total,
+        page: Number(page),
+        totalPages: Math.ceil(countResult.total / limit),
+      },
+    });
+  } catch (err) {
+    console.error("Error in get-order-tempPaymentAllocation route:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to fetch orders with temp allocations",
+      Details: err.message,
+    });
   }
 });
 

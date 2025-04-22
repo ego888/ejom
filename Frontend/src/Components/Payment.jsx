@@ -118,7 +118,7 @@ function Prod() {
     debouncedSearch(term);
   };
 
-  // 1. Move fetchOrderData outside useEffect
+  // Update fetchOrderData to use new endpoint
   const fetchOrderData = async () => {
     console.log("fetchOrderData function called");
     setLoading(true);
@@ -141,26 +141,48 @@ function Prod() {
         clients: selectedClients.length ? selectedClients.join(",") : undefined,
         ...(searchTerm.trim() && {
           search: searchTerm.trim(),
-          searchFields: [
-            "id",
-            "clientName",
-            "customerName",
-            "orderedBy",
-            "drnum",
-            "invnum",
-            "ornum",
-            "salesName",
-            "amount",
-            "orderReference",
-          ],
         }),
       };
 
       console.log("Search params:", params);
-      const response = await axios.get(`${ServerIP}/auth/orders`, { params });
+      const response = await axios.get(
+        `${ServerIP}/auth/get-order-tempPaymentAllocation`,
+        { params }
+      );
 
       if (response.data.Status) {
-        setOrders(response.data.Result.orders || []);
+        const ordersWithTemp = response.data.Result.orders;
+
+        // Update orders state
+        setOrders(ordersWithTemp);
+
+        // Update payment states based on temp allocations
+        const newOrderPayments = {};
+        const newCheckPay = new Set();
+        let totalTempPayments = 0;
+
+        ordersWithTemp.forEach((order) => {
+          if (order.tempPayment) {
+            newOrderPayments[order.id] = {
+              payment: Number(order.tempPayment),
+              wtax: 0, // You might want to handle wtax separately
+            };
+            newCheckPay.add(order.id);
+            totalTempPayments += Number(order.tempPayment);
+          }
+        });
+
+        // Only update payment states if we have temp payments
+        if (Object.keys(newOrderPayments).length > 0) {
+          setOrderPayments(newOrderPayments);
+          setCheckPay(newCheckPay);
+
+          // Update remaining amount based on current payment info
+          if (paymentInfo.amount) {
+            setRemainingAmount(Number(paymentInfo.amount) - totalTempPayments);
+          }
+        }
+
         setTotalCount(response.data.Result.total || 0);
         setTotalPages(response.data.Result.totalPages || 0);
       }
@@ -518,7 +540,25 @@ function Prod() {
     }
   }, [selectedWtax, vatRate, orders, paymentInfo.amount]);
 
-  // Add handler for payment/wtax changes
+  // Add debounced update function
+  const debouncedUpdateTempAllocation = useCallback(
+    debounce(async (payId, orderId, amount) => {
+      try {
+        await axios.post(`${ServerIP}/auth/update-temp-allocation`, {
+          payId,
+          allocation: {
+            orderId,
+            amount,
+          },
+        });
+      } catch (error) {
+        console.error("Error updating temp allocation:", error);
+      }
+    }, 500),
+    []
+  );
+
+  // Update handlePaymentChange function
   const handlePaymentChange = (orderId, field, value) => {
     const numValue = Number(value);
     const newOrderPayments = { ...orderPayments };
@@ -534,6 +574,11 @@ function Prod() {
         payment,
       };
       setRemainingAmount(maxPayment - payment);
+
+      // Update temp allocation if we have a tempPayId
+      if (tempPayId && payment > 0) {
+        debouncedUpdateTempAllocation(tempPayId, orderId, payment);
+      }
     } else if (field === "wtax") {
       newOrderPayments[orderId] = {
         ...newOrderPayments[orderId],
@@ -788,39 +833,6 @@ function Prod() {
     }
   };
 
-  const handleSavePayment = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Prepare allocations
-      const allocations = Object.entries(orderPayments).map(
-        ([orderId, details]) => ({
-          orderId: parseInt(orderId),
-          amount: details.payment || 0,
-        })
-      );
-
-      // Save to temp tables
-      const response = await axios.post(`${ServerIP}/auth/save-temp-payment`, {
-        payment: paymentInfo,
-        allocations,
-      });
-
-      if (response.data.Status) {
-        setTempPayId(response.data.Result.payId);
-        setShowAllocationModal(true);
-      } else {
-        setError(response.data.Error);
-      }
-    } catch (error) {
-      setError("Failed to save payment");
-      console.error("Error saving payment:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCancelPayment = () => {
     setTempPayId(null);
     setOrderPayments({});
@@ -834,98 +846,11 @@ function Prod() {
     });
   };
 
-  const handleAddPayment = async () => {
-    if (!selectedOrder || !amount) {
-      setError("Please select an order and enter an amount");
-      return;
-    }
-
-    if (amount <= 0) {
-      setError("Amount must be greater than 0");
-      return;
-    }
-
-    if (amount > remainingAmount) {
-      setError("Amount cannot exceed remaining payment amount");
-      return;
-    }
-
-    try {
-      // Make sure we have a tempPayId
-      if (!tempPayId) {
-        // First save the payment header
-        const paymentResponse = await axios.post(
-          `${ServerIP}/auth/save-temp-payment`,
-          {
-            payment: {
-              ...paymentInfo,
-              transactedBy: localStorage.getItem("userName") || "unknown",
-            },
-          }
-        );
-
-        if (!paymentResponse.data.Status) {
-          setError(
-            paymentResponse.data.Error || "Failed to save payment header"
-          );
-          return;
-        }
-
-        setTempPayId(paymentResponse.data.Result.payId);
-      }
-
-      // Now save the allocation
-      const response = await axios.post(
-        `${ServerIP}/auth/save-temp-allocation`,
-        {
-          payId: tempPayId,
-          allocation: {
-            orderId: selectedOrder.orderId,
-            amount: parseFloat(amount),
-          },
-        }
-      );
-
-      if (response.data.Status) {
-        // Add to local state
-        setOrderPayments((prev) => ({
-          ...prev,
-          [selectedOrder.orderId]: {
-            payment: parseFloat(amount),
-            wtax: 0, // Could calculate WTax here if needed
-          },
-        }));
-
-        // Update remaining amount
-        setRemainingAmount((prev) => prev - parseFloat(amount));
-
-        // Add to checked orders
-        setCheckPay((prev) => new Set([...prev, selectedOrder.orderId]));
-
-        // Reset form
-        setSelectedOrder(null);
-        setAmount("");
-        setError("");
-      } else {
-        setError(response.data.Error || "Failed to save allocation");
-      }
-    } catch (error) {
-      console.error("Error saving allocation:", error);
-      setError("Failed to save allocation");
-    }
-  };
-
   const handleClientHover = (clientId) => {
     hoverTimerRef.current = setTimeout(() => {
       setSelectedClientId(clientId);
       setShowClientInfo(true);
     }); // 5 seconds
-  };
-
-  const handleClientLeave = () => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-    }
   };
 
   // Add cleanup for the timer
