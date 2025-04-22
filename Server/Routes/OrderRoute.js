@@ -1820,6 +1820,7 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
   try {
     const userId = req.user.id;
     const currentDate = new Date();
+
     const firstDayOfMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
@@ -1831,18 +1832,30 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
       0
     );
 
-    const formattedFirstDay = firstDayOfMonth.toISOString().split("T")[0];
-    const formattedLastDay = lastDayOfMonth.toISOString().split("T")[0];
+    // Format date to YYYY-MM-DD for MySQL compatibility
+    const formatDate = (date) =>
+      date.getFullYear() +
+      "-" +
+      String(date.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(date.getDate()).padStart(2, "0");
+
+    const formattedFirstDay = formatDate(firstDayOfMonth);
+    const formattedLastDay = formatDate(lastDayOfMonth);
+
+    console.log("formattedFirstDay", formattedFirstDay);
+    console.log("formattedLastDay", formattedLastDay);
 
     const sql = `
       SELECT 
         (SELECT COALESCE(SUM(grandTotal), 0) 
          FROM orders 
          WHERE preparedBy = ? 
-           AND orderDate BETWEEN ? AND ?) as userMonthlySales,
+           AND productionDate BETWEEN ? AND ?) as userMonthlySales,
         (SELECT COALESCE(SUM(grandTotal), 0) 
          FROM orders 
-         WHERE orderDate BETWEEN ? AND ?) as totalMonthlySales
+         WHERE productionDate BETWEEN ? AND ? 
+           AND status IN ('Prod', 'Finished', 'Billed', 'Delivered', 'Close')) as totalMonthlySales
     `;
 
     const [result] = await pool.query(sql, [
@@ -1856,7 +1869,7 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {
     console.log("Query Error:", err);
-    return res.json({
+    return res.status(500).json({
       Status: false,
       Error: "Failed to fetch monthly sales data",
     });

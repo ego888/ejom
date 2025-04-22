@@ -197,15 +197,6 @@ function Orders() {
     selectedClients,
   ]);
 
-  // Add useEffect to fetch orders on mount
-  useEffect(() => {
-    console.log("Orders component mounted");
-    // Reset to first page when component mounts
-    setCurrentPage(1);
-    localStorage.setItem("ordersListPage", "1");
-    fetchOrders();
-  }, []);
-
   // Fetch status options
   useEffect(() => {
     const fetchStatusOptions = async () => {
