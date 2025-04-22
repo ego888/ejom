@@ -120,77 +120,64 @@ function Prod() {
 
   // Update fetchOrderData to use new endpoint
   const fetchOrderData = async () => {
-    console.log("fetchOrderData function called");
-    setLoading(true);
     try {
-      if (selectedStatuses.length === 0) {
-        setOrders([]);
-        setTotalCount(0);
-        setTotalPages(0);
-        setLoading(false);
-        return;
-      }
-
-      const params = {
-        page: currentPage,
-        limit: recordsPerPage,
-        sortBy: sortConfig.key,
-        sortDirection: sortConfig.direction,
-        statuses: selectedStatuses.join(","),
-        sales: selectedSales.length ? selectedSales.join(",") : undefined,
-        clients: selectedClients.length ? selectedClients.join(",") : undefined,
-        ...(searchTerm.trim() && {
-          search: searchTerm.trim(),
-        }),
-      };
-
-      console.log("Search params:", params);
+      setLoading(true);
       const response = await axios.get(
         `${ServerIP}/auth/get-order-tempPaymentAllocation`,
-        { params }
+        {
+          params: {
+            page: currentPage,
+            limit: recordsPerPage,
+            sortBy: sortConfig.key,
+            sortDirection: sortConfig.direction,
+            statuses: selectedStatuses.join(","),
+            sales: selectedSales.join(","),
+            clients: selectedClients.join(","),
+            search: searchTerm,
+          },
+        }
       );
 
       if (response.data.Status) {
-        const ordersWithTemp = response.data.Result.orders;
+        setOrders(response.data.Result.orders);
+        setTotalPages(response.data.Result.totalPages);
+        setTotalCount(response.data.Result.total);
 
-        // Update orders state
-        setOrders(ordersWithTemp);
+        // Get total allocated amount if we have a tempPayId
+        if (tempPayId) {
+          const totalAllocated = await getTotalAllocated(tempPayId);
+          setRemainingAmount(paymentInfo.amount - totalAllocated);
+        }
 
-        // Update payment states based on temp allocations
+        // Update payment states based on server data
         const newOrderPayments = {};
         const newCheckPay = new Set();
-        let totalTempPayments = 0;
+        let hasTempPayments = false;
 
-        ordersWithTemp.forEach((order) => {
-          if (order.tempPayment) {
+        response.data.Result.orders.forEach((order) => {
+          if (order.tempPayment && order.tempPaymentOrderId === order.id) {
+            hasTempPayments = true;
             newOrderPayments[order.id] = {
-              payment: Number(order.tempPayment),
-              wtax: 0, // You might want to handle wtax separately
+              payment: order.tempPayment,
+              wtax: 0, // WTax will be calculated when needed
             };
             newCheckPay.add(order.id);
-            totalTempPayments += Number(order.tempPayment);
           }
         });
 
-        // Only update payment states if we have temp payments
-        if (Object.keys(newOrderPayments).length > 0) {
+        // Only update payment states if we found temp payments
+        if (hasTempPayments) {
           setOrderPayments(newOrderPayments);
           setCheckPay(newCheckPay);
-
-          // Update remaining amount based on current payment info
-          if (paymentInfo.amount) {
-            setRemainingAmount(Number(paymentInfo.amount) - totalTempPayments);
-          }
+        } else {
+          // Clear payment states if no temp payments found
+          setOrderPayments({});
+          setCheckPay(new Set());
         }
-
-        setTotalCount(response.data.Result.total || 0);
-        setTotalPages(response.data.Result.totalPages || 0);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
-      setOrders([]);
-      setTotalCount(0);
-      setTotalPages(0);
+      handleApiError(error);
     } finally {
       setLoading(false);
     }
@@ -362,6 +349,10 @@ function Prod() {
 
           if (response.data.Status) {
             setTempPayId(response.data.Result.payId);
+            setPaymentInfo((prev) => ({
+              ...prev,
+              payId: response.data.Result.payId,
+            }));
           }
         }
       } catch (error) {
@@ -399,27 +390,35 @@ function Prod() {
     );
   };
 
-  // Update handlePayCheck to use save-temp-allocation
+  // Add function to get total allocated amount
+  const getTotalAllocated = async (payId) => {
+    try {
+      const response = await axios.get(
+        `${ServerIP}/auth/get-total-tempPaymentAllocated`,
+        { params: { payId } }
+      );
+
+      if (response.data.Status) {
+        return response.data.Result.totalAllocated;
+      }
+      return 0;
+    } catch (error) {
+      console.error("Error getting total allocated amount:", error);
+      return 0;
+    }
+  };
+
+  // Update handlePayCheck to use the new endpoint
   const handlePayCheck = async (orderId, orderAmount, orderTotal) => {
     if (!canEditPayments()) return;
 
-    console.log("passed orderTotal", orderTotal);
-    console.log("passed orderAmount", orderAmount);
-
     const newCheckPay = new Set(checkPay);
     const newOrderPayments = { ...orderPayments };
-
-    // Calculate current total payments
-    const currentTotal = Object.values(newOrderPayments).reduce(
-      (sum, p) => sum + (p.payment || 0),
-      0
-    );
 
     if (newCheckPay.has(orderId)) {
       // Uncheck: Remove payment and add amount back to remaining
       newCheckPay.delete(orderId);
       const removedPayment = newOrderPayments[orderId]?.payment || 0;
-      setRemainingAmount((prev) => prev + removedPayment);
       delete newOrderPayments[orderId];
 
       // Delete from temp allocation if tempPayId exists
@@ -429,6 +428,10 @@ function Prod() {
             payId: tempPayId,
             orderId: orderId,
           });
+
+          // Get updated total allocated amount
+          const totalAllocated = await getTotalAllocated(tempPayId);
+          setRemainingAmount(paymentInfo.amount - totalAllocated);
         } catch (error) {
           console.error("Error deleting temp allocation:", error);
         }
@@ -436,26 +439,28 @@ function Prod() {
     } else {
       // Check: Calculate and apply new payment
       const availableAmount = Math.min(remainingAmount, orderAmount);
-      console.log("orderID", orderId);
-      console.log("Available Amount 1:", availableAmount);
-      console.log("Order Total 1:", orderTotal);
-      console.log("Order Balance 1:", orderAmount);
-      console.log("Remaining Amount 1:", remainingAmount);
       if (availableAmount > 0) {
         let wtaxAmount = 0;
         let paymentAmount = availableAmount;
 
+        console.log("paymentAmount 1", paymentAmount);
         // Calculate WTax if selected
-        console.log("Selected WTax:", selectedWtax);
         if (selectedWtax) {
           if (selectedWtax.withVAT === 1) {
             const baseAmount = orderTotal / (1 + vatRate / 100);
             wtaxAmount =
               Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
-            if (availableAmount >= orderAmount) {
-              paymentAmount = orderAmount - wtaxAmount;
+            console.log("wTaxAmount", wtaxAmount);
+            console.log("availableAmount", availableAmount);
+            console.log("orderAmount", orderAmount);
+            if (wtaxAmount === paymentAmount) {
+              wtaxAmount = 0;
             } else {
-              paymentAmount = availableAmount;
+              if (availableAmount >= orderAmount) {
+                paymentAmount = orderAmount - wtaxAmount;
+              } else {
+                paymentAmount = availableAmount;
+              }
             }
           } else {
             wtaxAmount =
@@ -463,34 +468,28 @@ function Prod() {
               100;
           }
         }
-        console.log("Available Amount:", availableAmount);
-        console.log("Order Total:", orderTotal);
-        console.log("Order Balance:", orderAmount);
-        console.log("Payment Amount:", paymentAmount);
+        // Save to temp allocation if tempPayId exists
+        if (tempPayId && paymentAmount > 0) {
+          try {
+            await axios.post(`${ServerIP}/auth/save-temp-allocation`, {
+              payId: tempPayId,
+              allocation: {
+                orderId: orderId,
+                amount: paymentAmount,
+              },
+            });
 
-        // Ensure we don't exceed the input amount
-        if (currentTotal + paymentAmount <= paymentInfo.amount) {
-          newCheckPay.add(orderId);
-          newOrderPayments[orderId] = {
-            payment: paymentAmount,
-            wtax: wtaxAmount,
-          };
-          // Update remaining amount based on payment only
-          setRemainingAmount((prev) => prev - paymentAmount);
+            // Get updated total allocated amount
+            const totalAllocated = await getTotalAllocated(tempPayId);
+            setRemainingAmount(paymentInfo.amount - totalAllocated);
 
-          // Save to temp allocation if tempPayId exists
-          if (tempPayId && paymentAmount > 0) {
-            try {
-              await axios.post(`${ServerIP}/auth/save-temp-allocation`, {
-                payId: tempPayId,
-                allocation: {
-                  orderId: orderId,
-                  amount: paymentAmount,
-                },
-              });
-            } catch (error) {
-              console.error("Error saving temp allocation:", error);
-            }
+            newCheckPay.add(orderId);
+            newOrderPayments[orderId] = {
+              payment: paymentAmount,
+              wtax: wtaxAmount,
+            };
+          } catch (error) {
+            console.error("Error saving temp allocation:", error);
           }
         }
       }
@@ -500,66 +499,8 @@ function Prod() {
     setOrderPayments(newOrderPayments);
   };
 
-  // Also update the WTax change handler
-  useEffect(() => {
-    if (selectedWtax && checkPay.size > 0) {
-      const newOrderPayments = { ...orderPayments };
-      let totalRemainingAmount = paymentInfo.amount;
-
-      // Recalculate all payments
-      checkPay.forEach((orderId) => {
-        const order = orders.find((o) => o.id === orderId);
-        if (!order) return;
-
-        const orderAmount = order.grandTotal - (order.amountPaid || 0);
-        let wtaxAmount = 0;
-        let paymentAmount = orderAmount;
-
-        // Calculate WTax and adjust payment
-        if (orderAmount <= totalRemainingAmount) {
-          const baseAmount =
-            selectedWtax.withVAT === 1
-              ? orderAmount / (1 + vatRate / 100)
-              : orderAmount;
-          wtaxAmount =
-            Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
-          paymentAmount = orderAmount - wtaxAmount;
-        } else {
-          paymentAmount = totalRemainingAmount;
-        }
-
-        newOrderPayments[orderId] = {
-          payment: paymentAmount,
-          wtax: wtaxAmount,
-        };
-        totalRemainingAmount -= paymentAmount;
-      });
-
-      setOrderPayments(newOrderPayments);
-      setRemainingAmount(totalRemainingAmount);
-    }
-  }, [selectedWtax, vatRate, orders, paymentInfo.amount]);
-
-  // Add debounced update function
-  const debouncedUpdateTempAllocation = useCallback(
-    debounce(async (payId, orderId, amount) => {
-      try {
-        await axios.post(`${ServerIP}/auth/update-temp-allocation`, {
-          payId,
-          allocation: {
-            orderId,
-            amount,
-          },
-        });
-      } catch (error) {
-        console.error("Error updating temp allocation:", error);
-      }
-    }, 500),
-    []
-  );
-
-  // Update handlePaymentChange function
-  const handlePaymentChange = (orderId, field, value) => {
+  // Update handlePaymentChange to use the new endpoint
+  const handlePaymentChange = async (orderId, field, value) => {
     const numValue = Number(value);
     const newOrderPayments = { ...orderPayments };
     const oldPayment = newOrderPayments[orderId]?.payment || 0;
@@ -573,11 +514,24 @@ function Prod() {
         ...newOrderPayments[orderId],
         payment,
       };
-      setRemainingAmount(maxPayment - payment);
 
       // Update temp allocation if we have a tempPayId
       if (tempPayId && payment > 0) {
-        debouncedUpdateTempAllocation(tempPayId, orderId, payment);
+        try {
+          await axios.post(`${ServerIP}/auth/update-temp-allocation`, {
+            payId: tempPayId,
+            allocation: {
+              orderId: orderId,
+              amount: payment,
+            },
+          });
+
+          // Get updated total allocated amount
+          const totalAllocated = await getTotalAllocated(tempPayId);
+          setRemainingAmount(paymentInfo.amount - totalAllocated);
+        } catch (error) {
+          console.error("Error updating temp allocation:", error);
+        }
       }
     } else if (field === "wtax") {
       newOrderPayments[orderId] = {
@@ -592,7 +546,9 @@ function Prod() {
   // Update canPost to check for OR#
   const canPost = () => {
     return (
-      canEditPayments() && checkPay.size > 0 && paymentInfo.ornum.trim() !== ""
+      canEditPayments() &&
+      remainingAmount === 0 &&
+      paymentInfo.ornum.trim() !== ""
     ); // Add OR# validation
   };
 
@@ -836,14 +792,19 @@ function Prod() {
   const handleCancelPayment = () => {
     setTempPayId(null);
     setOrderPayments({});
+    setCheckPay(new Set());
     setPaymentInfo({
       amount: "",
-      payType: "",
+      payType: "CASH",
       payReference: "",
-      payDate: "",
+      payDate: new Date().toISOString().split("T")[0],
       ornum: "",
       transactedBy: localStorage.getItem("userName") || "",
+      payId: null,
+      clientName: "",
     });
+    setRemainingAmount(0);
+    setSearchClientName(""); // Reset client search
   };
 
   const handleClientHover = (clientId) => {
@@ -1411,12 +1372,9 @@ function Prod() {
                     className="position-relative"
                     onMouseOver={(e) => {
                       if (!canPost()) {
-                        console.log("Showing tooltip");
                         const rect = e.currentTarget.getBoundingClientRect();
                         const message = getTooltipMessage();
-                        // Estimate pixel width based on message length (roughly 8px per character)
                         const messageWidth = message.length * 10;
-                        // Adjust x position based on message width
                         const xOffset = messageWidth / 2;
 
                         setTooltipPosition({
@@ -1442,33 +1400,21 @@ function Prod() {
                   <strong>Totals:</strong>
                 </td>
                 <td className="text-right">
-                  <strong>
-                    {(() => {
-                      const total = Object.values(orderPayments).reduce(
-                        (sum, p) => sum + (p.payment || 0),
-                        0
-                      );
-                      return total > 0 ? formatPeso(total) : "";
-                    })()}
-                  </strong>
-                </td>
-                <td className="text-right">
-                  <strong>
-                    {(() => {
-                      const total = Object.values(orderPayments).reduce(
-                        (sum, p) => sum + (p.wtax || 0),
-                        0
-                      );
-                      return total > 0 ? formatPeso(total) : "";
-                    })()}
-                  </strong>
-                </td>
-                <td className="text-right">
+                  Unallocated:
                   <strong>
                     {remainingAmount > 0 ? formatPeso(remainingAmount) : ""}
                   </strong>
                 </td>
-                <td colSpan="2"></td>
+                <td></td>
+                <td className="text-right">
+                  Allocated:
+                  <strong>
+                    {paymentInfo.amount - remainingAmount > 0
+                      ? formatPeso(paymentInfo.amount - remainingAmount)
+                      : ""}
+                  </strong>
+                </td>
+                <td colSpan="3"></td>
               </tr>
             </tbody>
           </table>

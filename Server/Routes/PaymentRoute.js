@@ -1602,8 +1602,9 @@ router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
         o.forBill,
         o.productionDate,
         COALESCE(pmt.orNums, '') as orNums,
-        MAX(tpa.amountApplied) as tempPayment,
-        MAX(CASE WHEN tpa.amountApplied IS NOT NULL THEN 1 ELSE 0 END) as isChecked
+        tpa.amountApplied as tempPayment,
+        tpa.orderId as tempPaymentOrderId,
+        CASE WHEN tpa.amountApplied IS NOT NULL THEN 1 ELSE 0 END as isChecked
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
@@ -1644,7 +1645,9 @@ router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
         o.forProd,
         o.forBill,
         o.productionDate,
-        pmt.orNums
+        pmt.orNums,
+        tpa.amountApplied,
+        tpa.orderId
       ORDER BY ${sortBy} ${sortDirection}
       LIMIT ? OFFSET ?
     `;
@@ -1679,6 +1682,45 @@ router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
       Error: "Failed to fetch orders with temp allocations",
       Details: err.message,
     });
+  }
+});
+
+// Get total allocated amount for a payment
+router.get("/get-total-tempPaymentAllocated", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payId } = req.query;
+
+    if (!payId) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Payment ID is required",
+      });
+    }
+
+    connection = await pool.getConnection();
+
+    const [result] = await connection.query(
+      `SELECT COALESCE(SUM(amountApplied), 0) as totalAllocated
+       FROM tempPaymentAllocation
+       WHERE payId = ?`,
+      [payId]
+    );
+
+    return res.json({
+      Status: true,
+      Result: {
+        totalAllocated: parseFloat(result[0].totalAllocated) || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting total allocated amount:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to get total allocated amount: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
