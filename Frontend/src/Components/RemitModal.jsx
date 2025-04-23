@@ -30,6 +30,7 @@ function RemitModal({ show, onClose }) {
       setLoading(true);
       setError(null);
       const response = await axios.get(`${ServerIP}/auth/unremitted-payments`);
+      console.log("unremitted payments", response.data);
       if (response.data.Status) {
         setPayments(response.data.Result);
         // Group payments by payType
@@ -126,9 +127,15 @@ function RemitModal({ show, onClose }) {
                 (payment, index) => `
               <tr style="background-color: ${
                 index % 2 === 0 ? "#ffffff" : "#f8f9fa"
-              };">
+              }; border-top: ${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? "2px solid #4d4d4d"
+                    : "1px solid #dee2e6"
+                };">
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payId
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payId
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
                   payment.orderId
@@ -143,25 +150,39 @@ function RemitModal({ show, onClose }) {
                   payment.amountApplied
                 )}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.ornum || "N/A"
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.ornum || "N/A"
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payDate
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payDate
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payType
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payType
+                    : ""
                 }</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatPeso(
-                  payment.amount
-                )}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payReference || ""
-                }</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.transactedBy
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? formatPeso(payment.amount)
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.postedDate
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payReference || ""
+                    : ""
+                }</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.transactedBy
+                    : ""
+                }</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.postedDate
+                    : ""
                 }</td>
               </tr>
             `
@@ -298,8 +319,22 @@ function RemitModal({ show, onClose }) {
               {Object.entries(groupedPayments).map(([type, typePayments]) => (
                 <React.Fragment key={type}>
                   {typePayments.map((payment, index) => (
-                    <tr key={`${payment.payId}-${payment.orderId}-${index}`}>
-                      <td className="text-center">{payment.payId}</td>
+                    <tr
+                      key={`${payment.payId}-${payment.orderId}-${index}`}
+                      style={{
+                        borderTop:
+                          index === 0 ||
+                          typePayments[index - 1].payId !== payment.payId
+                            ? "2px solid #4d4d4d"
+                            : "1px solid #dee2e6",
+                      }}
+                    >
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payId
+                          : ""}
+                      </td>
                       <td className="text-center">{payment.orderId}</td>
                       <td>{payment.clientName}</td>
                       <td className="text-end">
@@ -308,20 +343,63 @@ function RemitModal({ show, onClose }) {
                       <td className="text-end">
                         {formatPeso(payment.amountApplied)}
                       </td>
-                      <td className="text-center">{payment.ornum || "N/A"}</td>
-                      <td className="text-center">{payment.payDate}</td>
-                      <td className="text-center">{payment.payType}</td>
-                      <td className="text-end">{formatPeso(payment.amount)}</td>
                       <td className="text-center">
-                        {payment.payReference || ""}
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.ornum || "N/A"
+                          : ""}
                       </td>
-                      <td className="text-center">{payment.transactedBy}</td>
-                      <td className="text-center">{payment.postedDate}</td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payDate
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payType
+                          : ""}
+                      </td>
+                      <td className="text-end">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? formatPeso(payment.amount)
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payReference || ""
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.transactedBy
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.postedDate
+                          : ""}
+                      </td>
                     </tr>
                   ))}
                   <tr className="table-secondary">
                     <td colSpan="3" className="text-end">
                       <strong>Subtotal for {type}</strong>
+                    </td>
+                    <td className="text-end">
+                      <strong>
+                        {formatPeso(
+                          typePayments.reduce(
+                            (sum, p) => sum + Number(p.grandTotal),
+                            0
+                          )
+                        )}
+                      </strong>
                     </td>
                     <td className="text-end">
                       <strong>

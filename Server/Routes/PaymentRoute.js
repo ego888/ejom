@@ -1053,7 +1053,7 @@ router.get("/unremitted-payments", verifyUser, async (req, res) => {
       JOIN orders o ON pa.orderId = o.orderId
       JOIN client c ON o.clientId = c.id
       WHERE p.remittedBy IS NULL
-      ORDER BY p.payType ASC`
+      ORDER BY p.payType ASC, p.payId ASC`
     );
 
     return res.json({
