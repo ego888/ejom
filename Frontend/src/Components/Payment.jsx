@@ -10,7 +10,7 @@ import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
 import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
-import { formatPeso, formatDate } from "../utils/orderUtils";
+import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
 import Modal from "./UI/Modal";
 import PaymentAllocationModal from "./PaymentAllocationModal";
@@ -100,6 +100,8 @@ function Prod() {
   const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [clickTimer, setClickTimer] = useState(null);
+  const [allocationCount, setAllocationCount] = useState(0);
+  const [allocatedAmount, setAllocatedAmount] = useState(0);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -408,7 +410,7 @@ function Prod() {
     }
   };
 
-  // Update handlePayCheck to use the new endpoint
+  // Update handlePayCheck to use the combined response
   const handlePayCheck = async (orderId, orderAmount, orderTotal) => {
     if (!canEditPayments()) return;
 
@@ -424,14 +426,21 @@ function Prod() {
       // Delete from temp allocation if tempPayId exists
       if (tempPayId) {
         try {
-          await axios.post(`${ServerIP}/auth/delete-temp-allocation`, {
-            payId: tempPayId,
-            orderId: orderId,
-          });
+          const response = await axios.post(
+            `${ServerIP}/auth/delete-temp-allocation`,
+            {
+              payId: tempPayId,
+              orderId: orderId,
+            }
+          );
 
-          // Get updated total allocated amount
-          const totalAllocated = await getTotalAllocated(tempPayId);
-          setRemainingAmount(paymentInfo.amount - totalAllocated);
+          if (response.data.Status) {
+            setAllocationCount(response.data.Result.count);
+            setAllocatedAmount(response.data.Result.totalAllocated);
+            setRemainingAmount(
+              paymentInfo.amount - response.data.Result.totalAllocated
+            );
+          }
         } catch (error) {
           console.error("Error deleting temp allocation:", error);
         }
@@ -443,16 +452,12 @@ function Prod() {
         let wtaxAmount = 0;
         let paymentAmount = availableAmount;
 
-        console.log("paymentAmount 1", paymentAmount);
         // Calculate WTax if selected
         if (selectedWtax) {
           if (selectedWtax.withVAT === 1) {
             const baseAmount = orderTotal / (1 + vatRate / 100);
             wtaxAmount =
               Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
-            console.log("wTaxAmount", wtaxAmount);
-            console.log("availableAmount", availableAmount);
-            console.log("orderAmount", orderAmount);
             if (wtaxAmount === paymentAmount) {
               wtaxAmount = 0;
             } else {
@@ -471,23 +476,30 @@ function Prod() {
         // Save to temp allocation if tempPayId exists
         if (tempPayId && paymentAmount > 0) {
           try {
-            await axios.post(`${ServerIP}/auth/save-temp-allocation`, {
-              payId: tempPayId,
-              allocation: {
-                orderId: orderId,
-                amount: paymentAmount,
-              },
-            });
+            const response = await axios.post(
+              `${ServerIP}/auth/save-temp-allocation`,
+              {
+                payId: tempPayId,
+                allocation: {
+                  orderId: orderId,
+                  amount: paymentAmount,
+                },
+              }
+            );
 
-            // Get updated total allocated amount
-            const totalAllocated = await getTotalAllocated(tempPayId);
-            setRemainingAmount(paymentInfo.amount - totalAllocated);
+            if (response.data.Status) {
+              setAllocationCount(response.data.Result.count);
+              setAllocatedAmount(response.data.Result.totalAllocated);
+              setRemainingAmount(
+                paymentInfo.amount - response.data.Result.totalAllocated
+              );
 
-            newCheckPay.add(orderId);
-            newOrderPayments[orderId] = {
-              payment: paymentAmount,
-              wtax: wtaxAmount,
-            };
+              newCheckPay.add(orderId);
+              newOrderPayments[orderId] = {
+                payment: paymentAmount.toFixed(2),
+                wtax: wtaxAmount.toFixed(2),
+              };
+            }
           } catch (error) {
             console.error("Error saving temp allocation:", error);
           }
@@ -646,69 +658,29 @@ function Prod() {
   // Function to post payment to server
   const postPaymentToServer = async () => {
     try {
-      // Ensure all numeric values are properly converted
-      const payload = {
-        payment: {
-          amount: Number(paymentInfo.amount),
-          payType: paymentInfo.payType,
-          payReference: paymentInfo.payReference,
-          payDate: paymentInfo.payDate,
-          ornum: paymentInfo.ornum,
-          transactedBy: localStorage.getItem("userName"),
-        },
-        allocations: Object.entries(orderPayments).map(
-          ([orderId, details]) => ({
-            orderId: Number(orderId),
-            amount: Number(details.payment || 0),
-          })
-        ),
-      };
+      setLoading(true);
+      setError(null);
 
-      console.log("Sending payment payload:", JSON.stringify(payload, null, 2));
-      const response = await axios.post(
-        `${ServerIP}/auth/post-payment`,
-        payload
-      );
+      const response = await axios.post(`${ServerIP}/auth/post-payment`, {
+        payId: tempPayId,
+        transactedBy: localStorage.getItem("userName"),
+      });
 
       if (response.data.Status) {
-        setSuccessMessage(
-          `Payment of ${formatPeso(paymentInfo.amount)} posted successfully`
-        );
+        setSuccessMessage("Payment posted successfully");
         setShowSuccessModal(true);
-
-        // Clear all payment-related state
-        setOrderPayments({});
-        setRemainingAmount(0);
-        setCheckPay(new Set());
-        setTempPayId(null);
-        setPaymentInfo({
-          amount: "",
-          payType: "",
-          payReference: "",
-          payDate: new Date().toISOString().split("T")[0],
-          ornum: "",
-          transactedBy: localStorage.getItem("userName") || "",
-        });
-
-        // Refresh order data
-        fetchOrderData();
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          navigate("/payments");
+        }, 2000);
       } else {
-        setError(response.data.Error);
+        setError(response.data.Error || "Failed to post payment");
       }
     } catch (error) {
-      console.error("Payment error:", error);
-      let errorMessage = "Failed to post payment";
-
-      if (error.code === "ERR_CONNECTION_REFUSED") {
-        errorMessage =
-          "Unable to connect to server. Please check if the server is running.";
-      } else if (error.response?.data?.Error) {
-        errorMessage = error.response.data.Error;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setError(errorMessage);
+      setError("Failed to post payment: " + error.message);
+      console.error("Error posting payment:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -742,6 +714,7 @@ function Prod() {
     checkForTempPayments();
   }, []);
 
+  // Update checkForTempPayments to use the combined response
   const checkForTempPayments = async () => {
     try {
       const response = await axios.get(`${ServerIP}/auth/check-temp-payments`);
@@ -769,6 +742,7 @@ function Prod() {
               params: { payId: tempPayment.payId },
             }
           );
+
           if (allocationResponse.data.Status) {
             const allocations =
               allocationResponse.data.paymentAllocation.allocations;
@@ -781,6 +755,14 @@ function Prod() {
             });
             setOrderPayments(newOrderPayments);
             setCheckPay(new Set(allocations.map((a) => a.orderId)));
+            setAllocationCount(allocationResponse.data.paymentAllocation.count);
+            setAllocatedAmount(
+              allocationResponse.data.paymentAllocation.totalAllocated
+            );
+            setRemainingAmount(
+              tempPayment.amount -
+                allocationResponse.data.paymentAllocation.totalAllocated
+            );
           }
         }
       }
@@ -865,12 +847,12 @@ function Prod() {
             <Button variant="save" onClick={() => setShowRemitModal(true)}>
               Payment Summary
             </Button>
-            {checkPay.size > 0 && (
+            {allocationCount > 0 && (
               <Button
                 variant="view"
                 onClick={() => setShowAllocationModal(true)}
               >
-                View Allocations ({checkPay.size})
+                View Allocations ({allocationCount})
               </Button>
             )}
           </div>
@@ -1222,9 +1204,7 @@ function Prod() {
                       {order.invnum || ""}
                     </td>
                     <td className="number_right">
-                      {order.grandTotal
-                        ? `₱${order.grandTotal.toLocaleString()}`
-                        : ""}
+                      {formatPeso(order.grandTotal)}
                     </td>
                     <td
                       className="number_right"
@@ -1270,9 +1250,7 @@ function Prod() {
                         }
                       }}
                     >
-                      {order.amountPaid > 0
-                        ? `₱${order.amountPaid.toLocaleString()}`
-                        : ""}
+                      {formatPesoZ(order.amountPaid)}
                     </td>
                     <td>{order.orNums || ""}</td>
                     <td className="text-center">
@@ -1308,7 +1286,7 @@ function Prod() {
                       {canEditPayments() && checkPay.has(order.id) ? (
                         <input
                           type="number"
-                          className="form-control form-control-sm text-right"
+                          className="form-input detail text-end"
                           value={orderPayments[order.id]?.payment || 0}
                           onChange={(e) =>
                             handlePaymentChange(
@@ -1320,17 +1298,15 @@ function Prod() {
                           min="0"
                           max={order.grandTotal - (order.amountPaid || 0)}
                         />
-                      ) : orderPayments[order.id]?.payment > 0 ? (
-                        formatPeso(orderPayments[order.id]?.payment)
                       ) : (
-                        ""
+                        formatPesoZ(orderPayments[order.id]?.payment)
                       )}
                     </td>
                     <td className="text-right">
                       {canEditPayments() && checkPay.has(order.id) ? (
                         <input
                           type="number"
-                          className="form-control form-control-sm text-right"
+                          className="form-input detail text-end"
                           value={orderPayments[order.id]?.wtax || 0}
                           onChange={(e) =>
                             handlePaymentChange(
@@ -1341,10 +1317,8 @@ function Prod() {
                           }
                           min="0"
                         />
-                      ) : orderPayments[order.id]?.wtax > 0 ? (
-                        formatPeso(orderPayments[order.id]?.wtax)
                       ) : (
-                        ""
+                        formatPesoZ(orderPayments[order.id]?.wtax)
                       )}
                     </td>
                     <td className="text-right">
@@ -1401,18 +1375,12 @@ function Prod() {
                 </td>
                 <td className="text-right">
                   Unallocated:
-                  <strong>
-                    {remainingAmount > 0 ? formatPeso(remainingAmount) : ""}
-                  </strong>
+                  <strong>{formatPeso(remainingAmount)}</strong>
                 </td>
                 <td></td>
                 <td className="text-right">
                   Allocated:
-                  <strong>
-                    {paymentInfo.amount - remainingAmount > 0
-                      ? formatPeso(paymentInfo.amount - remainingAmount)
-                      : ""}
-                  </strong>
+                  <strong>{formatPeso(allocatedAmount)}</strong>
                 </td>
                 <td colSpan="3"></td>
               </tr>

@@ -216,10 +216,7 @@ export const formatNumber = (num) => {
 
 export const formatNumberZ = (num) => {
   if (num === null || num === undefined || Number(num) === 0) return "";
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(num);
+  return formatNumber(num);
 };
 
 {
@@ -235,6 +232,11 @@ export const formatPeso = (num) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num || 0);
+};
+
+export const formatPesoZ = (num) => {
+  if (num === null || num === undefined || Number(num) === 0) return "";
+  return formatPeso(num);
 };
 
 // API error handler
