@@ -141,22 +141,33 @@ router.get("/orders", async (req, res) => {
     let sortDirection = req.query.sortDirection || "desc";
     const forProdSort = req.query.forProdSort;
 
-    // Handle forProd sorting
     if (forProdSort === "asc" || forProdSort === "desc") {
       sortBy = "forProd";
       sortDirection = forProdSort;
     }
 
-    // Build where clause
-    let whereConditions = ["1=1"]; // Always true condition to start
+    let whereConditions = ["1=1"];
     let params = [];
+    let havingClause = "";
+    const havingParams = [];
 
     if (search) {
-      whereConditions.push(
-        "(o.orderID LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
-      );
       const searchParam = `%${search}%`;
-      params.push(
+      havingClause = `
+        HAVING 
+          o.orderID LIKE ? OR
+          c.clientName LIKE ? OR
+          c.customerName LIKE ? OR
+          o.projectName LIKE ? OR
+          o.orderedBy LIKE ? OR
+          o.drnum LIKE ? OR
+          o.invoiceNum LIKE ? OR
+          e.name LIKE ? OR
+          o.grandTotal LIKE ? OR
+          o.orderReference LIKE ? OR
+          orNums LIKE ?
+      `;
+      havingParams.push(
         searchParam,
         searchParam,
         searchParam,
@@ -166,7 +177,8 @@ router.get("/orders", async (req, res) => {
         searchParam,
         searchParam,
         searchParam,
-        searchParam
+        searchParam,
+        searchParam // for orNums
       );
     }
 
@@ -187,95 +199,86 @@ router.get("/orders", async (req, res) => {
 
     const whereClause = whereConditions.join(" AND ");
 
-    // Main data query
-    // const dataSql1 = `
-    //         SELECT
-    //             o.orderID as id,
-    //             o.revision,
-    //             o.clientId,
-    //             c.clientName,
-    //             c.customerName,
-    //             o.projectName,
-    //             o.orderedBy,
-    //             o.orderDate,
-    //             o.dueDate,
-    //             o.dueTime,
-    //             o.status,
-    //             o.drnum,
-    //             o.invoiceNum as invnum,
-    //             o.totalAmount,
-    //             o.amountDisc,
-    //             o.percentDisc,
-    //             o.grandTotal,
-    //             o.amountPaid,
-    //             o.datePaid,
-    //             e.name as salesName,
-    //             o.orderReference,
-    //             o.forProd,
-    //             o.forBill,
-    //             o.productionDate,
-    //         FROM orders o
-    //         LEFT JOIN client c ON o.clientId = c.id
-    //         LEFT JOIN employee e ON o.preparedBy = e.id
-    //         WHERE ${whereClause}
-    //         ORDER BY ${sortBy} ${sortDirection}
-    //         LIMIT ? OFFSET ?
-    //     `;
-
     const dataSql = `
-        SELECT 
-            o.orderID as id, 
-            o.revision,
-            o.clientId, 
-            c.clientName, 
-            c.customerName,
-            c.hold AS holdDate,
-            c.overdue AS warningDate,
-            o.projectName, 
-            o.orderedBy, 
-            o.orderDate, 
-            o.dueDate, 
-            o.dueTime,
-            o.status, 
-            o.drnum, 
-            o.invoiceNum as invnum, 
-            o.totalAmount,
-            o.amountDisc,
-            o.percentDisc,
-            o.grandTotal,
-            o.amountPaid,
-            o.datePaid,
-            e.name as salesName, 
-            o.orderReference,
-            o.forProd,
-            o.forBill,
-            o.productionDate,
-            GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
-        FROM orders o
-        LEFT JOIN client c ON o.clientId = c.id
-        LEFT JOIN employee e ON o.preparedBy = e.id
-        LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
-        LEFT JOIN payments p ON p.payId = pja.payId
-        WHERE ${whereClause}
-        GROUP BY o.orderId
-        ORDER BY ${sortBy} ${sortDirection}
-        LIMIT ? OFFSET ?
-    `;
-
-    // Execute data query with proper parameter order
-    const [orders] = await pool.query(dataSql, [...params, limit, offset]);
-
-    // Count query
-    const countSql = `
-      SELECT COUNT(DISTINCT o.orderID) as total
+      SELECT 
+          o.orderID as id, 
+          o.revision,
+          o.clientId, 
+          c.clientName, 
+          c.customerName,
+          c.hold AS holdDate,
+          c.overdue AS warningDate,
+          o.projectName, 
+          o.orderedBy, 
+          o.orderDate, 
+          o.dueDate, 
+          o.dueTime,
+          o.status, 
+          o.drnum, 
+          o.invoiceNum as invnum, 
+          o.totalAmount,
+          o.amountDisc,
+          o.percentDisc,
+          o.grandTotal,
+          o.amountPaid,
+          o.datePaid,
+          e.name as salesName, 
+          o.orderReference,
+          o.forProd,
+          o.forBill,
+          o.productionDate,
+          GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
+      LEFT JOIN payments p ON p.payId = pja.payId
       WHERE ${whereClause}
+      GROUP BY o.orderId
+      ${havingClause}
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
     `;
 
-    // Execute count query
-    const [countResults] = await pool.query(countSql, params);
+    const [orders] = await pool.query(dataSql, [
+      ...params,
+      ...havingParams,
+      limit,
+      offset,
+    ]);
+
+    // Count query (excluding GROUP_CONCAT and HAVING)
+    const countSql = `
+    SELECT COUNT(*) as total FROM (
+      SELECT 
+        o.orderID,
+        o.orderID AS id, 
+        c.clientName,
+        c.customerName,
+        o.projectName,
+        o.orderedBy,
+        o.drnum,
+        o.invoiceNum,
+        e.name AS salesName,
+        o.grandTotal,
+        o.orderReference,
+        GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
+      LEFT JOIN payments p ON p.payId = pja.payId
+      WHERE ${whereClause}
+      GROUP BY o.orderID
+      ${havingClause}
+    ) AS countResult
+  `;
+
+    // Use: [...params, ...havingParams]
+    const [countResults] = await pool.query(countSql, [
+      ...params,
+      ...havingParams,
+    ]);
     const countResult = countResults[0];
 
     return res.json({
@@ -288,7 +291,7 @@ router.get("/orders", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error in orders route:", err);
+    console.error("Error in /orders route:", err);
     return res.json({
       Status: false,
       Error: "Failed to fetch orders",
