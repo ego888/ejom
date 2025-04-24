@@ -852,7 +852,7 @@ function Prod() {
                 variant="view"
                 onClick={() => setShowAllocationModal(true)}
               >
-                View Allocations ({allocationCount})
+                Review Allocations ({allocationCount})
               </Button>
             )}
           </div>
@@ -1144,8 +1144,9 @@ function Prod() {
                       fontWeight:
                         new Date() > new Date(order.warningDate) &&
                         order.grandTotal > order.amountPaid &&
-                        (order.status === "Delivered" ||
-                          order.status === "Billed")
+                        !(
+                          order.status === "Closed" || order.status === "Cancel"
+                        )
                           ? "bold"
                           : "normal",
                     }}

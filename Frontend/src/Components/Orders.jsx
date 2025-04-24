@@ -525,8 +525,9 @@ function Orders() {
                       fontWeight:
                         new Date() > new Date(order.warningDate) &&
                         order.grandTotal > order.amountPaid &&
-                        (order.status === "Delivered" ||
-                          order.status === "Billed")
+                        !(
+                          order.status === "Closed" || order.status === "Cancel"
+                        )
                           ? "bold"
                           : "normal",
                     }}
