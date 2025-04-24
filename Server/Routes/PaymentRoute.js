@@ -1458,13 +1458,27 @@ router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
     // Build where clause
     let whereConditions = ["1=1"]; // Always true condition to start
     let params = [];
+    let havingClause = "";
+    const havingParams = [];
 
     if (search) {
-      whereConditions.push(
-        "(o.orderID LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
-      );
       const searchParam = `%${search}%`;
-      params.push(
+      havingClause = `
+        HAVING (
+          o.orderID LIKE ? OR
+          c.clientName LIKE ? OR
+          c.customerName LIKE ? OR
+          o.projectName LIKE ? OR
+          o.orderedBy LIKE ? OR
+          o.drnum LIKE ? OR
+          o.invoiceNum LIKE ? OR
+          e.name LIKE ? OR
+          o.grandTotal LIKE ? OR
+          o.orderReference LIKE ? OR
+          orNums LIKE ?
+        )
+      `;
+      havingParams.push(
         searchParam,
         searchParam,
         searchParam,
@@ -1474,7 +1488,8 @@ router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
         searchParam,
         searchParam,
         searchParam,
-        searchParam
+        searchParam,
+        searchParam // orNums
       );
     }
 
@@ -1571,22 +1586,47 @@ router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
         pmt.orNums,
         tpa.amountApplied,
         tpa.orderId
+        ${havingClause}
       ORDER BY ${sortBy} ${sortDirection}
       LIMIT ? OFFSET ?
     `;
 
     // Count query
     const countSql = `
-      SELECT COUNT(DISTINCT o.orderID) as total
+    SELECT COUNT(*) AS total FROM (
+      SELECT o.orderID,
+        c.clientName,
+        c.customerName,
+        o.projectName,
+        o.orderedBy,
+        o.drnum,
+        o.invoiceNum,
+        e.name AS salesName,
+        o.grandTotal,
+        o.orderReference,
+        GROUP_CONCAT(DISTINCT p.orNum SEPARATOR ', ') AS orNums
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
+      LEFT JOIN payments p ON p.payId = pja.payId
       WHERE ${whereClause}
-    `;
+      GROUP BY o.orderID
+      ${havingClause}
+    ) AS countResult
+  `;
 
     // Execute queries
-    const [orders] = await pool.query(dataSql, [...params, limit, offset]);
-    const [countResults] = await pool.query(countSql, params);
+    const [orders] = await pool.query(dataSql, [
+      ...params,
+      ...havingParams,
+      limit,
+      offset,
+    ]);
+    const [countResults] = await pool.query(countSql, [
+      ...params,
+      ...havingParams,
+    ]);
     const countResult = countResults[0];
 
     return res.json({
