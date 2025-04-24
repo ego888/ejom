@@ -363,4 +363,51 @@ router.get(
   }
 );
 
+router.get("/invoices-inquire", verifyUser, async (req, res) => {
+  const { dateFrom, dateTo } = req.query;
+
+  if (!dateFrom || !dateTo) {
+    return res.status(400).json({
+      Status: false,
+      Error: "Date range is required",
+    });
+  }
+
+  try {
+    const connection = await pool.getConnection();
+    const [results] = await connection.execute(
+      `SELECT 
+        i.id,
+        o.billDate,
+        i.invoicePrefix,
+        i.invoiceNumber,
+        i.invoiceAmount,
+        c.clientName,
+        c.customerName,
+        c.tinNumber,
+        o.orderId, 
+        o.grandTotal
+      FROM invoice i
+      LEFT JOIN orders o ON i.orderId = o.orderId
+      LEFT JOIN client c ON o.clientId = c.id
+      WHERE 
+        o.billDate >= ? AND 
+        o.billDate < DATE_ADD(?, INTERVAL 1 DAY)
+        AND i.invoiceNumber IS NOT NULL
+        AND i.invoiceNumber != 'NaN'
+      ORDER BY i.invoicePrefix, i.invoiceNumber ASC`,
+      [dateFrom, dateTo]
+    );
+
+    connection.release();
+    return res.json({ Status: true, Result: results });
+  } catch (error) {
+    console.error("Error in invoice inquiry:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch invoice data",
+    });
+  }
+});
+
 export default router;

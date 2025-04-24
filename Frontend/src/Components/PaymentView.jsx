@@ -33,6 +33,9 @@ function OrderView() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedPayId, setSelectedPayId] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [show, setShow] = useState(true);
 
   const location = useLocation(); // Get the current route path
 
@@ -169,6 +172,28 @@ function OrderView() {
       : overdueDate && currentDate > overdueDate
       ? "table-warning"
       : "";
+
+  // Add function to fetch invoices
+  const fetchInvoices = async () => {
+    try {
+      setLoadingInvoices(true);
+      const response = await axios.get(`${ServerIP}/auth/invoices/${id}`);
+      if (response.data.Status) {
+        setInvoices(response.data.Result);
+      }
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
+  // Add useEffect to fetch invoices when component mounts
+  useEffect(() => {
+    if (show) {
+      fetchInvoices();
+    }
+  }, [show, id]);
 
   return (
     <div
@@ -442,6 +467,20 @@ function OrderView() {
               <li className="nav-item" role="presentation">
                 <button
                   className="nav-link"
+                  id="invoice-info-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#invoice-info"
+                  type="button"
+                  role="tab"
+                  aria-controls="invoice-info"
+                  aria-selected="false"
+                >
+                  Invoice Info
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className="nav-link"
                   id="order-details-tab"
                   data-bs-toggle="tab"
                   data-bs-target="#order-details"
@@ -475,6 +514,52 @@ function OrderView() {
                 aria-labelledby="other-info-tab"
               >
                 <PaymentAllocation payId={selectedPayId} />
+              </div>
+
+              <div
+                className="tab-pane fade"
+                id="invoice-info"
+                role="tabpanel"
+                aria-labelledby="invoice-info-tab"
+              >
+                {loadingInvoices ? (
+                  <div className="text-center my-3">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                ) : invoices.length > 0 ? (
+                  <div className="table-responsive">
+                    <table className="table table-bordered">
+                      <thead>
+                        <tr>
+                          <th className="text-center">Invoice Number</th>
+                          <th className="text-center">Amount</th>
+                          <th className="text-center">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invoices.map((invoice) => (
+                          <tr key={invoice.id}>
+                            <td className="text-center">
+                              {invoice.invoicePrefix + invoice.invoiceNumber}
+                            </td>
+                            <td className="text-end">
+                              {formatPeso(invoice.invoiceAmount)}
+                            </td>
+                            <td className="text-center">
+                              {invoice.invoiceRemarks || ""}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="alert alert-info" role="alert">
+                    No invoices found for this order
+                  </div>
+                )}
               </div>
 
               <div

@@ -1854,10 +1854,12 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
         (SELECT COALESCE(SUM(grandTotal), 0) 
          FROM orders 
          WHERE preparedBy = ? 
-           AND productionDate BETWEEN ? AND ?) as userMonthlySales,
+           AND productionDate >= ? 
+           AND productionDate < DATE_ADD(?, INTERVAL 1 DAY)) as userMonthlySales,
         (SELECT COALESCE(SUM(grandTotal), 0) 
          FROM orders 
-         WHERE productionDate BETWEEN ? AND ? 
+         WHERE productionDate >= ? 
+           AND productionDate < DATE_ADD(?, INTERVAL 1 DAY)
            AND status IN ('Prod', 'Finished', 'Billed', 'Delivered', 'Close')) as totalMonthlySales
     `;
 

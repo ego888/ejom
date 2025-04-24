@@ -25,9 +25,6 @@ const getMaterialUsageData = async (dateFrom, dateTo, groupBy) => {
       selectClause = "m.Material as materialName";
   }
 
-  const endDate = new Date(dateTo);
-  endDate.setHours(23, 59, 59, 999);
-
   const query = `
     SELECT 
       ${selectClause},
@@ -37,12 +34,13 @@ const getMaterialUsageData = async (dateFrom, dateTo, groupBy) => {
     FROM orders o
     JOIN order_details od ON o.orderId = od.orderId
     JOIN material m ON od.material = m.Material
-    WHERE o.orderDate BETWEEN ? AND ?
+    WHERE o.orderDate >= ?
+      AND o.orderDate < DATE_ADD(?, INTERVAL 1 DAY)
     GROUP BY ${groupByClause}
     ORDER BY ${groupByClause}
   `;
 
-  const [results] = await pool.query(query, [dateFrom, endDate]);
+  const [results] = await pool.query(query, [dateFrom, dateTo]);
   return results;
 };
 
