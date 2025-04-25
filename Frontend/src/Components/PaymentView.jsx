@@ -294,7 +294,7 @@ function OrderView() {
                   <div className="form-input">{data.orderReference || ""}</div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-2 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Cell Number</label>
                   <div className="form-input">{data.cellNumber || ""}</div>
@@ -312,10 +312,26 @@ function OrderView() {
                   <div className="form-input">{data.dueTime || ""}</div>
                 </div>
               </div>
-              <div className="col-4 order-info-row">
+              <div className="col-2 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">Graphics By</label>
                   <div className="form-input">{data.graphicsByName || ""}</div>
+                </div>
+              </div>
+              <div className="col-2 order-info-row">
+                <div className="d-flex flex-column">
+                  <label className="form-label">Grand Total</label>
+                  <div className="form-input">
+                    <strong>{formatPeso(data.grandTotal)}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="col-2 order-info-row">
+                <div className="d-flex flex-column">
+                  <label className="form-label">Amount Paid</label>
+                  <div className="form-input">
+                    <strong>{formatPeso(data.amountPaid)}</strong>
+                  </div>
                 </div>
               </div>
               <div className="col-6">
@@ -530,7 +546,7 @@ function OrderView() {
                   </div>
                 ) : invoices.length > 0 ? (
                   <div className="table-responsive">
-                    <table className="table table-bordered">
+                    <table className="table table-bordered table-striped">
                       <thead>
                         <tr>
                           <th className="text-center">Invoice Number</th>
@@ -552,6 +568,20 @@ function OrderView() {
                             </td>
                           </tr>
                         ))}
+                        <tr style={{ borderTop: "2px solid lightgrey" }}>
+                          <td colSpan="2" className="text-end pe-2">
+                            <strong>
+                              Total:{" "}
+                              {formatPeso(
+                                invoices.reduce(
+                                  (sum, invoice) =>
+                                    sum + parseFloat(invoice.invoiceAmount),
+                                  0
+                                )
+                              )}
+                            </strong>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
