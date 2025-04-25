@@ -1687,4 +1687,41 @@ router.get("/get-total-tempPaymentAllocated", verifyUser, async (req, res) => {
   }
 });
 
+router.get("/cash-invoices-inquire", verifyUser, async (req, res) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      return res.json({ Status: false, Error: "Date range is required" });
+    }
+
+    const query = `
+            SELECT 
+                p.payId,
+                p.ornum,
+                p.payDate,
+                c.clientName,
+                c.customerName,
+                c.tinNumber,
+                p.amount,
+                o.orderId,
+                pja.amountApplied,
+                o.grandTotal
+            FROM payments p
+            JOIN paymentJoAllocation pja ON p.payId = pja.payId
+            JOIN orders o ON pja.orderId = o.orderId
+            JOIN client c ON o.clientId = c.id
+            WHERE p.payDate >= ? AND p.payDate <= DATE_ADD(?, INTERVAL 1 DAY)
+            ORDER BY p.ornum, p.payDate
+        `;
+
+    const [result] = await pool.query(query, [dateFrom, dateTo]);
+
+    return res.json({ Status: true, Result: result });
+  } catch (error) {
+    console.error("Error in cash-invoices-inquire:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
+});
+
 export { router as PaymentRouter };
