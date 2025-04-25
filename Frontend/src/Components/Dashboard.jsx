@@ -312,6 +312,7 @@ const Dashboard = () => {
       items.push(
         DASHPROD,
         PROD,
+        INVOICE_INQUIRY,
         WIPLOG,
         ARTISTLOG,
         PRINTLOG,
