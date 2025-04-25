@@ -246,9 +246,9 @@ function PaymentInquiry() {
                 </thead>
                 <tbody>
                   {groupPaymentsByPayId(payments).map((payment) => (
-                    <>
+                    <React.Fragment key={payment.payId}>
                       {payment.orders.map((order, index) => (
-                        <tr key={`${payment.payId}-${order.orderId}`}>
+                        <tr key={`${payment.payId}-${order.orderId}-${index}`}>
                           {index === 0 && (
                             <>
                               <td
@@ -324,7 +324,7 @@ function PaymentInquiry() {
                           </td>
                         </tr>
                       ))}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
