@@ -164,20 +164,6 @@ CREATE TABLE `employee` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `Holidays`
---
-
-CREATE TABLE `Holidays` (
-  `id` int NOT NULL,
-  `holidayDate` date NOT NULL,
-  `holidayType` varchar(50) NOT NULL,
-  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `invoice`
 --
 

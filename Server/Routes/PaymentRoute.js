@@ -1724,4 +1724,36 @@ router.get("/cash-invoices-inquire", verifyUser, async (req, res) => {
   }
 });
 
+// Delete payment
+router.delete("/delete-payment/:payId", verifyUser, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Check if payment exists
+    const [paymentCheck] = await connection.query(
+      "SELECT * FROM payments WHERE payId = ?",
+      [req.params.payId]
+    );
+
+    if (paymentCheck.length === 0) {
+      return res.json({ Status: false, Error: "Payment not found" });
+    }
+
+    // Delete payment details first
+    await connection.query("DELETE FROM payments WHERE payId = ?", [
+      req.params.payId,
+    ]);
+
+    await connection.commit();
+    return res.json({ Status: true, Message: "Payment deleted successfully" });
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error deleting payment:", err);
+    return res.json({ Status: false, Error: "Error deleting payment" });
+  } finally {
+    connection.release();
+  }
+});
+
 export { router as PaymentRouter };
