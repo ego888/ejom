@@ -361,8 +361,6 @@ const DTRBatchView = ({ batch, onBack }) => {
             setShowConfirmModal(true);
             return; // Exit and wait for user input
           } else {
-            console.log("LACK2 data: ", current);
-
             const [hours] = current.time.split(":").map(Number);
             // After 7 AM - Process as new time-in
             await axios.post(
@@ -664,6 +662,8 @@ const DTRBatchView = ({ batch, onBack }) => {
           entry.timeOut
       );
 
+      console.log("Start calculating hours:");
+
       // Calculate hours for each entry
       const updatedEntries = entriesToUpdate.map((entry) => {
         // Convert times to minutes for easier calculation
@@ -702,24 +702,32 @@ const DTRBatchView = ({ batch, onBack }) => {
           overtimeHours = totalHours - 8;
         }
 
-        return {
+        const updatedEntry = {
           id: entry.id,
+          batchId: entry.batchId,
           hours: regularHours.toFixed(2),
           overtime: overtimeHours.toFixed(2),
         };
+
+        return updatedEntry;
       });
 
+      console.log("Updating table:");
       // Send all updates in one request
       if (updatedEntries.length > 0) {
-        await axios.post(`${ServerIP}/auth/dtr/update-hours/${batch.id}`, {
-          entries: updatedEntries,
-        });
+        const response = await axios.post(
+          `${ServerIP}/auth/dtr/update-hours/${batch.id}`,
+          {
+            entries: updatedEntries,
+          }
+        );
+        console.log("Done updating table:");
       }
 
       // Refresh data after all calculations are complete
       await fetchEntries();
+      console.log("Entries refreshed after update");
     } catch (error) {
-      console.error("Error calculating hours:", error);
       setError("Failed to calculate hours. Please try again.");
     } finally {
       setLoading(false);
@@ -739,7 +747,6 @@ const DTRBatchView = ({ batch, onBack }) => {
       return;
     }
 
-    console.log("HANDLE TIME CLICK:", entry);
     let defaultTimeValue = "";
     let defaultDateValue = "";
 
@@ -780,9 +787,6 @@ const DTRBatchView = ({ batch, onBack }) => {
   };
 
   const handleTimeUpdate = async (newTime, newDate) => {
-    console.log("HANDLE TIME SUBMIT:", newTime);
-    console.log("HANDLE DATE SUBMIT:", newDate);
-    console.log("SELECTED ENTRY:", selectedEntry);
     if (!newTime || !selectedEntry || !newDate) return;
 
     try {
@@ -805,7 +809,6 @@ const DTRBatchView = ({ batch, onBack }) => {
         needsSwap = newDateTime < dateIn;
       }
 
-      console.log("NEEDS SWAP:", needsSwap);
       if (needsSwap) {
         // Handle swap case
         const newEditedIn = selectedEntry.editedOut;
@@ -815,10 +818,6 @@ const DTRBatchView = ({ batch, onBack }) => {
             ? [newTime, selectedEntry.timeIn]
             : [selectedEntry.timeOut, newTime];
 
-        console.log("NEW TIME IN:", newTimeIn);
-        console.log("NEW TIME OUT:", newTimeOut);
-        console.log("NEW EDITED IN:", newEditedIn);
-        console.log("NEW EDITED OUT:", newEditedOut);
         const response = await axios.post(
           `${ServerIP}/auth/dtr/update-time-in-out/${batch.id}`,
           {
@@ -906,7 +905,6 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const handleAddDate = async (entry) => {
     try {
-      console.log("HANDLE ADD DATE:", entry);
       const response = await axios.post(
         `${ServerIP}/auth/dtr/add-entry/${batch.id}`,
         {
@@ -1078,54 +1076,57 @@ const DTRBatchView = ({ batch, onBack }) => {
               entryDate.toDateString()
           );
 
-          // For Sunday entries, move regular hours to sundayHours and OT to sundayOT
-          if (entry.day?.toLowerCase() === "sun") {
-            if (holiday) {
+          // Only process if it's Sunday or a holiday
+          if (entry.day?.toLowerCase() === "sun" || holiday) {
+            // For Sunday entries, move regular hours to sundayHours and OT to sundayOT
+            if (entry.day?.toLowerCase() === "sun") {
+              if (holiday) {
+                holidayHours = Number(entry.hours);
+                holidayOT = Number(entry.overtime);
+                holidayType = `Sunday ${holiday.holidayType}`;
+              } else {
+                sundayHours = Number(entry.hours);
+                sundayOT = Number(entry.overtime);
+              }
+              // Clear regular hours and OT for Sundays
+              entry.hours = 0;
+              entry.overtime = 0;
+            } else if (holiday) {
+              // For non-Sunday holidays
               holidayHours = Number(entry.hours);
               holidayOT = Number(entry.overtime);
-              holidayType = `Sunday ${holiday.holidayType}`;
-            } else {
-              sundayHours = Number(entry.hours);
-              sundayOT = Number(entry.overtime);
+              holidayType = holiday.holidayType;
+              // Clear regular hours and OT for holidays
+              entry.hours = 0;
+              entry.overtime = 0;
             }
-            // Clear regular hours and OT for Sundays
-            entry.hours = 0;
-            entry.overtime = 0;
-          } else if (holiday) {
-            // For non-Sunday holidays
-            holidayHours = Number(entry.hours);
-            holidayOT = Number(entry.overtime);
-            holidayType = holiday.holidayType;
-            // Clear regular hours and OT for holidays
-            entry.hours = 0;
-            entry.overtime = 0;
-          }
 
-          // Update the database one entry at a time
-          const response = await axios.post(
-            `${ServerIP}/auth/dtr/update-special-hours/${batch.id}`,
-            {
-              entry: {
-                id: entry.id,
-                sundayHours:
-                  sundayHours > 0 ? Number(sundayHours.toFixed(2)) : 0,
-                sundayOT: sundayOT > 0 ? Number(sundayOT.toFixed(2)) : 0,
-                holidayHours:
-                  holidayHours > 0 ? Number(holidayHours.toFixed(2)) : 0,
-                holidayOT: holidayOT > 0 ? Number(holidayOT.toFixed(2)) : 0,
-                holidayType: holidayType || "",
-                nightDifferential:
-                  nightDifferential > 0
-                    ? Number(nightDifferential.toFixed(2))
-                    : 0,
-                hours: entry.hours,
-                overtime: entry.overtime,
-              },
+            // Update the database one entry at a time
+            const response = await axios.post(
+              `${ServerIP}/auth/dtr/update-special-hours/${batch.id}`,
+              {
+                entry: {
+                  id: entry.id,
+                  sundayHours:
+                    sundayHours > 0 ? Number(sundayHours.toFixed(2)) : 0,
+                  sundayOT: sundayOT > 0 ? Number(sundayOT.toFixed(2)) : 0,
+                  holidayHours:
+                    holidayHours > 0 ? Number(holidayHours.toFixed(2)) : 0,
+                  holidayOT: holidayOT > 0 ? Number(holidayOT.toFixed(2)) : 0,
+                  holidayType: holidayType || "",
+                  nightDifferential:
+                    nightDifferential > 0
+                      ? Number(nightDifferential.toFixed(2))
+                      : 0,
+                  hours: entry.hours,
+                  overtime: entry.overtime,
+                },
+              }
+            );
+
+            if (!response.data.Status) {
+              throw new Error(response.data.Error || "Failed to update entry");
             }
-          );
-
-          if (!response.data.Status) {
-            throw new Error(response.data.Error || "Failed to update entry");
           }
         }
       }
@@ -1135,7 +1136,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       setAlert({
         show: true,
         title: "Success",
-        message: "Successfully processed Sunday and holiday hours",
+        message: "Successfully calculated Hour, Sunday and holiday hours",
         variant: "success",
       });
     } catch (error) {
@@ -1867,7 +1868,6 @@ const FloatingTimeInput = ({
     )}:00`;
     onSave(formattedTime, date);
   };
-  console.log("HANDLE OPEN TIME WINDOW:", entry);
 
   if (!show) return null;
 
