@@ -1328,8 +1328,10 @@ function Prod() {
                           order.grandTotal -
                           (order.amountPaid || 0) -
                           (orderPayments[order.id]?.payment || 0);
+                        const grandTotalNetOfVat =
+                          order.grandTotal / (1 + vatRate / 100);
                         const balancePercentage =
-                          (balance / order.grandTotal) * 100;
+                          (balance / grandTotalNetOfVat) * 100;
                         return balance > 0 ? (
                           <div>
                             <div>{formatPeso(balance)}</div>
