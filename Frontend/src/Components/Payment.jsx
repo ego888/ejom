@@ -1328,7 +1328,18 @@ function Prod() {
                           order.grandTotal -
                           (order.amountPaid || 0) -
                           (orderPayments[order.id]?.payment || 0);
-                        return balance > 0 ? formatPeso(balance) : "";
+                        const balancePercentage =
+                          (balance / order.grandTotal) * 100;
+                        return balance > 0 ? (
+                          <div>
+                            <div>{formatPeso(balance)}</div>
+                            <div className="text-muted small">
+                              {balancePercentage.toFixed(2)}%
+                            </div>
+                          </div>
+                        ) : (
+                          ""
+                        );
                       })()}
                     </td>
                     <td>
