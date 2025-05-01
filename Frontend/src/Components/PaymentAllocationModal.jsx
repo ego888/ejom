@@ -104,9 +104,14 @@ const PaymentAllocationModal = ({
               }
             );
 
+            console.log("allocation response", allocationResponse.data);
             if (allocationResponse.data.Status) {
               // Update the modal's allocation data
               setAllocationData(allocationResponse.data.paymentAllocation);
+              console.log(
+                "New allocation data",
+                allocationResponse.data.paymentAllocation
+              );
             }
 
             // Refresh orders to update the UI
