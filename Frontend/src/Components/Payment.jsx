@@ -775,6 +775,7 @@ function Prod() {
     setTempPayId(null);
     setOrderPayments({});
     setCheckPay(new Set());
+    setAllocationCount(0);
     setPaymentInfo({
       amount: "",
       payType: "CASH",
@@ -786,7 +787,6 @@ function Prod() {
       clientName: "",
     });
     setRemainingAmount(0);
-    setSearchClientName(""); // Reset client search
   };
 
   const handleClientHover = (clientId) => {
@@ -1460,6 +1460,12 @@ function Prod() {
         orders={orders}
         onPostPayment={handlePostPayment}
         onCancelPayment={handleCancelPayment}
+        setOrderPayments={setOrderPayments}
+        setCheckPay={setCheckPay}
+        setAllocationCount={setAllocationCount}
+        setAllocatedAmount={setAllocatedAmount}
+        setRemainingAmount={setRemainingAmount}
+        fetchOrderData={fetchOrderData}
       />
       <RemitModal
         show={showRemitModal}
