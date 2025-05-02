@@ -125,7 +125,7 @@ const DTRHolidays = () => {
     <div className="dtr-holidays">
       <Calendar
         onChange={setDate}
-        value={date}
+        value={null}
         tileClassName={tileClassName}
         tileContent={tileContent}
         className="custom-calendar"
