@@ -9,6 +9,7 @@ import DTRBatchList from "./DTRBatchList";
 import DTRSummaryReport from "./DTRSummaryReport";
 import DTRDetailReport from "./DTRDetailReport";
 import DTRBatchView from "./DTRBatchView";
+import DTRHolidays from "./DTRHolidays";
 
 const DTR = () => {
   const navigate = useNavigate();
@@ -622,6 +623,8 @@ const DTR = () => {
             onAddFilesToBatch={handleAddFilesToBatch}
           />
         );
+      case "holidays":
+        return <DTRHolidays />;
       case "report":
         if (viewMode === "batch-view") {
           return (
@@ -673,6 +676,12 @@ const DTR = () => {
             onClick={() => handleTabClick("batches")}
           >
             View Batches
+          </div>
+          <div
+            className={`dtr-tab ${activeTab === "holidays" ? "active" : ""}`}
+            onClick={() => handleTabClick("holidays")}
+          >
+            Holidays
           </div>
           {selectedBatch && (
             <div
