@@ -97,9 +97,9 @@ function AddOrder() {
 
   const [orderTotals, setOrderTotals] = useState({
     subtotal: 0,
-    discAmount: data.amountDisc || 0,
-    percentDisc: data.percentDisc || 0,
-    grandTotal: data.grandTotal || 0,
+    discAmount: 0,
+    percentDisc: 0,
+    grandTotal: 0,
   });
 
   const [editingDisplayOrder, setEditingDisplayOrder] = useState(null);
@@ -145,45 +145,86 @@ function AddOrder() {
     return data.status === "Open" || currentUser.category_id === 1;
   };
 
+  // Add this at the top with other state declarations
+  const [tempDiscAmount, setTempDiscAmount] = useState(0);
+  const [debounceTimer, setDebounceTimer] = useState(null);
+
+  // Modify the handleDiscountChange function
   const handleDiscountChange = (type, value) => {
     const subtotal = orderDetails.reduce(
       (sum, detail) => sum + parseFloat(detail.amount || 0),
       0
     );
-    let newDiscAmount, newPercentDisc, newGrandTotal;
 
     if (type === "amount") {
-      newDiscAmount = parseFloat(value) || 0;
-      // Ensure discount amount doesn't exceed subtotal
-      newDiscAmount = Math.min(newDiscAmount, subtotal);
-      newPercentDisc =
-        subtotal > 0 ? ((newDiscAmount / subtotal) * 100).toFixed(2) : 0;
-      newGrandTotal = subtotal - newDiscAmount;
+      // For amount changes, just update the temporary value
+      setTempDiscAmount(value);
+
+      // Clear any existing timer
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      // Set a new timer to update the actual values after 500ms
+      const timer = setTimeout(() => {
+        const newDiscAmount = parseFloat(value) || 0;
+        // Ensure discount amount doesn't exceed subtotal
+        const finalDiscAmount = Math.min(newDiscAmount, subtotal);
+        const newPercentDisc =
+          subtotal > 0 ? ((finalDiscAmount / subtotal) * 100).toFixed(2) : 0;
+        const grandTotal = subtotal - finalDiscAmount;
+
+        setOrderTotals((prev) => ({
+          ...prev,
+          discAmount: parseFloat(finalDiscAmount),
+          percentDisc: parseFloat(newPercentDisc),
+          grandTotal: parseFloat(grandTotal),
+        }));
+
+        setData((prev) => ({
+          ...prev,
+          amountDisc: parseFloat(finalDiscAmount),
+          percentDisc: parseFloat(newPercentDisc),
+          grandTotal: parseFloat(grandTotal),
+        }));
+      }, 500);
+
+      setDebounceTimer(timer);
     } else {
-      newPercentDisc = parseFloat(value) || 0;
+      // For percentage changes, calculate immediately
+      const newPercentDisc = parseFloat(value) || 0;
       // Ensure percent discount doesn't exceed 100%
-      newPercentDisc = Math.min(newPercentDisc, 100);
-      newDiscAmount = ((subtotal * newPercentDisc) / 100).toFixed(2);
-      newGrandTotal = subtotal - newDiscAmount;
+      const finalPercentDisc = Math.min(newPercentDisc, 100);
+      const newDiscAmount = ((subtotal * finalPercentDisc) / 100).toFixed(2);
+      const grandTotal = subtotal - parseFloat(newDiscAmount);
+
+      // Update tempDiscAmount when percentage changes
+      setTempDiscAmount(newDiscAmount);
+
+      setOrderTotals((prev) => ({
+        ...prev,
+        discAmount: parseFloat(newDiscAmount),
+        percentDisc: parseFloat(finalPercentDisc),
+        grandTotal: parseFloat(grandTotal),
+      }));
+
+      setData((prev) => ({
+        ...prev,
+        amountDisc: parseFloat(newDiscAmount),
+        percentDisc: parseFloat(finalPercentDisc),
+        grandTotal: parseFloat(grandTotal),
+      }));
     }
-
-    const newTotals = {
-      subtotal,
-      discAmount: parseFloat(newDiscAmount),
-      percentDisc: parseFloat(newPercentDisc),
-      grandTotal: parseFloat(newGrandTotal),
-    };
-
-    setOrderTotals(newTotals);
-
-    // Update the main data state for saving to database
-    setData((prev) => ({
-      ...prev,
-      amountDisc: newDiscAmount,
-      percentDisc: newPercentDisc,
-      grandTotal: newGrandTotal,
-    }));
   };
+
+  // Add cleanup for the debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [debounceTimer]);
 
   const fetchOrderDetails = () => {
     const token = localStorage.getItem("token");
@@ -337,26 +378,37 @@ function AddOrder() {
   }, [orderId, data.amountDisc, data.percentDisc]);
 
   useEffect(() => {
+    // Calculate subtotal from order details
     const subtotal = orderDetails.reduce(
-      (acc, detail) =>
-        acc +
-        parseFloat(detail.unitPrice || 0) * parseFloat(detail.quantity || 0),
+      (sum, detail) => sum + parseFloat(detail.amount || 0),
       0
     );
-    const totalDiscount = orderDetails.reduce(
-      (acc, detail) =>
-        acc +
-        parseFloat(detail.unitPrice || 0) *
-          parseFloat(detail.quantity || 0) *
-          (parseFloat(detail.discount || 0) / 100),
-      0
-    );
+
+    // Get current discount values
+    const discAmount = parseFloat(orderTotals.discAmount) || 0;
+    const percentDisc = parseFloat(orderTotals.percentDisc) || 0;
+
+    // Calculate total discount (both amount and percentage)
+    const totalDiscount = discAmount + (subtotal * percentDisc) / 100;
+
+    // Calculate grand total
     const grandTotal = subtotal - totalDiscount;
 
-    setSubtotal(subtotal.toFixed(2));
-    setTotalDiscount(totalDiscount.toFixed(2));
-    setGrandTotal(grandTotal.toFixed(2));
-  }, [orderDetails]);
+    // Update all totals in one state update
+    setOrderTotals((prev) => ({
+      ...prev,
+      subtotal,
+      grandTotal,
+    }));
+
+    // Update the main data state for database
+    setData((prev) => ({
+      ...prev,
+      amountDisc: discAmount,
+      percentDisc: percentDisc,
+      grandTotal: grandTotal,
+    }));
+  }, [orderDetails, orderTotals.discAmount, orderTotals.percentDisc]);
 
   useEffect(() => {
     if (id) {
@@ -1097,31 +1149,33 @@ function AddOrder() {
       (sum, detail) => sum + parseFloat(detail.amount || 0),
       0
     );
-    const discAmount = parseFloat(orderTotals.discAmount) || 0;
 
-    // Recalculate percent discount based on current discount amount and new subtotal
-    const percentDisc =
-      subtotal > 0 ? ((discAmount / subtotal) * 100).toFixed(2) : 0;
+    // Keep the existing percentage discount
+    const percentDisc = parseFloat(orderTotals.percentDisc) || 0;
+
+    // Calculate new discount amount based on the percentage
+    const discAmount = ((subtotal * percentDisc) / 100).toFixed(2);
 
     // Calculate new grand total
-    const grandTotal = subtotal - discAmount;
+    const grandTotal = subtotal - parseFloat(discAmount);
 
     // Update all totals
     setOrderTotals((prev) => ({
       ...prev,
       subtotal,
-      percentDisc: parseFloat(percentDisc),
-      grandTotal,
+      discAmount: parseFloat(discAmount),
+      percentDisc,
+      grandTotal: parseFloat(grandTotal),
     }));
 
     // Update main data state for database
     setData((prev) => ({
       ...prev,
-      amountDisc: discAmount,
-      percentDisc: parseFloat(percentDisc),
-      grandTotal: grandTotal,
+      amountDisc: parseFloat(discAmount),
+      percentDisc,
+      grandTotal: parseFloat(grandTotal),
     }));
-  }, [orderDetails]); // Dependency on orderDetails
+  }, [orderDetails, orderTotals.percentDisc]); // Add percentDisc to dependencies
 
   // Add this function to handle the update
   const handleDisplayOrderUpdate = async (detail, newOrder) => {
@@ -1598,6 +1652,39 @@ function AddOrder() {
       }
     };
   }, []);
+
+  // Add this useEffect to handle recalculation when order details change
+  useEffect(() => {
+    const subtotal = orderDetails.reduce(
+      (sum, detail) => sum + parseFloat(detail.amount || 0),
+      0
+    );
+
+    // Get current percentage discount
+    const percentDisc = parseFloat(orderTotals.percentDisc) || 0;
+
+    // Calculate new discount amount based on the percentage
+    const newDiscAmount = ((subtotal * percentDisc) / 100).toFixed(2);
+    const grandTotal = subtotal - parseFloat(newDiscAmount);
+
+    // Update tempDiscAmount and orderTotals
+    setTempDiscAmount(newDiscAmount);
+    setOrderTotals((prev) => ({
+      ...prev,
+      subtotal,
+      discAmount: parseFloat(newDiscAmount),
+      percentDisc,
+      grandTotal: parseFloat(grandTotal),
+    }));
+
+    // Update main data state for database
+    setData((prev) => ({
+      ...prev,
+      amountDisc: parseFloat(newDiscAmount),
+      percentDisc,
+      grandTotal: parseFloat(grandTotal),
+    }));
+  }, [orderDetails]); // Only trigger on orderDetails changes
 
   return (
     <div className="orders-page-background">
@@ -2830,7 +2917,7 @@ function AddOrder() {
                       <input
                         type="number"
                         className="form-input detail text-end"
-                        value={orderTotals.discAmount}
+                        value={tempDiscAmount || orderTotals.discAmount}
                         onChange={(e) =>
                           handleDiscountChange("amount", e.target.value)
                         }
