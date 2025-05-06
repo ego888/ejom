@@ -16,7 +16,7 @@ import { formatDateTime } from "../utils/orderUtils";
 import PaymentAllocation from "./PaymentAllocation";
 import { getClientBackgroundStyle } from "../utils/clientOverdueStyle";
 
-function OrderView() {
+function PaymentView() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [data, setData] = useState({});
@@ -36,6 +36,7 @@ function OrderView() {
   const [invoices, setInvoices] = useState([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [show, setShow] = useState(true);
+  const [vatRate, setVatRate] = useState(0);
 
   const location = useLocation(); // Get the current route path
 
@@ -76,14 +77,14 @@ function OrderView() {
   useEffect(() => {
     console.log("useEffect loadStaticData");
     const loadStaticData = async () => {
-      const cachedStatuses = getCachedData("orderStatuses");
-      if (cachedStatuses) {
-        setStatusOptions(cachedStatuses);
-      } else {
-        // Fetch and cache
-        const response = await axios.get(`${ServerIP}/auth/order-statuses`);
-        if (response.data.Status) {
-          const statuses = response.data.Result;
+      try {
+        const [statusResponse, vatResponse] = await Promise.all([
+          axios.get(`${ServerIP}/auth/order-statuses`),
+          axios.get(`${ServerIP}/auth/jomcontrol/VAT`),
+        ]);
+
+        if (statusResponse.data.Status) {
+          const statuses = statusResponse.data.Result;
           localStorage.setItem(
             "orderStatuses",
             JSON.stringify({
@@ -93,6 +94,12 @@ function OrderView() {
           );
           setStatusOptions(statuses);
         }
+
+        if (vatResponse.data.Status) {
+          setVatRate(vatResponse.data.Result.vatPercent);
+        }
+      } catch (error) {
+        console.error("Error loading static data:", error);
       }
     };
 
@@ -308,12 +315,6 @@ function OrderView() {
               </div>
               <div className="col-2 order-info-row">
                 <div className="d-flex flex-column">
-                  <label className="form-label">Due Time</label>
-                  <div className="form-input">{data.dueTime || ""}</div>
-                </div>
-              </div>
-              <div className="col-2 order-info-row">
-                <div className="d-flex flex-column">
                   <label className="form-label">Graphics By</label>
                   <div className="form-input">{data.graphicsByName || ""}</div>
                 </div>
@@ -331,6 +332,42 @@ function OrderView() {
                   <label className="form-label">Amount Paid</label>
                   <div className="form-input">
                     <strong>{formatPeso(data.amountPaid)}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="col-2 order-info-row">
+                <div className="d-flex flex-column">
+                  <label className="form-label">Balance</label>
+                  <div className="form-input">
+                    <strong>
+                      {/* {formatPeso(data.grandTotal - data.amountPaid)}{" "} */}
+                      {(() => {
+                        const balance =
+                          data.grandTotal -
+                          (data.amountPaid || 0) -
+                          (data.amountPaid || 0);
+                        const grandTotalNetOfVat =
+                          data.grandTotal / (1 + vatRate / 100);
+                        const balancePercentage =
+                          (balance / grandTotalNetOfVat) * 100;
+                        return balance > 0 ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "baseline",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <div>{formatPeso(balance)}</div>
+                            <div className="text-muted small">
+                              {balancePercentage.toFixed(2)}%
+                            </div>
+                          </div>
+                        ) : (
+                          ""
+                        );
+                      })()}
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -800,4 +837,4 @@ function OrderView() {
   );
 }
 
-export default OrderView;
+export default PaymentView;
