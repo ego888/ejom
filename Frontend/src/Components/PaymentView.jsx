@@ -343,9 +343,7 @@ function PaymentView() {
                       {/* {formatPeso(data.grandTotal - data.amountPaid)}{" "} */}
                       {(() => {
                         const balance =
-                          data.grandTotal -
-                          (data.amountPaid || 0) -
-                          (data.amountPaid || 0);
+                          data.grandTotal - (data.amountPaid || 0);
                         const grandTotalNetOfVat =
                           data.grandTotal / (1 + vatRate / 100);
                         const balancePercentage =
