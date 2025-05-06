@@ -66,7 +66,8 @@ router.post("/save_invoice", verifyUser, async (req, res) => {
       });
     }
 
-    // Start transaction
+    // Start transaction with READ COMMITTED isolation level
+    await connection.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
     await connection.beginTransaction();
 
     // // Check if invoice number already exists
@@ -102,17 +103,30 @@ router.post("/save_invoice", verifyUser, async (req, res) => {
       [invoiceNumber, invoicePrefix]
     );
 
-    // Update order status and invoice amount
+    // Update order status and invoice number
     await connection.query(
       `UPDATE orders o 
-       SET o.status = 'Billed', 
-           o.billDate = NOW(),
+       SET o.billDate = NOW(),
            o.invoiceNum = (
              SELECT SUM(invoiceAmount) 
              FROM invoice 
              WHERE orderId = o.orderID
            )
        WHERE o.orderID = ?`,
+      [orderId]
+    );
+
+    // Update order status to Billed only if total invoice amount >= grand total
+    await connection.query(
+      `UPDATE orders o
+      JOIN (
+        SELECT orderId, COALESCE(SUM(invoiceAmount), 0) AS totalInvoiced
+        FROM invoice
+        GROUP BY orderId
+      ) i ON i.orderId = o.orderId
+      SET o.status = 'Billed'
+      WHERE o.orderId = ?
+      AND i.totalInvoiced >= o.grandTotal`,
       [orderId]
     );
 
