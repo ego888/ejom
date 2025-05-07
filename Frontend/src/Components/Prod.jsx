@@ -42,7 +42,14 @@ function Prod() {
           direction: "desc",
         };
   });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const saved = localStorage.getItem("prodSearchTerm") || "";
+    return saved;
+  });
+  const [displaySearchTerm, setDisplaySearchTerm] = useState(() => {
+    const saved = localStorage.getItem("prodSearchTerm") || "";
+    return saved;
+  });
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
     const saved = localStorage.getItem("orderStatusFilters");
@@ -79,7 +86,47 @@ function Prod() {
   const [showInvDetailsModal, setShowInvDetailsModal] = useState(false);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
 
+  // Define debounced search at component level
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      setSearchTerm(term);
+      localStorage.setItem("prodSearchTerm", term);
+    }, 300),
+    []
+  );
+
+  // Add useEffect to sync state with localStorage on mount
+  useEffect(() => {
+    const savedPage = parseInt(localStorage.getItem("ordersListPage")) || 1;
+    const savedSort = localStorage.getItem("prodSortConfig");
+    const savedSearch = localStorage.getItem("prodSearchTerm") || "";
+
+    if (savedPage !== currentPage) {
+      setCurrentPage(savedPage);
+    }
+
+    if (savedSort && JSON.parse(savedSort) !== sortConfig) {
+      setSortConfig(JSON.parse(savedSort));
+    }
+
+    // Only update search terms if they're different from saved value
+    if (savedSearch !== searchTerm) {
+      setSearchTerm(savedSearch);
+      setDisplaySearchTerm(savedSearch);
+    }
+  }, []); // Empty dependency array to run only on mount
+
+  // Separate useEffect for search term changes
+  useEffect(() => {
+    setDisplaySearchTerm(searchTerm);
+  }, [searchTerm]);
+
   const fetchOrders = async () => {
+    // Skip fetch if we're still initializing
+    if (!searchTerm && !localStorage.getItem("prodSearchTerm")) {
+      return;
+    }
+
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -220,18 +267,10 @@ function Prod() {
     fetchSalesEmployees();
   }, []);
 
-  // Debounced search handler
-  const debouncedSearch = useCallback(
-    debounce((term) => {
-      setSearchTerm(term);
-      setCurrentPage(1);
-    }, 500),
-    []
-  );
-
   const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    debouncedSearch(term);
+    const value = e.target.value;
+    setDisplaySearchTerm(value);
+    debouncedSearch(value);
   };
 
   // Sort handler
@@ -694,6 +733,7 @@ function Prod() {
             className="form-control form-control-sm"
             placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
             onChange={handleSearch}
+            value={displaySearchTerm}
             style={{ width: "400px" }}
           />
         </div>
@@ -991,18 +1031,18 @@ function Prod() {
         </div>
       </div>
 
-      <InvoiceModal
-        show={showInvModal}
-        onClose={() => setShowInvModal(false)}
-        orderId={orderId}
-        grandTotal={orders.find((order) => order.id === orderId)?.grandTotal}
-        onSave={() => {
-          // Handle successful save
-          setShowInvModal(false);
-          // Refresh your data if needed
-          fetchOrders();
-        }}
-      />
+      {showInvModal && (
+        <InvoiceModal
+          show={showInvModal}
+          onClose={() => setShowInvModal(false)}
+          orderId={orderId}
+          grandTotal={orders.find((order) => order.id === orderId)?.grandTotal}
+          onSave={() => {
+            setShowInvModal(false);
+            fetchOrders();
+          }}
+        />
+      )}
 
       <InvoiceDetailsModal
         show={showInvDetailsModal}
