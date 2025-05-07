@@ -1308,7 +1308,7 @@ router.post(
   async (req, res) => {
     const connection = await pool.getConnection();
     try {
-      await connection.beginTransaction();
+      // await connection.beginTransaction();
 
       // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
       const { printHrs, noPrint, ...otherData } = req.body;
@@ -1340,53 +1340,76 @@ router.post(
         });
       }
 
-      const sql = "INSERT INTO order_details SET ?";
-      const [result] = await connection.query(sql, data);
+      // Set transaction isolation level before starting transaction
+      await connection.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+      await connection.beginTransaction();
 
-      // After inserting, calculate new order totals
-      const [orderDetails] = await connection.query(
-        "SELECT amount, printHrs FROM order_details WHERE orderId = ?",
-        [data.orderId]
-      );
+      try {
+        const sql = "INSERT INTO order_details SET ?";
+        const [result] = await connection.query(sql, data);
 
-      // Calculate total amount
-      let totalAmount = 0;
-      let totalHrs = 0;
+        // After inserting, calculate new order totals
+        const [orderDetails] = await connection.query(
+          "SELECT amount, printHrs FROM order_details WHERE orderId = ? AND noPrint = 0",
+          [data.orderId]
+        );
 
-      orderDetails.forEach((detail) => {
-        totalAmount += parseFloat(detail.amount || 0);
-        totalHrs += parseFloat(detail.printHrs || 0);
-      });
+        // Calculate total amount
+        let totalAmount = 0;
+        let totalHrs = 0;
 
-      // Get existing discount values
-      const amountDisc = parseFloat(orderCheck[0].amountDisc || 0);
-      const percentDisc = parseFloat(orderCheck[0].percentDisc || 0);
+        orderDetails.forEach((detail) => {
+          console.log("Processing detail:", detail);
+          totalAmount += parseFloat(detail.amount || 0);
+          totalHrs += parseFloat(detail.printHrs || 0);
+        });
 
-      // Calculate grand total considering discounts
-      let discountValue = amountDisc;
-      if (percentDisc > 0) {
-        // If percent discount is set, recalculate amount discount
-        discountValue = (totalAmount * percentDisc) / 100;
+        // Get existing discount values
+        const [orderCheck] = await connection.query(
+          "SELECT amountDisc, percentDisc FROM orders WHERE orderID = ?",
+          [data.orderId]
+        );
+
+        const amountDisc = parseFloat(orderCheck[0]?.amountDisc || 0);
+        const percentDisc = parseFloat(orderCheck[0]?.percentDisc || 0);
+
+        // Calculate grand total considering discounts
+        let discountValue = amountDisc;
+        if (percentDisc > 0) {
+          // If percent discount is set, recalculate amount discount
+          discountValue = (totalAmount * percentDisc) / 100;
+        }
+
+        const grandTotal = totalAmount - discountValue;
+
+        // Update the order with new totals
+        await connection.query(
+          `UPDATE orders 
+           SET totalAmount = ?, 
+               grandTotal = ?,
+               totalHrs = ?,
+               lastEdited = NOW(),
+               editedBy = ?
+           WHERE orderID = ?`,
+          [totalAmount, grandTotal, totalHrs, req.user.name, data.orderId]
+        );
+        await connection.commit();
+
+        return res.json({
+          Status: true,
+          Message: "Order detail added successfully",
+          Result: result,
+        });
+      } catch (error) {
+        // Rollback in case of error
+        await connection.rollback();
+        console.error("Error in transaction:", error);
+        return res.json({
+          Status: false,
+          Error: "Failed to add order detail. Please try again.",
+        });
       }
-
-      const grandTotal = totalAmount - discountValue;
-
-      // Update the order with new totals
-      await connection.query(
-        `UPDATE orders 
-         SET totalAmount = ?, 
-             grandTotal = ?,
-             totalHrs = ?,
-             lastEdited = NOW(),
-             editedBy = ?
-         WHERE orderID = ?`,
-        [totalAmount, grandTotal, totalHrs, req.user.name, data.orderId]
-      );
-
-      await connection.commit();
-      return res.json({ Status: true, Result: result });
     } catch (err) {
-      await connection.rollback();
       console.log("SQL Error:", err);
       return res.json({ Status: false, Error: "Failed to add order detail" });
     } finally {

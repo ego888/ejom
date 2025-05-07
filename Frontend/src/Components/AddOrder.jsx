@@ -667,13 +667,10 @@ function AddOrder() {
   //     });
   // };
   const handleDetailAdded = () => {
-    fetchOrderDetails();
     const token = localStorage.getItem("token");
     axios
       .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
       .then((result) => {
         if (result.data.Status) {
@@ -684,25 +681,6 @@ function AddOrder() {
             ...prev,
             totalHrs: totals.totalHrs,
           }));
-
-          // Update order with new totalHrs
-          const orderUpdateData = {
-            lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
-            editedBy: localStorage.getItem("userName"),
-            totalHrs: totals.totalHrs,
-            totalAmount: data.totalAmount || 0,
-            amountDisc: data.amountDisc || 0,
-            percentDisc: data.percentDisc || 0,
-            grandTotal: data.grandTotal || 0,
-          };
-
-          axios.put(
-            `${ServerIP}/auth/orders/${orderId || id}/update_edited_info`,
-            orderUpdateData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
         }
       })
       .catch((err) => console.log(err));
