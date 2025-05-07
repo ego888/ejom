@@ -107,7 +107,10 @@ function Prod() {
   const debouncedSearch = useCallback(
     debounce((term) => {
       setSearchTerm(term);
-      setCurrentPage(1);
+      // Only reset page if this is a new search, not a restore from localStorage
+      if (term !== localStorage.getItem("paymentSearchTerm")) {
+        setCurrentPage(1);
+      }
       localStorage.setItem("paymentSearchTerm", term);
     }, 500),
     []
@@ -120,9 +123,31 @@ function Prod() {
     debouncedSearch(term);
   };
 
+  // Add useEffect to sync state with localStorage on mount
+  useEffect(() => {
+    const savedPage = parseInt(localStorage.getItem("ordersListPage")) || 1;
+    const savedSort = localStorage.getItem("ordersSortConfig");
+    const savedSearch = localStorage.getItem("paymentSearchTerm") || "";
+
+    if (savedPage !== currentPage) {
+      setCurrentPage(savedPage);
+    }
+
+    if (savedSort && JSON.parse(savedSort) !== sortConfig) {
+      setSortConfig(JSON.parse(savedSort));
+    }
+
+    if (savedSearch !== searchTerm) {
+      setSearchTerm(savedSearch);
+      setDisplaySearchTerm(savedSearch);
+    }
+  }, []);
+
   // Update fetchOrderData to use new endpoint
   const fetchOrderData = async () => {
     try {
+      console.log("RUN fetchOrderData");
+      console.trace("TRACE fetchOrderData");
       setLoading(true);
       const response = await axios.get(
         `${ServerIP}/auth/get-order-tempPaymentAllocation`,
@@ -250,6 +275,8 @@ function Prod() {
           setSalesEmployees(salesResponse.data.Result);
 
         console.log("FINISH initializeComponent");
+        // Set initialLoad to false before fetching data
+        setInitialLoad(false);
         // Call fetchOrderData after initialization is complete
         await fetchOrderData();
       } catch (error) {
@@ -262,6 +289,10 @@ function Prod() {
 
   // Update useEffect dependencies
   useEffect(() => {
+    // Skip the initial fetch since it's handled by initializeComponent
+    if (initialLoad) {
+      return;
+    }
     fetchOrderData();
   }, [
     currentPage,
@@ -273,7 +304,7 @@ function Prod() {
     searchTerm,
   ]);
 
-  // Sort handler
+  // Update handleSort to preserve page number
   const handleSort = (key) => {
     let direction = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") {
@@ -281,7 +312,7 @@ function Prod() {
     }
     const newSortConfig = { key, direction };
     setSortConfig(newSortConfig);
-    setCurrentPage(1);
+    // Remove the page reset
     localStorage.setItem("paymentsSortConfig", JSON.stringify(newSortConfig));
   };
 
@@ -305,22 +336,19 @@ function Prod() {
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
-  // Update handleClientSearch to use fetchOrderData
+  // Update handleClientSearch to preserve page number
   const handleClientSearch = async (e) => {
-    if (e.type === "keydown" && e.key !== "Enter") return;
-    if (e.type === "blur" && searchTerm.trim() === "") return;
+    const value = e.target.value.trim();
 
-    // Update payment info with client name
-    setPaymentInfo((prev) => ({
-      ...prev,
-      clientName: searchTerm,
-    }));
+    // Only run if value is different from current
+    if (value && value !== paymentInfo.clientName) {
+      setPaymentInfo((prev) => ({
+        ...prev,
+        clientName: value,
+      }));
 
-    // Reset to first page when searching
-    setCurrentPage(1);
-
-    // Fetch data using main function
-    await fetchOrderData();
+      await fetchOrderData();
+    }
   };
 
   // Add useEffect to focus on client name input when component mounts
@@ -410,7 +438,7 @@ function Prod() {
     }
   };
 
-  // Update handlePayCheck to use the combined response
+  // Update handlePayCheck to preserve page number
   const handlePayCheck = async (orderId, orderAmount, orderTotal) => {
     if (!canEditPayments()) return;
 
@@ -511,7 +539,7 @@ function Prod() {
     setOrderPayments(newOrderPayments);
   };
 
-  // Update handlePaymentChange to use the new endpoint
+  // Update handlePaymentChange to preserve page number
   const handlePaymentChange = async (orderId, field, value) => {
     const numValue = Number(value);
     const newOrderPayments = { ...orderPayments };
@@ -920,8 +948,13 @@ function Prod() {
                   className="form-input"
                   value={searchClientName}
                   onChange={(e) => setSearchClientName(e.target.value)}
-                  onKeyDown={handleClientSearch}
-                  onBlur={handleClientSearch}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleClientSearch(e);
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value.trim();
+                    if (value !== paymentInfo.clientName) handleClientSearch(e);
+                  }}
                   placeholder="Enter client name"
                   list="clientList"
                   autoComplete="off"
@@ -1421,7 +1454,7 @@ function Prod() {
                 "orderStatusFilter",
                 JSON.stringify(newStatuses)
               );
-              fetchOrderData();
+              // fetchOrderData();
             }}
           />
 
