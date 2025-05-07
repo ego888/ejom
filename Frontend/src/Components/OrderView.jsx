@@ -122,6 +122,7 @@ function OrderView() {
       projectName: data.projectName,
       drNum: data.drNum,
       drDate: data.drDate,
+      orderedBy: data.orderedBy,
       order_details: orderDetails
         .filter((detail) => !detail.noPrint) // Filter out noPrint records
         .map((detail) => ({

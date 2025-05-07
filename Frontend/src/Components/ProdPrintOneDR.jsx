@@ -68,6 +68,7 @@ function ProdPrintOneDR() {
           clientName: orderInfo.clientName,
           customerName: orderInfo.customerName,
           projectName: orderInfo.projectName,
+          orderedBy: orderInfo.orderedBy,
           drDate: orderInfo.drDate,
           drNum: drNumber,
           deliveryInst: orderInfo.deliveryInst,
