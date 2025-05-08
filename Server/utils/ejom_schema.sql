@@ -388,7 +388,7 @@ CREATE TABLE `orders` (
   `goprint` tinyint(1) DEFAULT 0,
   `status` varchar(10) DEFAULT 'Open',
   `totalAmount` decimal(10,2) DEFAULT 0.00,
-  `percentDisc` decimal(3,0) DEFAULT 0,
+  `percentDisc` decimal(5,2) DEFAULT 0.00,
   `amountDisc` decimal(8,2) DEFAULT 0.00,
   `grandTotal` decimal(10,2) DEFAULT 0.00,
   `amountPaid` decimal(10,2) DEFAULT 0.00,

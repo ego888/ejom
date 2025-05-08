@@ -254,9 +254,7 @@ function PrintDR({ data, showAmounts = true }) {
                               </div>
                             </div>
                             <div className="total-row">
-                              <div className="total-label">
-                                Amount Discount:
-                              </div>
+                              <div className="total-label">Amount Disc:</div>
                               <div className="total-value">
                                 {formatNumber(order.amountDisc)}
                               </div>
