@@ -122,11 +122,6 @@ function Prod() {
   }, [searchTerm]);
 
   const fetchOrders = async () => {
-    // Skip fetch if we're still initializing
-    if (!searchTerm && !localStorage.getItem("prodSearchTerm")) {
-      return;
-    }
-
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -142,7 +137,7 @@ function Prod() {
           limit: recordsPerPage,
           sortBy: sortConfig.key,
           sortDirection: sortConfig.direction,
-          search: searchTerm,
+          search: searchTerm || "",
           statuses: activeStatuses.join(","),
           sales: selectedSales.length ? selectedSales.join(",") : undefined,
           clients: selectedClients.length
