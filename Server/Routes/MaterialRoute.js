@@ -42,7 +42,7 @@ router.post("/material/add", async (req, res) => {
   try {
     const sql = `
       INSERT INTO material 
-      (material, description, sqFtPerHour, minimumPrice, fixWidth, fixHeight, cost, unitCost, materialType, machineType, noIncentive) 
+      (material, description, sqFtPerHour, minimumPrice, fixWidth, fixHeight, cost, unitCost, noIncentive, materialType, machineType) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -55,9 +55,9 @@ router.post("/material/add", async (req, res) => {
       req.body.FixHeight,
       req.body.Cost,
       req.body.UnitCost,
+      req.body.noIncentive,
       req.body.MaterialType,
       req.body.MachineType,
-      req.body.NoIncentive,
     ];
 
     const [result] = await pool.query(sql, values);

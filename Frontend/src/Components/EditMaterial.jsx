@@ -15,7 +15,7 @@ const EditMaterial = () => {
     FixHeight: "",
     Cost: "",
     UnitCost: "",
-    NoIncentive: "",
+    noIncentive: "",
     MaterialType: "",
     MachineType: "",
   });
@@ -44,7 +44,7 @@ const EditMaterial = () => {
           FixHeight: result.data.Result.FixHeight,
           Cost: result.data.Result.Cost,
           UnitCost: result.data.Result.UnitCost,
-          NoIncentive: result.data.Result.NoIncentive,
+          noIncentive: result.data.Result.noIncentive,
           MaterialType: result.data.Result.MaterialType,
           MachineType: result.data.Result.MachineType,
         });
@@ -171,11 +171,12 @@ const EditMaterial = () => {
             <label htmlFor="sqFtPerHour">SqFt Per Hour:</label>
             <input
               type="number"
+              step="0.01"
               id="sqFtPerHour"
               name="sqFtPerHour"
               placeholder="Enter SqFt Per Hour"
               className="form-control"
-              value={material.SqFtPerHour}
+              value={material.SqFtPerHour === "" ? "" : material.SqFtPerHour}
               onChange={(e) =>
                 setMaterial({ ...material, SqFtPerHour: e.target.value })
               }
@@ -185,11 +186,12 @@ const EditMaterial = () => {
             <label htmlFor="minimumPrice">Minimum Price:</label>
             <input
               type="number"
+              step="0.01"
               id="minimumPrice"
               name="minimumPrice"
               placeholder="Enter Minimum Price"
               className="form-control"
-              value={material.MinimumPrice}
+              value={material.MinimumPrice === "" ? "" : material.MinimumPrice}
               onChange={(e) =>
                 setMaterial({ ...material, MinimumPrice: e.target.value })
               }
@@ -199,11 +201,12 @@ const EditMaterial = () => {
             <label htmlFor="fixWidth">Fix Width:</label>
             <input
               type="number"
+              step="0.01"
               id="fixWidth"
               name="fixWidth"
               placeholder="Enter Fix Width"
               className="form-control"
-              value={material.FixWidth}
+              value={material.FixWidth === "" ? "" : material.FixWidth}
               onChange={(e) =>
                 setMaterial({ ...material, FixWidth: e.target.value })
               }
@@ -213,11 +216,12 @@ const EditMaterial = () => {
             <label htmlFor="fixHeight">Fix Height:</label>
             <input
               type="number"
+              step="0.01"
               id="fixHeight"
               name="fixHeight"
               placeholder="Enter Fix Height"
               className="form-control"
-              value={material.FixHeight}
+              value={material.FixHeight === "" ? "" : material.FixHeight}
               onChange={(e) =>
                 setMaterial({ ...material, FixHeight: e.target.value })
               }
@@ -227,11 +231,12 @@ const EditMaterial = () => {
             <label htmlFor="cost">Cost:</label>
             <input
               type="number"
+              step="0.01"
               id="cost"
               name="cost"
               placeholder="Enter Cost"
               className="form-control"
-              value={material.Cost}
+              value={material.Cost === "" ? "" : material.Cost}
               onChange={(e) =>
                 setMaterial({ ...material, Cost: e.target.value })
               }
@@ -259,9 +264,9 @@ const EditMaterial = () => {
               type="checkbox"
               id="noIncentive"
               name="noIncentive"
-              checked={material.NoIncentive}
+              checked={material.noIncentive}
               onChange={(e) =>
-                setMaterial({ ...material, NoIncentive: e.target.checked })
+                setMaterial({ ...material, noIncentive: e.target.checked })
               }
             />
           </div>
