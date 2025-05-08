@@ -100,25 +100,28 @@ const startServer = (port) => {
 
 // Start the server on port 3000, fallback to alternatives if needed
 const PORT = process.env.PORT || 3000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
 const MAX_PORT_ATTEMPTS = 5;
 
-async function attemptToStartServer() {
-  for (let i = 0; i < MAX_PORT_ATTEMPTS; i++) {
-    const portToTry = PORT + i;
-    try {
-      // Start server
-      await startServer(portToTry);
-      return; // Server successfully started
-    } catch (err) {
-      if (err.code === "EADDRINUSE" && i < MAX_PORT_ATTEMPTS - 1) {
-        // Try next port
-        continue;
-      }
+// async function attemptToStartServer() {
+//   for (let i = 0; i < MAX_PORT_ATTEMPTS; i++) {
+//     const portToTry = PORT + i;
+//     try {
+//       // Start server
+//       await startServer(portToTry);
+//       return; // Server successfully started
+//     } catch (err) {
+//       if (err.code === "EADDRINUSE" && i < MAX_PORT_ATTEMPTS - 1) {
+//         // Try next port
+//         continue;
+//       }
 
-      console.error("Failed to start server after multiple attempts:", err);
-      process.exit(1);
-    }
-  }
-}
+//       console.error("Failed to start server after multiple attempts:", err);
+//       process.exit(1);
+//     }
+//   }
+// }
 
-attemptToStartServer();
+// attemptToStartServer();
