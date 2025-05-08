@@ -315,7 +315,7 @@ function PrintQuote() {
             </div>
           </div>
           <div className="totals-right">
-            {formatNumber(quote.amountDiscount) > 0 ? (
+            {Number(quote.amountDiscount) > 0 ? (
               <>
                 <div className="total-row">
                   <span>Total Amount:</span>
@@ -327,7 +327,7 @@ function PrintQuote() {
                 </div>
                 <div className="total-row">
                   <span>Disc. %:</span>
-                  <span>{formatNumber(quote.percentDisc)}</span>
+                  <span>{formatNumber(quote.percentDisc)}%</span>
                 </div>
               </>
             ) : null}
