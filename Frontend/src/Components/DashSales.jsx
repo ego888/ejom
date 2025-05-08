@@ -105,10 +105,18 @@ const DashSales = () => {
       });
 
       if (response.data.Status) {
-        setMonthlySales(response.data.Result);
+        setMonthlySales({
+          userMonthlySales: Number(response.data.Result.userMonthlySales) || 0,
+          totalMonthlySales:
+            Number(response.data.Result.totalMonthlySales) || 0,
+        });
       }
     } catch (error) {
       console.error("Error fetching monthly sales:", error);
+      setMonthlySales({
+        userMonthlySales: 0,
+        totalMonthlySales: 0,
+      });
     }
   };
 
