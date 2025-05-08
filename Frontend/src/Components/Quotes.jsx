@@ -541,9 +541,7 @@ function Quotes() {
                       </span>
                     </td>
                     <td className="number_right">
-                      {quote.grandTotal
-                        ? `₱${quote.grandTotal.toLocaleString()}`
-                        : ""}
+                      {formatPeso(quote.grandTotal)}
                     </td>
                     <td
                       className="client-cell"
