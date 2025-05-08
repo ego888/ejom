@@ -69,6 +69,7 @@ function Prod() {
     return localStorage.getItem("prodForProdSort") || "none";
   });
   const [orderIdInput, setOrderIdInput] = useState("");
+  const [isDelivered, setIsDelivered] = useState(false);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -453,32 +454,37 @@ function Prod() {
   };
 
   const handleOrderIdSubmit = async (e) => {
-    console.log("handleOrderIdSubmit", e);
     if (e.key === "Enter") {
       console.log("handleOrderIdSubmit enter key", e.target.value);
       const orderId = e.target.value.trim();
       if (orderId) {
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.put(
-            `${ServerIP}/auth/update-forprod/${orderId}`,
-            { forProd: true },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          let response;
+
+          if (isDelivered) {
+            response = await axios.put(
+              `${ServerIP}/auth/update_order_status`,
+              {
+                orderId,
+                newStatus: "Delivered",
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } else {
+            response = await axios.put(
+              `${ServerIP}/auth/update-forprod/${orderId}`,
+              { forProd: true },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          }
 
           if (response.data.Status) {
-            // Update the local state if the order is in the current view
-            setOrders(
-              orders.map((order) =>
-                order.id === parseInt(orderId)
-                  ? { ...order, forProd: true }
-                  : order
-              )
-            );
+            fetchOrders();
             setOrderIdInput(""); // Clear input after successful update
           }
         } catch (error) {
-          console.error("Error updating forProd status:", error);
+          console.error("Error updating order status:", error);
         }
       }
     }
@@ -707,6 +713,18 @@ function Prod() {
               onKeyDown={handleOrderIdSubmit}
               style={{ width: "150px" }}
             />
+            <div className="form-check">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="deliveredCheckbox"
+                checked={isDelivered}
+                onChange={(e) => setIsDelivered(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="deliveredCheckbox">
+                Delivered
+              </label>
+            </div>
             <Button
               variant="save"
               onClick={handlePrintProductionClick}

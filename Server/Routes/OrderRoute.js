@@ -440,7 +440,8 @@ router.put("/update-forprod/:id", async (req, res) => {
     const orderId = req.params.id;
     const { forProd } = req.body;
 
-    const sql = "UPDATE orders SET forProd = ? WHERE orderID = ?";
+    const sql =
+      "UPDATE orders SET forProd = ? WHERE orderID = ? AND (status = 'Open' OR status = 'Printed')";
     const [result] = await pool.query(sql, [forProd, orderId]);
 
     if (result.affectedRows > 0) {
