@@ -79,7 +79,7 @@ app.get("/test", (req, res) => {
 const startServer = (port) => {
   return new Promise((resolve, reject) => {
     const server = app
-      .listen(port)
+      .listen(port, "0.0.0.0")
       .on("listening", () => {
         console.log(
           `🚀 Server started on port ${port} at ${new Date().toLocaleTimeString()}`
