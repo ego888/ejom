@@ -17,6 +17,7 @@ import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { ReportRouter } from "./Routes/ReportRoute.js";
+import { ReportProductionRouter } from "./Routes/ReportProductionRoute.js";
 import { DTRRouter } from "./Routes/DTRRoute.js";
 import InvoiceRoute from "./Routes/InvoiceRoute.js";
 
@@ -59,6 +60,7 @@ app.use("/auth", OrderStatusRouter);
 app.use("/auth", JomControlRouter);
 app.use("/auth", PaymentRouter);
 app.use("/auth", ReportRouter);
+app.use("/auth", ReportProductionRouter);
 app.use("/auth/dtr", DTRRouter);
 app.use("/auth", InvoiceRoute);
 app.use("/employee", EmployeeRouter);
