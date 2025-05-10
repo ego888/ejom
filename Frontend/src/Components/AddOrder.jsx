@@ -1519,30 +1519,38 @@ function AddOrder() {
     try {
       const token = localStorage.getItem("token");
 
-      // Get the highest display order
-      const maxDisplayOrder = Math.max(
-        ...orderDetails.map((d) => d.displayOrder),
-        0
+      // Get the next display order from the server
+      const response = await axios.get(
+        `${ServerIP}/auth/next_display_order/${orderId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Create new detail object with incremented display order
+      if (!response.data.Status) {
+        throw new Error(
+          response.data.Error || "Failed to get next display order"
+        );
+      }
+
+      const nextDisplayOrder = response.data.Result;
+
+      // Create new detail object with server-provided display order
       const newDetail = {
         ...detail,
-        displayOrder: maxDisplayOrder + 5,
+        displayOrder: nextDisplayOrder,
         Id: null, // Remove Id so a new one is generated
       };
 
-      const response = await axios.post(
+      const addResponse = await axios.post(
         `${ServerIP}/auth/add_order_detail`,
         newDetail,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data.Status) {
-        // Refresh order details
+      if (addResponse.data.Status) {
+        // Refresh order details to get the updated list with correct display orders
         fetchOrderDetails();
       } else {
-        throw new Error(response.data.Error || "Failed to copy detail");
+        throw new Error(addResponse.data.Error || "Failed to copy detail");
       }
     } catch (err) {
       console.error("Error copying detail:", err);
