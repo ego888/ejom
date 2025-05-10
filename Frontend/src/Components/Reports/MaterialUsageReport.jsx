@@ -75,7 +75,6 @@ const MaterialUsageReport = () => {
         },
       });
 
-      console.log("material usage:", response.data);
       if (response.data.Status) {
         setReportData(response.data.Result);
       } else {
