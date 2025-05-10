@@ -89,17 +89,10 @@ const getDetailedMaterialUsageData = async (dateFrom, dateTo, groupBy) => {
 
 // Material Usage Report
 router.get("/material-usage", verifyUser, async (req, res) => {
-  console.log("Material usage report route hit");
-  console.log("Request URL:", req.originalUrl);
-  console.log("Request method:", req.method);
-  console.log("Request headers:", req.headers);
   const { dateFrom, dateTo, groupBy } = req.query;
-  console.log("Query params:", { dateFrom, dateTo, groupBy });
 
   try {
-    console.log("Executing database query...");
     const results = await getMaterialUsageData(dateFrom, dateTo, groupBy);
-    console.log("Query results:", results);
     res.json({
       Status: true,
       Result: results,
