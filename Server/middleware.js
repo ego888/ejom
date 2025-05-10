@@ -1,16 +1,20 @@
 import jwt from "jsonwebtoken";
 
 export const verifyUser = (req, res, next) => {
+  console.log("Verifying user token");
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
+    console.log("No token provided");
     return res.json({ Status: false, Error: "Token not provided" });
   }
 
   try {
     const decoded = jwt.verify(token, "jwt_secret_key");
+    console.log("Token decoded successfully:", decoded);
     req.user = decoded;
     next();
   } catch (err) {
+    console.error("Token verification error:", err);
     if (err.name === "TokenExpiredError") {
       return res.status(401).json({
         Status: false,
