@@ -419,7 +419,8 @@ const MaterialUsageReport = () => {
                           <td>{row.clientName}</td>
                           <td>{formatDate(row.orderDate)}</td>
                         </>
-                      )}{" "}
+                      )}
+                      {""}
                       <td>
                         {groupBy === "material"
                           ? row.materialName
