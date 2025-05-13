@@ -810,7 +810,7 @@ router.get("/next_display_order/:orderId", async (req, res) => {
     const [result] = await pool.query(sql, [orderId]);
 
     // If maxOrder is 0, it means no records exist yet
-    const maxOrder = result[0].maxOrder;
+    const maxOrder = Number(result[0].maxOrder);
     const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
 
     return res.json({
@@ -2022,5 +2022,39 @@ router.put(
     }
   }
 );
+
+// Renumber display order for an order's details
+router.put("/renumber-displayOrder/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const sql = `
+      UPDATE order_details od
+      SET displayOrder = (
+        SELECT newOrder
+        FROM (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY displayOrder) * 5 as newOrder
+          FROM order_details
+          WHERE orderId = ?
+        ) AS ordered
+        WHERE ordered.id = od.id
+      )
+      WHERE orderId = ?
+    `;
+
+    await pool.query(sql, [orderId, orderId]);
+
+    return res.json({
+      Status: true,
+      Message: "Display order renumbered successfully",
+    });
+  } catch (err) {
+    console.error("Error renumbering display order:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to renumber display order",
+    });
+  }
+});
 
 export { router as OrderRouter };

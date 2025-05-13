@@ -1672,6 +1672,35 @@ function AddOrder() {
     }));
   }, [orderDetails]); // Only trigger on orderDetails changes
 
+  const handleRenumberDisplayOrder = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${ServerIP}/auth/renumber-displayOrder/${orderId || id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.Status) {
+        // Refresh the order details after renumbering
+        fetchOrderDetails();
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to renumber display order",
+          type: "alert",
+        });
+      }
+    } catch (error) {
+      handleApiError(error, "renumbering display order");
+    }
+  };
+
   return (
     <div className="orders-page-background">
       <div className="px-4 mt-3">
@@ -2238,7 +2267,13 @@ function AddOrder() {
               <table className="table detail table-striped">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onDoubleClick={handleRenumberDisplayOrder}
+                      title="Double click to renumber display order"
+                    >
+                      #
+                    </th>
                     <th>Qty</th>
                     <th>Width</th>
                     <th>Height</th>
