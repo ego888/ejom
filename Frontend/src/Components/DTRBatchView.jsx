@@ -567,10 +567,16 @@ const DTRBatchView = ({ batch, onBack }) => {
 
         // Check if date is within batch period
         const currentDate = new Date(current.date);
+        currentDate.setHours(0, 0, 0, 0); // Set time to midnight
+
         const batchStartDate = new Date(batch.periodStart);
+        batchStartDate.setHours(0, 0, 0, 0); // Set time to midnight
+
         const batchEndDate = new Date(batch.periodEnd);
+        batchEndDate.setHours(0, 0, 0, 0); // Set time to midnight
 
         if (currentDate < batchStartDate || currentDate > batchEndDate) {
+          console.log(currentDate, batchStartDate, batchEndDate);
           try {
             await axios.post(
               `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
