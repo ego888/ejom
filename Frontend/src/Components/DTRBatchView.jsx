@@ -733,12 +733,14 @@ const DTRBatchView = ({ batch, onBack }) => {
       // Refresh data after all calculations are complete
       await fetchEntries();
       console.log("Entries refreshed after update");
+
+      // Now that we have fresh data, process Sunday/Holiday hours
+      //      await handleSundayHoliday();
     } catch (error) {
       setError("Failed to calculate hours. Please try again.");
     } finally {
       setLoading(false);
     }
-    handleSundayHoliday();
   };
 
   const handleTimeClick = (entry, type, event) => {
@@ -1084,6 +1086,8 @@ const DTRBatchView = ({ batch, onBack }) => {
 
           // Only process if it's Sunday or a holiday
           if (entry.day?.toLowerCase() === "sun" || holiday) {
+            console.log(entry.empName, entry.day?.toLowerCase(), holiday);
+            console.log(entry.date, entry.hours, entry.overtime);
             // For Sunday entries, move regular hours to sundayHours and OT to sundayOT
             if (entry.day?.toLowerCase() === "sun") {
               if (holiday) {
@@ -1213,6 +1217,9 @@ const DTRBatchView = ({ batch, onBack }) => {
       </Button>
       <Button variant="view" onClick={handleCalculateHours} disabled={loading}>
         Calculate Hours
+      </Button>
+      <Button variant="add" onClick={handleSundayHoliday} disabled={loading}>
+        Check Sun/Hol
       </Button>
       <Button
         variant="danger"
