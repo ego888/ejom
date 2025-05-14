@@ -692,7 +692,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         }
 
         // Subtract dinner break (19:00-20:00) if period covers it
-        if (timeInMinutes < 20 * 60 && timeOutMinutes > 19 * 60) {
+        if (timeInMinutes < 19 * 60 && timeOutMinutes > 20 * 60) {
           totalMinutes -= 60; // Subtract 1 hour
         }
 
