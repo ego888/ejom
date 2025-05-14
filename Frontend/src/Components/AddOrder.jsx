@@ -2270,7 +2270,6 @@ function AddOrder() {
                     <th
                       style={{ cursor: "pointer" }}
                       onDoubleClick={handleRenumberDisplayOrder}
-                      title="Double click to renumber display order"
                     >
                       #
                     </th>
