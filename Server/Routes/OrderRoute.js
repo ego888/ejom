@@ -4,6 +4,96 @@ import { verifyUser, authorize, logUserAction } from "../middleware.js";
 
 const router = express.Router();
 
+// Helper function to calculate squareFeet and materialUsage
+const calculateOrderDetailArea = (
+  width,
+  height,
+  unit,
+  quantity,
+  top = 0,
+  bottom = 0,
+  allowanceLeft = 0,
+  allowanceRight = 0
+) => {
+  // Validate numeric inputs
+  width = parseFloat(width) || 0;
+  height = parseFloat(height) || 0;
+  quantity = parseFloat(quantity) || 0;
+  top = parseFloat(top) || 0;
+  bottom = parseFloat(bottom) || 0;
+  allowanceLeft = parseFloat(allowanceLeft) || 0;
+  allowanceRight = parseFloat(allowanceRight) || 0;
+
+  if (!width || !height || !unit) {
+    return {
+      squareFeet: 0,
+      materialUsage: 0,
+    };
+  }
+
+  // Calculate squareFeet (without allowances)
+  let squareFeet = width * height;
+
+  // Convert dimensions to square feet based on unit
+  switch (unit) {
+    case "IN":
+      squareFeet = squareFeet / 144; // Convert from sq inches to sq feet
+      break;
+    case "CM":
+      squareFeet = squareFeet / 929.0304; // Convert from sq cm to sq feet
+      break;
+    case "M":
+      squareFeet = squareFeet * 10.7639; // Convert from sq meters to sq feet
+      break;
+    case "FT":
+      // Already in square feet
+      break;
+  }
+
+  // If no quantity, return only squareFeet calculation
+  if (!quantity) {
+    return {
+      squareFeet: parseFloat(squareFeet.toFixed(2)),
+      materialUsage: 0,
+    };
+  }
+
+  // Calculate materialUsage (with allowances)
+  // First convert width and height to inches for allowance calculations
+  let widthInInches, heightInInches;
+  switch (unit) {
+    case "IN":
+      widthInInches = width;
+      heightInInches = height;
+      break;
+    case "CM":
+      widthInInches = width / 2.54;
+      heightInInches = height / 2.54;
+      break;
+    case "M":
+      widthInInches = width / 0.0254;
+      heightInInches = height / 0.0254;
+      break;
+    case "FT":
+      widthInInches = width * 12;
+      heightInInches = height * 12;
+      break;
+  }
+
+  // Add allowances (in inches)
+  const totalWidthInInches = widthInInches + allowanceLeft + allowanceRight;
+  const totalHeightInInches = heightInInches + top + bottom;
+
+  // Convert back to square feet and multiply by quantity
+  const materialUsage =
+    ((totalWidthInInches * totalHeightInInches) / 144) * quantity;
+
+  return {
+    squareFeet: parseFloat(squareFeet.toFixed(2)),
+    materialUsage: parseFloat(materialUsage.toFixed(2)),
+  };
+};
+
 // Get all orders w/o payment info with pagination, sorting, filtering and search
 router.get("/orders-min", async (req, res) => {
   try {
@@ -1221,22 +1311,92 @@ router.put(
 router.put("/order_details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { printHrs, ...otherData } = req.body;
+    const {
+      printHrs,
+      width,
+      height,
+      unit,
+      quantity,
+      top,
+      bottom,
+      allowanceLeft,
+      allowanceRight,
+      ...otherData
+    } = req.body;
+
+    console.log("Request body:", req.body);
+    console.log("Extracted values:", {
+      width,
+      height,
+      unit,
+      quantity,
+      top,
+      bottom,
+      allowanceLeft,
+      allowanceRight,
+    });
+
+    // Helper function to safely parse float with default
+    const safeParseFloat = (value, defaultValue = 0) => {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? defaultValue : parsed;
+    };
+
+    // Calculate squareFeet and materialUsage
+    const { squareFeet, materialUsage } = calculateOrderDetailArea(
+      safeParseFloat(width),
+      safeParseFloat(height),
+      unit || "IN", // Default to IN if unit is null/undefined
+      safeParseFloat(quantity),
+      safeParseFloat(top),
+      safeParseFloat(bottom),
+      safeParseFloat(allowanceLeft),
+      safeParseFloat(allowanceRight)
+    );
+
+    console.log("Calculated values:", { squareFeet, materialUsage });
+
     const data = {
       ...otherData,
-      printHrs: Number(printHrs || 0),
+      width,
+      height,
+      unit,
+      quantity,
+      top,
+      bottom,
+      allowanceLeft,
+      allowanceRight,
+      printHrs: Number(printHrs) || 0, // Convert to number, default to 0
+      noPrint: Number(noPrint) || 0, // Convert to number, default to 0
+      squareFeet,
+      materialUsage,
     };
-    console.log("Data being updated:", data);
-    console.log("ID:", id);
-    const sql = "UPDATE order_details SET ? WHERE Id = ?";
 
+    console.log("Final data being updated:", data);
+    console.log("ID:", id);
+
+    const sql = "UPDATE order_details SET ? WHERE Id = ?";
     const [result] = await pool.query(sql, [data, id]);
-    return res.json({ Status: true, Result: result });
+
+    console.log("Update result:", result);
+
+    if (result.affectedRows === 0) {
+      return res.json({
+        Status: false,
+        Error: "No rows were updated",
+      });
+    }
+
+    return res.json({
+      Status: true,
+      Result: result,
+      Message: "Order detail updated successfully",
+    });
   } catch (err) {
     console.log("Update Error:", err);
     return res.json({
       Status: false,
-      Error: "Failed to update order detail",
+      Error: "Failed to update order detail: " + err.message,
     });
   }
 });
@@ -1312,12 +1472,46 @@ router.post(
       // await connection.beginTransaction();
 
       // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
-      const { printHrs, noPrint, ...otherData } = req.body;
+      const {
+        printHrs,
+        noPrint,
+        width,
+        height,
+        unit,
+        quantity,
+        top,
+        bottom,
+        allowanceLeft,
+        allowanceRight,
+        ...otherData
+      } = req.body;
+
+      // Calculate squareFeet and materialUsage
+      const { squareFeet, materialUsage } = calculateOrderDetailArea(
+        width,
+        height,
+        unit,
+        quantity,
+        top,
+        bottom,
+        allowanceLeft,
+        allowanceRight
+      );
 
       const data = {
         ...otherData,
+        width,
+        height,
+        unit,
+        quantity,
+        top,
+        bottom,
+        allowanceLeft,
+        allowanceRight,
         printHrs: Number(printHrs) || 0, // Convert to number, default to 0
         noPrint: Number(noPrint) || 0, // Convert to number, default to 0
+        squareFeet,
+        materialUsage,
       };
 
       // Verify user has permission to add detail to this order

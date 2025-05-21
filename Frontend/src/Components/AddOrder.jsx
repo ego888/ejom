@@ -3063,11 +3063,26 @@ function AddOrder() {
                 variant="save"
                 onClick={async () => {
                   const [orderId, displayOrder] = currentDetailId.split("_");
+                  console.log("Looking for detail with:", {
+                    orderId,
+                    displayOrder,
+                  });
+                  console.log("Available orderDetails:", orderDetails);
+
                   const currentDetail = orderDetails.find(
-                    (d) =>
-                      d.orderId === parseInt(orderId) &&
-                      d.displayOrder === parseInt(displayOrder)
+                    (d) => d.Id === parseInt(orderId)
                   );
+
+                  if (!currentDetail) {
+                    console.error("Detail not found:", {
+                      orderId,
+                      displayOrder,
+                    });
+                    setShowAllowanceModal(false);
+                    return;
+                  }
+
+                  console.log("Current detail before update:", currentDetail);
 
                   const { squareFeet, materialUsage, printHrs } = calculateArea(
                     currentDetail,
@@ -3075,7 +3090,24 @@ function AddOrder() {
                   );
 
                   const updatedDetail = {
-                    ...currentDetail,
+                    Id: currentDetail.Id,
+                    orderId: currentDetail.orderId,
+                    displayOrder: currentDetail.displayOrder,
+                    width: currentDetail.width,
+                    height: currentDetail.height,
+                    unit: currentDetail.unit,
+                    quantity: currentDetail.quantity,
+                    material: currentDetail.material,
+                    filename: currentDetail.filename,
+                    unitPrice: currentDetail.unitPrice,
+                    perSqFt: currentDetail.perSqFt,
+                    standardPrice: currentDetail.standardPrice,
+                    discount: currentDetail.discount,
+                    amount: currentDetail.amount,
+                    remarks: currentDetail.remarks,
+                    itemDescription: currentDetail.itemDescription,
+                    noPrint: currentDetail.noPrint,
+                    balanceHours: currentDetail.balanceHours,
                     squareFeet,
                     materialUsage,
                     printHrs,
@@ -3083,8 +3115,17 @@ function AddOrder() {
                     bottom: allowanceValues.bottom,
                     allowanceLeft: allowanceValues.left,
                     allowanceRight: allowanceValues.right,
+                    auditQuantity: currentDetail.auditQuantity,
+                    auditremaining: currentDetail.auditremaining,
+                    salesIncentive: currentDetail.salesIncentive,
+                    overideIncentive: currentDetail.overideIncentive,
+                    artistIncentive: currentDetail.artistIncentive,
+                    major: currentDetail.major,
+                    minor: currentDetail.minor,
+                    artistIncentiveAmount: currentDetail.artistIncentiveAmount,
                   };
 
+                  console.log("Modal allowance", updatedDetail);
                   // Save to database first
                   const token = localStorage.getItem("token");
                   try {
