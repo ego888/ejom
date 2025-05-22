@@ -148,6 +148,8 @@ function AddOrder() {
   // Add this at the top with other state declarations
   const [tempDiscAmount, setTempDiscAmount] = useState(0);
   const [debounceTimer, setDebounceTimer] = useState(null);
+  const [isUpdatingFromAmount, setIsUpdatingFromAmount] = useState(false);
+  const [isUpdatingFromPercent, setIsUpdatingFromPercent] = useState(false);
 
   // Modify the handleDiscountChange function
   const handleDiscountChange = (type, value) => {
@@ -157,6 +159,9 @@ function AddOrder() {
     );
 
     if (type === "amount") {
+      // If this update was triggered by a percentage change, ignore it
+      if (isUpdatingFromPercent) return;
+
       // For amount changes, just update the temporary value
       setTempDiscAmount(value);
 
@@ -167,6 +172,7 @@ function AddOrder() {
 
       // Set a new timer to update the actual values after 500ms
       const timer = setTimeout(() => {
+        setIsUpdatingFromAmount(true);
         const newDiscAmount = parseFloat(value) || 0;
         // Ensure discount amount doesn't exceed subtotal
         const finalDiscAmount = Math.min(newDiscAmount, subtotal);
@@ -187,11 +193,16 @@ function AddOrder() {
           percentDisc: parseFloat(newPercentDisc),
           grandTotal: parseFloat(grandTotal),
         }));
+        setIsUpdatingFromAmount(false);
       }, 500);
 
       setDebounceTimer(timer);
     } else {
+      // If this update was triggered by an amount change, ignore it
+      if (isUpdatingFromAmount) return;
+
       // For percentage changes, calculate immediately
+      setIsUpdatingFromPercent(true);
       const newPercentDisc = parseFloat(value) || 0;
       // Ensure percent discount doesn't exceed 100%
       const finalPercentDisc = Math.min(newPercentDisc, 100);
@@ -214,6 +225,7 @@ function AddOrder() {
         percentDisc: parseFloat(finalPercentDisc),
         grandTotal: parseFloat(grandTotal),
       }));
+      setIsUpdatingFromPercent(false);
     }
   };
 
