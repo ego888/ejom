@@ -1311,8 +1311,9 @@ router.put(
 router.put("/order_details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const {
+    let {
       printHrs,
+      noPrint,
       width,
       height,
       unit,
@@ -1323,9 +1324,11 @@ router.put("/order_details/:id", async (req, res) => {
       allowanceRight,
       ...otherData
     } = req.body;
+    delete otherData.squareFeet;
+    delete otherData.materialUsage;
 
-    console.log("Request body:", req.body);
-    console.log("Extracted values:", {
+    console.log("1. Request body:", req.body);
+    console.log("2. Extracted values:", {
       width,
       height,
       unit,
@@ -1354,31 +1357,31 @@ router.put("/order_details/:id", async (req, res) => {
       safeParseFloat(allowanceRight)
     );
 
-    console.log("Calculated values:", { squareFeet, materialUsage });
+    console.log("3. Calculated values:", { squareFeet, materialUsage });
 
     const data = {
       ...otherData,
-      width,
-      height,
+      width: safeParseFloat(width),
+      height: safeParseFloat(height),
       unit,
-      quantity,
-      top,
-      bottom,
-      allowanceLeft,
-      allowanceRight,
-      printHrs: Number(printHrs) || 0, // Convert to number, default to 0
-      noPrint: Number(noPrint) || 0, // Convert to number, default to 0
+      quantity: safeParseFloat(quantity),
+      top: safeParseFloat(top),
+      bottom: safeParseFloat(bottom),
+      allowanceLeft: safeParseFloat(allowanceLeft),
+      allowanceRight: safeParseFloat(allowanceRight),
+      printHrs: safeParseFloat(printHrs),
+      noPrint: safeParseFloat(noPrint),
       squareFeet,
       materialUsage,
     };
 
-    console.log("Final data being updated:", data);
-    console.log("ID:", id);
+    console.log("4. Final data being updated:", data);
+    console.log("5. ID:", id);
 
     const sql = "UPDATE order_details SET ? WHERE Id = ?";
     const [result] = await pool.query(sql, [data, id]);
 
-    console.log("Update result:", result);
+    console.log("6. Update result:", result);
 
     if (result.affectedRows === 0) {
       return res.json({

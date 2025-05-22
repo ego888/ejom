@@ -3083,11 +3083,26 @@ function AddOrder() {
                   }
 
                   console.log("Current detail before update:", currentDetail);
+                  console.log("Allowance values from modal:", allowanceValues);
 
                   const { squareFeet, materialUsage, printHrs } = calculateArea(
-                    currentDetail,
-                    allowanceValues
+                    currentDetail.width,
+                    currentDetail.height,
+                    currentDetail.unit,
+                    currentDetail.quantity,
+                    {
+                      top: allowanceValues.top,
+                      bottom: allowanceValues.bottom,
+                      left: allowanceValues.left,
+                      right: allowanceValues.right,
+                    }
                   );
+
+                  console.log("Calculated values:", {
+                    squareFeet,
+                    materialUsage,
+                    printHrs,
+                  });
 
                   const updatedDetail = {
                     Id: currentDetail.Id,
@@ -3125,7 +3140,7 @@ function AddOrder() {
                     artistIncentiveAmount: currentDetail.artistIncentiveAmount,
                   };
 
-                  console.log("Modal allowance", updatedDetail);
+                  console.log("Final updated detail:", updatedDetail);
                   // Save to database first
                   const token = localStorage.getItem("token");
                   try {
