@@ -1600,40 +1600,6 @@ function AddOrder() {
     };
   }, []);
 
-  // Add this useEffect to handle recalculation when order details change
-  // Removed automatic recalculation to prevent unwanted updates
-  // useEffect(() => {
-  //   const subtotal = orderDetails.reduce(
-  //     (sum, detail) => sum + parseFloat(detail.amount || 0),
-  //     0
-  //   );
-
-  //   // Get current percentage discount
-  //   const percentDisc = parseFloat(data.percentDisc) || 0;
-
-  //   // Calculate new discount amount based on the percentage
-  //   const newDiscAmount = ((subtotal * percentDisc) / 100).toFixed(2);
-  //   const grandTotal = subtotal - parseFloat(newDiscAmount);
-
-  //   // Update tempDiscAmount and orderTotals
-  //   setTempDiscAmount(newDiscAmount);
-  //   setData((prev) => ({
-  //     ...prev,
-  //     totalAmount: subtotal,
-  //     discAmount: parseFloat(newDiscAmount),
-  //     percentDisc,
-  //     grandTotal: parseFloat(grandTotal),
-  //   }));
-
-  //   // Update main data state for database
-  //   setData((prev) => ({
-  //     ...prev,
-  //     amountDisc: parseFloat(newDiscAmount),
-  //     percentDisc,
-  //     grandTotal: parseFloat(grandTotal),
-  //   }));
-  // }, [orderDetails]); // Only trigger on orderDetails changes
-
   const handleRenumberDisplayOrder = async () => {
     try {
       const token = localStorage.getItem("token");
