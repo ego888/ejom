@@ -996,6 +996,85 @@ function AddQuote() {
     }
   };
 
+  const handleDiscountInputChange = (detailId, discountValue) => {
+    const discount = parseFloat(discountValue) || 0;
+
+    // Validate discount range
+    if (discount < 0 || discount > 100) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Discount must be between 0 and 100",
+        type: "alert",
+      });
+      return;
+    }
+
+    // If discount is 0, just reset the discount field without changing unit price
+    if (discount === 0) {
+      setEditedValues((prev) => {
+        const currentDetail = prev[detailId] || {};
+        const updatedValues = {
+          ...prev,
+          [detailId]: {
+            ...currentDetail,
+            discount: 0,
+          },
+        };
+        return updatedValues;
+      });
+      return;
+    }
+
+    setEditedValues((prev) => {
+      const currentDetail = prev[detailId] || {};
+      const currentUnitPrice = parseFloat(currentDetail.unitPrice) || 0;
+
+      // Calculate new unit price with discount applied
+      const newUnitPrice = currentUnitPrice * (1 - discount / 100);
+
+      // Calculate new amount with the discounted unit price
+      const amount = calculateAmount(
+        newUnitPrice,
+        0, // Reset discount to 0
+        currentDetail.quantity || 0
+      );
+
+      // Calculate new persqft if squareFeet exists
+      let perSqFt = 0;
+      if (
+        currentDetail.squareFeet &&
+        parseFloat(currentDetail.squareFeet) > 0
+      ) {
+        perSqFt = calculatePerSqFt(newUnitPrice, currentDetail.squareFeet);
+      }
+
+      const updatedValues = {
+        ...prev,
+        [detailId]: {
+          ...currentDetail,
+          unitPrice: parseFloat(newUnitPrice.toFixed(2)),
+          persqft: parseFloat(perSqFt.toFixed(2)),
+          discount: 0, // Reset discount to 0
+          amount: amount,
+        },
+      };
+
+      return updatedValues;
+    });
+
+    // Clear error for discount field if it exists
+    if (editErrors[detailId]?.discount) {
+      setEditErrors((prev) => ({
+        ...prev,
+        [detailId]: {
+          ...(prev[detailId] || {}),
+          discount: null,
+        },
+      }));
+    }
+  };
+
   const handleSaveDetail = async (uniqueId) => {
     if (!canEdit()) {
       setAlert({
@@ -2015,10 +2094,37 @@ function AddQuote() {
                                   /[^\d.-]/g,
                                   ""
                                 );
-                                if (!isNaN(value)) {
+                                if (!isNaN(value) || value === "") {
+                                  // Just update the display value, don't calculate yet
                                   handleDetailInputChange(
                                     `${detail.quoteId}_${detail.displayOrder}`,
                                     "discount",
+                                    value
+                                  );
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDiscountInputChange(
+                                      `${detail.quoteId}_${detail.displayOrder}`,
+                                      value
+                                    );
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value.replace(
+                                  /[^\d.-]/g,
+                                  ""
+                                );
+                                if (!isNaN(value)) {
+                                  handleDiscountInputChange(
+                                    `${detail.quoteId}_${detail.displayOrder}`,
                                     value
                                   );
                                 }

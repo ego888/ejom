@@ -137,13 +137,20 @@ export const calculatePrice = (squareFeet, perSqFt) => {
 
 export const calculateAmount = (price, discount, quantity) => {
   if (!price || !quantity) return 0;
-  const discountAmount =
-    parseFloat(price) *
-    parseFloat(quantity) *
-    (parseFloat(discount || 0) / 100);
+  // const discountAmount =
+  //   parseFloat(price) *
+  //   parseFloat(quantity) *
+  //   (parseFloat(discount || 0) / 100);
   return parseFloat(
-    (parseFloat(price) * parseFloat(quantity) - discountAmount).toFixed(2)
+    (parseFloat(price) * parseFloat(quantity)).toFixed(2)
+    // (parseFloat(price) * parseFloat(quantity) - discountAmount).toFixed(2)
   );
+};
+
+export const calculateDetailDiscount = (price, discount) => {
+  if (!price) return 0;
+  const discountAmount = parseFloat(price) * (parseFloat(discount || 0) / 100);
+  return parseFloat(price - discountAmount).toFixed(2);
 };
 
 export const calculateTotals = (
