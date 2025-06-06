@@ -22,6 +22,7 @@ import InvoiceRoute from "./Routes/InvoiceRoute.js";
 
 // Load environment variables
 dotenv.config();
+const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
