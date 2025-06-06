@@ -34,15 +34,22 @@ if (!process.env.CORS_ORIGIN) {
 
 const corsOrigins = process.env.CORS_ORIGIN.split(",");
 
-const app = express();
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like curl, Postman)
+      if (!origin || corsOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.json({ limit: "100mb" }));
@@ -75,29 +82,6 @@ app.get("/test", (req, res) => {
   res.json({ message: "Server is running" });
 });
 
-// Improved server startup with error handling
-const startServer = (port) => {
-  return new Promise((resolve, reject) => {
-    const server = app
-      .listen(port, "0.0.0.0")
-      .on("listening", () => {
-        console.log(
-          `🚀 Server started on port ${port} at ${new Date().toLocaleTimeString()}`
-        );
-        resolve(server);
-      })
-      .on("error", (err) => {
-        if (err.code === "EADDRINUSE") {
-          console.warn(`⚠️ Port ${port} is already in use`);
-          reject(err);
-        } else {
-          console.error("Server error:", err);
-          reject(err);
-        }
-      });
-  });
-};
-
 // Start the server on port 3000, fallback to alternatives if needed
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -105,24 +89,3 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 const MAX_PORT_ATTEMPTS = 5;
-
-// async function attemptToStartServer() {
-//   for (let i = 0; i < MAX_PORT_ATTEMPTS; i++) {
-//     const portToTry = PORT + i;
-//     try {
-//       // Start server
-//       await startServer(portToTry);
-//       return; // Server successfully started
-//     } catch (err) {
-//       if (err.code === "EADDRINUSE" && i < MAX_PORT_ATTEMPTS - 1) {
-//         // Try next port
-//         continue;
-//       }
-
-//       console.error("Failed to start server after multiple attempts:", err);
-//       process.exit(1);
-//     }
-//   }
-// }
-
-// attemptToStartServer();
