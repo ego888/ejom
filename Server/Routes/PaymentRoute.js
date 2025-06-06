@@ -298,7 +298,6 @@ router.get("/payments", verifyUser, async (req, res) => {
       ORDER BY p.${sortBy} ${sortDirection}
       LIMIT ? OFFSET ?
     `;
-    console.log("dataSQL:", dataSql);
 
     // Count query
     const countSql = `
@@ -595,7 +594,6 @@ router.post("/save-temp-payment", verifyUser, async (req, res) => {
 
     let payId;
 
-    console.log("existingPayments", existingPayments);
     if (existingPayments.length > 0) {
       // Update existing payment
       payId = existingPayments[0].payId;
@@ -1121,8 +1119,6 @@ router.post("/confirm-payment-receipt", verifyUser, async (req, res) => {
   try {
     const { payIds, receivedBy } = req.body;
 
-    console.log("Received request:", { payIds, receivedBy });
-
     if (
       !payIds ||
       !Array.isArray(payIds) ||
@@ -1155,9 +1151,6 @@ router.post("/confirm-payment-receipt", verifyUser, async (req, res) => {
                               receivedBy = ?, 
                               receivedDate = NOW() 
                           WHERE payId IN (${payIds.map(() => "?").join(",")})`;
-
-      console.log("Update query:", updateQuery);
-      console.log("Parameters:", [receivedBy, ...payIds]);
 
       await connection.query(updateQuery, [receivedBy, ...payIds]);
 

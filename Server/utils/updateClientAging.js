@@ -9,17 +9,12 @@ async function updateClientAging() {
     WHERE status IN ('Delivered', 'Billed')
   `);
 
-  console.log(`Total delivered & billed orders: ${orders.length}`);
-
   const agingMap = new Map();
 
   // Group orders by client and bucket them by age
   for (const order of orders) {
     const { orderId, clientId, grandTotal, amountPaid, productionDate } = order;
     if (!clientId || !productionDate) {
-      console.log(
-        `Skipping order ${orderId}: missing clientId or productionDate`
-      );
       continue;
     }
 
@@ -44,14 +39,10 @@ async function updateClientAging() {
     } else if (days > 90) {
       clientAging.over90 += balance;
     }
-
-    console.log(
-      `Order ${orderId} → client ${clientId} → ${days} days → balance: ${balance}`
-    );
   }
 
+  //  ❌ No aging data to update.
   if (agingMap.size === 0) {
-    console.log("❌ No aging data to update.");
     return;
   }
 
@@ -92,13 +83,6 @@ async function updateClientAging() {
       hold.setDate(overdue.getDate() + 7);
     }
 
-    console.log(`Updating client ${clientId} with:`);
-    console.log(`  31-60: ${aging["31-60"]}`);
-    console.log(`  61-90: ${aging["61-90"]}`);
-    console.log(`  >90  : ${aging.over90}`);
-    console.log(`  overdue: ${overdue}`);
-    console.log(`  hold   : ${hold}`);
-
     const [result] = await db.query(
       `
       UPDATE client
@@ -108,13 +92,7 @@ async function updateClientAging() {
       `,
       [aging["31-60"], aging["61-90"], aging.over90, overdue, hold, clientId]
     );
-
-    console.log(
-      `→ Client ${clientId} updated. Rows affected: ${result.affectedRows}`
-    );
   }
-
-  console.log(`[${new Date().toISOString()}] ✅ Client aging update complete`);
 }
 
 export default updateClientAging;

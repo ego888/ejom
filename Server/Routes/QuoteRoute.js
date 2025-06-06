@@ -639,8 +639,6 @@ router.put("/quote/status/:id", async (req, res) => {
     const id = req.params.id;
     const { status } = req.body;
 
-    console.log("quoteId:", id, "Status:", status);
-
     const sql = "UPDATE quotes SET status = ? WHERE quoteId = ?";
     const result = await pool.query(sql, [status, id]);
 

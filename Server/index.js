@@ -62,7 +62,6 @@ app.use("/auth", ReportRouter);
 app.use("/auth", ReportProductionRouter);
 app.use("/auth/dtr", DTRRouter);
 app.use("/auth", InvoiceRoute);
-app.use("/employee", EmployeeRouter);
 app.use("/public", express.static("public"));
 
 app.use(express.static("Public"));

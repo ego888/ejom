@@ -40,7 +40,6 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
       ORDER BY ${groupByColumn} ASC
     `;
 
-    console.log("SQL", sql);
     const [results] = await pool.query(sql, [dateFrom, dateTo]);
 
     return res.json({
@@ -213,8 +212,6 @@ router.get("/sales-incentive", verifyUser, async (req, res) => {
   try {
     const { dateFrom, dateTo } = req.query;
 
-    console.log("Date From", dateFrom);
-    console.log("Date To", dateTo);
     if (!dateFrom || !dateTo) {
       return res.json({ Status: false, Error: "Date range is required" });
     }

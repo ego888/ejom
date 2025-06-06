@@ -88,14 +88,6 @@ router.get("/client/:id", verifyUser, async (req, res) => {
       return res.json({ Status: false, Error: "Client not found" });
     }
 
-    // Add debug logging
-    console.log("Client data from database:", {
-      id: clients[0].id,
-      clientName: clients[0].clientName,
-      hold: clients[0].hold,
-      overdue: clients[0].overdue,
-    });
-
     return res.json({ Status: true, Result: clients[0] });
   } catch (err) {
     console.error("Error fetching client:", err);

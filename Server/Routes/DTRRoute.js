@@ -28,13 +28,6 @@ if (!fs.existsSync(uploadDir)) {
 // Log upload directory status
 try {
   const stats = fs.statSync(uploadDir);
-  console.log("Upload directory status:", {
-    path: uploadDir,
-    exists: true,
-    isDirectory: stats.isDirectory(),
-    permissions: stats.mode,
-    writable: fs.accessSync(uploadDir, fs.constants.W_OK),
-  });
 } catch (err) {
   console.error("Error checking upload directory:", err);
 }
@@ -201,8 +194,6 @@ const calculateHours = (timeIn, timeOut) => {
 
 // Helper function to parse CSV/Excel files
 async function parseFile(filePath, fileType) {
-  console.log(`Parsing file: ${filePath} (${fileType})`);
-
   try {
     if (fileType === "csv") {
       return new Promise((resolve, reject) => {
@@ -219,8 +210,6 @@ async function parseFile(filePath, fileType) {
           const containsTabs = fileContent.includes("\t");
           const delimiter = containsTabs ? "\t" : ",";
 
-          console.log(`Detected delimiter: ${containsTabs ? "tab" : "comma"}`);
-
           if (containsTabs) {
             // For tab-delimited files, manually parse the lines
             const lines = fileContent.split("\n").filter((line) => line.trim());
@@ -229,13 +218,6 @@ async function parseFile(filePath, fileType) {
               // Split by tab and clean each field
               const fields = line.split("\t").map((field) => field.trim());
               results.push(fields);
-            }
-
-            console.log(
-              `Manually parsed ${results.length} rows from tab-delimited file`
-            );
-            if (results.length > 0) {
-              console.log(`First row sample: ${JSON.stringify(results[0])}`);
             }
 
             resolve(results);
@@ -261,10 +243,6 @@ async function parseFile(filePath, fileType) {
 
                   // Check if this looks like our expected format (has "AC-No." and "State")
                   if (headers[0] === "AC-No." && headers.includes("State")) {
-                    console.log(
-                      "Found Type 1 format with headers: AC-No., Name, Time, State"
-                    );
-
                     // Convert the rows to objects with proper keys
                     const objectRows = [];
                     for (let i = 1; i < results.length; i++) {
@@ -277,8 +255,6 @@ async function parseFile(filePath, fileType) {
                     }
                     resolve(objectRows);
                   } else {
-                    // This is Type 2 (no headers) or unknown format
-                    console.log("Treating as Type 2 format (no headers)");
                     resolve(results);
                   }
                 } else {
@@ -304,7 +280,6 @@ async function parseFile(filePath, fileType) {
         const headers = rawData[0];
 
         if (headers[0] === "AC-No." && headers.includes("State")) {
-          console.log("Found Type 1 Excel format with headers");
           // Convert arrays to objects with headers as keys
           const objectRows = [];
           for (let i = 1; i < rawData.length; i++) {
@@ -317,7 +292,6 @@ async function parseFile(filePath, fileType) {
           }
           return objectRows;
         } else {
-          console.log("Treating Excel as Type 2 format (no headers)");
           return rawData;
         }
       }
@@ -332,8 +306,6 @@ async function parseFile(filePath, fileType) {
 
 // Process DTR data and standardize format
 function processDTRData(data, existingEmployees = new Map()) {
-  console.log(`Processing ${data.length} entries`);
-
   // Merge existing employees with any new ones found in the data
   const employeeNames = new Map(existingEmployees);
 
@@ -346,27 +318,10 @@ function processDTRData(data, existingEmployees = new Map()) {
 
   const isFormatType2 = data.length > 0 && Array.isArray(data[0]);
 
-  console.log(
-    `Detected format: ${
-      isFormatType1
-        ? "Type 1 (with headers)"
-        : isFormatType2
-        ? "Type 2 (without headers)"
-        : "Unknown"
-    }`
-  );
-
   if (data.length > 0) {
-    console.log("First row data structure:", typeof data[0]);
     if (typeof data[0] === "object" && !Array.isArray(data[0])) {
-      console.log("First row keys:", Object.keys(data[0]));
     } else if (Array.isArray(data[0])) {
-      console.log("First row values:", data[0]);
     }
-    console.log(
-      "First row sample:",
-      JSON.stringify(data[0]).substring(0, 100) + "..."
-    );
   }
 
   let processedEntries = [];
@@ -374,7 +329,6 @@ function processDTRData(data, existingEmployees = new Map()) {
   if (isFormatType1) {
     data.forEach((row) => {
       try {
-        console.log("ROW:", row);
         const empId = row["AC-No."]?.toString().trim();
         const empName = row["Name"]?.toString().trim();
         const dateTimeStr = row["Time"]?.toString().trim();
@@ -420,7 +374,6 @@ function processDTRData(data, existingEmployees = new Map()) {
     data.forEach((row) => {
       try {
         if (!row || row.length < 2) {
-          console.log("Skipping invalid row:", row);
           return; // Skip invalid rows
         }
 
@@ -440,12 +393,7 @@ function processDTRData(data, existingEmployees = new Map()) {
         // Clean empId - remove any non-numeric characters
         empId = empId.replace(/\D/g, "");
 
-        console.log(`Processing row: EmpID=${empId}, DateTime=${dateTimeStr}`);
-
         if (!empId || !dateTimeStr || isNaN(empId)) {
-          console.log(
-            `Skipping row with invalid data: EmpID=${empId}, DateTime=${dateTimeStr}`
-          );
           return; // Skip invalid rows
         }
 
@@ -471,10 +419,6 @@ function processDTRData(data, existingEmployees = new Map()) {
         const timeFormatted = dateTime.format("HH:mm:ss");
         const dayOfWeek = dateTime.format("ddd");
 
-        console.log(
-          `Parsed date=${dateFormatted}, time=${timeFormatted}, day=${dayOfWeek}`
-        );
-
         if (!employeeTimeRecords[empId]) {
           employeeTimeRecords[empId] = {};
         }
@@ -495,19 +439,10 @@ function processDTRData(data, existingEmployees = new Map()) {
         employeeTimeRecords[empId][dateFormatted].records.push({
           time: timeFormatted,
         });
-
-        console.log(`Added record for employee ${empId} on ${dateFormatted}`);
       } catch (error) {
         console.error("Error processing row:", error, row);
       }
     });
-
-    // Log the collected records for debugging
-    console.log(
-      `Collected records for ${
-        Object.keys(employeeTimeRecords).length
-      } employees`
-    );
 
     // Second pass: Create entries from the collected records
     Object.values(employeeTimeRecords).forEach((empDates) => {
@@ -576,8 +511,6 @@ function processDTRData(data, existingEmployees = new Map()) {
 
         // Process remaining records
         filteredRecords.forEach((record) => {
-          console.log("EMPLOYEE TIME RECORDS:", empId, empName, date, day);
-
           // Create raw state by combining date and time
           const rawState = `${date} ${record.time}`;
 
@@ -590,23 +523,12 @@ function processDTRData(data, existingEmployees = new Map()) {
             rawState: rawState,
             remarks: "Type 2",
           });
-
-          console.log(
-            `Added processed entry for employee ${empId} on ${date} at ${record.time}`
-          );
         });
       });
     });
   } else {
     console.warn("Unknown data format received");
     return [];
-  }
-
-  // Log processed entries summary
-  console.log(`Processed ${processedEntries.length} entries`);
-
-  if (processedEntries.length > 0) {
-    console.log("First processed entry:", JSON.stringify(processedEntries[0]));
   }
 
   // Sort processed entries by empId and rawState
@@ -620,84 +542,13 @@ function processDTRData(data, existingEmployees = new Map()) {
   return processedEntries;
 }
 
-// Create tables if they don't exist
-// async function setupDTRTables() {
-//   let connection;
-//   try {
-//     connection = await pool.getConnection();
-//     console.log("Setting up DTR tables...");
-
-//     // Create DTR Batches table - use uppercase table names to match existing
-//     await connection.query(`
-//       CREATE TABLE IF NOT EXISTS DTRBatches (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         batchName VARCHAR(100) NOT NULL,
-//         periodStart DATE NOT NULL,
-//         periodEnd DATE NOT NULL,
-//         fileCount INT DEFAULT 0,
-//         entryCount INT DEFAULT 0,
-//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-//       )
-//     `);
-//     console.log("DTRBatches table created or verified");
-
-//     // Create DTR Entries table - use uppercase table names to match existing
-//     await connection.query(`
-//       CREATE TABLE IF NOT EXISTS DTREntries (
-//         id INT AUTO_INCREMENT PRIMARY KEY,
-//         batchId INT NOT NULL,
-//         empId VARCHAR(50) NOT NULL,
-//         empName VARCHAR(100) NOT NULL,
-//         date DATE NOT NULL,
-//         day VARCHAR(10) NOT NULL,
-//         timeIn VARCHAR(20),
-//         timeOut VARCHAR(20),
-//         state VARCHAR(50),
-//         hours DECIMAL(10,2) DEFAULT 0,
-//         overtime DECIMAL(10,2) DEFAULT 0,
-//         specialHours DECIMAL(10,2) DEFAULT 0,
-//         remarks VARCHAR(255),
-//         processed INT DEFAULT 0,
-//         deleteRecord INT DEFAULT 0,
-//         editedIn INT DEFAULT 0,
-//         editedOut INT DEFAULT 0,
-//         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-//         FOREIGN KEY (batchId) REFERENCES DTRBatches(id) ON DELETE CASCADE
-//       )
-//     `);
-//     console.log("DTREntries table created or verified");
-
-//     return true;
-//   } catch (error) {
-//     console.error("Error setting up DTR tables:", error);
-//     throw error;
-//   } finally {
-//     if (connection) connection.release();
-//   }
-// }
-
-// Call setupDTRTables immediately when this module is loaded
-// (async () => {
-//   try {
-//     await setupDTRTables();
-//     console.log("DTR database setup complete");
-//   } catch (err) {
-//     console.error("Failed to set up DTR database:", err);
-//   }
-// })();
-
 // Route to upload DTR files
 router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
   let connection;
   const uploadedFiles = req.files || [];
 
   try {
-    console.log("=========== DTR UPLOAD REQUEST ===========");
-    console.log(`Received ${uploadedFiles.length} files for processing`);
-
     if (uploadedFiles.length === 0) {
-      console.log("Error: No files uploaded");
       return res.status(400).json({
         Status: false,
         Error: "No files uploaded",
@@ -705,12 +556,6 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
     }
 
     const { batchName, periodStart, periodEnd } = req.body;
-    console.log("Upload request details:", {
-      batchName,
-      periodStart,
-      periodEnd,
-      fileCount: uploadedFiles.length,
-    });
 
     if (!batchName || !periodStart || !periodEnd) {
       console.log("Error: Missing required fields");
@@ -722,7 +567,6 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
-    console.log("Database transaction started");
 
     // Create a new batch record - use uppercase table names
     const [batchResult] = await connection.query(
@@ -731,7 +575,6 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
     );
 
     const batchId = batchResult.insertId;
-    console.log("Created batch with ID:", batchId);
 
     // Get existing employee names
     const existingEmployees = await getExistingEmployeeNames(connection);
@@ -749,41 +592,11 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
         .substring(1);
 
       try {
-        console.log(`Processing file: ${file.originalname} (${fileType})`);
-
         // Parse the file
         const rawData = await parseFile(filePath, fileType);
-        console.log(
-          `Parsed ${rawData.length} rows from file ${file.originalname}`
-        );
-        console.log("RAWDATA", rawData);
-
-        // Debug sample of rawData
-        if (rawData.length > 0) {
-          console.log("First entry type:", typeof rawData[0]);
-          if (typeof rawData[0] === "object" && !Array.isArray(rawData[0])) {
-            console.log("First entry keys:", Object.keys(rawData[0]));
-          } else if (Array.isArray(rawData[0])) {
-            console.log(
-              "First entry is array, first few values:",
-              rawData[0].slice(0, 5)
-            );
-          }
-        }
 
         // Process the data
         const processedData = processDTRData(rawData, existingEmployees);
-        console.log(
-          `Processed ${processedData.length} entries from ${file.originalname}`
-        );
-
-        // Debug sample of processed data
-        if (processedData.length > 0) {
-          console.log(
-            "First processed entry:",
-            JSON.stringify(processedData[0])
-          );
-        }
 
         // Add to all processed data
         allProcessedData = [...allProcessedData, ...processedData];
@@ -824,21 +637,14 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
       entry.remarks || null,
     ]);
 
-    console.log("ENTRIES DATA", entriesData);
     // Insert processed entries in bulk - use uppercase table names
     if (entriesData.length > 0) {
-      console.log(
-        `Inserting ${entriesData.length} entries into DTREntries table`
-      );
       await connection.query(
         `INSERT INTO DTREntries 
          (batchId, empId, empName, date, day, time, rawState, timeIn, timeOut, state, hours, overtime, specialHours, remarks) 
          VALUES ?`,
         [entriesData]
       );
-      console.log("Bulk insert completed successfully");
-    } else {
-      console.log("No valid entries found to insert");
     }
 
     // Update batch with entry count - use uppercase table names
@@ -846,19 +652,15 @@ router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
       "UPDATE DTRBatches SET entryCount = ? WHERE id = ?",
       [totalEntries, batchId]
     );
-    console.log(`Updated batch ${batchId} with entry count: ${totalEntries}`);
 
     await connection.commit();
-    console.log("Database transaction committed");
 
     // Fetch the created batch to return to client - use uppercase table names
     const [createdBatch] = await connection.query(
       "SELECT * FROM DTRBatches WHERE id = ?",
       [batchId]
     );
-    console.log("Fetched created batch for response");
 
-    console.log("Sending success response to client");
     res.status(200).json({
       Status: true,
       Message: `Successfully processed ${totalEntries} DTR entries from ${uploadedFiles.length} files`,
@@ -888,15 +690,12 @@ router.get("/batches", async (req, res) => {
   let connection;
 
   try {
-    console.log("Fetching DTR batches...");
     connection = await pool.getConnection();
 
     // Use uppercase table names
     const [batches] = await connection.query(
       "SELECT * FROM DTRBatches ORDER BY createdAt DESC"
     );
-
-    console.log(`Found ${batches.length} batches`);
 
     // Always return in a consistent format
     res.status(200).json({
@@ -920,7 +719,6 @@ router.get("/summary/:batchId", async (req, res) => {
 
   try {
     const { batchId } = req.params;
-    console.log(`Fetching summary report for batch ${batchId}`);
 
     connection = await pool.getConnection();
 
@@ -954,8 +752,6 @@ router.get("/summary/:batchId", async (req, res) => {
       [batchId]
     );
 
-    console.log(`Found summary data for ${summaryData.length} employees`);
-
     res.json({
       Status: true,
       BatchDetails: batchDetails[0],
@@ -978,9 +774,6 @@ router.get("/detail/:batchId/:empId", async (req, res) => {
 
   try {
     const { batchId, empId } = req.params;
-    console.log(
-      `Fetching detail report for batch ${batchId}, employee ${empId}`
-    );
 
     connection = await pool.getConnection();
 
@@ -1014,8 +807,6 @@ router.get("/detail/:batchId/:empId", async (req, res) => {
       });
     }
 
-    console.log(`Found ${details.length} entries for employee ${empId}`);
-
     res.json({
       Status: true,
       BatchDetails: batchDetails[0],
@@ -1038,7 +829,6 @@ router.get("/export/:batchId", async (req, res) => {
 
   try {
     const { batchId } = req.params;
-    console.log(`Exporting data for batch ${batchId}`);
 
     connection = await pool.getConnection();
 
@@ -1070,8 +860,6 @@ router.get("/export/:batchId", async (req, res) => {
       [batchId]
     );
 
-    console.log(`Found ${entries.length} entries for export`);
-
     res.json({
       Status: true,
       BatchDetails: batchDetails[0],
@@ -1094,7 +882,6 @@ router.delete("/DTRdelete/:batchId", async (req, res) => {
 
   try {
     const { batchId } = req.params;
-    console.log(`Deleting batch ${batchId}`);
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -1115,7 +902,6 @@ router.delete("/DTRdelete/:batchId", async (req, res) => {
 
     // Then delete the batch
     await connection.query("DELETE FROM DTRBatches WHERE id = ?", [batchId]);
-    console.log(`Deleted batch ${batchId}`);
 
     await connection.commit();
 
@@ -1145,21 +931,6 @@ router.post(
     let connection;
     const uploadedFiles = req.files || [];
     const { batchId } = req.params;
-
-    console.log("=== ADD TO BATCH REQUEST ===");
-    console.log("Batch ID:", batchId);
-    console.log(
-      "Files received:",
-      uploadedFiles.map((f) => ({
-        name: f.originalname,
-        size: f.size,
-        path: f.path,
-        mimetype: f.mimetype,
-      }))
-    );
-    console.log("Request body:", req.body);
-    console.log("Request headers:", req.headers);
-    console.log("============================");
 
     try {
       // Validate files
@@ -1218,19 +989,11 @@ router.post(
           .substring(1);
 
         try {
-          console.log(`Processing file: ${file.originalname} (${fileType})`);
-
           // Parse the file
           const rawData = await parseFile(filePath, fileType);
-          console.log(
-            `Parsed ${rawData.length} rows from file ${file.originalname}`
-          );
 
           // Pass existingEmployees to processDTRData
           const processedData = processDTRData(rawData, existingEmployees);
-          console.log(
-            `Processed ${processedData.length} entries from ${file.originalname}`
-          );
 
           // Add to all processed data
           allProcessedData = [...allProcessedData, ...processedData];
@@ -1334,11 +1097,6 @@ router.post(
   "/test-upload/:batchId",
   upload.array("dtrFiles", 10),
   (req, res) => {
-    console.log("Test upload received:", {
-      files: req.files,
-      body: req.body,
-      params: req.params,
-    });
     res.json({
       Status: true,
       message: "Test upload received",
@@ -1692,7 +1450,6 @@ router.delete("/delete-entry/:batchId/:entryId", async (req, res) => {
   let connection;
   try {
     const { batchId, entryId } = req.params;
-    console.log(`Deleting entry ${entryId} from batch ${batchId}`);
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -1724,7 +1481,6 @@ router.post("/update-time-in-only/:batchId", async (req, res) => {
     const { id, time } = req.body;
     const { batchId } = req.params;
 
-    console.log("TIME:", time, id, batchId);
     const sql = `
       UPDATE DTREntries 
       SET timeIn = ?
@@ -1785,8 +1541,6 @@ router.post("/update-time-in-out/:batchId", async (req, res) => {
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
-
-    console.log("Passed Data:", req.body);
 
     const updateFields = [
       "timeIn = ?",
@@ -2075,9 +1829,6 @@ router.post("/add-holiday", async (req, res) => {
       )
     );
     const formattedDate = utcDate.toISOString().split("T")[0];
-
-    console.log("Original local date:", holidayDate);
-    console.log("Converted UTC date:", formattedDate);
 
     // Check if holiday already exists
     const [existingHoliday] = await connection.query(

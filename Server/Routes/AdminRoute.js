@@ -315,7 +315,6 @@ router.post("/login", async (req, res) => {
 
     if (result.length > 0) {
       const employee = result[0];
-      console.log("Result 2:", result);
 
       const response = await bcrypt.compare(
         req.body.password,
@@ -323,8 +322,6 @@ router.post("/login", async (req, res) => {
       );
 
       if (response) {
-        console.log("Employee data for token:", employee); // Debug log
-
         const token = jwt.sign(
           {
             name: employee.name,

@@ -462,7 +462,6 @@ router.get("/search-orders-by-client", async (req, res) => {
       WHERE ${whereClause}
     `;
 
-    console.log("WHERE CLAUSE", whereClause);
     // Main data query - using same fields as regular order search
     const ordersSql = `
       SELECT 
@@ -504,7 +503,6 @@ router.get("/search-orders-by-client", async (req, res) => {
       Number(limit),
       Number(offset),
     ]);
-    console.log("orders", orders);
     return res.json({
       Status: true,
       Result: {
@@ -633,7 +631,6 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     let logMessage = "";
     let statusToSet = newStatus;
     let isRestricted = false;
-    console.log("statusToSet", statusToSet);
 
     // Handle status change rules
     if (
@@ -728,9 +725,6 @@ router.put("/update_orders_drnum", async (req, res) => {
     .join(" ");
   const orderIDs = updates.map((order) => order.orderID).join(", ");
 
-  console.log("lastDRNumber", lastDRNumber);
-  console.log("orderIDs", orderIDs);
-
   const connection = await pool.getConnection();
 
   try {
@@ -742,7 +736,6 @@ router.put("/update_orders_drnum", async (req, res) => {
     const currentLastDRNumber = currentDRResult[0].lastDRNumber;
     const finalDRNumber = Math.max(lastDRNumber, currentLastDRNumber);
 
-    console.log("dateCases", dateCases);
     const sqlUpdateOrders = `
       UPDATE orders
       SET drnum = CASE ${cases} END,
@@ -821,7 +814,6 @@ router.get("/orders-all-DR", async (req, res) => {
 `;
 
     const [result] = await pool.query(sql);
-    console.log("result", result);
 
     // Restructure the data to group order details by order
     const ordersMap = new Map();
@@ -1327,18 +1319,6 @@ router.put("/order_details/:id", async (req, res) => {
     delete otherData.squareFeet;
     delete otherData.materialUsage;
 
-    console.log("1. Request body:", req.body);
-    console.log("2. Extracted values:", {
-      width,
-      height,
-      unit,
-      quantity,
-      top,
-      bottom,
-      allowanceLeft,
-      allowanceRight,
-    });
-
     // Helper function to safely parse float with default
     const safeParseFloat = (value, defaultValue = 0) => {
       const parsed = parseFloat(value);
@@ -1357,8 +1337,6 @@ router.put("/order_details/:id", async (req, res) => {
       safeParseFloat(allowanceRight)
     );
 
-    console.log("3. Calculated values:", { squareFeet, materialUsage });
-
     const data = {
       ...otherData,
       width: safeParseFloat(width),
@@ -1375,13 +1353,8 @@ router.put("/order_details/:id", async (req, res) => {
       materialUsage,
     };
 
-    console.log("4. Final data being updated:", data);
-    console.log("5. ID:", id);
-
     const sql = "UPDATE order_details SET ? WHERE Id = ?";
     const [result] = await pool.query(sql, [data, id]);
-
-    console.log("6. Update result:", result);
 
     if (result.affectedRows === 0) {
       return res.json({
@@ -1557,7 +1530,6 @@ router.post(
         let totalHrs = 0;
 
         orderDetails.forEach((detail) => {
-          console.log("Processing detail:", detail);
           totalAmount += parseFloat(detail.amount || 0);
           totalHrs += parseFloat(detail.printHrs || 0);
         });
@@ -1845,7 +1817,6 @@ router.put("/admin-status-update", verifyUser, async (req, res) => {
 
 // Create a new order based on an existing one (reorder)
 router.post("/order-reorder", verifyUser, async (req, res) => {
-  console.log("REORDER: req.body", req.body);
   const { orderId } = req.body;
   const userName = req.body.userName || req.user.name;
   const userId = req.body.userId || req.user.id;
@@ -2066,9 +2037,6 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
 
     const formattedFirstDay = formatDate(firstDayOfMonth);
     const formattedLastDay = formatDate(lastDayOfMonth);
-
-    console.log("formattedFirstDay", formattedFirstDay);
-    console.log("formattedLastDay", formattedLastDay);
 
     const sql = `
       SELECT 
