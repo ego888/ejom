@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { AdminRouter } from "./Routes/AdminRoute.js";
-import { EmployeeRouter } from "./Routes/EmployeeRoute.js";
 import { QuoteRouter } from "./Routes/QuoteRoute.js";
 import { OrderRouter } from "./Routes/OrderRoute.js";
 import { ClientRouter } from "./Routes/ClientRoute.js";

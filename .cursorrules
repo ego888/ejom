@@ -174,9 +174,8 @@ package-lock.json
 | |_**package.json
 | |**_Routes
 | | |_**AdminRoute.js.org
-| | |**_EmployeeRoute.js
-| | |_**AdminRoute.js
-|**_.cursorrules
+| | |\_**AdminRoute.js
+|\*\*_.cursorrules
 |\*\*\_package-lock.json
 |_\*\*package.json
 

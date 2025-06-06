@@ -10,6 +10,16 @@ fi
 # Get current branch name
 branch=$(git rev-parse --abbrev-ref HEAD)
 
+if [ "$branch" != "main" ]; then
+  echo "⚠️  You're pushing to '$branch' instead of 'main'. Continue? (y/N): "
+  read confirm
+  confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
+  if [[ "$confirm" != "y" && "$confirm" != "yes" ]]; then
+    echo "❌ Push aborted."
+    exit 1
+  fi
+fi
+
 # Git commands
 git add .
 git commit -m "$1"
