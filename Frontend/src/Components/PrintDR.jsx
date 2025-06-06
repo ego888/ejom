@@ -28,6 +28,7 @@ function PrintDR({ data, showAmounts = true }) {
         totalAmount: data[0].totalAmount,
         amountDisc: data[0].amountDisc,
         grandTotal: data[0].grandTotal,
+        orderedBy: data[0].orderedBy, // Add orderedBy to debug log
       });
       // Log the first detail to see its structure
       if (data[0].order_details && data[0].order_details.length > 0) {
@@ -131,20 +132,20 @@ function PrintDR({ data, showAmounts = true }) {
                   </div>
                   <div className="info-section">
                     <div className="info-row">
-                      <div className="info-label text-end">DR No.</div>
-                      <h2 className="info-value" style={{ fontSize: "18px" }}>
-                        <strong>{order.drNum || ""}</strong>
-                      </h2>
-                    </div>
-                    <div className="info-row">
                       <div className="info-label text-end">Date:</div>
                       <div className="info-value">{order.drDate || ""}</div>
+                      <div className="info-label text-end ms-4">DR No.:</div>
+                      <div className="info-value">
+                        <strong>{order.drNum || ""}</strong>
+                      </div>
                     </div>
                     <div className="info-row">
                       <div className="info-label text-end">Client:</div>
-                      <div className="info-value" style={{ fontSize: "18px" }}>
-                        <strong>{order.customerName}</strong>
-                      </div>
+                      <div className="info-value">{order.clientName || ""}</div>
+                    </div>
+                    <div className="info-row">
+                      <div className="info-label text-end">Ordered by:</div>
+                      <div className="info-value">{order.orderedBy || ""}</div>
                     </div>
                     <div className="info-row">
                       <div className="info-label text-end">Project Name:</div>
@@ -253,9 +254,7 @@ function PrintDR({ data, showAmounts = true }) {
                               </div>
                             </div>
                             <div className="total-row">
-                              <div className="total-label">
-                                Amount Discount:
-                              </div>
+                              <div className="total-label">Amount Disc:</div>
                               <div className="total-value">
                                 {formatNumber(order.amountDisc)}
                               </div>

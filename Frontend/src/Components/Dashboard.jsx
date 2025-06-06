@@ -10,13 +10,10 @@ import {
 import "bootstrap-icons/font/bootstrap-icons.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import { jwtDecode } from "jwt-decode";
-import AddOrder from "./AddOrder";
-import Billing from "./Billing";
 import "./Dashboard.css";
 import { ServerIP } from "../config";
 import logo from "../assets/Go Large logo 2009C2 small.jpg";
 import ProfileUpdateModal from "./UI/ProfileUpdateModal";
-import PaymentInquiry from "./PaymentInquiry";
 
 // Menu item constants
 const DASHBOARD = { path: "", icon: "bi-speedometer2", text: "Dashboard" };
@@ -59,6 +56,11 @@ const PAYMENT_INQUIRY = {
   path: "payment-inquiry",
   icon: "bi-bank",
   text: "Payments Inquiry",
+};
+const INVOICE_INQUIRY = {
+  path: "invoice-inquiry",
+  icon: "bi-file-earmark-binary",
+  text: "Invoice Inquiry",
 };
 const RECEIVE_PAYMENT = {
   path: "receive-payment",
@@ -287,6 +289,7 @@ const Dashboard = () => {
         PRINTLOG,
         PAYMENT,
         PAYMENT_INQUIRY,
+        INVOICE_INQUIRY,
         RECEIVE_PAYMENT,
         REPORTS,
         MASTERFILES,
@@ -301,6 +304,7 @@ const Dashboard = () => {
         PAYMENT,
         RECEIVE_PAYMENT,
         PAYMENT_INQUIRY,
+        INVOICE_INQUIRY,
         BILLING,
         SOA
       );
@@ -308,6 +312,7 @@ const Dashboard = () => {
       items.push(
         DASHPROD,
         PROD,
+        INVOICE_INQUIRY,
         WIPLOG,
         ARTISTLOG,
         PRINTLOG,
@@ -428,14 +433,6 @@ const Dashboard = () => {
                     </li>
                   );
                 })}
-                {permissions.isAccounting && (
-                  <li className="nav-item">
-                    <Link to="/payment-inquiry" className="nav-link">
-                      <i className="nav-icon fas fa-search"></i>
-                      <p>Payment Inquiry</p>
-                    </Link>
-                  </li>
-                )}
                 <li>
                   <a
                     href="#"

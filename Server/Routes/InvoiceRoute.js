@@ -66,7 +66,8 @@ router.post("/save_invoice", verifyUser, async (req, res) => {
       });
     }
 
-    // Start transaction
+    // Start transaction with READ COMMITTED isolation level
+    await connection.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
     await connection.beginTransaction();
 
     // // Check if invoice number already exists
@@ -102,17 +103,30 @@ router.post("/save_invoice", verifyUser, async (req, res) => {
       [invoiceNumber, invoicePrefix]
     );
 
-    // Update order status and invoice amount
+    // Update order status and invoice number
     await connection.query(
       `UPDATE orders o 
-       SET o.status = 'Billed', 
-           o.billDate = NOW(),
+       SET o.billDate = NOW(),
            o.invoiceNum = (
              SELECT SUM(invoiceAmount) 
              FROM invoice 
              WHERE orderId = o.orderID
            )
        WHERE o.orderID = ?`,
+      [orderId]
+    );
+
+    // Update order status to Billed only if total invoice amount >= grand total
+    await connection.query(
+      `UPDATE orders o
+      JOIN (
+        SELECT orderId, COALESCE(SUM(invoiceAmount), 0) AS totalInvoiced
+        FROM invoice
+        GROUP BY orderId
+      ) i ON i.orderId = o.orderId
+      SET o.status = 'Billed'
+      WHERE o.orderId = ?
+      AND i.totalInvoiced >= o.grandTotal`,
       [orderId]
     );
 
@@ -362,5 +376,52 @@ router.get(
     }
   }
 );
+
+router.get("/invoices-inquire", verifyUser, async (req, res) => {
+  const { dateFrom, dateTo } = req.query;
+
+  if (!dateFrom || !dateTo) {
+    return res.status(400).json({
+      Status: false,
+      Error: "Date range is required",
+    });
+  }
+
+  try {
+    const connection = await pool.getConnection();
+    const [results] = await connection.execute(
+      `SELECT 
+        i.id,
+        o.billDate,
+        i.invoicePrefix,
+        i.invoiceNumber,
+        i.invoiceAmount,
+        c.clientName,
+        c.customerName,
+        c.tinNumber,
+        o.orderId, 
+        o.grandTotal
+      FROM invoice i
+      LEFT JOIN orders o ON i.orderId = o.orderId
+      LEFT JOIN client c ON o.clientId = c.id
+      WHERE 
+        o.billDate >= ? AND 
+        o.billDate < DATE_ADD(?, INTERVAL 1 DAY)
+        AND i.invoiceNumber IS NOT NULL
+        AND i.invoiceNumber != 'NaN'
+      ORDER BY i.invoicePrefix, i.invoiceNumber ASC`,
+      [dateFrom, dateTo]
+    );
+
+    connection.release();
+    return res.json({ Status: true, Result: results });
+  } catch (error) {
+    console.error("Error in invoice inquiry:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch invoice data",
+    });
+  }
+});
 
 export default router;

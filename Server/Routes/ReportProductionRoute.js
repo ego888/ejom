@@ -25,9 +25,6 @@ const getMaterialUsageData = async (dateFrom, dateTo, groupBy) => {
       selectClause = "m.Material as materialName";
   }
 
-  const endDate = new Date(dateTo);
-  endDate.setHours(23, 59, 59, 999);
-
   const query = `
     SELECT 
       ${selectClause},
@@ -37,12 +34,56 @@ const getMaterialUsageData = async (dateFrom, dateTo, groupBy) => {
     FROM orders o
     JOIN order_details od ON o.orderId = od.orderId
     JOIN material m ON od.material = m.Material
-    WHERE o.orderDate BETWEEN ? AND ?
+    WHERE o.orderDate >= ?
+      AND o.orderDate < DATE_ADD(?, INTERVAL 1 DAY)
     GROUP BY ${groupByClause}
     ORDER BY ${groupByClause}
   `;
 
-  const [results] = await pool.query(query, [dateFrom, endDate]);
+  const [results] = await pool.query(query, [dateFrom, dateTo]);
+  return results;
+};
+
+// Helper function to get detailed report data
+const getDetailedMaterialUsageData = async (dateFrom, dateTo, groupBy) => {
+  let groupByClause, selectClause;
+  switch (groupBy) {
+    case "material":
+      groupByClause = "m.Material";
+      selectClause = "m.Material as materialName";
+      break;
+    case "materialType":
+      groupByClause = "m.materialType";
+      selectClause = "m.materialType as materialType";
+      break;
+    case "machineType":
+      groupByClause = "m.machineType";
+      selectClause = "m.machineType as machineType";
+      break;
+    default:
+      groupByClause = "m.Material";
+      selectClause = "m.Material as materialName";
+  }
+
+  const query = `
+    SELECT 
+      ${selectClause},
+      od.quantity,
+      od.materialUsage,
+      od.amount,
+      o.orderId,
+      o.orderDate,
+      c.clientName
+    FROM orders o
+    JOIN order_details od ON o.orderId = od.orderId
+    JOIN material m ON od.material = m.Material
+    JOIN client c ON o.clientId = c.id
+    WHERE o.orderDate >= ?
+      AND o.orderDate < DATE_ADD(?, INTERVAL 1 DAY)
+    ORDER BY ${groupByClause}, o.orderDate
+  `;
+
+  const [results] = await pool.query(query, [dateFrom, dateTo]);
   return results;
 };
 
@@ -61,6 +102,29 @@ router.get("/material-usage", verifyUser, async (req, res) => {
     res.json({
       Status: false,
       Error: "Failed to fetch material usage data",
+    });
+  }
+});
+
+// Detailed Material Usage Report
+router.get("/material-usage-detailed", verifyUser, async (req, res) => {
+  const { dateFrom, dateTo, groupBy } = req.query;
+
+  try {
+    const results = await getDetailedMaterialUsageData(
+      dateFrom,
+      dateTo,
+      groupBy
+    );
+    res.json({
+      Status: true,
+      Result: results,
+    });
+  } catch (error) {
+    console.error("Error in detailed material usage report:", error);
+    res.json({
+      Status: false,
+      Error: "Failed to fetch detailed material usage data",
     });
   }
 });

@@ -37,6 +37,7 @@ function OrderView() {
     orderReference: "",
   });
   const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
+  const [vatRate, setVatRate] = useState(0);
 
   const location = useLocation(); // Get the current route path
   console.log(location);
@@ -78,40 +79,38 @@ function OrderView() {
   useEffect(() => {
     if (id) {
       const token = localStorage.getItem("token");
-      axios
-        .get(`${ServerIP}/auth/order/${id}`, {
+      Promise.all([
+        axios.get(`${ServerIP}/auth/order/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        })
-        .then((result) => {
-          if (result.data.Status) {
-            const orderData = result.data.Result;
-            setData(orderData);
+        }),
+        axios.get(`${ServerIP}/auth/order_details/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        axios.get(`${ServerIP}/auth/jomcontrol/VAT`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ])
+        .then(([orderResult, detailsResult, vatResult]) => {
+          if (orderResult.data.Status) {
+            setData(orderResult.data.Result);
+          }
+          if (detailsResult.data.Status) {
+            setOrderDetails(detailsResult.data.Result);
+          }
+          if (vatResult.data.Status) {
+            setVatRate(vatResult.data.Result.vatPercent);
           }
         })
         .catch((err) => handleApiError(err, navigate));
     }
   }, [id, navigate]);
   console.log("Order View Data", data);
-
-  useEffect(() => {
-    if (id) {
-      const token = localStorage.getItem("token");
-      axios
-        .get(`${ServerIP}/auth/order_details/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .then((result) => {
-          if (result.data.Status) {
-            setOrderDetails(result.data.Result);
-          }
-        })
-        .catch((err) => handleApiError(err, navigate));
-    }
-  }, [id, navigate]);
 
   // Add function to handle DR printing
   const handlePrintDR = (showAmounts = true) => {
@@ -122,6 +121,7 @@ function OrderView() {
       projectName: data.projectName,
       drNum: data.drNum,
       drDate: data.drDate,
+      orderedBy: data.orderedBy,
       order_details: orderDetails
         .filter((detail) => !detail.noPrint) // Filter out noPrint records
         .map((detail) => ({
@@ -727,7 +727,14 @@ function OrderView() {
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan="8" className="text-end pe-2">
+                  <td colSpan="4" className="text-end pe-2">
+                    Total Sales:
+                  </td>
+                  <td className="numeric-cell">
+                    {formatNumber(data.grandTotal)}
+                  </td>
+                  <td colSpan="1"></td>
+                  <td colSpan="2" className="text-end pe-2">
                     Disc. Amount:
                   </td>
                   <td className="numeric-cell">
@@ -743,7 +750,16 @@ function OrderView() {
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan="8" className="text-end pe-2">
+                  <td colSpan="4" className="text-end pe-2">
+                    Less VAT:
+                  </td>
+                  <td className="numeric-cell">
+                    {formatNumber(
+                      data.grandTotal - data.grandTotal / (1 + vatRate / 100)
+                    )}
+                  </td>
+                  <td colSpan="1"></td>
+                  <td colSpan="2" className="text-end pe-2">
                     Percent Disc.:
                   </td>
                   <td className="numeric-cell">
@@ -761,7 +777,14 @@ function OrderView() {
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan="8" className="text-end pe-2">
+                  <td colSpan="4" className="text-end pe-2">
+                    Net Amount:
+                  </td>
+                  <td className="numeric-cell">
+                    {formatNumber(data.grandTotal / (1 + vatRate / 100))}
+                  </td>
+                  <td colSpan="1"></td>
+                  <td colSpan="2" className="text-end pe-2">
                     Grand Total:
                   </td>
                   <td className="numeric-cell">

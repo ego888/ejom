@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
-
+import { formatPeso } from "../../utils/orderUtils";
 const SalesGauge = ({
   value,
   maxValue,
@@ -209,7 +209,7 @@ const SalesGauge = ({
   };
 
   // Format the displayed value with ₱ symbol and K/M suffix
-  const formattedValue = `₱${formatValueWithUnit(value)}`;
+  const formattedValue = `${formatPeso(formatValueWithUnit(value))}`;
 
   // Calculate percentage for display
   const percentageText = `${Math.round((value / maxValue) * 100)}% of target`;

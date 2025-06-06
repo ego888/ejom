@@ -89,19 +89,6 @@ function AddOrder() {
 
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
 
-  const [totals, setTotals] = useState({
-    subtotal: 0,
-    totalDiscount: 0,
-    grandTotal: 0,
-  });
-
-  const [orderTotals, setOrderTotals] = useState({
-    subtotal: 0,
-    discAmount: data.amountDisc || 0,
-    percentDisc: data.percentDisc || 0,
-    grandTotal: data.grandTotal || 0,
-  });
-
   const [editingDisplayOrder, setEditingDisplayOrder] = useState(null);
   const [tempDisplayOrder, setTempDisplayOrder] = useState(null);
 
@@ -145,45 +132,101 @@ function AddOrder() {
     return data.status === "Open" || currentUser.category_id === 1;
   };
 
+  // Add this at the top with other state declarations
+  const [tempDiscAmount, setTempDiscAmount] = useState(0);
+  const [debounceTimer, setDebounceTimer] = useState(null);
+  const [isUpdatingFromAmount, setIsUpdatingFromAmount] = useState(false);
+  const [isUpdatingFromPercent, setIsUpdatingFromPercent] = useState(false);
+
+  // Modify the handleDiscountChange function
   const handleDiscountChange = (type, value) => {
     const subtotal = orderDetails.reduce(
       (sum, detail) => sum + parseFloat(detail.amount || 0),
       0
     );
-    let newDiscAmount, newPercentDisc, newGrandTotal;
 
     if (type === "amount") {
-      newDiscAmount = parseFloat(value) || 0;
-      // Ensure discount amount doesn't exceed subtotal
-      newDiscAmount = Math.min(newDiscAmount, subtotal);
-      newPercentDisc =
-        subtotal > 0 ? ((newDiscAmount / subtotal) * 100).toFixed(2) : 0;
-      newGrandTotal = subtotal - newDiscAmount;
+      // If this update was triggered by a percentage change, ignore it
+      if (isUpdatingFromPercent) return;
+
+      // For amount changes, just update the temporary value
+      setTempDiscAmount(value);
+
+      // Clear any existing timer
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      // Set a new timer to update the actual values after 500ms
+      const timer = setTimeout(() => {
+        setIsUpdatingFromAmount(true);
+        const newDiscAmount = parseFloat(value) || 0;
+        // Ensure discount amount doesn't exceed subtotal
+        const finalDiscAmount = Math.min(newDiscAmount, subtotal);
+        const newPercentDisc =
+          subtotal > 0 ? ((finalDiscAmount / subtotal) * 100).toFixed(2) : 0;
+        const grandTotal = subtotal - finalDiscAmount;
+
+        setData((prev) => ({
+          ...prev,
+          amountDisc: parseFloat(finalDiscAmount),
+          percentDisc: parseFloat(newPercentDisc),
+          grandTotal: parseFloat(grandTotal),
+        }));
+
+        setIsUpdatingFromAmount(false);
+      }, 500);
+
+      setDebounceTimer(timer);
     } else {
-      newPercentDisc = parseFloat(value) || 0;
-      // Ensure percent discount doesn't exceed 100%
-      newPercentDisc = Math.min(newPercentDisc, 100);
-      newDiscAmount = ((subtotal * newPercentDisc) / 100).toFixed(2);
-      newGrandTotal = subtotal - newDiscAmount;
+      // For percentage changes, just update the display value
+      setData((prev) => ({
+        ...prev,
+        percentDisc: parseFloat(value) || 0,
+      }));
     }
-
-    const newTotals = {
-      subtotal,
-      discAmount: parseFloat(newDiscAmount),
-      percentDisc: parseFloat(newPercentDisc),
-      grandTotal: parseFloat(newGrandTotal),
-    };
-
-    setOrderTotals(newTotals);
-
-    // Update the main data state for saving to database
-    setData((prev) => ({
-      ...prev,
-      amountDisc: newDiscAmount,
-      percentDisc: newPercentDisc,
-      grandTotal: newGrandTotal,
-    }));
   };
+
+  // Add new function to handle percentage discount on Enter
+  const handlePercentDiscountEnter = (e) => {
+    if (e.key === "Enter") {
+      const subtotal = orderDetails.reduce(
+        (sum, detail) => sum + parseFloat(detail.amount || 0),
+        0
+      );
+
+      // If this update was triggered by an amount change, ignore it
+      if (isUpdatingFromAmount) return;
+
+      // For percentage changes, calculate immediately
+      setIsUpdatingFromPercent(true);
+      const newPercentDisc = parseFloat(e.target.value) || 0;
+      // Ensure percent discount doesn't exceed 100%
+      const finalPercentDisc = Math.min(newPercentDisc, 100);
+      const newDiscAmount = ((subtotal * finalPercentDisc) / 100).toFixed(2);
+      const grandTotal = subtotal - parseFloat(newDiscAmount);
+
+      // Update tempDiscAmount when percentage changes
+      setTempDiscAmount(newDiscAmount);
+
+      setData((prev) => ({
+        ...prev,
+        amountDisc: parseFloat(newDiscAmount),
+        percentDisc: parseFloat(finalPercentDisc),
+        grandTotal: parseFloat(grandTotal),
+      }));
+      setIsUpdatingFromPercent(false);
+    }
+  };
+
+  // Add cleanup for the debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [debounceTimer]);
 
   const fetchOrderDetails = () => {
     const token = localStorage.getItem("token");
@@ -197,7 +240,6 @@ function AddOrder() {
         if (result.data.Status) {
           setOrderDetails(result.data.Result);
           const totals = calculateTotals(result.data.Result);
-          setTotals(totals);
           setData((prev) => ({
             ...prev,
             totalHrs: totals.totalHrs,
@@ -317,10 +359,14 @@ function AddOrder() {
 
         if (response.data.Status) {
           setOrderDetails(response.data.Result);
-          setOrderTotals((prev) => ({
+
+          // Simply display the values from data without any calculations
+          setData((prev) => ({
             ...prev,
-            discAmount: data.amountDisc || 0,
+            totalAmount: data.totalAmount || 0,
+            amountDisc: data.amountDisc || 0,
             percentDisc: data.percentDisc || 0,
+            grandTotal: data.grandTotal || 0,
           }));
         }
       } catch (err) {
@@ -334,29 +380,7 @@ function AddOrder() {
     return () => {
       isMounted = false;
     };
-  }, [orderId, data.amountDisc, data.percentDisc]);
-
-  useEffect(() => {
-    const subtotal = orderDetails.reduce(
-      (acc, detail) =>
-        acc +
-        parseFloat(detail.unitPrice || 0) * parseFloat(detail.quantity || 0),
-      0
-    );
-    const totalDiscount = orderDetails.reduce(
-      (acc, detail) =>
-        acc +
-        parseFloat(detail.unitPrice || 0) *
-          parseFloat(detail.quantity || 0) *
-          (parseFloat(detail.discount || 0) / 100),
-      0
-    );
-    const grandTotal = subtotal - totalDiscount;
-
-    setSubtotal(subtotal.toFixed(2));
-    setTotalDiscount(totalDiscount.toFixed(2));
-    setGrandTotal(grandTotal.toFixed(2));
-  }, [orderDetails]);
+  }, [orderId]); // Only depend on orderId
 
   useEffect(() => {
     if (id) {
@@ -479,10 +503,10 @@ function AddOrder() {
       ...data,
       preparedBy: data.preparedBy, // Always use the logged-in user
       editedBy: userName, // Always use the logged-in user's name
-      totalAmount: orderTotals.subtotal, // Set totalAmount from subtotal
-      amountDisc: orderTotals.discAmount,
-      percentDisc: orderTotals.percentDisc,
-      grandTotal: orderTotals.grandTotal,
+      totalAmount: data.totalAmount, // Set totalAmount from subtotal
+      amountDisc: data.amountDisc,
+      percentDisc: data.percentDisc,
+      grandTotal: data.grandTotal,
     };
 
     if (!isHeaderSaved) {
@@ -615,42 +639,19 @@ function AddOrder() {
   //     });
   // };
   const handleDetailAdded = () => {
-    fetchOrderDetails();
     const token = localStorage.getItem("token");
     axios
       .get(`${ServerIP}/auth/order_details/${orderId || id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
       .then((result) => {
         if (result.data.Status) {
           setOrderDetails(result.data.Result);
           const totals = calculateTotals(result.data.Result);
-          setTotals(totals);
           setData((prev) => ({
             ...prev,
             totalHrs: totals.totalHrs,
           }));
-
-          // Update order with new totalHrs
-          const orderUpdateData = {
-            lastEdited: new Date().toISOString().slice(0, 19).replace("T", " "),
-            editedBy: localStorage.getItem("userName"),
-            totalHrs: totals.totalHrs,
-            totalAmount: data.totalAmount || 0,
-            amountDisc: data.amountDisc || 0,
-            percentDisc: data.percentDisc || 0,
-            grandTotal: data.grandTotal || 0,
-          };
-
-          axios.put(
-            `${ServerIP}/auth/orders/${orderId || id}/update_edited_info`,
-            orderUpdateData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
         }
       })
       .catch((err) => console.log(err));
@@ -708,7 +709,6 @@ function AddOrder() {
             if (detailResult.data.Status) {
               // Update local states
               setOrderDetails(updatedDetails);
-              setTotals(totals);
               setData((prev) => ({
                 ...prev,
                 totalHrs: totals.totalHrs,
@@ -868,7 +868,7 @@ function AddOrder() {
         };
       }
       // Recalculate price and amount when perSqFt or discount changes
-      else if (["perSqFt", "discount"].includes(field)) {
+      else if (["perSqFt"].includes(field)) {
         const price = calculatePrice(
           currentDetail.squareFeet || 0,
           currentDetail.perSqFt || 0
@@ -907,6 +907,86 @@ function AddOrder() {
       }));
     }
   };
+
+  const handleDiscountInputChange = (detailId, discountValue) => {
+    const discount = parseFloat(discountValue) || 0;
+
+    // Validate discount range
+    if (discount < 0 || discount > 100) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Discount must be between 0 and 100",
+        type: "alert",
+      });
+      return;
+    }
+
+    // If discount is 0, just reset the discount field without changing unit price
+    if (discount === 0) {
+      setEditedValues((prev) => {
+        const currentDetail = prev[detailId] || {};
+        const updatedValues = {
+          ...prev,
+          [detailId]: {
+            ...currentDetail,
+            discount: 0,
+          },
+        };
+        return updatedValues;
+      });
+      return;
+    }
+
+    setEditedValues((prev) => {
+      const currentDetail = prev[detailId] || {};
+      const currentUnitPrice = parseFloat(currentDetail.unitPrice) || 0;
+
+      // Calculate new unit price with discount applied
+      const newUnitPrice = currentUnitPrice * (1 - discount / 100);
+
+      // Calculate new amount with the discounted unit price
+      const amount = calculateAmount(
+        newUnitPrice,
+        0, // Reset discount to 0
+        currentDetail.quantity || 0
+      );
+
+      // Calculate new perSqFt if squareFeet exists
+      let perSqFt = 0;
+      if (
+        currentDetail.squareFeet &&
+        parseFloat(currentDetail.squareFeet) > 0
+      ) {
+        perSqFt = calculatePerSqFt(newUnitPrice, currentDetail.squareFeet);
+      }
+
+      const updatedValues = {
+        ...prev,
+        [detailId]: {
+          ...currentDetail,
+          unitPrice: parseFloat(newUnitPrice.toFixed(2)),
+          perSqFt: parseFloat(perSqFt.toFixed(2)),
+          discount: 0, // Reset discount to 0
+          amount: amount,
+        },
+      };
+
+      return updatedValues;
+    });
+
+    // Clear error for discount field if it exists
+    if (editErrors[detailId]?.discount) {
+      setEditErrors((prev) => ({
+        ...prev,
+        [detailId]: {
+          ...(prev[detailId] || {}),
+          discount: null,
+        },
+      }));
+    }
+  };
+
   const handleSaveDetail = (detailId) => {
     const updatedDetail = editedValues[detailId];
     const errors = validateDetail(updatedDetail);
@@ -1004,7 +1084,6 @@ function AddOrder() {
 
           // Update local states
           setOrderDetails(updatedDetails);
-          setTotals(totals);
           setData((prev) => ({
             ...prev,
             totalHrs: totals.totalHrs,
@@ -1075,10 +1154,12 @@ function AddOrder() {
         if (response.data.Status) {
           setOrderDetails(response.data.Result);
           // Initialize orderTotals with saved values from the order
-          setOrderTotals((prev) => ({
+          setData((prev) => ({
             ...prev,
-            discAmount: data.amountDisc || 0,
+            totalAmount: data.totalAmount || 0,
+            amountDisc: data.amountDisc || 0,
             percentDisc: data.percentDisc || 0,
+            grandTotal: data.grandTotal || 0,
           }));
         }
       } catch (err) {
@@ -1091,37 +1172,29 @@ function AddOrder() {
     }
   }, [orderId]);
 
-  // Add this useEffect to handle automatic recalculations
+  // Remove both useEffect hooks that handle automatic recalculations
+  // and replace with a single effect that only updates subtotal and grand total
   useEffect(() => {
+    // Calculate subtotal from order details
     const subtotal = orderDetails.reduce(
       (sum, detail) => sum + parseFloat(detail.amount || 0),
       0
     );
-    const discAmount = parseFloat(orderTotals.discAmount) || 0;
 
-    // Recalculate percent discount based on current discount amount and new subtotal
-    const percentDisc =
-      subtotal > 0 ? ((discAmount / subtotal) * 100).toFixed(2) : 0;
+    // Keep existing discount values
+    const discAmount = parseFloat(data.amountDisc) || 0;
+    const percentDisc = parseFloat(data.percentDisc) || 0;
 
-    // Calculate new grand total
+    // Calculate grand total using existing discount amount
     const grandTotal = subtotal - discAmount;
 
-    // Update all totals
-    setOrderTotals((prev) => ({
-      ...prev,
-      subtotal,
-      percentDisc: parseFloat(percentDisc),
-      grandTotal,
-    }));
-
-    // Update main data state for database
+    // Update data state (single source of truth)
     setData((prev) => ({
       ...prev,
-      amountDisc: discAmount,
-      percentDisc: parseFloat(percentDisc),
-      grandTotal: grandTotal,
+      totalAmount: subtotal,
+      grandTotal: parseFloat(grandTotal),
     }));
-  }, [orderDetails]); // Dependency on orderDetails
+  }, [orderDetails]); // Only trigger on orderDetails changes
 
   // Add this function to handle the update
   const handleDisplayOrderUpdate = async (detail, newOrder) => {
@@ -1487,30 +1560,38 @@ function AddOrder() {
     try {
       const token = localStorage.getItem("token");
 
-      // Get the highest display order
-      const maxDisplayOrder = Math.max(
-        ...orderDetails.map((d) => d.displayOrder),
-        0
+      // Get the next display order from the server
+      const response = await axios.get(
+        `${ServerIP}/auth/next_display_order/${orderId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Create new detail object with incremented display order
+      if (!response.data.Status) {
+        throw new Error(
+          response.data.Error || "Failed to get next display order"
+        );
+      }
+
+      const nextDisplayOrder = response.data.Result;
+
+      // Create new detail object with server-provided display order
       const newDetail = {
         ...detail,
-        displayOrder: maxDisplayOrder + 5,
+        displayOrder: nextDisplayOrder,
         Id: null, // Remove Id so a new one is generated
       };
 
-      const response = await axios.post(
+      const addResponse = await axios.post(
         `${ServerIP}/auth/add_order_detail`,
         newDetail,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data.Status) {
-        // Refresh order details
+      if (addResponse.data.Status) {
+        // Refresh order details to get the updated list with correct display orders
         fetchOrderDetails();
       } else {
-        throw new Error(response.data.Error || "Failed to copy detail");
+        throw new Error(addResponse.data.Error || "Failed to copy detail");
       }
     } catch (err) {
       console.error("Error copying detail:", err);
@@ -1598,6 +1679,35 @@ function AddOrder() {
       }
     };
   }, []);
+
+  const handleRenumberDisplayOrder = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${ServerIP}/auth/renumber-displayOrder/${orderId || id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.Status) {
+        // Refresh the order details after renumbering
+        fetchOrderDetails();
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to renumber display order",
+          type: "alert",
+        });
+      }
+    } catch (error) {
+      handleApiError(error, "renumbering display order");
+    }
+  };
 
   return (
     <div className="orders-page-background">
@@ -2165,7 +2275,12 @@ function AddOrder() {
               <table className="table detail table-striped">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onDoubleClick={handleRenumberDisplayOrder}
+                    >
+                      #
+                    </th>
                     <th>Qty</th>
                     <th>Width</th>
                     <th>Height</th>
@@ -2403,12 +2518,36 @@ function AddOrder() {
                                     /[^\d.-]/g,
                                     ""
                                   );
-                                  if (!isNaN(value)) {
+                                  if (!isNaN(value) || value === "") {
+                                    // Just update the display value, don't calculate yet
                                     handleDetailInputChange(
                                       uniqueId,
                                       "discount",
                                       value
                                     );
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    const value = e.target.value.replace(
+                                      /[^\d.-]/g,
+                                      ""
+                                    );
+                                    if (!isNaN(value)) {
+                                      handleDiscountInputChange(
+                                        uniqueId,
+                                        value
+                                      );
+                                    }
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[^\d.-]/g,
+                                    ""
+                                  );
+                                  if (!isNaN(value)) {
+                                    handleDiscountInputChange(uniqueId, value);
                                   }
                                 }}
                               />
@@ -2805,7 +2944,7 @@ function AddOrder() {
                     <td></td>
                     <td className="text-end pe-2">Subtotal:</td>
                     <td className="numeric-cell">
-                      {formatNumber(orderTotals.subtotal)}
+                      {formatNumber(data.totalAmount)}
                     </td>
                     <td colSpan="3">
                       <div className="ms-3 d-flex align-items-center">
@@ -2832,7 +2971,7 @@ function AddOrder() {
                       <input
                         type="number"
                         className="form-input detail text-end"
-                        value={orderTotals.discAmount}
+                        value={tempDiscAmount || data.amountDisc}
                         onChange={(e) =>
                           handleDiscountChange("amount", e.target.value)
                         }
@@ -2863,10 +3002,11 @@ function AddOrder() {
                       <input
                         type="number"
                         className="form-input detail text-end"
-                        value={orderTotals.percentDisc}
+                        value={data.percentDisc}
                         onChange={(e) =>
                           handleDiscountChange("percent", e.target.value)
                         }
+                        onKeyDown={handlePercentDiscountEnter}
                         style={{ width: "100px", display: "inline-block" }}
                         disabled={!canEdit()}
                       />
@@ -2895,7 +3035,7 @@ function AddOrder() {
                     <td></td>
                     <td className="text-end pe-2">Grand Total:</td>
                     <td className="numeric-cell">
-                      {formatPeso(orderTotals.grandTotal)}
+                      {formatPeso(data.grandTotal)}
                     </td>
                     <td colSpan="3">
                       <div className="ms-3 d-flex align-items-center">
@@ -2904,17 +3044,16 @@ function AddOrder() {
                         </div>
                         <div style={{ width: "80px", textAlign: "right" }}>
                           {formatNumber(
-                            orderTotals.grandTotal - (data.amountPaid || 0)
+                            data.grandTotal - (data.amountPaid || 0)
                           )}
                         </div>
                         <div className="ms-2">
                           <small style={{ fontSize: "1rem" }}>
                             (
-                            {orderTotals.grandTotal > 0
+                            {data.grandTotal > 0
                               ? (
-                                  ((orderTotals.grandTotal -
-                                    (data.amountPaid || 0)) /
-                                    orderTotals.grandTotal) *
+                                  ((data.grandTotal - (data.amountPaid || 0)) /
+                                    data.grandTotal) *
                                   100
                                 ).toFixed(2) + "%"
                               : "0%"}
@@ -2958,19 +3097,66 @@ function AddOrder() {
                 variant="save"
                 onClick={async () => {
                   const [orderId, displayOrder] = currentDetailId.split("_");
+                  console.log("Looking for detail with:", {
+                    orderId,
+                    displayOrder,
+                  });
+                  console.log("Available orderDetails:", orderDetails);
+
                   const currentDetail = orderDetails.find(
-                    (d) =>
-                      d.orderId === parseInt(orderId) &&
-                      d.displayOrder === parseInt(displayOrder)
+                    (d) => d.Id === parseInt(orderId)
                   );
+
+                  if (!currentDetail) {
+                    console.error("Detail not found:", {
+                      orderId,
+                      displayOrder,
+                    });
+                    setShowAllowanceModal(false);
+                    return;
+                  }
+
+                  console.log("Current detail before update:", currentDetail);
+                  console.log("Allowance values from modal:", allowanceValues);
 
                   const { squareFeet, materialUsage, printHrs } = calculateArea(
-                    currentDetail,
-                    allowanceValues
+                    currentDetail.width,
+                    currentDetail.height,
+                    currentDetail.unit,
+                    currentDetail.quantity,
+                    {
+                      top: allowanceValues.top,
+                      bottom: allowanceValues.bottom,
+                      left: allowanceValues.left,
+                      right: allowanceValues.right,
+                    }
                   );
 
+                  console.log("Calculated values:", {
+                    squareFeet,
+                    materialUsage,
+                    printHrs,
+                  });
+
                   const updatedDetail = {
-                    ...currentDetail,
+                    Id: currentDetail.Id,
+                    orderId: currentDetail.orderId,
+                    displayOrder: currentDetail.displayOrder,
+                    width: currentDetail.width,
+                    height: currentDetail.height,
+                    unit: currentDetail.unit,
+                    quantity: currentDetail.quantity,
+                    material: currentDetail.material,
+                    filename: currentDetail.filename,
+                    unitPrice: currentDetail.unitPrice,
+                    perSqFt: currentDetail.perSqFt,
+                    standardPrice: currentDetail.standardPrice,
+                    discount: currentDetail.discount,
+                    amount: currentDetail.amount,
+                    remarks: currentDetail.remarks,
+                    itemDescription: currentDetail.itemDescription,
+                    noPrint: currentDetail.noPrint,
+                    balanceHours: currentDetail.balanceHours,
                     squareFeet,
                     materialUsage,
                     printHrs,
@@ -2978,8 +3164,17 @@ function AddOrder() {
                     bottom: allowanceValues.bottom,
                     allowanceLeft: allowanceValues.left,
                     allowanceRight: allowanceValues.right,
+                    auditQuantity: currentDetail.auditQuantity,
+                    auditremaining: currentDetail.auditremaining,
+                    salesIncentive: currentDetail.salesIncentive,
+                    overideIncentive: currentDetail.overideIncentive,
+                    artistIncentive: currentDetail.artistIncentive,
+                    major: currentDetail.major,
+                    minor: currentDetail.minor,
+                    artistIncentiveAmount: currentDetail.artistIncentiveAmount,
                   };
 
+                  console.log("Final updated detail:", updatedDetail);
                   // Save to database first
                   const token = localStorage.getItem("token");
                   try {
@@ -3000,12 +3195,18 @@ function AddOrder() {
 
                     // Recalculate totals
                     const totals = calculateTotals(updatedDetails);
-                    setTotals(totals);
+                    setData((prev) => ({
+                      ...prev,
+                      totalHrs: totals.totalHrs,
+                    }));
 
                     // Update the main data state
                     setData((prev) => ({
                       ...prev,
-                      orderDetails: updatedDetails,
+                      totalAmount: totals.subtotal,
+                      discAmount: totals.amountDisc,
+                      percentDisc: totals.percentDisc,
+                      grandTotal: totals.grandTotal,
                     }));
 
                     // Refresh the order details

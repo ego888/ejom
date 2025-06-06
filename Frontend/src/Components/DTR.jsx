@@ -9,6 +9,10 @@ import DTRBatchList from "./DTRBatchList";
 import DTRSummaryReport from "./DTRSummaryReport";
 import DTRDetailReport from "./DTRDetailReport";
 import DTRBatchView from "./DTRBatchView";
+import DTRHolidays from "./DTRHolidays";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+import "./DTRHolidays.css";
 
 const DTR = () => {
   const navigate = useNavigate();
@@ -28,6 +32,8 @@ const DTR = () => {
   const [periodEnd, setPeriodEnd] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isEditingExistingBatch, setIsEditingExistingBatch] = useState(false);
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
 
   useEffect(() => {
     fetchBatches();
@@ -258,18 +264,42 @@ const DTR = () => {
     }
   };
 
-  const generateBatchName = () => {
-    // Don't generate a new name if editing an existing batch
-    if (isEditingExistingBatch) return;
+  const handleStartDateChange = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+    setPeriodStart(dateStr);
+    setShowStartCalendar(false);
+    // Generate batch name with the new date
+    if (periodEnd) {
+      const formatDate = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}${(d.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
+      };
+      setBatchName(`DTR ${formatDate(dateStr)}-${formatDate(periodEnd)}`);
+    }
+  };
 
-    const formatDate = (date) => {
-      const d = new Date(date);
-      return `${d.getFullYear()}${(d.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
-    };
-
-    setBatchName(`DTR ${formatDate(periodStart)}-${formatDate(periodEnd)}`);
+  const handleEndDateChange = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+    setPeriodEnd(dateStr);
+    setShowEndCalendar(false);
+    // Generate batch name with the new date
+    if (periodStart) {
+      const formatDate = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}${(d.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
+      };
+      setBatchName(`DTR ${formatDate(periodStart)}-${formatDate(dateStr)}`);
+    }
   };
 
   const resetUploadForm = () => {
@@ -424,6 +454,11 @@ const DTR = () => {
     }
   };
 
+  const generateBatchName = () => {
+    // Don't generate a new name if editing an existing batch
+    if (isEditingExistingBatch) return;
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -474,14 +509,11 @@ const DTR = () => {
                             >
                               Period Start:
                             </label>
-                            <input
-                              id="period-start"
-                              type="date"
-                              value={periodStart}
-                              onChange={(e) => setPeriodStart(e.target.value)}
-                              className="form-control"
-                              required
-                              readOnly={isEditingExistingBatch}
+                            <Calendar
+                              onChange={handleStartDateChange}
+                              value={periodStart ? new Date(periodStart) : null}
+                              className="custom-calendar"
+                              locale="en-US"
                             />
                           </div>
                         </div>
@@ -490,14 +522,11 @@ const DTR = () => {
                             <label htmlFor="period-end" className="form-label">
                               Period End:
                             </label>
-                            <input
-                              id="period-end"
-                              type="date"
-                              value={periodEnd}
-                              onChange={(e) => setPeriodEnd(e.target.value)}
-                              className="form-control"
-                              required
-                              readOnly={isEditingExistingBatch}
+                            <Calendar
+                              onChange={handleEndDateChange}
+                              value={periodEnd ? new Date(periodEnd) : null}
+                              className="custom-calendar"
+                              locale="en-US"
                             />
                           </div>
                         </div>
@@ -622,6 +651,8 @@ const DTR = () => {
             onAddFilesToBatch={handleAddFilesToBatch}
           />
         );
+      case "holidays":
+        return <DTRHolidays />;
       case "report":
         if (viewMode === "batch-view") {
           return (
@@ -673,6 +704,12 @@ const DTR = () => {
             onClick={() => handleTabClick("batches")}
           >
             View Batches
+          </div>
+          <div
+            className={`dtr-tab ${activeTab === "holidays" ? "active" : ""}`}
+            onClick={() => handleTabClick("holidays")}
+          >
+            Holidays
           </div>
           {selectedBatch && (
             <div

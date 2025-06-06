@@ -10,6 +10,8 @@ import {
 import ModalAlert from "./UI/ModalAlert";
 import DisplayPage from "./UI/DisplayPage";
 import Pagination from "./UI/Pagination";
+import { jwtDecode } from "jwt-decode";
+import Button from "./UI/Button";
 // import { handleApiError } from "../utils/handleApiError";
 
 function PaymentInquiry() {
@@ -31,9 +33,17 @@ function PaymentInquiry() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [includeReceived, setIncludeReceived] = useState(false);
+  const [allowDelete, setAllowDelete] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetchPayments();
+    // Check if user is admin from JWT token
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = jwtDecode(token);
+      setIsAdmin(decoded.categoryId === 1);
+    }
   }, [currentPage, recordsPerPage, sortConfig, searchTerm, includeReceived]);
 
   const fetchPayments = async () => {
@@ -80,6 +90,56 @@ function PaymentInquiry() {
   const handleIncludeReceivedChange = (e) => {
     setIncludeReceived(e.target.checked);
     setCurrentPage(1);
+  };
+
+  const handleDeletePayment = async (payId) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      console.log("Attempting to delete payment with ID:", payId);
+      const response = await axios.delete(
+        `${ServerIP}/auth/delete-payment/${payId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Delete payment response:", response.data);
+
+      if (response.data.Status) {
+        setAlert({
+          show: true,
+          title: "Success",
+          message: "Payment deleted successfully",
+          type: "alert",
+        });
+        fetchPayments(); // Refresh the payments list
+      } else {
+        throw new Error(response.data.Error);
+      }
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: error.message || "Failed to delete payment",
+        type: "alert",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDelete = (payId) => {
+    setAlert({
+      show: true,
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this payment?",
+      type: "confirm",
+      onConfirm: () => handleDeletePayment(payId),
+    });
   };
 
   // Add this function to group payments by payId
@@ -132,6 +192,20 @@ function PaymentInquiry() {
                   Include received
                 </label>
               </div>
+              {isAdmin && (
+                <div className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="allowDelete"
+                    checked={allowDelete}
+                    onChange={(e) => setAllowDelete(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="allowDelete">
+                    Allow delete
+                  </label>
+                </div>
+              )}
             </div>
             <div className="search-container">
               <input
@@ -246,16 +320,29 @@ function PaymentInquiry() {
                 </thead>
                 <tbody>
                   {groupPaymentsByPayId(payments).map((payment) => (
-                    <>
+                    <React.Fragment key={payment.payId}>
                       {payment.orders.map((order, index) => (
-                        <tr key={`${payment.payId}-${order.orderId}`}>
+                        <tr key={`${payment.payId}-${order.orderId}-${index}`}>
                           {index === 0 && (
                             <>
                               <td
                                 className="text-center"
                                 rowSpan={payment.orders.length}
                               >
-                                {payment.payId}
+                                <div className="d-flex align-items-center justify-content-center gap-2">
+                                  {payment.payId}
+                                  {allowDelete && (
+                                    <Button
+                                      variant="delete"
+                                      iconOnly
+                                      size="sm"
+                                      onClick={() =>
+                                        confirmDelete(payment.payId)
+                                      }
+                                      title="Delete payment"
+                                    />
+                                  )}
+                                </div>
                               </td>
                               <td
                                 className="text-center"
@@ -324,7 +411,7 @@ function PaymentInquiry() {
                           </td>
                         </tr>
                       ))}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -354,6 +441,7 @@ function PaymentInquiry() {
         message={alert.message}
         type={alert.type}
         onClose={() => setAlert({ ...alert, show: false })}
+        onConfirm={alert.onConfirm}
       />
     </div>
   );

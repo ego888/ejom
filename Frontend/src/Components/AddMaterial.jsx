@@ -9,13 +9,13 @@ const AddMaterial = () => {
   const [material, setMaterial] = useState({
     Material: "",
     Description: "",
-    SqFtPerHour: 0,
-    MinimumPrice: 0,
-    FixWidth: 0,
-    FixHeight: 0,
-    Cost: 0,
+    SqFtPerHour: "",
+    MinimumPrice: "",
+    FixWidth: "",
+    FixHeight: "",
+    Cost: "",
     UnitCost: false,
-    NoIncentive: false,
+    noIncentive: false,
     MaterialType: "",
     MachineType: "",
   });
@@ -64,7 +64,7 @@ const AddMaterial = () => {
     e.preventDefault();
 
     // Frontend validation
-    if (!material.material.trim()) {
+    if (!material.Material.trim()) {
       setAlert({
         show: true,
         title: "Validation Error",
@@ -73,7 +73,7 @@ const AddMaterial = () => {
       });
       return;
     }
-    if (!material.description.trim()) {
+    if (!material.Description.trim()) {
       setAlert({
         show: true,
         title: "Validation Error",
@@ -84,14 +84,15 @@ const AddMaterial = () => {
     }
 
     const formData = {
-      ...material,
+      Material: material.Material || "",
+      Description: material.Description || "",
       SqFtPerHour: material.SqFtPerHour || 0,
       MinimumPrice: material.MinimumPrice || 0,
       FixWidth: material.FixWidth || 0,
       FixHeight: material.FixHeight || 0,
       Cost: material.Cost || 0,
       UnitCost: material.UnitCost || false,
-      NoIncentive: material.NoIncentive || false,
+      noIncentive: material.noIncentive || false,
       MaterialType: material.MaterialType || "",
       MachineType: material.MachineType || "",
     };
@@ -143,7 +144,7 @@ const AddMaterial = () => {
               className="form-control"
               maxLength={12}
               onChange={(e) =>
-                setMaterial({ ...material, material: e.target.value })
+                setMaterial({ ...material, Material: e.target.value })
               }
             />
           </div>
@@ -156,7 +157,7 @@ const AddMaterial = () => {
               placeholder="Enter Description"
               className="form-control"
               onChange={(e) =>
-                setMaterial({ ...material, description: e.target.value })
+                setMaterial({ ...material, Description: e.target.value })
               }
             />
           </div>
@@ -165,11 +166,14 @@ const AddMaterial = () => {
             <input
               id="sqft-per-hour"
               type="number"
+              step="0.01"
               name="sqFtPerHour"
               placeholder="Enter SqFt Per Hour"
               className="form-control"
-              value={material.sqFtPerHour}
-              onChange={handleNumberChange}
+              value={material.SqFtPerHour === "" ? "" : material.SqFtPerHour}
+              onChange={(e) =>
+                setMaterial({ ...material, SqFtPerHour: e.target.value })
+              }
             />
           </div>
           <div className="mb-3">
@@ -181,8 +185,10 @@ const AddMaterial = () => {
               name="minimumPrice"
               placeholder="Enter Minimum Price"
               className="form-control"
-              value={material.minimumPrice}
-              onChange={handleNumberChange}
+              value={material.MinimumPrice === "" ? "" : material.MinimumPrice}
+              onChange={(e) =>
+                setMaterial({ ...material, MinimumPrice: e.target.value })
+              }
             />
           </div>
           <div className="mb-3">
@@ -194,8 +200,10 @@ const AddMaterial = () => {
               name="fixWidth"
               placeholder="Enter Fix Width"
               className="form-control"
-              value={material.fixWidth}
-              onChange={handleNumberChange}
+              value={material.FixWidth === "" ? "" : material.FixWidth}
+              onChange={(e) =>
+                setMaterial({ ...material, FixWidth: e.target.value })
+              }
             />
           </div>
           <div className="mb-3">
@@ -207,8 +215,10 @@ const AddMaterial = () => {
               name="fixHeight"
               placeholder="Enter Fix Height"
               className="form-control"
-              value={material.fixHeight}
-              onChange={handleNumberChange}
+              value={material.FixHeight === "" ? "" : material.FixHeight}
+              onChange={(e) =>
+                setMaterial({ ...material, FixHeight: e.target.value })
+              }
             />
           </div>
           <div className="mb-3">
@@ -220,8 +230,10 @@ const AddMaterial = () => {
               name="cost"
               placeholder="Enter Cost"
               className="form-control"
-              value={material.cost}
-              onChange={handleNumberChange}
+              value={material.Cost === "" ? "" : material.Cost}
+              onChange={(e) =>
+                setMaterial({ ...material, Cost: e.target.value })
+              }
             />
           </div>
           <div className="mb-3">
@@ -246,7 +258,7 @@ const AddMaterial = () => {
               type="checkbox"
               name="unitCost"
               onChange={(e) =>
-                setMaterial({ ...material, unitCost: e.target.checked })
+                setMaterial({ ...material, UnitCost: e.target.checked })
               }
             />
           </div>

@@ -30,6 +30,7 @@ function RemitModal({ show, onClose }) {
       setLoading(true);
       setError(null);
       const response = await axios.get(`${ServerIP}/auth/unremitted-payments`);
+      console.log("unremitted payments", response.data);
       if (response.data.Status) {
         setPayments(response.data.Result);
         // Group payments by payType
@@ -126,9 +127,15 @@ function RemitModal({ show, onClose }) {
                 (payment, index) => `
               <tr style="background-color: ${
                 index % 2 === 0 ? "#ffffff" : "#f8f9fa"
-              };">
+              }; border-top: ${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? "2px solid #4d4d4d"
+                    : "1px solid #dee2e6"
+                };">
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payId
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payId
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
                   payment.orderId
@@ -143,25 +150,39 @@ function RemitModal({ show, onClose }) {
                   payment.amountApplied
                 )}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.ornum || "N/A"
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.ornum || "N/A"
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payDate
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payDate
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payType
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payType
+                    : ""
                 }</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatPeso(
-                  payment.amount
-                )}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.payReference || ""
-                }</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.transactedBy
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? formatPeso(payment.amount)
+                    : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  payment.postedDate
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.payReference || ""
+                    : ""
+                }</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.transactedBy
+                    : ""
+                }</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${
+                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                    ? payment.postedDate
+                    : ""
                 }</td>
               </tr>
             `
@@ -169,28 +190,57 @@ function RemitModal({ show, onClose }) {
               .join("")}
             
               <tr style="background-color: #e9ecef;">
-                <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Subtotal for ${type}</strong></td>
+                <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Order Total & Amount Applied</strong></td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
                   typePayments.reduce((sum, p) => sum + Number(p.grandTotal), 0)
                 )}</strong></td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
                   calculateSubtotal(typePayments)
                 )}</strong></td>
-                <td colspan="7" style="border: 1px solid #ddd; padding: 8px;"></td>
+                <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;">
+                  <strong>Received Amount ${type}</strong>
+                </td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">
+                  <strong>
+                    ${formatPeso(
+                      typePayments.reduce((sum, payment, index) => {
+                        if (
+                          index === 0 ||
+                          typePayments[index - 1].payId !== payment.payId
+                        ) {
+                          return sum + Number(payment.amount);
+                        }
+                        return sum;
+                      }, 0)
+                    )}
+                  </strong>
+                </td>
+                <td colSpan={2}></td>
               </tr>
           `
             )
             .join("")}
           <tr style="background-color: #e9ecef;">
-            <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Total Amount</strong></td>
+            <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Order Grand Total & Amount Applied</strong></td>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
               payments.reduce((sum, p) => sum + Number(p.grandTotal), 0)
             )}</strong></td>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
               payments.reduce((sum, p) => sum + Number(p.amountApplied), 0)
             )}</strong></td>
-            <td colspan="7" style="border: 1px solid #ddd; padding: 8px;"></td>
-          </tr>
+            <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;">
+              <strong>Grand Total Received Amount</strong>
+            </td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">
+              <strong>
+                ${formatPeso(
+                  payments.reduce((sum, payment) => {
+                    return sum + Number(payment.amount);
+                  }, 0)
+                )}
+              </strong>
+            </td>
+            <td colSpan={3}></td>
         </table>
       </div>
     `;
@@ -298,8 +348,22 @@ function RemitModal({ show, onClose }) {
               {Object.entries(groupedPayments).map(([type, typePayments]) => (
                 <React.Fragment key={type}>
                   {typePayments.map((payment, index) => (
-                    <tr key={`${payment.payId}-${payment.orderId}-${index}`}>
-                      <td className="text-center">{payment.payId}</td>
+                    <tr
+                      key={`${payment.payId}-${payment.orderId}-${index}`}
+                      style={{
+                        borderTop:
+                          index === 0 ||
+                          typePayments[index - 1].payId !== payment.payId
+                            ? "2px solid #4d4d4d"
+                            : "1px solid #dee2e6",
+                      }}
+                    >
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payId
+                          : ""}
+                      </td>
                       <td className="text-center">{payment.orderId}</td>
                       <td>{payment.clientName}</td>
                       <td className="text-end">
@@ -308,20 +372,63 @@ function RemitModal({ show, onClose }) {
                       <td className="text-end">
                         {formatPeso(payment.amountApplied)}
                       </td>
-                      <td className="text-center">{payment.ornum || "N/A"}</td>
-                      <td className="text-center">{payment.payDate}</td>
-                      <td className="text-center">{payment.payType}</td>
-                      <td className="text-end">{formatPeso(payment.amount)}</td>
                       <td className="text-center">
-                        {payment.payReference || ""}
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.ornum || "N/A"
+                          : ""}
                       </td>
-                      <td className="text-center">{payment.transactedBy}</td>
-                      <td className="text-center">{payment.postedDate}</td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payDate
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payType
+                          : ""}
+                      </td>
+                      <td className="text-end">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? formatPeso(payment.amount)
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.payReference || ""
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.transactedBy
+                          : ""}
+                      </td>
+                      <td className="text-center">
+                        {index === 0 ||
+                        typePayments[index - 1].payId !== payment.payId
+                          ? payment.postedDate
+                          : ""}
+                      </td>
                     </tr>
                   ))}
                   <tr className="table-secondary">
                     <td colSpan="3" className="text-end">
-                      <strong>Subtotal for {type}</strong>
+                      <strong>Order Total & Amount Applied</strong>
+                    </td>
+                    <td className="text-end">
+                      <strong>
+                        {formatPeso(
+                          typePayments.reduce(
+                            (sum, p) => sum + Number(p.grandTotal),
+                            0
+                          )
+                        )}
+                      </strong>
                     </td>
                     <td className="text-end">
                       <strong>
@@ -329,12 +436,31 @@ function RemitModal({ show, onClose }) {
                       </strong>
                     </td>
                     <td colSpan={showDetails ? 2 : 1}></td>
+                    <td colSpan="2" className="text-end">
+                      <strong>Received Amount {type}</strong>
+                    </td>
+                    <td className="text-end">
+                      <strong>
+                        {formatPeso(
+                          typePayments.reduce((sum, payment, index) => {
+                            if (
+                              index === 0 ||
+                              typePayments[index - 1].payId !== payment.payId
+                            ) {
+                              return sum + Number(payment.amount);
+                            }
+                            return sum;
+                          }, 0)
+                        )}
+                      </strong>
+                    </td>
+                    <td colSpan={showDetails ? 3 : 3}></td>
                   </tr>
                 </React.Fragment>
               ))}
               <tr className="table-primary">
-                <td colSpan="3" className="text-end">
-                  <strong>Total Amount</strong>
+                <td colSpan="4" className="text-end">
+                  <strong>Grand Total Amount Applied</strong>
                 </td>
                 <td className="text-end">
                   <strong>
@@ -347,6 +473,25 @@ function RemitModal({ show, onClose }) {
                   </strong>
                 </td>
                 <td colSpan={showDetails ? 2 : 1}></td>
+                <td colSpan="2" className="text-end">
+                  <strong>Grand Total Received Amount</strong>
+                </td>
+                <td className="text-end">
+                  <strong>
+                    {formatPeso(
+                      payments.reduce((sum, payment, index) => {
+                        if (
+                          index === 0 ||
+                          payments[index - 1].payId !== payment.payId
+                        ) {
+                          return sum + Number(payment.amount);
+                        }
+                        return sum;
+                      }, 0)
+                    )}
+                  </strong>
+                </td>
+                <td colSpan={showDetails ? 3 : 3}></td>
               </tr>
             </tbody>
           </table>

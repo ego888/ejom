@@ -4,6 +4,7 @@ import { formatPeso } from "../utils/orderUtils";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
+import ModalAlert from "./UI/ModalAlert";
 
 const PaymentAllocationModal = ({
   show,
@@ -14,13 +15,21 @@ const PaymentAllocationModal = ({
   onPostPayment,
   onCancelPayment,
   setOrderPayments,
+  setCheckPay,
+  setAllocationCount,
+  setAllocatedAmount,
+  setRemainingAmount,
+  fetchOrderData,
 }) => {
   const [allocationData, setAllocationData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [alert, setAlert] = useState(null);
 
   useEffect(() => {
-    if (show && paymentInfo?.payId) {
+    console.log("show", show);
+    console.log("paymentInfo", paymentInfo);
+    if (show && paymentInfo.payId) {
       fetchAllocationDetails();
     }
   }, [show, paymentInfo?.payId]);
@@ -49,73 +58,95 @@ const PaymentAllocationModal = ({
   };
 
   const handleDeleteAllocation = async (orderId) => {
-    if (!window.confirm("Are you sure you want to delete this allocation?")) {
-      return;
-    }
-
-    setLoading(true);
     try {
-      const response = await axios.post(
-        `${ServerIP}/auth/delete-temp-allocation`,
-        {
-          payId: paymentInfo.payId,
-          orderId: orderId,
-        }
-      );
+      setAlert({
+        show: true,
+        title: "Confirm Delete",
+        message: "Are you sure you want to delete this allocation?",
+        type: "confirm",
+        onConfirm: async () => {
+          // Close the confirmation window
+          setAlert(null);
 
-      if (response.data.Status) {
-        // Remove the allocation from local state
-        const updatedPayments = { ...orderPayments };
-        delete updatedPayments[orderId];
+          const response = await axios.post(
+            `${ServerIP}/auth/delete-temp-allocation`,
+            {
+              payId: paymentInfo.payId,
+              orderId: orderId,
+            }
+          );
 
-        // Update parent component's state
-        onCancelPayment(); // This will reset the parent's state
+          if (response.data.Status) {
+            // Update parent component state
+            const newOrderPayments = { ...orderPayments };
+            delete newOrderPayments[orderId];
+            setOrderPayments(newOrderPayments);
 
-        // Fetch fresh data
-        const allocationResponse = await axios.get(
-          `${ServerIP}/auth/view-allocation`,
-          {
-            params: { payId: paymentInfo.payId },
+            // Update checkPay set using the prop
+            setCheckPay((prevCheckPay) => {
+              const newCheckPay = new Set(prevCheckPay);
+              newCheckPay.delete(orderId);
+              return newCheckPay;
+            });
+
+            // Update allocation count and amounts
+            setAllocationCount(response.data.Result.count);
+            setAllocatedAmount(response.data.Result.totalAllocated);
+            setRemainingAmount(
+              paymentInfo.amount - response.data.Result.totalAllocated
+            );
+
+            // Fetch updated allocation data
+            const allocationResponse = await axios.get(
+              `${ServerIP}/auth/view-allocation`,
+              {
+                params: { payId: paymentInfo.payId },
+              }
+            );
+
+            console.log("allocation response", allocationResponse.data);
+            if (allocationResponse.data.Status) {
+              // Update the modal's allocation data
+              setAllocationData(allocationResponse.data.paymentAllocation);
+              console.log(
+                "New allocation data",
+                allocationResponse.data.paymentAllocation
+              );
+            }
+
+            // Refresh orders to update the UI
+            await fetchOrderData();
           }
-        );
-
-        if (allocationResponse.data.Status) {
-          const allocations =
-            allocationResponse.data.paymentAllocation.allocations;
-          const newOrderPayments = {};
-          allocations.forEach((allocation) => {
-            newOrderPayments[allocation.orderId] = {
-              payment: Number(allocation.amountApplied || 0),
-              wtax: 0,
-            };
-          });
-          setOrderPayments(newOrderPayments);
-        }
-      }
+        },
+      });
     } catch (error) {
       console.error("Error deleting allocation:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePostPayment = async () => {
-    try {
-      const response = await axios.post(`${ServerIP}/auth/post-temp-payment`, {
-        payId: paymentInfo.payId,
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to delete allocation",
+        type: "error",
       });
-
-      if (response.data.Status) {
-        onPostPayment(response.data.Result);
-        onClose();
-      } else {
-        setError(response.data.Error || "Failed to post payment");
-      }
-    } catch (error) {
-      console.error("Error posting payment:", error);
-      setError("Failed to post payment");
     }
   };
+
+  // const handlePostPayment = async () => {
+  //   try {
+  //     const response = await axios.post(`${ServerIP}/auth/post-temp-payment`, {
+  //       payId: paymentInfo.payId,
+  //     });
+
+  //     if (response.data.Status) {
+  //       onPostPayment(response.data.Result);
+  //       onClose();
+  //     } else {
+  //       setError(response.data.Error || "Failed to post payment");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error posting payment:", error);
+  //     setError("Failed to post payment");
+  //   }
+  // };
 
   const handleCancelPayment = async () => {
     try {
@@ -127,8 +158,12 @@ const PaymentAllocationModal = ({
       );
 
       if (response.data.Status) {
+        // Reset state before calling onCancelPayment
+        setAllocationData(null);
+        setError(null);
         onCancelPayment();
         onClose();
+        setAllocationCount(0);
       } else {
         setError(response.data.Error || "Failed to cancel payment");
       }
@@ -137,6 +172,15 @@ const PaymentAllocationModal = ({
       setError("Failed to cancel payment");
     }
   };
+
+  // Add cleanup effect
+  useEffect(() => {
+    if (!show) {
+      // Reset state when modal is closed
+      setAllocationData(null);
+      setError(null);
+    }
+  }, [show]);
 
   if (loading) {
     return (
@@ -211,7 +255,7 @@ const PaymentAllocationModal = ({
                 <th className="text-center">Paid</th>
                 <th className="text-center">Amount Applied</th>
                 <th className="text-center">Balance</th>
-                <th className="text-center">Actions</th>
+                {/* <th className="text-center">Actions</th> */}
               </tr>
             </thead>
             <tbody>
@@ -228,16 +272,7 @@ const PaymentAllocationModal = ({
                     {formatPeso(allocation.orderAmountPaid)}
                   </td>
                   <td className="text-right">
-                    {formatPeso(allocation.amountApplied)}
-                  </td>
-                  <td className="text-right">
-                    {formatPeso(
-                      allocation.orderTotal -
-                        allocation.orderAmountPaid -
-                        allocation.amountApplied
-                    )}
-                  </td>
-                  <td className="text-center">
+                    {formatPeso(allocation.amountApplied)}{" "}
                     <Button
                       variant="delete"
                       size="sm"
@@ -247,20 +282,25 @@ const PaymentAllocationModal = ({
                       Delete
                     </Button>
                   </td>
+                  <td className="text-right">
+                    {formatPeso(
+                      allocation.orderTotal -
+                        allocation.orderAmountPaid -
+                        allocation.amountApplied
+                    )}
+                  </td>
                 </tr>
               ))}
               <tr className="table-info">
-                <td colSpan="5" className="text-right">
+                <td colSpan="6" className="text-right">
                   <strong>Totals:</strong>
                 </td>
                 <td className="text-right">
                   <strong>{formatPeso(totalAllocated)}</strong>
                 </td>
-                <td></td>
                 <td className="text-right">
                   <strong>{formatPeso(remainingAmount)}</strong>
                 </td>
-                <td></td>
               </tr>
             </tbody>
           </table>
@@ -286,6 +326,14 @@ const PaymentAllocationModal = ({
           </Button> */}
         </div>
       </div>
+      <ModalAlert
+        show={alert?.show}
+        title={alert?.title}
+        message={alert?.message}
+        type={alert?.type}
+        onClose={() => setAlert(null)}
+        onConfirm={alert?.onConfirm}
+      />
     </Modal>
   );
 };

@@ -5,8 +5,7 @@ import Button from "./UI/Button";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
 import { formatPeso } from "../utils/orderUtils";
-import { BiSortAlt2, BiSortUp, BiSortDown, BiSearch } from "react-icons/bi";
-import { BsCheck } from "react-icons/bs";
+import { BiSortAlt2, BiSortUp, BiSortDown } from "react-icons/bi";
 
 const Material = () => {
   const [material, setMaterial] = useState([]);

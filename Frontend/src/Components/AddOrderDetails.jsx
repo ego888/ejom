@@ -206,14 +206,11 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
   const getNextDisplayOrder = async () => {
     try {
       const token = localStorage.getItem("token");
-      console.log("Fetching next display order for orderId:", orderId); // Debug log
       const response = await axios.get(
         `${ServerIP}/auth/next_display_order/${orderId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log("Response from next_display_order:", response.data); // Debug log
       const nextOrder = response.data.Result || 5;
-      console.log("Next order number will be:", nextOrder); // Debug log
       return nextOrder;
     } catch (err) {
       console.error("Error getting next display order:", err);

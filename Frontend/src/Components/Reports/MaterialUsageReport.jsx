@@ -37,6 +37,7 @@ const MaterialUsageReport = () => {
     message: "",
     type: "alert",
   });
+  const [isDetailed, setIsDetailed] = useState(false);
 
   const groupByOptions = [
     { id: "material", name: "By Material" },
@@ -45,7 +46,7 @@ const MaterialUsageReport = () => {
   ];
 
   const handleCalculate = async () => {
-    console.log("Date Range:", dateRange); // For debugging
+    console.log("Date Range:", dateRange);
     if (
       !dateRange.dateFrom ||
       !dateRange.dateTo ||
@@ -63,7 +64,10 @@ const MaterialUsageReport = () => {
 
     setLoading(true);
     try {
-      const response = await axios.get(`${ServerIP}/auth/material-usage`, {
+      const endpoint = isDetailed
+        ? "material-usage-detailed"
+        : "material-usage";
+      const response = await axios.get(`${ServerIP}/auth/${endpoint}`, {
         params: {
           dateFrom: dateRange.dateFrom,
           dateTo: dateRange.dateTo,
@@ -94,6 +98,23 @@ const MaterialUsageReport = () => {
   };
 
   const getColumnHeaders = () => {
+    if (isDetailed) {
+      return [
+        "Order ID",
+        "Client",
+        "Order Date",
+        groupBy === "material"
+          ? "Material"
+          : groupBy === "materialType"
+          ? "Material Type"
+          : "Machine Type",
+        "Quantity",
+        "Usage",
+        "Amount",
+        "Per Sq Ft",
+      ];
+    }
+
     switch (groupBy) {
       case "material":
         return [
@@ -308,6 +329,19 @@ const MaterialUsageReport = () => {
           />
 
           <div className="mt-5">
+            <div className="form-check mb-3">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="detailed"
+                checked={isDetailed}
+                onChange={(e) => setIsDetailed(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="detailed">
+                Detailed
+              </label>
+            </div>
+
             {groupByOptions.map((option) => (
               <div key={option.id} className="form-check mb-2">
                 <input
@@ -346,51 +380,104 @@ const MaterialUsageReport = () => {
       )}
 
       {reportData.length > 0 && (
-        <div className="mt-3" style={{ maxWidth: "350px", margin: "0 auto" }}>
-          <table className="table table-striped align-middle">
-            <thead>
-              <tr>
-                {getColumnHeaders().map((header, index) => (
-                  <th className="text-center" key={index}>
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {reportData.map((row, index) => (
-                <tr key={index}>
-                  <td>
-                    {groupBy === "material"
-                      ? row.materialName
-                      : groupBy === "materialType"
-                      ? row.materialType
-                      : row.machineType}
-                  </td>
-                  <td className="text-end">
-                    {Number(row.totalQuantity) === 0
-                      ? ""
-                      : formatNumber(row.totalQuantity)}
-                  </td>
-                  <td className="text-end">
-                    {Number(row.totalUsage) === 0
-                      ? ""
-                      : formatNumber(row.totalUsage)}
-                  </td>
-                  <td className="text-end">
-                    {Number(row.totalAmount) === 0
-                      ? ""
-                      : formatNumber(row.totalAmount)}
-                  </td>
-                  <td className="text-end">
-                    {Number(row.totalUsage) > 0
-                      ? formatNumber(row.totalAmount / row.totalUsage)
-                      : ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div
+          className="mt-3"
+          style={{ maxWidth: isDetailed ? "100%" : "350px", margin: "0 auto" }}
+        >
+          {(() => {
+            // Calculate totals only for non-detailed view
+            const totals = !isDetailed
+              ? reportData.reduce(
+                  (acc, curr) => ({
+                    totalQuantity:
+                      acc.totalQuantity + Number(curr.totalQuantity || 0),
+                    totalUsage: acc.totalUsage + Number(curr.totalUsage || 0),
+                    totalAmount:
+                      acc.totalAmount + Number(curr.totalAmount || 0),
+                  }),
+                  { totalQuantity: 0, totalUsage: 0, totalAmount: 0 }
+                )
+              : null;
+
+            return (
+              <table className="table table-striped align-middle">
+                <thead>
+                  <tr>
+                    {getColumnHeaders().map((header, index) => (
+                      <th className="text-center" key={index}>
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.map((row, index) => (
+                    <tr key={index}>
+                      {isDetailed && (
+                        <>
+                          <td>{row.orderId}</td>
+                          <td>{row.clientName}</td>
+                          <td>{formatDate(row.orderDate)}</td>
+                        </>
+                      )}
+                      {""}
+                      <td>
+                        {groupBy === "material"
+                          ? row.materialName
+                          : groupBy === "materialType"
+                          ? row.materialType
+                          : row.machineType}
+                      </td>
+                      <td className="text-end">
+                        {Number(row.quantity || row.totalQuantity) === 0
+                          ? ""
+                          : formatNumber(row.quantity || row.totalQuantity)}
+                      </td>
+                      <td className="text-end">
+                        {Number(row.materialUsage || row.totalUsage) === 0
+                          ? ""
+                          : formatNumber(row.materialUsage || row.totalUsage)}
+                      </td>
+                      <td className="text-end">
+                        {Number(row.amount || row.totalAmount) === 0
+                          ? ""
+                          : formatNumber(row.amount || row.totalAmount)}
+                      </td>
+                      <td className="text-end">
+                        {Number(row.materialUsage || row.totalUsage) > 0
+                          ? formatNumber(
+                              (row.amount || row.totalAmount) /
+                                (row.materialUsage || row.totalUsage)
+                            )
+                          : ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {!isDetailed && totals && (
+                  <tfoot>
+                    <tr className="table-active">
+                      <td>Total</td>
+                      <td className="text-end">
+                        {formatNumber(totals.totalQuantity)}
+                      </td>
+                      <td className="text-end">
+                        {formatNumber(totals.totalUsage)}
+                      </td>
+                      <td className="text-end">
+                        {formatNumber(totals.totalAmount)}
+                      </td>
+                      <td className="text-end">
+                        {totals.totalUsage > 0
+                          ? formatNumber(totals.totalAmount / totals.totalUsage)
+                          : ""}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            );
+          })()}
         </div>
       )}
 

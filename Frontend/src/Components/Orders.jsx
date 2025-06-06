@@ -23,7 +23,6 @@ function Orders() {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
     const savedPage = parseInt(localStorage.getItem("ordersListPage")) || 1;
-    console.log("Initializing currentPage:", savedPage);
     return savedPage;
   });
   const [recordsPerPage, setRecordsPerPage] = useState(10);
@@ -34,20 +33,14 @@ function Orders() {
       key: "id",
       direction: "desc",
     };
-    console.log(
-      "Initializing sortConfig:",
-      saved ? JSON.parse(saved) : defaultConfig
-    );
     return saved ? JSON.parse(saved) : defaultConfig;
   });
   const [searchTerm, setSearchTerm] = useState(() => {
     const saved = localStorage.getItem("ordersSearchTerm") || "";
-    console.log("Initializing searchTerm:", saved);
     return saved;
   });
   const [displaySearchTerm, setDisplaySearchTerm] = useState(() => {
     const saved = localStorage.getItem("ordersSearchTerm") || "";
-    console.log("Initializing displaySearchTerm:", saved);
     return saved;
   });
   const [statusOptions, setStatusOptions] = useState([]);
@@ -77,26 +70,19 @@ function Orders() {
 
   // Add useEffect to sync state with localStorage on mount
   useEffect(() => {
-    console.log("Component mounted - syncing state with localStorage");
     const savedPage = parseInt(localStorage.getItem("ordersListPage")) || 1;
     const savedSort = localStorage.getItem("ordersSortConfig");
     const savedSearch = localStorage.getItem("ordersSearchTerm") || "";
 
     if (savedPage !== currentPage) {
-      console.log("Updating currentPage from localStorage:", savedPage);
       setCurrentPage(savedPage);
     }
 
     if (savedSort && JSON.parse(savedSort) !== sortConfig) {
-      console.log(
-        "Updating sortConfig from localStorage:",
-        JSON.parse(savedSort)
-      );
       setSortConfig(JSON.parse(savedSort));
     }
 
     if (savedSearch !== searchTerm) {
-      console.log("Updating searchTerm from localStorage:", savedSearch);
       setSearchTerm(savedSearch);
       setDisplaySearchTerm(savedSearch);
     }
@@ -104,9 +90,7 @@ function Orders() {
 
   // Add useEffect to check navigation state
   useEffect(() => {
-    console.log("Location state changed:", location.state);
     if (location.state?.refresh) {
-      console.log("Refresh triggered from navigation");
       fetchOrders();
       // Clear the refresh flag
       navigate(location.pathname, { replace: true, state: {} });
@@ -115,27 +99,11 @@ function Orders() {
 
   const fetchOrders = async () => {
     setLoading(true);
-    console.log(
-      "FETCH ORDERS CALLED WITH:",
-      "\nCurrent Page:",
-      currentPage,
-      "\nRecords Per Page:",
-      recordsPerPage,
-      "\nSort Config:",
-      sortConfig,
-      "\nSearch Term:",
-      searchTerm,
-      "\nSelected Sales:",
-      selectedSales,
-      "\nSelected Clients:",
-      selectedClients
-    );
     try {
       const token = localStorage.getItem("token");
       const activeStatuses = JSON.parse(
         localStorage.getItem("orderStatusFilter") || "[]"
       );
-      console.log("Fetching with statuses:", activeStatuses);
 
       const response = await axios.get(`${ServerIP}/auth/orders`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -152,16 +120,10 @@ function Orders() {
             : undefined,
         },
       });
-      console.log("Orders API Response:", response.data);
 
       if (response.data.Status) {
         setOrders(response.data.Result.orders);
         setTotalCount(response.data.Result.total);
-        console.log(
-          "Orders set:",
-          response.data.Result.orders.length,
-          "orders"
-        );
       } else {
         console.error("Error in orders response:", response.data.Error);
         setAlert({
@@ -186,7 +148,6 @@ function Orders() {
 
   // Fetch orders when parameters change
   useEffect(() => {
-    console.log("Orders component mounted or parameters changed");
     fetchOrders();
   }, [
     currentPage,
@@ -196,15 +157,6 @@ function Orders() {
     selectedSales,
     selectedClients,
   ]);
-
-  // Add useEffect to fetch orders on mount
-  useEffect(() => {
-    console.log("Orders component mounted");
-    // Reset to first page when component mounts
-    setCurrentPage(1);
-    localStorage.setItem("ordersListPage", "1");
-    fetchOrders();
-  }, []);
 
   // Fetch status options
   useEffect(() => {
@@ -295,12 +247,10 @@ function Orders() {
 
   // Handle status changes from StatusBadges
   const handleStatusChange = (newActiveStatuses) => {
-    console.log("Orders received new statuses:", newActiveStatuses);
     // Get the latest statuses from localStorage before fetching
     const savedStatuses = JSON.parse(
       localStorage.getItem("orderStatusFilter") || "[]"
     );
-    console.log("Saved statuses:", savedStatuses);
     fetchOrders();
   };
 
@@ -534,8 +484,9 @@ function Orders() {
                       fontWeight:
                         new Date() > new Date(order.warningDate) &&
                         order.grandTotal > order.amountPaid &&
-                        (order.status === "Delivered" ||
-                          order.status === "Billed")
+                        !(
+                          order.status === "Closed" || order.status === "Cancel"
+                        )
                           ? "bold"
                           : "normal",
                     }}

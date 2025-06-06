@@ -4,6 +4,96 @@ import { verifyUser, authorize, logUserAction } from "../middleware.js";
 
 const router = express.Router();
 
+// Helper function to calculate squareFeet and materialUsage
+const calculateOrderDetailArea = (
+  width,
+  height,
+  unit,
+  quantity,
+  top = 0,
+  bottom = 0,
+  allowanceLeft = 0,
+  allowanceRight = 0
+) => {
+  // Validate numeric inputs
+  width = parseFloat(width) || 0;
+  height = parseFloat(height) || 0;
+  quantity = parseFloat(quantity) || 0;
+  top = parseFloat(top) || 0;
+  bottom = parseFloat(bottom) || 0;
+  allowanceLeft = parseFloat(allowanceLeft) || 0;
+  allowanceRight = parseFloat(allowanceRight) || 0;
+
+  if (!width || !height || !unit) {
+    return {
+      squareFeet: 0,
+      materialUsage: 0,
+    };
+  }
+
+  // Calculate squareFeet (without allowances)
+  let squareFeet = width * height;
+
+  // Convert dimensions to square feet based on unit
+  switch (unit) {
+    case "IN":
+      squareFeet = squareFeet / 144; // Convert from sq inches to sq feet
+      break;
+    case "CM":
+      squareFeet = squareFeet / 929.0304; // Convert from sq cm to sq feet
+      break;
+    case "M":
+      squareFeet = squareFeet * 10.7639; // Convert from sq meters to sq feet
+      break;
+    case "FT":
+      // Already in square feet
+      break;
+  }
+
+  // If no quantity, return only squareFeet calculation
+  if (!quantity) {
+    return {
+      squareFeet: parseFloat(squareFeet.toFixed(2)),
+      materialUsage: 0,
+    };
+  }
+
+  // Calculate materialUsage (with allowances)
+  // First convert width and height to inches for allowance calculations
+  let widthInInches, heightInInches;
+  switch (unit) {
+    case "IN":
+      widthInInches = width;
+      heightInInches = height;
+      break;
+    case "CM":
+      widthInInches = width / 2.54;
+      heightInInches = height / 2.54;
+      break;
+    case "M":
+      widthInInches = width / 0.0254;
+      heightInInches = height / 0.0254;
+      break;
+    case "FT":
+      widthInInches = width * 12;
+      heightInInches = height * 12;
+      break;
+  }
+
+  // Add allowances (in inches)
+  const totalWidthInInches = widthInInches + allowanceLeft + allowanceRight;
+  const totalHeightInInches = heightInInches + top + bottom;
+
+  // Convert back to square feet and multiply by quantity
+  const materialUsage =
+    ((totalWidthInInches * totalHeightInInches) / 144) * quantity;
+
+  return {
+    squareFeet: parseFloat(squareFeet.toFixed(2)),
+    materialUsage: parseFloat(materialUsage.toFixed(2)),
+  };
+};
+
 // Get all orders w/o payment info with pagination, sorting, filtering and search
 router.get("/orders-min", async (req, res) => {
   try {
@@ -141,22 +231,33 @@ router.get("/orders", async (req, res) => {
     let sortDirection = req.query.sortDirection || "desc";
     const forProdSort = req.query.forProdSort;
 
-    // Handle forProd sorting
     if (forProdSort === "asc" || forProdSort === "desc") {
       sortBy = "forProd";
       sortDirection = forProdSort;
     }
 
-    // Build where clause
-    let whereConditions = ["1=1"]; // Always true condition to start
+    let whereConditions = ["1=1"];
     let params = [];
+    let havingClause = "";
+    const havingParams = [];
 
     if (search) {
-      whereConditions.push(
-        "(o.orderID LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ? OR o.projectName LIKE ? OR o.orderedBy LIKE ? OR o.drnum LIKE ? OR o.invoiceNum LIKE ? OR e.name LIKE ? OR o.grandTotal LIKE ? OR o.orderReference LIKE ?)"
-      );
       const searchParam = `%${search}%`;
-      params.push(
+      havingClause = `
+        HAVING 
+          o.orderID LIKE ? OR
+          c.clientName LIKE ? OR
+          c.customerName LIKE ? OR
+          o.projectName LIKE ? OR
+          o.orderedBy LIKE ? OR
+          o.drnum LIKE ? OR
+          o.invoiceNum LIKE ? OR
+          e.name LIKE ? OR
+          o.grandTotal LIKE ? OR
+          o.orderReference LIKE ? OR
+          orNums LIKE ?
+      `;
+      havingParams.push(
         searchParam,
         searchParam,
         searchParam,
@@ -166,7 +267,8 @@ router.get("/orders", async (req, res) => {
         searchParam,
         searchParam,
         searchParam,
-        searchParam
+        searchParam,
+        searchParam // for orNums
       );
     }
 
@@ -187,95 +289,86 @@ router.get("/orders", async (req, res) => {
 
     const whereClause = whereConditions.join(" AND ");
 
-    // Main data query
-    // const dataSql1 = `
-    //         SELECT
-    //             o.orderID as id,
-    //             o.revision,
-    //             o.clientId,
-    //             c.clientName,
-    //             c.customerName,
-    //             o.projectName,
-    //             o.orderedBy,
-    //             o.orderDate,
-    //             o.dueDate,
-    //             o.dueTime,
-    //             o.status,
-    //             o.drnum,
-    //             o.invoiceNum as invnum,
-    //             o.totalAmount,
-    //             o.amountDisc,
-    //             o.percentDisc,
-    //             o.grandTotal,
-    //             o.amountPaid,
-    //             o.datePaid,
-    //             e.name as salesName,
-    //             o.orderReference,
-    //             o.forProd,
-    //             o.forBill,
-    //             o.productionDate,
-    //         FROM orders o
-    //         LEFT JOIN client c ON o.clientId = c.id
-    //         LEFT JOIN employee e ON o.preparedBy = e.id
-    //         WHERE ${whereClause}
-    //         ORDER BY ${sortBy} ${sortDirection}
-    //         LIMIT ? OFFSET ?
-    //     `;
-
     const dataSql = `
-        SELECT 
-            o.orderID as id, 
-            o.revision,
-            o.clientId, 
-            c.clientName, 
-            c.customerName,
-            c.hold AS holdDate,
-            c.overdue AS warningDate,
-            o.projectName, 
-            o.orderedBy, 
-            o.orderDate, 
-            o.dueDate, 
-            o.dueTime,
-            o.status, 
-            o.drnum, 
-            o.invoiceNum as invnum, 
-            o.totalAmount,
-            o.amountDisc,
-            o.percentDisc,
-            o.grandTotal,
-            o.amountPaid,
-            o.datePaid,
-            e.name as salesName, 
-            o.orderReference,
-            o.forProd,
-            o.forBill,
-            o.productionDate,
-            GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
-        FROM orders o
-        LEFT JOIN client c ON o.clientId = c.id
-        LEFT JOIN employee e ON o.preparedBy = e.id
-        LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
-        LEFT JOIN payments p ON p.payId = pja.payId
-        WHERE ${whereClause}
-        GROUP BY o.orderId
-        ORDER BY ${sortBy} ${sortDirection}
-        LIMIT ? OFFSET ?
-    `;
-
-    // Execute data query with proper parameter order
-    const [orders] = await pool.query(dataSql, [...params, limit, offset]);
-
-    // Count query
-    const countSql = `
-      SELECT COUNT(DISTINCT o.orderID) as total
+      SELECT 
+          o.orderID as id, 
+          o.revision,
+          o.clientId, 
+          c.clientName, 
+          c.customerName,
+          c.hold AS holdDate,
+          c.overdue AS warningDate,
+          o.projectName, 
+          o.orderedBy, 
+          o.orderDate, 
+          o.dueDate, 
+          o.dueTime,
+          o.status, 
+          o.drnum, 
+          o.invoiceNum as invnum, 
+          o.totalAmount,
+          o.amountDisc,
+          o.percentDisc,
+          o.grandTotal,
+          o.amountPaid,
+          o.datePaid,
+          e.name as salesName, 
+          o.orderReference,
+          o.forProd,
+          o.forBill,
+          o.productionDate,
+          GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
+      LEFT JOIN payments p ON p.payId = pja.payId
       WHERE ${whereClause}
+      GROUP BY o.orderId
+      ${havingClause}
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
     `;
 
-    // Execute count query
-    const [countResults] = await pool.query(countSql, params);
+    const [orders] = await pool.query(dataSql, [
+      ...params,
+      ...havingParams,
+      limit,
+      offset,
+    ]);
+
+    // Count query (excluding GROUP_CONCAT and HAVING)
+    const countSql = `
+    SELECT COUNT(*) as total FROM (
+      SELECT 
+        o.orderID,
+        o.orderID AS id, 
+        c.clientName,
+        c.customerName,
+        o.projectName,
+        o.orderedBy,
+        o.drnum,
+        o.invoiceNum,
+        e.name AS salesName,
+        o.grandTotal,
+        o.orderReference,
+        GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
+      LEFT JOIN payments p ON p.payId = pja.payId
+      WHERE ${whereClause}
+      GROUP BY o.orderID
+      ${havingClause}
+    ) AS countResult
+  `;
+
+    // Use: [...params, ...havingParams]
+    const [countResults] = await pool.query(countSql, [
+      ...params,
+      ...havingParams,
+    ]);
     const countResult = countResults[0];
 
     return res.json({
@@ -288,7 +381,7 @@ router.get("/orders", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error in orders route:", err);
+    console.error("Error in /orders route:", err);
     return res.json({
       Status: false,
       Error: "Failed to fetch orders",
@@ -437,7 +530,8 @@ router.put("/update-forprod/:id", async (req, res) => {
     const orderId = req.params.id;
     const { forProd } = req.body;
 
-    const sql = "UPDATE orders SET forProd = ? WHERE orderID = ?";
+    const sql =
+      "UPDATE orders SET forProd = ? WHERE orderID = ? AND (status = 'Open' OR status = 'Printed')";
     const [result] = await pool.query(sql, [forProd, orderId]);
 
     if (result.affectedRows > 0) {
@@ -806,7 +900,7 @@ router.get("/next_display_order/:orderId", async (req, res) => {
     const [result] = await pool.query(sql, [orderId]);
 
     // If maxOrder is 0, it means no records exist yet
-    const maxOrder = result[0].maxOrder;
+    const maxOrder = Number(result[0].maxOrder);
     const nextDisplayOrder = maxOrder === 0 ? 5 : maxOrder + 5;
 
     return res.json({
@@ -1217,22 +1311,95 @@ router.put(
 router.put("/order_details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { printHrs, ...otherData } = req.body;
+    let {
+      printHrs,
+      noPrint,
+      width,
+      height,
+      unit,
+      quantity,
+      top,
+      bottom,
+      allowanceLeft,
+      allowanceRight,
+      ...otherData
+    } = req.body;
+    delete otherData.squareFeet;
+    delete otherData.materialUsage;
+
+    console.log("1. Request body:", req.body);
+    console.log("2. Extracted values:", {
+      width,
+      height,
+      unit,
+      quantity,
+      top,
+      bottom,
+      allowanceLeft,
+      allowanceRight,
+    });
+
+    // Helper function to safely parse float with default
+    const safeParseFloat = (value, defaultValue = 0) => {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? defaultValue : parsed;
+    };
+
+    // Calculate squareFeet and materialUsage
+    const { squareFeet, materialUsage } = calculateOrderDetailArea(
+      safeParseFloat(width),
+      safeParseFloat(height),
+      unit || "IN", // Default to IN if unit is null/undefined
+      safeParseFloat(quantity),
+      safeParseFloat(top),
+      safeParseFloat(bottom),
+      safeParseFloat(allowanceLeft),
+      safeParseFloat(allowanceRight)
+    );
+
+    console.log("3. Calculated values:", { squareFeet, materialUsage });
+
     const data = {
       ...otherData,
-      printHrs: Number(printHrs || 0),
+      width: safeParseFloat(width),
+      height: safeParseFloat(height),
+      unit,
+      quantity: safeParseFloat(quantity),
+      top: safeParseFloat(top),
+      bottom: safeParseFloat(bottom),
+      allowanceLeft: safeParseFloat(allowanceLeft),
+      allowanceRight: safeParseFloat(allowanceRight),
+      printHrs: safeParseFloat(printHrs),
+      noPrint: safeParseFloat(noPrint),
+      squareFeet,
+      materialUsage,
     };
-    console.log("Data being updated:", data);
-    console.log("ID:", id);
-    const sql = "UPDATE order_details SET ? WHERE Id = ?";
 
+    console.log("4. Final data being updated:", data);
+    console.log("5. ID:", id);
+
+    const sql = "UPDATE order_details SET ? WHERE Id = ?";
     const [result] = await pool.query(sql, [data, id]);
-    return res.json({ Status: true, Result: result });
+
+    console.log("6. Update result:", result);
+
+    if (result.affectedRows === 0) {
+      return res.json({
+        Status: false,
+        Error: "No rows were updated",
+      });
+    }
+
+    return res.json({
+      Status: true,
+      Result: result,
+      Message: "Order detail updated successfully",
+    });
   } catch (err) {
     console.log("Update Error:", err);
     return res.json({
       Status: false,
-      Error: "Failed to update order detail",
+      Error: "Failed to update order detail: " + err.message,
     });
   }
 });
@@ -1305,15 +1472,49 @@ router.post(
   async (req, res) => {
     const connection = await pool.getConnection();
     try {
-      await connection.beginTransaction();
+      // await connection.beginTransaction();
 
       // Extract `printHrs` and `noPrint`, ensuring they are numbers and default to 0 if empty or null
-      const { printHrs, noPrint, ...otherData } = req.body;
+      const {
+        printHrs,
+        noPrint,
+        width,
+        height,
+        unit,
+        quantity,
+        top,
+        bottom,
+        allowanceLeft,
+        allowanceRight,
+        ...otherData
+      } = req.body;
+
+      // Calculate squareFeet and materialUsage
+      const { squareFeet, materialUsage } = calculateOrderDetailArea(
+        width,
+        height,
+        unit,
+        quantity,
+        top,
+        bottom,
+        allowanceLeft,
+        allowanceRight
+      );
 
       const data = {
         ...otherData,
+        width,
+        height,
+        unit,
+        quantity,
+        top,
+        bottom,
+        allowanceLeft,
+        allowanceRight,
         printHrs: Number(printHrs) || 0, // Convert to number, default to 0
         noPrint: Number(noPrint) || 0, // Convert to number, default to 0
+        squareFeet,
+        materialUsage,
       };
 
       // Verify user has permission to add detail to this order
@@ -1337,53 +1538,76 @@ router.post(
         });
       }
 
-      const sql = "INSERT INTO order_details SET ?";
-      const [result] = await connection.query(sql, data);
+      // Set transaction isolation level before starting transaction
+      await connection.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+      await connection.beginTransaction();
 
-      // After inserting, calculate new order totals
-      const [orderDetails] = await connection.query(
-        "SELECT amount, printHrs FROM order_details WHERE orderId = ?",
-        [data.orderId]
-      );
+      try {
+        const sql = "INSERT INTO order_details SET ?";
+        const [result] = await connection.query(sql, data);
 
-      // Calculate total amount
-      let totalAmount = 0;
-      let totalHrs = 0;
+        // After inserting, calculate new order totals
+        const [orderDetails] = await connection.query(
+          "SELECT amount, printHrs FROM order_details WHERE orderId = ? AND noPrint = 0",
+          [data.orderId]
+        );
 
-      orderDetails.forEach((detail) => {
-        totalAmount += parseFloat(detail.amount || 0);
-        totalHrs += parseFloat(detail.printHrs || 0);
-      });
+        // Calculate total amount
+        let totalAmount = 0;
+        let totalHrs = 0;
 
-      // Get existing discount values
-      const amountDisc = parseFloat(orderCheck[0].amountDisc || 0);
-      const percentDisc = parseFloat(orderCheck[0].percentDisc || 0);
+        orderDetails.forEach((detail) => {
+          console.log("Processing detail:", detail);
+          totalAmount += parseFloat(detail.amount || 0);
+          totalHrs += parseFloat(detail.printHrs || 0);
+        });
 
-      // Calculate grand total considering discounts
-      let discountValue = amountDisc;
-      if (percentDisc > 0) {
-        // If percent discount is set, recalculate amount discount
-        discountValue = (totalAmount * percentDisc) / 100;
+        // Get existing discount values
+        const [orderCheck] = await connection.query(
+          "SELECT amountDisc, percentDisc FROM orders WHERE orderID = ?",
+          [data.orderId]
+        );
+
+        const amountDisc = parseFloat(orderCheck[0]?.amountDisc || 0);
+        const percentDisc = parseFloat(orderCheck[0]?.percentDisc || 0);
+
+        // Calculate grand total considering discounts
+        let discountValue = amountDisc;
+        if (percentDisc > 0) {
+          // If percent discount is set, recalculate amount discount
+          discountValue = (totalAmount * percentDisc) / 100;
+        }
+
+        const grandTotal = totalAmount - discountValue;
+
+        // Update the order with new totals
+        await connection.query(
+          `UPDATE orders 
+           SET totalAmount = ?, 
+               grandTotal = ?,
+               totalHrs = ?,
+               lastEdited = NOW(),
+               editedBy = ?
+           WHERE orderID = ?`,
+          [totalAmount, grandTotal, totalHrs, req.user.name, data.orderId]
+        );
+        await connection.commit();
+
+        return res.json({
+          Status: true,
+          Message: "Order detail added successfully",
+          Result: result,
+        });
+      } catch (error) {
+        // Rollback in case of error
+        await connection.rollback();
+        console.error("Error in transaction:", error);
+        return res.json({
+          Status: false,
+          Error: "Failed to add order detail. Please try again.",
+        });
       }
-
-      const grandTotal = totalAmount - discountValue;
-
-      // Update the order with new totals
-      await connection.query(
-        `UPDATE orders 
-         SET totalAmount = ?, 
-             grandTotal = ?,
-             totalHrs = ?,
-             lastEdited = NOW(),
-             editedBy = ?
-         WHERE orderID = ?`,
-        [totalAmount, grandTotal, totalHrs, req.user.name, data.orderId]
-      );
-
-      await connection.commit();
-      return res.json({ Status: true, Result: result });
     } catch (err) {
-      await connection.rollback();
       console.log("SQL Error:", err);
       return res.json({ Status: false, Error: "Failed to add order detail" });
     } finally {
@@ -1820,6 +2044,7 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
   try {
     const userId = req.user.id;
     const currentDate = new Date();
+
     const firstDayOfMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
@@ -1831,18 +2056,32 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
       0
     );
 
-    const formattedFirstDay = firstDayOfMonth.toISOString().split("T")[0];
-    const formattedLastDay = lastDayOfMonth.toISOString().split("T")[0];
+    // Format date to YYYY-MM-DD for MySQL compatibility
+    const formatDate = (date) =>
+      date.getFullYear() +
+      "-" +
+      String(date.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(date.getDate()).padStart(2, "0");
+
+    const formattedFirstDay = formatDate(firstDayOfMonth);
+    const formattedLastDay = formatDate(lastDayOfMonth);
+
+    console.log("formattedFirstDay", formattedFirstDay);
+    console.log("formattedLastDay", formattedLastDay);
 
     const sql = `
       SELECT 
         (SELECT COALESCE(SUM(grandTotal), 0) 
          FROM orders 
          WHERE preparedBy = ? 
-           AND orderDate BETWEEN ? AND ?) as userMonthlySales,
+           AND productionDate >= ? 
+           AND productionDate < DATE_ADD(?, INTERVAL 1 DAY)) as userMonthlySales,
         (SELECT COALESCE(SUM(grandTotal), 0) 
          FROM orders 
-         WHERE orderDate BETWEEN ? AND ?) as totalMonthlySales
+         WHERE productionDate >= ? 
+           AND productionDate < DATE_ADD(?, INTERVAL 1 DAY)
+           AND status IN ('Prod', 'Finished', 'Billed', 'Delivered', 'Close')) as totalMonthlySales
     `;
 
     const [result] = await pool.query(sql, [
@@ -1856,7 +2095,7 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {
     console.log("Query Error:", err);
-    return res.json({
+    return res.status(500).json({
       Status: false,
       Error: "Failed to fetch monthly sales data",
     });
@@ -1980,5 +2219,39 @@ router.put(
     }
   }
 );
+
+// Renumber display order for an order's details
+router.put("/renumber-displayOrder/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const sql = `
+      UPDATE order_details od
+      SET displayOrder = (
+        SELECT newOrder
+        FROM (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY displayOrder) * 5 as newOrder
+          FROM order_details
+          WHERE orderId = ?
+        ) AS ordered
+        WHERE ordered.id = od.id
+      )
+      WHERE orderId = ?
+    `;
+
+    await pool.query(sql, [orderId, orderId]);
+
+    return res.json({
+      Status: true,
+      Message: "Display order renumbered successfully",
+    });
+  } catch (err) {
+    console.error("Error renumbering display order:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to renumber display order",
+    });
+  }
+});
 
 export { router as OrderRouter };

@@ -5,6 +5,12 @@ import { ServerIP } from "../config";
 import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
 import gcashQRCode from "../assets/GLG QRcode.jpg";
 import "./PrintQuote.css";
+import {
+  formatNumber,
+  formatNumberZ,
+  formatPeso,
+  formatPesoZ,
+} from "../utils/orderUtils";
 
 function PrintQuote() {
   const { id } = useParams();
@@ -278,28 +284,18 @@ function PrintQuote() {
               <tr key={index} className={index % 2 === 0 ? "row-gray" : ""}>
                 <td className="quote-details-center">{detail.quantity}</td>
                 <td className="quote-details-center">
-                  {Number(detail.width || 0).toFixed(2)}
+                  {formatNumberZ(detail.width || 0)}
                 </td>
                 <td className="quote-details-center">
-                  {Number(detail.height || 0).toFixed(2)}
+                  {formatNumberZ(detail.height || 0)}
                 </td>
                 <td className="quote-details-center">{detail.unit}</td>
                 <td>
                   {detail.material}
                   {detail.itemDescription ? ` - ${detail.itemDescription}` : ""}
                 </td>
-                <td className="text-right">
-                  {Number(detail.unitPrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </td>
-                <td className="text-right">
-                  {Number(detail.amount).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </td>
+                <td className="text-right">{formatNumber(detail.unitPrice)}</td>
+                <td className="text-right">{formatPeso(detail.amount)}</td>
               </tr>
             ))}
           </tbody>
@@ -320,45 +316,24 @@ function PrintQuote() {
           </div>
           <div className="totals-right">
             {Number(quote.amountDiscount) > 0 ? (
-              // Show all totals when there's a discount
               <>
                 <div className="total-row">
                   <span>Total Amount:</span>
-                  <span>
-                    {Number(quote.totalAmount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
+                  <span>{formatPeso(quote.totalAmount)}</span>
                 </div>
                 <div className="total-row">
                   <span>Disc. Amount:</span>
-                  <span>
-                    {Number(quote.amountDiscount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
+                  <span>{formatNumber(quote.amountDiscount)}</span>
                 </div>
                 <div className="total-row">
                   <span>Disc. %:</span>
-                  <span>
-                    {Number(quote.percentDisc).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
+                  <span>{formatNumber(quote.percentDisc)}%</span>
                 </div>
               </>
             ) : null}
             <div className="total-row grand-total">
               <span>Grand Total:</span>
-              <span>
-                {Number(quote.grandTotal).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
+              <span>{formatPeso(quote.grandTotal)}</span>
             </div>
             <div style={{ whiteSpace: "pre-wrap" }}>
               Bank Info: {companyInfo?.bankInfo}

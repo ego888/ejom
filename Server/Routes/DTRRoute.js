@@ -2010,9 +2010,26 @@ router.get("/holidays", async (req, res) => {
     const [holidays] = await connection.query(
       "SELECT * FROM DTRHolidays ORDER BY holidayDate"
     );
+
+    // Convert UTC to local timezone
+    const formattedHolidays = holidays.map((holiday) => {
+      // Create date from MySQL date
+      const date = new Date(holiday.holidayDate);
+
+      // Format as YYYY-MM-DD in local timezone
+      const localYear = date.getFullYear();
+      const localMonth = String(date.getMonth() + 1).padStart(2, "0");
+      const localDay = String(date.getDate()).padStart(2, "0");
+
+      return {
+        ...holiday,
+        holidayDate: `${localYear}-${localMonth}-${localDay}`,
+      };
+    });
+
     res.json({
       Status: true,
-      Holidays: holidays,
+      Holidays: formattedHolidays,
     });
   } catch (error) {
     console.error("Error fetching holidays:", error);
@@ -2025,106 +2042,80 @@ router.get("/holidays", async (req, res) => {
   }
 });
 
-// Helper function to check if a date is a holiday
-// const isHoliday = async (connection, date) => {
-//   const [holidays] = await connection.query(
-//     "SELECT * FROM Holidays WHERE holidayDate = ?",
-//     [date]
-//   );
-//   return holidays.length > 0 ? holidays[0] : null;
-// };
+// Add holiday API endpoint
+router.post("/add-holiday", async (req, res) => {
+  let connection;
+  try {
+    const { holidayDate, holidayType } = req.body;
 
-// Modified handleSundayHoliday function
-// const handleSundayHoliday = async (connection, entry) => {
-//   try {
-//     const date = new Date(entry.date);
-//     const day = date.getDay();
-//     const holiday = await isHoliday(connection, entry.date);
+    if (!holidayDate || !holidayType) {
+      return res.json({
+        Status: false,
+        Error: "Holiday date and type are required",
+      });
+    }
 
-//     if (holiday) {
-//       // If it's a holiday, move hours to holidayHours and overtime to holidayOT
-//       entry.holidayHours = entry.hours;
-//       entry.holidayOT = entry.overtime;
-//       entry.holidayType = holiday.holidayType;
-//       entry.hours = 0;
-//       entry.overtime = 0;
-//     } else if (day === 0) {
-//       // If it's Sunday and not a holiday
-//       entry.sundayHours = entry.hours;
-//       entry.sundayOT = entry.overtime;
-//       entry.hours = 0;
-//       entry.overtime = 0;
-//     }
+    if (!["Regular", "Special"].includes(holidayType)) {
+      return res.json({
+        Status: false,
+        Error: "Holiday type must be either Regular or Special",
+      });
+    }
 
-//     return entry;
-//   } catch (error) {
-//     console.error("Error in handleSundayHoliday:", error);
-//     throw error;
-//   }
-// };
+    connection = await pool.getConnection();
 
-// Add route to update holiday hours
-// router.post("/update-holiday-hours/:batchId", async (req, res) => {
-//   let connection;
-//   try {
-//     const { batchId } = req.params;
-//     const { entries } = req.body;
+    // Convert local date to UTC
+    const [year, month, day] = holidayDate.split("-").map(Number);
+    const localDate = new Date(year, month - 1, day);
+    const utcDate = new Date(
+      Date.UTC(
+        localDate.getFullYear(),
+        localDate.getMonth(),
+        localDate.getDate()
+      )
+    );
+    const formattedDate = utcDate.toISOString().split("T")[0];
 
-//     if (!entries || !Array.isArray(entries)) {
-//       return res.status(400).json({
-//         Status: false,
-//         Error: "Invalid entries data",
-//       });
-//     }
+    console.log("Original local date:", holidayDate);
+    console.log("Converted UTC date:", formattedDate);
 
-//     connection = await pool.getConnection();
-//     await connection.beginTransaction();
+    // Check if holiday already exists
+    const [existingHoliday] = await connection.query(
+      "SELECT * FROM DTRHolidays WHERE holidayDate = ?",
+      [formattedDate]
+    );
 
-//     // Update each entry
-//     for (const entry of entries) {
-//       await connection.query(
-//         `
-//         UPDATE DTREntries
-//         SET
-//           holidayHours = ?,
-//           holidayOT = ?,
-//           holidayType = ?,
-//           hours = 0,
-//           overtime = 0,
-//           remarks = IF(
-//             INSTR(remarks, 'HOLIDAY') = 0,
-//             CONCAT('HOLIDAY, ', remarks),
-//             remarks
-//           )
-//         WHERE id = ? AND batchId = ? AND processed = 1 AND deleteRecord = 0
-//       `,
-//         [
-//           entry.holidayHours,
-//           entry.holidayOT,
-//           entry.holidayType,
-//           entry.id,
-//           batchId,
-//         ]
-//       );
-//     }
+    if (existingHoliday.length > 0) {
+      // Update existing holiday instead of returning error
+      await connection.query("DELETE FROM DTRHolidays WHERE holidayDate = ?", [
+        formattedDate,
+      ]);
 
-//     await connection.commit();
+      return res.json({
+        Status: true,
+        Message: "Holiday updated successfully",
+      });
+    }
 
-//     res.json({
-//       Status: true,
-//       Message: "Successfully updated holiday hours",
-//       UpdatedCount: entries.length,
-//     });
-//   } catch (error) {
-//     if (connection) await connection.rollback();
-//     console.error("Error updating holiday hours:", error);
-//     res.status(500).json({
-//       Status: false,
-//       Error: `Failed to update holiday hours: ${error.message}`,
-//     });
-//   } finally {
-//     if (connection) connection.release();
-//   }
-// });
+    // Add the new holiday
+    await connection.query(
+      "INSERT INTO DTRHolidays (holidayDate, holidayType) VALUES (?, ?)",
+      [formattedDate, holidayType]
+    );
+
+    res.json({
+      Status: true,
+      Message: "Holiday added successfully",
+    });
+  } catch (error) {
+    console.error("Error adding/updating holiday:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to add/update holiday: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
 
 export const DTRRouter = router;

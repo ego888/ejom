@@ -137,13 +137,20 @@ export const calculatePrice = (squareFeet, perSqFt) => {
 
 export const calculateAmount = (price, discount, quantity) => {
   if (!price || !quantity) return 0;
-  const discountAmount =
-    parseFloat(price) *
-    parseFloat(quantity) *
-    (parseFloat(discount || 0) / 100);
+  // const discountAmount =
+  //   parseFloat(price) *
+  //   parseFloat(quantity) *
+  //   (parseFloat(discount || 0) / 100);
   return parseFloat(
-    (parseFloat(price) * parseFloat(quantity) - discountAmount).toFixed(2)
+    (parseFloat(price) * parseFloat(quantity)).toFixed(2)
+    // (parseFloat(price) * parseFloat(quantity) - discountAmount).toFixed(2)
   );
+};
+
+export const calculateDetailDiscount = (price, discount) => {
+  if (!price) return 0;
+  const discountAmount = parseFloat(price) * (parseFloat(discount || 0) / 100);
+  return parseFloat(price - discountAmount).toFixed(2);
 };
 
 export const calculateTotals = (
@@ -216,10 +223,7 @@ export const formatNumber = (num) => {
 
 export const formatNumberZ = (num) => {
   if (num === null || num === undefined || Number(num) === 0) return "";
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(num);
+  return formatNumber(num);
 };
 
 {
@@ -235,6 +239,11 @@ export const formatPeso = (num) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num || 0);
+};
+
+export const formatPesoZ = (num) => {
+  if (num === null || num === undefined || Number(num) === 0) return "";
+  return formatPeso(num);
 };
 
 // API error handler

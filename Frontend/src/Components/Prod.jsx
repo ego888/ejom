@@ -42,7 +42,14 @@ function Prod() {
           direction: "desc",
         };
   });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const saved = localStorage.getItem("prodSearchTerm") || "";
+    return saved;
+  });
+  const [displaySearchTerm, setDisplaySearchTerm] = useState(() => {
+    const saved = localStorage.getItem("prodSearchTerm") || "";
+    return saved;
+  });
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
     const saved = localStorage.getItem("orderStatusFilters");
@@ -62,6 +69,7 @@ function Prod() {
     return localStorage.getItem("prodForProdSort") || "none";
   });
   const [orderIdInput, setOrderIdInput] = useState("");
+  const [isDelivered, setIsDelivered] = useState(false);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -79,6 +87,41 @@ function Prod() {
   const [showInvDetailsModal, setShowInvDetailsModal] = useState(false);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
 
+  // Define debounced search at component level
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      setSearchTerm(term);
+      localStorage.setItem("prodSearchTerm", term);
+    }, 300),
+    []
+  );
+
+  // Add useEffect to sync state with localStorage on mount
+  useEffect(() => {
+    const savedPage = parseInt(localStorage.getItem("ordersListPage")) || 1;
+    const savedSort = localStorage.getItem("prodSortConfig");
+    const savedSearch = localStorage.getItem("prodSearchTerm") || "";
+
+    if (savedPage !== currentPage) {
+      setCurrentPage(savedPage);
+    }
+
+    if (savedSort && JSON.parse(savedSort) !== sortConfig) {
+      setSortConfig(JSON.parse(savedSort));
+    }
+
+    // Only update search terms if they're different from saved value
+    if (savedSearch !== searchTerm) {
+      setSearchTerm(savedSearch);
+      setDisplaySearchTerm(savedSearch);
+    }
+  }, []); // Empty dependency array to run only on mount
+
+  // Separate useEffect for search term changes
+  useEffect(() => {
+    setDisplaySearchTerm(searchTerm);
+  }, [searchTerm]);
+
   const fetchOrders = async () => {
     setLoading(true);
     try {
@@ -95,7 +138,7 @@ function Prod() {
           limit: recordsPerPage,
           sortBy: sortConfig.key,
           sortDirection: sortConfig.direction,
-          search: searchTerm,
+          search: searchTerm || "",
           statuses: activeStatuses.join(","),
           sales: selectedSales.length ? selectedSales.join(",") : undefined,
           clients: selectedClients.length
@@ -220,18 +263,10 @@ function Prod() {
     fetchSalesEmployees();
   }, []);
 
-  // Debounced search handler
-  const debouncedSearch = useCallback(
-    debounce((term) => {
-      setSearchTerm(term);
-      setCurrentPage(1);
-    }, 500),
-    []
-  );
-
   const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    debouncedSearch(term);
+    const value = e.target.value;
+    setDisplaySearchTerm(value);
+    debouncedSearch(value);
   };
 
   // Sort handler
@@ -419,32 +454,37 @@ function Prod() {
   };
 
   const handleOrderIdSubmit = async (e) => {
-    console.log("handleOrderIdSubmit", e);
     if (e.key === "Enter") {
       console.log("handleOrderIdSubmit enter key", e.target.value);
       const orderId = e.target.value.trim();
       if (orderId) {
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.put(
-            `${ServerIP}/auth/update-forprod/${orderId}`,
-            { forProd: true },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          let response;
+
+          if (isDelivered) {
+            response = await axios.put(
+              `${ServerIP}/auth/update_order_status`,
+              {
+                orderId,
+                newStatus: "Delivered",
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } else {
+            response = await axios.put(
+              `${ServerIP}/auth/update-forprod/${orderId}`,
+              { forProd: true },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          }
 
           if (response.data.Status) {
-            // Update the local state if the order is in the current view
-            setOrders(
-              orders.map((order) =>
-                order.id === parseInt(orderId)
-                  ? { ...order, forProd: true }
-                  : order
-              )
-            );
+            fetchOrders();
             setOrderIdInput(""); // Clear input after successful update
           }
         } catch (error) {
-          console.error("Error updating forProd status:", error);
+          console.error("Error updating order status:", error);
         }
       }
     }
@@ -673,6 +713,18 @@ function Prod() {
               onKeyDown={handleOrderIdSubmit}
               style={{ width: "150px" }}
             />
+            <div className="form-check">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="deliveredCheckbox"
+                checked={isDelivered}
+                onChange={(e) => setIsDelivered(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="deliveredCheckbox">
+                Delivered
+              </label>
+            </div>
             <Button
               variant="save"
               onClick={handlePrintProductionClick}
@@ -694,6 +746,7 @@ function Prod() {
             className="form-control form-control-sm"
             placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
             onChange={handleSearch}
+            value={displaySearchTerm}
             style={{ width: "400px" }}
           />
         </div>
@@ -991,18 +1044,18 @@ function Prod() {
         </div>
       </div>
 
-      <InvoiceModal
-        show={showInvModal}
-        onClose={() => setShowInvModal(false)}
-        orderId={orderId}
-        grandTotal={orders.find((order) => order.id === orderId)?.grandTotal}
-        onSave={() => {
-          // Handle successful save
-          setShowInvModal(false);
-          // Refresh your data if needed
-          fetchOrders();
-        }}
-      />
+      {showInvModal && (
+        <InvoiceModal
+          show={showInvModal}
+          onClose={() => setShowInvModal(false)}
+          orderId={orderId}
+          grandTotal={orders.find((order) => order.id === orderId)?.grandTotal}
+          onSave={() => {
+            setShowInvModal(false);
+            fetchOrders();
+          }}
+        />
+      )}
 
       <InvoiceDetailsModal
         show={showInvDetailsModal}

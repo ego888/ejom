@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import { formatNumber, formatPeso } from "../../utils/orderUtils";
+import {
+  formatNumber,
+  formatPeso,
+  formatNumberZ,
+} from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 
 const ReportSalesIncentiveDetails = ({ data }) => {
@@ -241,18 +245,18 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                         </td>
                         <td></td>
                         <td className="text-end fw-bold">
-                          ₱{formatNumber(item.grandTotal)}
+                          {formatPeso(item.grandTotal)}
                         </td>
                         <td></td>
                         <td className="text-end fw-bold">
-                          ₱{formatNumber(item.amount)}
+                          {formatPeso(item.amount)}
                         </td>
                         <td colSpan={2}></td>
                         <td className="text-end border-start fw-bold">
-                          ₱{formatNumber(item.salesIncentive)}
+                          {formatPeso(item.salesIncentive)}
                         </td>
                         <td className="text-end fw-bold">
-                          ₱{formatNumber(item.overideIncentive)}
+                          {formatPeso(item.overideIncentive)}
                         </td>
                         <td></td>
                       </tr>
@@ -280,7 +284,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                     </td>
                     <td>{item.materialName}</td>
                     <td className="text-end" style={{ fontWeight: "bold" }}>
-                      ₱{formatNumber(item.amount)}
+                      {formatPeso(item.amount)}
                     </td>
                     <td
                       className={`text-end ${
@@ -289,16 +293,16 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                           : ""
                       }`}
                     >
-                      {formatNumber(item.perSqFt)}
+                      {formatNumberZ(item.perSqFt)}
                     </td>
                     <td className="text-center red-warning">
                       {item.percentDisc ? `${item.percentDisc}%` : ""}
                     </td>
                     <td className="text-end border-start">
-                      ₱{formatNumber(item.salesIncentive)}
+                      {formatPeso(item.salesIncentive)}
                     </td>
                     <td className="text-end">
-                      ₱{formatNumber(item.overideIncentive)}
+                      {formatPeso(item.overideIncentive)}
                     </td>
                     <td className="text-left">{item.remarks}</td>
                   </tr>
@@ -327,8 +331,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                   Grand Total:
                 </td>
                 <td className="text-end">
-                  ₱
-                  {formatNumber(
+                  {formatPeso(
                     Array.from(
                       new Set(calculatedData.map((item) => item.orderId))
                     )
@@ -346,8 +349,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                 </td>
                 <td></td>
                 <td className="text-end">
-                  ₱
-                  {formatNumber(
+                  {formatPeso(
                     calculatedData.reduce(
                       (sum, item) => sum + parseFloat(item.amount || 0),
                       0
@@ -357,8 +359,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                 <td></td>
                 <td></td>
                 <td className="text-end border-start">
-                  ₱
-                  {formatNumber(
+                  {formatPeso(
                     calculatedData.reduce(
                       (sum, item) => sum + parseFloat(item.salesIncentive || 0),
                       0
@@ -366,8 +367,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                   )}
                 </td>
                 <td className="text-end">
-                  ₱
-                  {formatNumber(
+                  {formatPeso(
                     calculatedData.reduce(
                       (sum, item) =>
                         sum + parseFloat(item.overideIncentive || 0),

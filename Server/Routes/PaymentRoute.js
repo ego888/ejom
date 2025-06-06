@@ -8,168 +8,54 @@ const router = express.Router();
 router.post("/post-payment", verifyUser, async (req, res) => {
   let connection;
   try {
-    const { payment, allocations } = req.body;
+    const { payId, transactedBy } = req.body;
 
-    // 1. Input Validation
-    if (
-      !payment ||
-      !allocations ||
-      !Array.isArray(allocations) ||
-      allocations.length === 0
-    ) {
+    if (!payId || !transactedBy) {
       return res.status(400).json({
         Status: false,
-        Error: "Invalid payment data. Payment and allocations are required.",
+        Error: "Missing required fields: payId and transactedBy",
       });
     }
 
-    // 2. Format and validate payment data
-    const formattedPayment = {
-      amount: parseFloat(payment.amount || 0).toFixed(2),
-      payType: payment.payType?.trim(),
-      payReference: payment.payReference?.trim(),
-      payDate: payment.payDate,
-      ornum: payment.ornum?.trim(),
-      transactedBy: payment.transactedBy,
-    };
-
-    // Validate required payment fields
-    if (
-      !formattedPayment.amount ||
-      !formattedPayment.payType ||
-      !formattedPayment.payDate
-    ) {
-      return res.status(400).json({
-        Status: false,
-        Error: "Payment amount, type, and date are required",
-      });
-    }
-
-    // 3. Format and validate allocations
-    const formattedAllocations = allocations.map((allocation) => ({
-      orderId: parseInt(allocation.orderId),
-      amount: parseFloat(allocation.amount || 0).toFixed(2),
-    }));
-
-    // Validate allocation amounts - ensure they don't exceed payment amount
-    const totalAllocations = formattedAllocations.reduce(
-      (sum, allocation) => sum + parseFloat(allocation.amount),
-      0
-    );
-
-    const paymentAmount = parseFloat(formattedPayment.amount);
-    if (totalAllocations > paymentAmount + 0.01) {
-      // Allow small float difference
-      return res.status(400).json({
-        Status: false,
-        Error: `Total allocations (${totalAllocations.toFixed(
-          2
-        )}) cannot exceed payment amount (${paymentAmount.toFixed(2)})`,
-      });
-    }
-
-    // Get connection from pool
     connection = await pool.getConnection();
-
-    // 4. Verify all orders exist before starting transaction
-    const orderIds = formattedAllocations.map((a) => a.orderId);
-    const [existingOrders] = await connection.query(
-      `SELECT orderId, grandTotal, amountPaid 
-       FROM orders 
-       WHERE orderId IN (${orderIds.map(() => "?").join(",")})`,
-      orderIds
-    );
-
-    if (existingOrders.length !== orderIds.length) {
-      return res.status(404).json({
-        Status: false,
-        Error: "One or more orders not found",
-      });
-    }
-
-    // Create order balances map
-    const orderBalances = new Map(
-      existingOrders.map((order) => [
-        order.orderId,
-        {
-          remaining:
-            parseFloat(order.grandTotal) - parseFloat(order.amountPaid || 0),
-        },
-      ])
-    );
-
-    // Validate payment amounts don't exceed remaining balance
-    const overPaidOrders = formattedAllocations.filter((allocation) => {
-      const orderBalance = orderBalances.get(allocation.orderId);
-      return parseFloat(allocation.amount) > orderBalance?.remaining + 0.01; // Allow small float difference
-    });
-
-    if (overPaidOrders.length > 0) {
-      return res.status(400).json({
-        Status: false,
-        Error: `Payment amount exceeds remaining balance for order(s): ${overPaidOrders
-          .map((a) => a.orderId)
-          .join(", ")}`,
-      });
-    }
-
-    // 5. Start transaction
     await connection.beginTransaction();
 
-    // Insert payment header
+    // 1. Copy payment from tempPayments to payments
     const [paymentResult] = await connection.query(
       `INSERT INTO payments 
        (amount, payType, payReference, payDate, ornum, postedDate, transactedBy) 
-       VALUES (?, ?, ?, ?, ?, NOW(), ?)`,
-      [
-        formattedPayment.amount,
-        formattedPayment.payType,
-        formattedPayment.payReference,
-        formattedPayment.payDate,
-        formattedPayment.ornum,
-        formattedPayment.transactedBy,
-      ]
+       SELECT amount, payType, payReference, payDate, ornum, NOW(), ?
+       FROM tempPayments 
+       WHERE payId = ?`,
+      [transactedBy, payId]
     );
 
-    const paymentId = paymentResult.insertId;
+    const newPayId = paymentResult.insertId;
 
-    // Process each allocation
-    for (const allocation of formattedAllocations) {
-      // Skip if amountApplied is 0
-      if (parseFloat(allocation.amount) === 0) continue;
+    // 2. Copy allocations from tempPaymentAllocation to paymentJoAllocation
+    await connection.query(
+      `INSERT INTO paymentJoAllocation 
+       (payId, orderId, amountApplied) 
+       SELECT ?, orderId, amountApplied 
+       FROM tempPaymentAllocation 
+       WHERE payId = ?`,
+      [newPayId, payId]
+    );
 
-      // Insert payment allocation
-      await connection.query(
-        `INSERT INTO paymentJoAllocation 
-         (payId, orderId, amountApplied) 
-         VALUES (?, ?, ?)`,
-        [paymentId, allocation.orderId, allocation.amount]
-      );
+    // 4. Delete temp records
+    await connection.query(
+      `DELETE FROM tempPaymentAllocation WHERE payId = ?`,
+      [payId]
+    );
+    await connection.query(`DELETE FROM tempPayments WHERE payId = ?`, [payId]);
 
-      // Update order table with amount paid and datePaid
-      await connection.query(
-        `UPDATE orders 
-         SET amountPaid = COALESCE(amountPaid, 0) + ?,
-             datePaid = COALESCE(datePaid, NOW())
-         WHERE orderId = ?`,
-        [allocation.amount, allocation.orderId]
-      );
-    }
-
-    // Delete temporary records
-    await connection.query(`TRUNCATE TABLE tempPaymentAllocation`);
-    await connection.query(`TRUNCATE TABLE tempPayments`);
-
-    // Commit transaction
     await connection.commit();
 
     return res.json({
       Status: true,
       Message: "Payment posted successfully",
       Result: {
-        paymentId,
-        amount: formattedPayment.amount,
-        allocations: formattedAllocations,
+        payId: newPayId,
       },
     });
   } catch (error) {
@@ -576,6 +462,8 @@ router.get("/view-allocation", verifyUser, async (req, res) => {
     // Then get all allocations with complete order details
     const [allocations] = await connection.query(
       `SELECT 
+        pa.id,
+        pa.payId,
         pa.orderId,
         pa.amountApplied,
         o.projectName,
@@ -592,6 +480,14 @@ router.get("/view-allocation", verifyUser, async (req, res) => {
       [payId]
     );
 
+    // Get allocation count
+    const [countResult] = await connection.query(
+      `SELECT COUNT(*) as count
+       FROM tempPaymentAllocation
+       WHERE payId = ?`,
+      [payId]
+    );
+
     // Format the response
     const formattedResponse = {
       ...paymentHeader[0],
@@ -605,6 +501,7 @@ router.get("/view-allocation", verifyUser, async (req, res) => {
         customerName: allocation.customerName || "",
         status: allocation.status,
       })),
+      count: parseInt(countResult[0].count) || 0,
     };
 
     return res.json({
@@ -829,11 +726,25 @@ router.post("/save-temp-allocation", verifyUser, async (req, res) => {
       [payId, allocation.orderId, amount]
     );
 
+    // Get updated allocation count and total allocated amount
+    const [result] = await connection.query(
+      `SELECT 
+        COUNT(*) as count,
+        COALESCE(SUM(amountApplied), 0) as totalAllocated
+       FROM tempPaymentAllocation
+       WHERE payId = ?`,
+      [payId]
+    );
+
     await connection.commit();
 
     return res.json({
       Status: true,
       Message: "Allocation saved to temp tables",
+      Result: {
+        count: parseInt(result[0].count) || 0,
+        totalAllocated: parseFloat(result[0].totalAllocated) || 0,
+      },
     });
   } catch (error) {
     if (connection) await connection.rollback();
@@ -871,11 +782,25 @@ router.post("/delete-temp-allocation", verifyUser, async (req, res) => {
       [payId, orderId]
     );
 
+    // Get updated allocation count and total allocated amount
+    const [result] = await connection.query(
+      `SELECT 
+        COUNT(*) as count,
+        COALESCE(SUM(amountApplied), 0) as totalAllocated
+       FROM tempPaymentAllocation
+       WHERE payId = ?`,
+      [payId]
+    );
+
     await connection.commit();
 
     return res.json({
       Status: true,
       Message: "Allocation deleted from temp tables",
+      Result: {
+        count: parseInt(result[0].count) || 0,
+        totalAllocated: parseFloat(result[0].totalAllocated) || 0,
+      },
     });
   } catch (error) {
     if (connection) await connection.rollback();
@@ -890,103 +815,103 @@ router.post("/delete-temp-allocation", verifyUser, async (req, res) => {
 });
 
 // Post payment from temp tables
-router.post("/post-temp-payment", verifyUser, async (req, res) => {
-  let connection;
-  try {
-    const { payId } = req.body;
+// router.post("/post-temp-payment", verifyUser, async (req, res) => {
+//   let connection;
+//   try {
+//     const { payId } = req.body;
 
-    if (!payId) {
-      return res.status(400).json({ Status: false, Error: "Missing payId" });
-    }
+//     if (!payId) {
+//       return res.status(400).json({ Status: false, Error: "Missing payId" });
+//     }
 
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
+//     connection = await pool.getConnection();
+//     await connection.beginTransaction();
 
-    // 1. Get temp payment data
-    const [tempPayment] = await connection.query(
-      `SELECT * FROM tempPayments WHERE payId = ?`,
-      [payId]
-    );
+//     // 1. Get temp payment data
+//     const [tempPayment] = await connection.query(
+//       `SELECT * FROM tempPayments WHERE payId = ?`,
+//       [payId]
+//     );
 
-    if (!tempPayment.length) {
-      await connection.rollback();
-      return res.status(404).json({
-        Status: false,
-        Error: "Temp payment not found",
-      });
-    }
+//     if (!tempPayment.length) {
+//       await connection.rollback();
+//       return res.status(404).json({
+//         Status: false,
+//         Error: "Temp payment not found",
+//       });
+//     }
 
-    // 2. Insert into actual payments table
-    const [paymentResult] = await connection.query(
-      `INSERT INTO payments 
-       (amount, payType, payReference, payDate, ornum, postedDate, transactedBy) 
-       VALUES (?, ?, ?, ?, ?, NOW(), ?)`,
-      [
-        tempPayment[0].amount,
-        tempPayment[0].payType,
-        tempPayment[0].payReference,
-        tempPayment[0].payDate,
-        tempPayment[0].ornum,
-        tempPayment[0].transactedBy,
-      ]
-    );
+//     // 2. Insert into actual payments table
+//     const [paymentResult] = await connection.query(
+//       `INSERT INTO payments
+//        (amount, payType, payReference, payDate, ornum, postedDate, transactedBy)
+//        VALUES (?, ?, ?, ?, ?, NOW(), ?)`,
+//       [
+//         tempPayment[0].amount,
+//         tempPayment[0].payType,
+//         tempPayment[0].payReference,
+//         tempPayment[0].payDate,
+//         tempPayment[0].ornum,
+//         tempPayment[0].transactedBy,
+//       ]
+//     );
 
-    const newPayId = paymentResult.insertId;
+//     const newPayId = paymentResult.insertId;
 
-    // 3. Get temp allocations
-    const [tempAllocations] = await connection.query(
-      `SELECT * FROM tempPaymentAllocation WHERE payId = ?`,
-      [payId]
-    );
+//     // 3. Get temp allocations
+//     const [tempAllocations] = await connection.query(
+//       `SELECT * FROM tempPaymentAllocation WHERE payId = ?`,
+//       [payId]
+//     );
 
-    // 4. Process each allocation
-    for (const allocation of tempAllocations) {
-      // Insert into paymentJoAllocation
-      await connection.query(
-        `INSERT INTO paymentJoAllocation 
-         (payId, orderId, amountApplied) 
-         VALUES (?, ?, ?)`,
-        [newPayId, allocation.orderId, allocation.amount]
-      );
+//     // 4. Process each allocation
+//     for (const allocation of tempAllocations) {
+//       // Insert into paymentJoAllocation
+//       await connection.query(
+//         `INSERT INTO paymentJoAllocation
+//          (payId, orderId, amountApplied)
+//          VALUES (?, ?, ?)`,
+//         [newPayId, allocation.orderId, allocation.amount]
+//       );
 
-      // Update order amountPaid
-      await connection.query(
-        `UPDATE orders 
-         SET amountPaid = COALESCE(amountPaid, 0) + ?,
-             datePaid = COALESCE(datePaid, NOW())
-         WHERE orderId = ?`,
-        [allocation.amount, allocation.orderId]
-      );
-    }
+//       // Update order amountPaid
+//       await connection.query(
+//         `UPDATE orders
+//          SET amountPaid = COALESCE(amountPaid, 0) + ?,
+//              datePaid = COALESCE(datePaid, NOW())
+//          WHERE orderId = ?`,
+//         [allocation.amount, allocation.orderId]
+//       );
+//     }
 
-    // 5. Delete temp records
-    // await connection.query(
-    //   `DELETE FROM tempPaymentAllocation WHERE payId = ?`,
-    //   [payId]
-    // );
-    await connection.query(`DELETE FROM tempPayments WHERE payId = ?`, [payId]);
+//     // 5. Delete temp records
+//     // await connection.query(
+//     //   `DELETE FROM tempPaymentAllocation WHERE payId = ?`,
+//     //   [payId]
+//     // );
+//     await connection.query(`DELETE FROM tempPayments WHERE payId = ?`, [payId]);
 
-    await connection.commit();
+//     await connection.commit();
 
-    return res.json({
-      Status: true,
-      Message: "Payment posted successfully",
-      Result: {
-        payId: newPayId,
-        amount: tempPayment[0].amount,
-      },
-    });
-  } catch (error) {
-    if (connection) await connection.rollback();
-    console.error("Error posting temp payment:", error);
-    return res.status(500).json({
-      Status: false,
-      Error: "Failed to post payment: " + error.message,
-    });
-  } finally {
-    if (connection) connection.release();
-  }
-});
+//     return res.json({
+//       Status: true,
+//       Message: "Payment posted successfully",
+//       Result: {
+//         payId: newPayId,
+//         amount: tempPayment[0].amount,
+//       },
+//     });
+//   } catch (error) {
+//     if (connection) await connection.rollback();
+//     console.error("Error posting temp payment:", error);
+//     return res.status(500).json({
+//       Status: false,
+//       Error: "Failed to post payment: " + error.message,
+//     });
+//   } finally {
+//     if (connection) connection.release();
+//   }
+// });
 
 // Cancel temp payment
 router.post("/cancel-temp-payment", verifyUser, async (req, res) => {
@@ -1051,7 +976,7 @@ router.get("/unremitted-payments", verifyUser, async (req, res) => {
       JOIN orders o ON pa.orderId = o.orderId
       JOIN client c ON o.clientId = c.id
       WHERE p.remittedBy IS NULL
-      ORDER BY p.payType ASC`
+      ORDER BY p.payType ASC, p.payId ASC`
     );
 
     return res.json({
@@ -1350,7 +1275,9 @@ router.get("/all-payments", verifyUser, async (req, res) => {
         p.payReference,
         DATE_FORMAT(p.payDate, '%Y-%m-%d') as payDate,
         DATE_FORMAT(p.postedDate, '%Y-%m-%d %H:%i:%s') as postedDate,
+        DATE_FORMAT(p.remittedDate, '%Y-%m-%d %H:%i:%s') as remittedDate,
         p.transactedBy,
+        p.remittedBy,
         p.receivedBy,
         DATE_FORMAT(p.receivedDate, '%Y-%m-%d %H:%i:%s') as receivedDate,
         o.orderId,
@@ -1423,6 +1350,409 @@ router.get("/all-payments", verifyUser, async (req, res) => {
     if (connection) {
       connection.release();
     }
+  }
+});
+
+// Update allocation in temp tables
+router.post("/update-temp-allocation", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payId, allocation } = req.body;
+
+    // Input validation
+    if (!payId) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Payment ID is required",
+      });
+    }
+
+    if (!allocation || !allocation.orderId || !allocation.amount) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Allocation data is required (orderId and amount)",
+      });
+    }
+
+    // Validate amount is a positive number
+    const amount = parseFloat(allocation.amount);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Allocation amount must be a positive number",
+      });
+    }
+
+    // Get database connection first
+    connection = await pool.getConnection();
+
+    // Check if payment exists
+    const [existingPayment] = await connection.query(
+      `SELECT payId FROM tempPayments WHERE payId = ?`,
+      [payId]
+    );
+
+    if (existingPayment.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        Status: false,
+        Error: "Temp payment not found",
+      });
+    }
+
+    // Check if order exists
+    const [existingOrder] = await connection.query(
+      `SELECT orderId FROM orders WHERE orderId = ?`,
+      [allocation.orderId]
+    );
+
+    if (existingOrder.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        Status: false,
+        Error: "Order not found",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    // Update allocation if exists, otherwise insert
+    await connection.query(
+      `UPDATE tempPaymentAllocation 
+       SET amountApplied = ?
+       WHERE payId = ? AND orderId = ?`,
+      [amount, payId, allocation.orderId]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Message: "Allocation updated in temp tables",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating temp allocation:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to update temp allocation: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Get orders with temp payment allocations
+router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || "";
+    const statuses = req.query.statuses ? req.query.statuses.split(",") : [];
+    const sales = req.query.sales ? req.query.sales.split(",") : [];
+    const clients = req.query.clients ? req.query.clients.split(",") : [];
+    let sortBy = req.query.sortBy || "orderID";
+    let sortDirection = req.query.sortDirection || "desc";
+
+    // Build where clause
+    let whereConditions = ["1=1"]; // Always true condition to start
+    let params = [];
+    let havingClause = "";
+    const havingParams = [];
+
+    if (search) {
+      const searchParam = `%${search}%`;
+      havingClause = `
+        HAVING (
+          o.orderID LIKE ? OR
+          c.clientName LIKE ? OR
+          c.customerName LIKE ? OR
+          o.projectName LIKE ? OR
+          o.orderedBy LIKE ? OR
+          o.drnum LIKE ? OR
+          o.invoiceNum LIKE ? OR
+          e.name LIKE ? OR
+          o.grandTotal LIKE ? OR
+          o.orderReference LIKE ? OR
+          orNums LIKE ?
+        )
+      `;
+      havingParams.push(
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam // orNums
+      );
+    }
+
+    if (statuses.length) {
+      whereConditions.push(`o.status IN (?)`);
+      params.push(statuses);
+    }
+
+    if (sales.length) {
+      whereConditions.push(`o.preparedBy IN (?)`);
+      params.push(sales);
+    }
+
+    if (clients.length) {
+      whereConditions.push(`c.clientName IN (?)`);
+      params.push(clients);
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // Main data query with temp allocations - Fixed GROUP BY issue
+    const dataSql = `
+      SELECT 
+        o.orderID as id, 
+        o.revision,
+        o.clientId, 
+        c.clientName, 
+        c.customerName,
+        c.hold AS holdDate,
+        c.overdue AS warningDate,
+        o.projectName, 
+        o.orderedBy, 
+        o.orderDate, 
+        o.dueDate, 
+        o.dueTime,
+        o.status, 
+        o.drnum, 
+        o.invoiceNum as invnum, 
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
+        e.name as salesName, 
+        o.orderReference,
+        o.forProd,
+        o.forBill,
+        o.productionDate,
+        COALESCE(pmt.orNums, '') as orNums,
+        tpa.amountApplied as tempPayment,
+        tpa.orderId as tempPaymentOrderId,
+        CASE WHEN tpa.amountApplied IS NOT NULL THEN 1 ELSE 0 END as isChecked
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN (
+        SELECT 
+          pja.orderId,
+          GROUP_CONCAT(DISTINCT p.orNum SEPARATOR ', ') AS orNums
+        FROM paymentJoAllocation pja 
+        JOIN payments p ON p.payId = pja.payId
+        GROUP BY pja.orderId
+      ) pmt ON pmt.orderId = o.orderId
+      LEFT JOIN tempPaymentAllocation tpa ON tpa.orderId = o.orderId
+      WHERE ${whereClause}
+      GROUP BY 
+        o.orderID,
+        o.revision,
+        o.clientId,
+        c.clientName,
+        c.customerName,
+        c.hold,
+        c.overdue,
+        o.projectName,
+        o.orderedBy,
+        o.orderDate,
+        o.dueDate,
+        o.dueTime,
+        o.status,
+        o.drnum,
+        o.invoiceNum,
+        o.totalAmount,
+        o.amountDisc,
+        o.percentDisc,
+        o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
+        e.name,
+        o.orderReference,
+        o.forProd,
+        o.forBill,
+        o.productionDate,
+        pmt.orNums,
+        tpa.amountApplied,
+        tpa.orderId
+        ${havingClause}
+      ORDER BY ${sortBy} ${sortDirection}
+      LIMIT ? OFFSET ?
+    `;
+
+    // Count query
+    const countSql = `
+    SELECT COUNT(*) AS total FROM (
+      SELECT o.orderID,
+        c.clientName,
+        c.customerName,
+        o.projectName,
+        o.orderedBy,
+        o.drnum,
+        o.invoiceNum,
+        e.name AS salesName,
+        o.grandTotal,
+        o.orderReference,
+        GROUP_CONCAT(DISTINCT p.orNum SEPARATOR ', ') AS orNums
+      FROM orders o
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN paymentJoAllocation pja ON pja.orderId = o.orderId
+      LEFT JOIN payments p ON p.payId = pja.payId
+      WHERE ${whereClause}
+      GROUP BY o.orderID
+      ${havingClause}
+    ) AS countResult
+  `;
+
+    // Execute queries
+    const [orders] = await pool.query(dataSql, [
+      ...params,
+      ...havingParams,
+      limit,
+      offset,
+    ]);
+    const [countResults] = await pool.query(countSql, [
+      ...params,
+      ...havingParams,
+    ]);
+    const countResult = countResults[0];
+
+    return res.json({
+      Status: true,
+      Result: {
+        orders,
+        total: countResult.total,
+        page: Number(page),
+        totalPages: Math.ceil(countResult.total / limit),
+      },
+    });
+  } catch (err) {
+    console.error("Error in get-order-tempPaymentAllocation route:", err);
+    return res.json({
+      Status: false,
+      Error: "Failed to fetch orders with temp allocations",
+      Details: err.message,
+    });
+  }
+});
+
+// Get total allocated amount for a payment
+router.get("/get-total-tempPaymentAllocated", verifyUser, async (req, res) => {
+  let connection;
+  try {
+    const { payId } = req.query;
+
+    if (!payId) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Payment ID is required",
+      });
+    }
+
+    connection = await pool.getConnection();
+
+    const [result] = await connection.query(
+      `SELECT COALESCE(SUM(amountApplied), 0) as totalAllocated
+       FROM tempPaymentAllocation
+       WHERE payId = ?`,
+      [payId]
+    );
+
+    return res.json({
+      Status: true,
+      Result: {
+        totalAllocated: parseFloat(result[0].totalAllocated) || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting total allocated amount:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to get total allocated amount: " + error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+router.get("/cash-invoices-inquire", verifyUser, async (req, res) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      return res.json({ Status: false, Error: "Date range is required" });
+    }
+
+    const query = `
+            SELECT 
+                p.payId,
+                p.ornum,
+                p.payDate,
+                c.clientName,
+                c.customerName,
+                c.tinNumber,
+                p.amount,
+                o.orderId,
+                pja.amountApplied,
+                o.grandTotal
+            FROM payments p
+            JOIN paymentJoAllocation pja ON p.payId = pja.payId
+            JOIN orders o ON pja.orderId = o.orderId
+            JOIN client c ON o.clientId = c.id
+            WHERE p.payDate >= ? AND p.payDate <= DATE_ADD(?, INTERVAL 1 DAY)
+            ORDER BY p.ornum, p.payDate
+        `;
+
+    const [result] = await pool.query(query, [dateFrom, dateTo]);
+
+    return res.json({ Status: true, Result: result });
+  } catch (error) {
+    console.error("Error in cash-invoices-inquire:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
+});
+
+// Delete payment
+router.delete("/delete-payment/:payId", verifyUser, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Check if payment exists
+    const [paymentCheck] = await connection.query(
+      "SELECT * FROM payments WHERE payId = ?",
+      [req.params.payId]
+    );
+
+    if (paymentCheck.length === 0) {
+      return res.json({ Status: false, Error: "Payment not found" });
+    }
+
+    // Delete payment details first
+    await connection.query("DELETE FROM payments WHERE payId = ?", [
+      req.params.payId,
+    ]);
+
+    await connection.commit();
+    return res.json({ Status: true, Message: "Payment deleted successfully" });
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error deleting payment:", err);
+    return res.json({ Status: false, Error: "Error deleting payment" });
+  } finally {
+    connection.release();
   }
 });
 

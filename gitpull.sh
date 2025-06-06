@@ -8,7 +8,7 @@ confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
 
 if [[ "$confirm" == "y" || "$confirm" == "yes" ]]; then
   echo "🔄 Fetching and pulling latest changes..."
-  git pull origin multiuser  # Replace 'main' with your branch name if different
+  git pull origin newPayment  # Replace 'main' with your branch name if different
   echo "✅ Update complete! Your local setup files were not affected."
 else
   echo "❌ Operation canceled."
