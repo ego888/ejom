@@ -141,7 +141,9 @@ function PrintDR({ data, showAmounts = true }) {
                     </div>
                     <div className="info-row">
                       <div className="info-label text-end">Client:</div>
-                      <div className="info-value">{order.clientName || ""}</div>
+                      <div className="info-value">
+                        {order.customerName || ""}
+                      </div>
                     </div>
                     <div className="info-row">
                       <div className="info-label text-end">Ordered by:</div>
