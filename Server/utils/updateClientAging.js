@@ -10,10 +10,7 @@ async function updateClientAging() {
   `);
 
   const agingMap = new Map();
-  console.log(`🧾 Orders fetched: ${orders.length}`);
-  console.log(`🧮 Clients in agingMap: ${agingMap.size}`);
 
-  // Group orders by client and bucket them by age
   for (const order of orders) {
     const { orderId, clientId, grandTotal, amountPaid, productionDate } = order;
     if (!clientId || !productionDate) continue;
@@ -51,12 +48,9 @@ async function updateClientAging() {
 
   if (agingMap.size === 0) return;
 
-  // Update each client with their aging values + warning/hold dates
-  for (const [clientId, aging] of agingMap.entries()) {
-    console.log(
-      `➡️ Updating client ${clientId}: over30=${aging.over30}, over60=${aging.over60}, over90=${aging.over90}`
-    );
+  let updatedCount = 0; // ✅ count updated clients
 
+  for (const [clientId, aging] of agingMap.entries()) {
     const [clientRows] = await db.query(
       `SELECT c.overdue, c.hold, c.terms, pt.days as termsDays
        FROM client c
@@ -92,7 +86,7 @@ async function updateClientAging() {
     const aging61_90 = isNaN(aging.over60) ? 0 : aging.over60;
     const agingOver90 = isNaN(aging.over90) ? 0 : aging.over90;
 
-    await db.query(
+    const [result] = await db.query(
       `
       UPDATE client
       SET \`over30\` = ?, \`over60\` = ?, \`over90\` = ?,
@@ -101,7 +95,13 @@ async function updateClientAging() {
       `,
       [aging31_60, aging61_90, agingOver90, overdue, hold, clientId]
     );
+
+    if (result.affectedRows > 0) {
+      updatedCount++;
+    }
   }
+
+  console.log(`📊 Total clients updated: ${updatedCount}`);
 }
 
 export default updateClientAging;
