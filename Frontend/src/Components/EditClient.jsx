@@ -1,6 +1,7 @@
 import axios from "../utils/axiosConfig"; // Import configured axios
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
@@ -23,9 +24,19 @@ const EditClient = () => {
     terms: "",
     salesId: "",
     creditLimit: 0,
+    overdue: "",
+    hold: "",
+    over30: 0,
+    over60: 0,
+    over90: 0,
+    lastTransaction: "",
+    lastPaymentAmount: 0,
+    lastPaymentDate: "",
+    lastUpdated: "",
   });
   const [salesPeople, setSalesPeople] = useState([]);
   const [paymentTerms, setPaymentTerms] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -36,12 +47,47 @@ const EditClient = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Auto-expand textarea function
+  const autoExpandTextarea = (textarea) => {
+    textarea.style.height = "auto";
+    const lineHeight =
+      parseInt(window.getComputedStyle(textarea).lineHeight, 10) || 20;
+    const maxRows = 15;
+    const maxHeight = lineHeight * maxRows;
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = newHeight + "px";
+  };
+
   useEffect(() => {
+    // Check if user is admin
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setIsAdmin(decoded.categoryId === 1);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
+    }
+
     // Fetch client data
     axios.get(`${ServerIP}/auth/client/${id}`).then((result) => {
       if (result.data.Status) {
+        const clientData = result.data.Result;
         setClient({
-          ...result.data.Result,
+          ...clientData,
+          // Format dates properly for input fields
+          overdue: clientData.overdue ? clientData.overdue.split("T")[0] : "",
+          hold: clientData.hold ? clientData.hold.split("T")[0] : "",
+          lastTransaction: clientData.lastTransaction
+            ? clientData.lastTransaction.split("T")[0]
+            : "",
+          lastPaymentDate: clientData.lastPaymentDate
+            ? clientData.lastPaymentDate.split("T")[0]
+            : "",
+          lastUpdated: clientData.lastUpdated
+            ? clientData.lastUpdated.split("T")[0]
+            : "",
         });
       }
     });
@@ -80,6 +126,14 @@ const EditClient = () => {
       })
       .catch((err) => console.log(err));
   }, [id]);
+
+  // Auto-expand notes textarea when component loads with data
+  useEffect(() => {
+    const notesTextarea = document.getElementById("notes");
+    if (notesTextarea && client.notes) {
+      setTimeout(() => autoExpandTextarea(notesTextarea), 0);
+    }
+  }, [client.notes]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -343,9 +397,133 @@ const EditClient = () => {
               id="notes"
               name="notes"
               className="form-control"
+              rows="3"
               value={client.notes}
-              onChange={(e) => setClient({ ...client, notes: e.target.value })}
+              onChange={(e) => {
+                setClient({ ...client, notes: e.target.value });
+                autoExpandTextarea(e.target);
+              }}
+              onInput={(e) => autoExpandTextarea(e.target)}
+              style={{
+                resize: "none",
+                overflow: "hidden",
+              }}
             ></textarea>
+          </div>
+
+          <div className="row">
+            <div className="col-md-3 mb-3">
+              <label htmlFor="overdue">Overdue Date:</label>
+              <input
+                id="overdue"
+                type="date"
+                name="overdue"
+                className="form-control rounded-0"
+                value={client.overdue || ""}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
+            <div className="col-md-3 mb-3">
+              <label htmlFor="hold">Hold Date:</label>
+              <input
+                id="hold"
+                type="date"
+                name="hold"
+                className="form-control rounded-0"
+                value={client.hold || ""}
+                onChange={(e) => setClient({ ...client, hold: e.target.value })}
+                readOnly={!isAdmin}
+                tabIndex={!isAdmin ? "-1" : "0"}
+              />
+            </div>
+            <div className="col-md-2 mb-3">
+              <label htmlFor="over30">Over 30:</label>
+              <input
+                id="over30"
+                type="number"
+                name="over30"
+                className="form-control rounded-0"
+                value={client.over30 || 0}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
+            <div className="col-md-2 mb-3">
+              <label htmlFor="over60">Over 60:</label>
+              <input
+                id="over60"
+                type="number"
+                name="over60"
+                className="form-control rounded-0"
+                value={client.over60 || 0}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
+            <div className="col-md-2 mb-3">
+              <label htmlFor="over90">Over 90:</label>
+              <input
+                id="over90"
+                type="number"
+                name="over90"
+                className="form-control rounded-0"
+                value={client.over90 || 0}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-md-3 mb-3">
+              <label htmlFor="last-transaction">Last Transaction:</label>
+              <input
+                id="last-transaction"
+                type="date"
+                name="lastTransaction"
+                className="form-control rounded-0"
+                value={client.lastTransaction || ""}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
+            <div className="col-md-3 mb-3">
+              <label htmlFor="last-payment-amount">Last Payment Amount:</label>
+              <input
+                id="last-payment-amount"
+                type="number"
+                name="lastPaymentAmount"
+                className="form-control rounded-0"
+                value={client.lastPaymentAmount || 0}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
+            <div className="col-md-3 mb-3">
+              <label htmlFor="last-payment-date">Last Payment Date:</label>
+              <input
+                id="last-payment-date"
+                type="date"
+                name="lastPaymentDate"
+                className="form-control rounded-0"
+                value={client.lastPaymentDate || ""}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
+            <div className="col-md-3 mb-3">
+              <label htmlFor="last-updated">Last Updated:</label>
+              <input
+                id="last-updated"
+                type="date"
+                name="lastUpdated"
+                className="form-control rounded-0"
+                value={client.lastUpdated || ""}
+                readOnly
+                tabIndex="-1"
+              />
+            </div>
           </div>
 
           <div className="d-flex justify-content-end gap-2">

@@ -401,6 +401,30 @@ function Prod() {
       return;
     }
 
+    // Check client hold status when marking for production (newValue = true)
+    if (newValue === true) {
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+
+      if (order.holdDate) {
+        const holdDate = new Date(order.holdDate);
+        holdDate.setHours(0, 0, 0, 0);
+
+        if (holdDate <= currentDate) {
+          setTimeout(() => {
+            setAlert({
+              show: true,
+              title: "Error",
+              message: "Client is on HOLD!",
+              type: "alert",
+              onConfirm: null,
+            });
+          }, 0);
+          return;
+        }
+      }
+    }
+
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
@@ -458,6 +482,46 @@ function Prod() {
       console.log("handleOrderIdSubmit enter key", e.target.value);
       const orderId = e.target.value.trim();
       if (orderId) {
+        // Find the order in the existing orders data
+        const order = orders.find((o) => o.id.toString() === orderId);
+        console.log("Found order:", order);
+
+        if (order) {
+          const currentDate = new Date();
+          currentDate.setHours(0, 0, 0, 0);
+          console.log("Order holdDate:", order.holdDate);
+          console.log("Order status:", order.status);
+          console.log("Current date:", currentDate);
+
+          // Check if client is on hold and order status is Open or Printed
+          if (
+            order.holdDate &&
+            (order.status === "Open" || order.status === "Printed")
+          ) {
+            const holdDate = new Date(order.holdDate);
+            holdDate.setHours(0, 0, 0, 0);
+            console.log("Hold date:", holdDate);
+            console.log("Hold date <= current date:", holdDate <= currentDate);
+
+            if (holdDate <= currentDate) {
+              console.log("Setting alert for client on hold");
+              setTimeout(() => {
+                setAlert({
+                  show: true,
+                  title: "Error",
+                  message: "Client is on HOLD!",
+                  type: "alert",
+                  onConfirm: null,
+                });
+                console.log("Alert state set, should show modal now");
+              }, 0);
+              return;
+            }
+          }
+        } else {
+          console.log("Order not found in orders array");
+        }
+
         try {
           const token = localStorage.getItem("token");
           let response;
