@@ -3,6 +3,33 @@ import db from "../utils/db.js";
 async function updateClientAging() {
   const now = new Date();
 
+  // First, close orders where amountPaid >= grandTotal
+  const [closedResult] = await db.query(`
+    UPDATE orders 
+    SET status = 'Closed' 
+    WHERE status IN ('Delivered', 'Billed') 
+    AND amountPaid >= grandTotal
+  `);
+
+  if (closedResult.affectedRows > 0) {
+    console.log(`🔒 Closed ${closedResult.affectedRows} fully paid orders`);
+  }
+
+  // Second, close orders in production statuses that are 15+ days past production date
+  const [staleResult] = await db.query(`
+    UPDATE orders 
+    SET status = 'Closed' 
+    WHERE status IN ('Open', 'Printed', 'Prod', 'Finished') 
+    AND productionDate IS NOT NULL
+    AND productionDate <= DATE_SUB(NOW(), INTERVAL 15 DAY)
+  `);
+
+  if (staleResult.affectedRows > 0) {
+    console.log(
+      `⏰ Closed ${staleResult.affectedRows} stale production orders (15+ days old)`
+    );
+  }
+
   const [orders] = await db.query(`
     SELECT orderId, clientId, grandTotal, amountPaid, productionDate
     FROM orders
