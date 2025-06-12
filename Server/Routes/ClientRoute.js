@@ -74,8 +74,15 @@ router.get("/client/:id", verifyUser, async (req, res) => {
         c.terms,
         c.salesId,
         c.creditLimit,
+        c.over30,
+        c.over60,
+        c.over90,
+        c.lastTransaction,
         c.hold,
         c.overdue,
+        c.lastUpdated,
+        c.lastPaymentDate,
+        c.lastPaymentAmount,
         e.name as salesName
       FROM client c 
       LEFT JOIN employee e ON c.salesId = e.id

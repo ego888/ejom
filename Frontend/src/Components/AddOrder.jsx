@@ -1312,40 +1312,89 @@ function AddOrder() {
       return; // Add return to prevent navigation if no details
     }
 
-    try {
-      console.log("updating order status to Printed");
-      // First update the status to "Printed"
-      const response = await axios.put(
-        `${ServerIP}/auth/update_order_status`,
-        {
-          orderId: id,
-          newStatus: "Printed",
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+    // Check client hold status
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
 
-      console.log("response.data.Status", response.data.Status);
-      if (response.data.Status) {
-        // Update local state
-        setData((prev) => ({
-          ...prev,
-          status: "Printed",
-        }));
+    if (data.hold) {
+      const holdDate = new Date(data.hold);
+      holdDate.setHours(0, 0, 0, 0);
 
-        // Navigate to print view
-        navigate(`/dashboard/print_order/${id}`);
-      } else {
+      if (holdDate <= currentDate) {
         setAlert({
           show: true,
           title: "Error",
-          message: "Failed to update order status: " + response.data.Error,
-          type: "error",
+          message: "Cannot print order because client is on Hold.",
+          type: "alert",
         });
+        return;
       }
-    } catch (error) {
-      handleApiError(error, setAlert);
+    }
+
+    // Check client overdue status
+    if (data.overdue) {
+      const overdueDate = new Date(data.overdue);
+      overdueDate.setHours(0, 0, 0, 0);
+
+      if (overdueDate <= currentDate && data.hold) {
+        const holdDate = new Date(data.hold);
+        const formattedHoldDate = holdDate.toLocaleDateString();
+
+        setAlert({
+          show: true,
+          title: "Warning",
+          message: `Client will be on hold by ${formattedHoldDate}`,
+          type: "confirm",
+          onConfirm: () => {
+            // Proceed with printing
+            proceedWithPrint();
+          },
+        });
+        return;
+      }
+    }
+
+    // If no hold/overdue issues, proceed directly
+    proceedWithPrint();
+
+    async function proceedWithPrint() {
+      try {
+        console.log("updating order status to Printed");
+        // First update the status to "Printed"
+        const response = await axios.put(
+          `${ServerIP}/auth/update_order_status`,
+          {
+            orderId: id,
+            newStatus: "Printed",
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        console.log("response.data.Status", response.data.Status);
+        if (response.data.Status) {
+          // Update local state
+          setData((prev) => ({
+            ...prev,
+            status: "Printed",
+          }));
+
+          // Navigate to print view
+          navigate(`/dashboard/print_order/${id}`);
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: "Failed to update order status: " + response.data.Error,
+            type: "error",
+          });
+        }
+      } catch (error) {
+        handleApiError(error, setAlert);
+      }
     }
   };
 

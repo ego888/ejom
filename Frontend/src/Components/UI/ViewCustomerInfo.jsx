@@ -36,7 +36,7 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-
+        console.log(response.data.Result);
         if (response.data.Status) {
           setClientInfo(response.data.Result);
         } else {
@@ -245,7 +245,11 @@ function ViewCustomerInfo({ clientId, show, onClose }) {
                       Overdue Amount
                     </label>
                     <div id="view-client" className="form-input">
-                      {formatNumber(clientInfo.overdue) || 0}
+                      {formatNumber(
+                        (Number(clientInfo.over30) || 0) +
+                          (Number(clientInfo.over60) || 0) +
+                          (Number(clientInfo.over90) || 0)
+                      )}
                     </div>
                   </div>
                 </div>

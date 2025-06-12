@@ -27,15 +27,15 @@ async function updateClientAging() {
     }
 
     if (!agingMap.has(clientId)) {
-      agingMap.set(clientId, { "31-60": 0, "61-90": 0, over90: 0 });
+      agingMap.set(clientId, { over30: 0, over60: 0, over90: 0 });
     }
 
     const clientAging = agingMap.get(clientId);
 
     if (days >= 31 && days <= 60) {
-      clientAging["31-60"] += balance;
+      clientAging.over30 += balance;
     } else if (days >= 61 && days <= 90) {
-      clientAging["61-90"] += balance;
+      clientAging.over60 += balance;
     } else if (days > 90) {
       clientAging.over90 += balance;
     }
@@ -86,11 +86,11 @@ async function updateClientAging() {
     const [result] = await db.query(
       `
       UPDATE client
-      SET \`31-60\` = ?, \`61-90\` = ?, \`over90\` = ?,
+      SET \`over30\` = ?, \`over60\` = ?, \`over90\` = ?,
           overdue = ?, hold = ?
       WHERE id = ?
       `,
-      [aging["31-60"], aging["61-90"], aging.over90, overdue, hold, clientId]
+      [aging.over30, aging.over60, aging.over90, overdue, hold, clientId]
     );
   }
 }
