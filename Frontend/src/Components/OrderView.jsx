@@ -39,6 +39,9 @@ function OrderView() {
   const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
   const [vatRate, setVatRate] = useState(0);
 
+  // Add state for right panel tabs
+  const [activeTab, setActiveTab] = useState("info");
+
   const location = useLocation(); // Get the current route path
   console.log(location);
   console.log(location.pathname.includes("/prod/view"));
@@ -98,6 +101,7 @@ function OrderView() {
       ])
         .then(([orderResult, detailsResult, vatResult]) => {
           if (orderResult.data.Status) {
+            console.log("OrderView data received:", orderResult.data.Result); // Debug log
             setData(orderResult.data.Result);
           }
           if (detailsResult.data.Status) {
@@ -500,124 +504,163 @@ function OrderView() {
             </div>
 
             <div className="right-panel">
-              <div className="info-group">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div className="info-label mb-0">Status:</div>
-                  <span
-                    className={`status-badge ${data.status || "default"}`}
-                    style={{ cursor: "default" }}
-                  >
-                    {data.status || "N/A"}
-                  </span>
-                </div>
+              {/* Tab Navigation */}
+              <div className="tab-navigation">
+                <button
+                  className={`tab-button ${
+                    activeTab === "info" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("info")}
+                >
+                  Info
+                </button>
+                <button
+                  className={`tab-button ${
+                    activeTab === "log" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("log")}
+                >
+                  Log
+                </button>
               </div>
 
-              <div className="info-group">
-                <div className="info-label">Edited By</div>
-                <div className="info-value">{data.editedBy || ""}</div>
-              </div>
+              {/* Tab Content */}
+              <div className="right-panel-content">
+                {activeTab === "info" && (
+                  <>
+                    <div className="info-group">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="info-label mb-0">Status:</div>
+                        <span
+                          className={`status-badge ${data.status || "default"}`}
+                          style={{ cursor: "default" }}
+                        >
+                          {data.status || "N/A"}
+                        </span>
+                      </div>
+                    </div>
 
-              <div className="info-group">
-                <div className="info-label">Last Edited</div>
-                <div className="info-value">
-                  {data.lastEdited
-                    ? new Date(data.lastEdited)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
-              </div>
+                    <div className="info-group">
+                      <div className="info-label">Edited By</div>
+                      <div className="info-value">{data.editedBy || ""}</div>
+                    </div>
 
-              <div className="info-group">
-                <div className="info-group-row">
-                  <div className="info-label">Total Hours:</div>
-                  <div className="info-value">
-                    {formatNumber(data.totalHrs)}
+                    <div className="info-group">
+                      <div className="info-label">Last Edited</div>
+                      <div className="info-value">
+                        {data.lastEdited
+                          ? new Date(data.lastEdited)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : ""}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-group-row">
+                        <div className="info-label">Total Hours:</div>
+                        <div className="info-value">
+                          {formatNumber(data.totalHrs)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Production Date</div>
+                      <div className="info-value">
+                        {data.productionDate
+                          ? new Date(data.productionDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : ""}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <label htmlFor="view-ready-date" className="info-label">
+                        Ready Date
+                      </label>
+                      <div id="view-ready-date" className="info-value">
+                        {data.readyDate
+                          ? new Date(data.readyDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : ""}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Delivery Date</div>
+                      <div className="info-value">
+                        {data.deliveryDate
+                          ? new Date(data.deliveryDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : ""}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <label htmlFor="view-bill-date" className="info-label">
+                        Bill Date
+                      </label>
+                      <div id="view-bill-date" className="info-value">
+                        {data.billDate
+                          ? new Date(data.billDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : ""}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "log" && (
+                  <div className="log-content">
+                    <div className="log-entries">
+                      {data.log ? (
+                        <pre className="log-text">{data.log}</pre>
+                      ) : (
+                        <div className="info-value">No log entries</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Production Date</div>
-                <div className="info-value">
-                  {data.productionDate
-                    ? new Date(data.productionDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <label htmlFor="view-ready-date" className="info-label">
-                  Ready Date
-                </label>
-                <div id="view-ready-date" className="info-value">
-                  {data.readyDate
-                    ? new Date(data.readyDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Delivery Date</div>
-                <div className="info-value">
-                  {data.deliveryDate
-                    ? new Date(data.deliveryDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <label htmlFor="view-bill-date" className="info-label">
-                  Bill Date
-                </label>
-                <div id="view-bill-date" className="info-value">
-                  {data.billDate
-                    ? new Date(data.billDate)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
+                )}
               </div>
             </div>
           </div>

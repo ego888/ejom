@@ -38,6 +38,9 @@ function PaymentView() {
   const [show, setShow] = useState(true);
   const [vatRate, setVatRate] = useState(0);
 
+  // Add state for right panel tabs
+  const [activeTab, setActiveTab] = useState("info");
+
   const location = useLocation(); // Get the current route path
 
   let backgroundColor = "#fcd8f3";
@@ -124,6 +127,7 @@ function PaymentView() {
         ]);
 
         if (orderResponse.data.Status) {
+          console.log("PaymentView data received:", orderResponse.data.Result); // Debug log
           setData(orderResponse.data.Result);
         }
         if (detailsResponse.data.Status) {
@@ -418,69 +422,116 @@ function PaymentView() {
             </div>
 
             <div className="right-panel">
-              <div className="info-group">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div className="info-label mb-0">Status:</div>
-                  <span className={`status-badge ${data.status || "default"}`}>
-                    {data.status || "N/A"}
-                  </span>
-                </div>
+              {/* Tab Navigation */}
+              <div className="tab-navigation">
+                <button
+                  className={`tab-button ${
+                    activeTab === "info" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("info")}
+                >
+                  Info
+                </button>
+                <button
+                  className={`tab-button ${
+                    activeTab === "log" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("log")}
+                >
+                  Log
+                </button>
               </div>
 
-              <div className="info-group">
-                <div className="info-label">Edited By</div>
-                <div className="info-value">
-                  {localStorage.getItem("userName") || ""}
-                </div>
-              </div>
+              {/* Tab Content */}
+              <div className="right-panel-content">
+                {activeTab === "info" && (
+                  <>
+                    <div className="info-group">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="info-label mb-0">Status:</div>
+                        <span
+                          className={`status-badge ${data.status || "default"}`}
+                        >
+                          {data.status || "N/A"}
+                        </span>
+                      </div>
+                    </div>
 
-              <div className="info-group">
-                <div className="info-label">Last Edited</div>
-                <div className="info-value">
-                  {data.lastEdited
-                    ? new Date(data.lastEdited)
-                        .toLocaleString("en-CA", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        })
-                        .replace(",", "")
-                    : ""}
-                </div>
-              </div>
+                    <div className="info-group">
+                      <div className="info-label">Edited By</div>
+                      <div className="info-value">
+                        {localStorage.getItem("userName") || ""}
+                      </div>
+                    </div>
 
-              <div className="info-group">
-                <div className="info-group-row">
-                  <div className="info-label">Total Hours:</div>
-                  <div className="info-value">
-                    {formatNumber(data.totalHrs)}
+                    <div className="info-group">
+                      <div className="info-label">Last Edited</div>
+                      <div className="info-value">
+                        {data.lastEdited
+                          ? new Date(data.lastEdited)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : ""}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-group-row">
+                        <div className="info-label">Total Hours:</div>
+                        <div className="info-value">
+                          {formatNumber(data.totalHrs)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Production Date</div>
+                      <div className="info-value">
+                        {formattedDates.productionDate}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Ready Date</div>
+                      <div className="info-value">
+                        {formattedDates.readyDate}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Delivery Date</div>
+                      <div className="info-value">
+                        {formattedDates.deliveryDate}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Bill Date</div>
+                      <div className="info-value">
+                        {formattedDates.billDate}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "log" && (
+                  <div className="log-content">
+                    <div className="log-entries">
+                      {data.log ? (
+                        <pre className="log-text">{data.log}</pre>
+                      ) : (
+                        <div className="info-value">No log entries</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Production Date</div>
-                <div className="info-value">
-                  {formattedDates.productionDate}
-                </div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Ready Date</div>
-                <div className="info-value">{formattedDates.readyDate}</div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Delivery Date</div>
-                <div className="info-value">{formattedDates.deliveryDate}</div>
-              </div>
-
-              <div className="info-group">
-                <div className="info-label">Bill Date</div>
-                <div className="info-value">{formattedDates.billDate}</div>
+                )}
               </div>
             </div>
           </div>
