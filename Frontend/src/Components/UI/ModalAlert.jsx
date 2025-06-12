@@ -5,11 +5,13 @@ const ModalAlert = ({
   show,
   onClose,
   onConfirm,
+  onCancel,
   title,
   message,
   confirmText = "OK",
   cancelText = "Cancel",
-  type = "confirm", // 'alert' or 'confirm'
+  type = "confirm", // 'alert', 'confirm', or 'custom'
+  customContent = null, // New prop for custom content
 }) => {
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -58,9 +60,18 @@ const ModalAlert = ({
               {/* ✂️ Removed the 'X' close button here */}
             </div>
             <div className="modal-body">
-              <p id="alert-message" style={{ whiteSpace: "pre-line" }}>
-                {message}
-              </p>
+              {customContent ? (
+                <div>
+                  {message && (
+                    <p style={{ whiteSpace: "pre-line" }}>{message}</p>
+                  )}
+                  {customContent}
+                </div>
+              ) : (
+                <p id="alert-message" style={{ whiteSpace: "pre-line" }}>
+                  {message}
+                </p>
+              )}
             </div>
             <div className="modal-footer">
               {type === "confirm" && (
@@ -90,6 +101,10 @@ const ModalAlert = ({
                   {confirmText}
                 </Button>
               )}
+              {type === "custom" &&
+                customContent &&
+                // For custom type, the footer is handled by the customContent
+                null}
             </div>
           </div>
         </div>

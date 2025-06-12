@@ -33,6 +33,11 @@ const QUOTES = {
   text: "Quotes",
 };
 const ORDERS = { path: "orders", icon: "bi-cart", text: "Orders" };
+const DELIVERY_QR = {
+  path: "delivery-qr",
+  icon: "bi-qr-code-scan",
+  text: "DeliveryQR",
+};
 const CLIENT = { path: "client", icon: "bi-building", text: "Clients" };
 const PROD = { path: "prod", icon: "bi-gear", text: "Prod" };
 const BILLING = { path: "billing", icon: "bi-receipt", text: "Billing" };
@@ -281,6 +286,7 @@ const Dashboard = () => {
         DASHPROD,
         QUOTES,
         ORDERS,
+        DELIVERY_QR,
         CLIENT,
         PROD,
         BILLING,
@@ -296,10 +302,11 @@ const Dashboard = () => {
         DTR
       );
     } else if (permissions.isSales) {
-      items.push(DASHSALES, QUOTES, ORDERS, CLIENT, REPORTS_SALES);
+      items.push(DASHSALES, QUOTES, ORDERS, DELIVERY_QR, CLIENT, REPORTS_SALES);
     } else if (permissions.isAccounting) {
       items.push(
         ORDERS,
+        DELIVERY_QR,
         CLIENT,
         PAYMENT,
         RECEIVE_PAYMENT,
@@ -313,6 +320,7 @@ const Dashboard = () => {
         DASHPROD,
         PROD,
         INVOICE_INQUIRY,
+        DELIVERY_QR,
         WIPLOG,
         ARTISTLOG,
         PRINTLOG,

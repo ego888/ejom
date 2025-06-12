@@ -50,6 +50,7 @@ import DTR from "./Components/DTR";
 import MaterialUsageReport from "./Components/Reports/MaterialUsageReport";
 import PaymentInquiry from "./Components/PaymentInquiry";
 import InvoiceInquiry from "./Components/InvoiceInquiry";
+import DeliveryQR from "./Components/deliveryQR";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
@@ -263,6 +264,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Billing />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard/delivery-qr"
+            element={
+              <PrivateRoute>
+                <DeliveryQR />
               </PrivateRoute>
             }
           />

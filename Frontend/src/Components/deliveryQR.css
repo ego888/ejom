@@ -1,0 +1,138 @@
+.delivery-qr-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.scanner-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-panel {
+  background: #f8f9fa !important;
+  border: 1px solid #dee2e6;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-badge.Open {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+.status-badge.Printed {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+.status-badge.Prod {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+.status-badge.Finished {
+  background-color: #e8f5e8;
+  color: #388e3c;
+}
+.status-badge.Delivered {
+  background-color: #e1f5fe;
+  color: #0288d1;
+}
+.status-badge.Billed {
+  background-color: #fce4ec;
+  color: #c2185b;
+}
+.status-badge.Closed {
+  background-color: #f5f5f5;
+  color: #616161;
+}
+.status-badge.Cancel {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+/* QR Scanner specific styles */
+#qr-reader {
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+#qr-reader video {
+  border-radius: 6px;
+}
+
+/* Override html5-qrcode styles for better integration */
+#qr-reader .qr-shaded-region {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Make the scan region more visible */
+#qr-reader__scan_region {
+  border: 3px solid #007bff !important;
+}
+
+/* Style the control buttons */
+#qr-reader__dashboard_section {
+  padding: 10px;
+  background: white;
+  border-radius: 0 0 6px 6px;
+}
+
+#qr-reader__dashboard_section button {
+  margin: 5px;
+  padding: 8px 16px;
+  border: 1px solid #007bff;
+  background: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#qr-reader__dashboard_section button:hover {
+  background: #0056b3;
+}
+
+/* Loading and status messages */
+.scanner-status {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.1rem;
+  color: #6c757d;
+}
+
+/* Success animation */
+.scan-success {
+  animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .delivery-qr-page .row {
+    flex-direction: column;
+  }
+
+  .info-panel {
+    margin-top: 20px;
+  }
+
+  #qr-reader {
+    max-width: 100%;
+  }
+}
