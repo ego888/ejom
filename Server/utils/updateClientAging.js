@@ -22,6 +22,7 @@ async function updateClientAging() {
     WHERE status IN ('Open', 'Printed', 'Prod', 'Finished') 
     AND productionDate IS NOT NULL
     AND productionDate <= DATE_SUB(NOW(), INTERVAL 15 DAY)
+    AND amountPaid >= grandTotal
   `);
 
   if (staleResult.affectedRows > 0) {
