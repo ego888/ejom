@@ -89,7 +89,7 @@ async function updateClientAging() {
     await db.query(
       `
       UPDATE client
-      SET \`31-60\` = ?, \`61-90\` = ?, \`over90\` = ?,
+      SET \`over30\` = ?, \`over60\` = ?, \`over90\` = ?,
           overdue = ?, hold = ?
       WHERE id = ?
       `,
