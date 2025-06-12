@@ -6,6 +6,7 @@ import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
+import { formatNumber, formatPeso } from "../utils/orderUtils";
 
 const EditClient = () => {
   const [client, setClient] = useState({
@@ -441,10 +442,10 @@ const EditClient = () => {
               <label htmlFor="over30">Over 30:</label>
               <input
                 id="over30"
-                type="number"
+                type="text"
                 name="over30"
                 className="form-control rounded-0"
-                value={client.over30 || 0}
+                value={formatPeso(client.over30) || "₱0.00"}
                 readOnly
                 tabIndex="-1"
               />
@@ -453,10 +454,10 @@ const EditClient = () => {
               <label htmlFor="over60">Over 60:</label>
               <input
                 id="over60"
-                type="number"
+                type="text"
                 name="over60"
                 className="form-control rounded-0"
-                value={client.over60 || 0}
+                value={formatPeso(client.over60) || "₱0.00"}
                 readOnly
                 tabIndex="-1"
               />
@@ -465,10 +466,10 @@ const EditClient = () => {
               <label htmlFor="over90">Over 90:</label>
               <input
                 id="over90"
-                type="number"
+                type="text"
                 name="over90"
                 className="form-control rounded-0"
-                value={client.over90 || 0}
+                value={formatPeso(client.over90) || "₱0.00"}
                 readOnly
                 tabIndex="-1"
               />
@@ -492,10 +493,10 @@ const EditClient = () => {
               <label htmlFor="last-payment-amount">Last Payment Amount:</label>
               <input
                 id="last-payment-amount"
-                type="number"
+                type="text"
                 name="lastPaymentAmount"
                 className="form-control rounded-0"
-                value={client.lastPaymentAmount || 0}
+                value={formatPeso(client.lastPaymentAmount) || "₱0.00"}
                 readOnly
                 tabIndex="-1"
               />
