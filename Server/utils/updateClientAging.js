@@ -39,9 +39,9 @@ async function updateClientAging() {
     const clientAging = agingMap.get(clientId);
 
     if (days >= 31 && days <= 60) {
-      clientAging["31-60"] += balance;
+      clientAging.over30 += balance;
     } else if (days >= 61 && days <= 90) {
-      clientAging["61-90"] += balance;
+      clientAging.over60 += balance;
     } else if (days > 90) {
       clientAging.over90 += balance;
     }
