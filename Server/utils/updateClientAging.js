@@ -14,41 +14,43 @@ async function updateClientAging() {
   // Group orders by client and bucket them by age
   for (const order of orders) {
     const { orderId, clientId, grandTotal, amountPaid, productionDate } = order;
-    if (!clientId || !productionDate) {
+    if (!clientId || !productionDate) continue;
+
+    const grand = parseFloat(grandTotal);
+    const paid = parseFloat(amountPaid || 0);
+
+    if (isNaN(grand) || isNaN(paid)) {
+      console.warn(
+        `Skipping NaN order: orderId=${orderId}, clientId=${clientId}, grandTotal=${grandTotal}, amountPaid=${amountPaid}`
+      );
       continue;
     }
+
+    const balance = grand - paid;
+    if (balance <= 0) continue;
 
     const prodDate = new Date(productionDate);
     const days = Math.floor((now - prodDate) / (1000 * 60 * 60 * 24));
-    const balance = parseFloat(grandTotal) - parseFloat(amountPaid || 0);
-
-    if (balance <= 0) {
-      continue;
-    }
 
     if (!agingMap.has(clientId)) {
-      agingMap.set(clientId, { over30: 0, over60: 0, over90: 0 });
+      agingMap.set(clientId, { "31-60": 0, "61-90": 0, over90: 0 });
     }
 
     const clientAging = agingMap.get(clientId);
 
     if (days >= 31 && days <= 60) {
-      clientAging.over30 += balance;
+      clientAging["31-60"] += balance;
     } else if (days >= 61 && days <= 90) {
-      clientAging.over60 += balance;
+      clientAging["61-90"] += balance;
     } else if (days > 90) {
       clientAging.over90 += balance;
     }
   }
 
-  //  ❌ No aging data to update.
-  if (agingMap.size === 0) {
-    return;
-  }
+  if (agingMap.size === 0) return;
 
   // Update each client with their aging values + warning/hold dates
   for (const [clientId, aging] of agingMap.entries()) {
-    // Get client terms and days
     const [clientRows] = await db.query(
       `SELECT c.overdue, c.hold, c.terms, pt.days as termsDays
        FROM client c
@@ -58,7 +60,6 @@ async function updateClientAging() {
     );
     const client = clientRows[0] || {};
 
-    // Get oldest unpaid production date
     const [oldestUnpaid] = await db.query(
       `SELECT MIN(productionDate) as oldestProdDate
        FROM orders
@@ -73,24 +74,26 @@ async function updateClientAging() {
     let overdue = null;
     let hold = null;
 
-    if (oldestProductionDate) {
-      // overdue = oldest unpaid productionDate + terms.days
+    if (oldestProductionDate && client.termsDays != null) {
       overdue = new Date(oldestProductionDate);
       overdue.setDate(overdue.getDate() + client.termsDays);
 
-      // hold = overdue + 7 days
       hold = new Date(overdue);
-      hold.setDate(overdue.getDate() + 7);
+      hold.setDate(hold.getDate() + 7);
     }
 
-    const [result] = await db.query(
+    const aging31_60 = isNaN(aging["31-60"]) ? 0 : aging["31-60"];
+    const aging61_90 = isNaN(aging["61-90"]) ? 0 : aging["61-90"];
+    const agingOver90 = isNaN(aging.over90) ? 0 : aging.over90;
+
+    await db.query(
       `
       UPDATE client
-      SET \`over30\` = ?, \`over60\` = ?, \`over90\` = ?,
+      SET \`31-60\` = ?, \`61-90\` = ?, \`over90\` = ?,
           overdue = ?, hold = ?
       WHERE id = ?
       `,
-      [aging.over30, aging.over60, aging.over90, overdue, hold, clientId]
+      [aging31_60, aging61_90, agingOver90, overdue, hold, clientId]
     );
   }
 }
