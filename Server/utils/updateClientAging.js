@@ -10,6 +10,8 @@ async function updateClientAging() {
   `);
 
   const agingMap = new Map();
+  console.log(`🧾 Orders fetched: ${orders.length}`);
+  console.log(`🧮 Clients in agingMap: ${agingMap.size}`);
 
   // Group orders by client and bucket them by age
   for (const order of orders) {
@@ -51,6 +53,10 @@ async function updateClientAging() {
 
   // Update each client with their aging values + warning/hold dates
   for (const [clientId, aging] of agingMap.entries()) {
+    console.log(
+      `➡️ Updating client ${clientId}: over30=${aging.over30}, over60=${aging.over60}, over90=${aging.over90}`
+    );
+
     const [clientRows] = await db.query(
       `SELECT c.overdue, c.hold, c.terms, pt.days as termsDays
        FROM client c
