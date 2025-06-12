@@ -33,7 +33,7 @@ async function updateClientAging() {
     const days = Math.floor((now - prodDate) / (1000 * 60 * 60 * 24));
 
     if (!agingMap.has(clientId)) {
-      agingMap.set(clientId, { "31-60": 0, "61-90": 0, over90: 0 });
+      agingMap.set(clientId, { over30: 0, over60: 0, over90: 0 });
     }
 
     const clientAging = agingMap.get(clientId);
@@ -82,8 +82,8 @@ async function updateClientAging() {
       hold.setDate(hold.getDate() + 7);
     }
 
-    const aging31_60 = isNaN(aging["31-60"]) ? 0 : aging["31-60"];
-    const aging61_90 = isNaN(aging["61-90"]) ? 0 : aging["61-90"];
+    const aging31_60 = isNaN(aging.over30) ? 0 : aging.over30;
+    const aging61_90 = isNaN(aging.over60) ? 0 : aging.over60;
     const agingOver90 = isNaN(aging.over90) ? 0 : aging.over90;
 
     await db.query(
