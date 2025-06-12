@@ -1781,13 +1781,13 @@ router.put("/admin-status-update", verifyUser, async (req, res) => {
       await connection.beginTransaction();
 
       const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-      const logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+      const logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
 
       // Update order with new status and log
       await connection.query(
         `UPDATE orders 
          SET status = ?,
-             log = RIGHT(CONCAT(IFNULL(log, ''), ?), 255)
+             log = RIGHT(CONCAT(?, IFNULL(log, '')), 65535)
          WHERE orderID = ?`,
         [newStatus, logMessage, orderId]
       );
