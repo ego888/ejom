@@ -6,7 +6,8 @@ async function updateClientAging() {
   // First, close orders where amountPaid >= grandTotal
   const [closedResult] = await db.query(`
     UPDATE orders 
-    SET status = 'Closed' 
+    SET status = 'Closed',
+        log = CONCAT(status, ' to Closed. ', NOW(), ', ', COALESCE(log, ''))
     WHERE status IN ('Delivered', 'Billed') 
     AND amountPaid >= grandTotal
   `);
@@ -16,18 +17,36 @@ async function updateClientAging() {
   }
 
   // Second, close orders in production statuses that are 15+ days past production date
-  const [staleResult] = await db.query(`
+  const [staleProdResult] = await db.query(`
     UPDATE orders 
-    SET status = 'Closed' 
-    WHERE status IN ('Open', 'Printed', 'Prod', 'Finished') 
+    SET status = 'Closed',
+        log = CONCAT(status, ' to Closed. ', NOW(), ', ', COALESCE(log, ''))
+    WHERE status IN ('Prod', 'Finished') 
     AND productionDate IS NOT NULL
     AND productionDate <= DATE_SUB(NOW(), INTERVAL 15 DAY)
-    AND amountPaid >= grandTotal
+    AND amountPaid >= grandTotal AND grandTotal > 0
   `);
 
-  if (staleResult.affectedRows > 0) {
+  if (staleProdResult.affectedRows > 0) {
     console.log(
-      `⏰ Closed ${staleResult.affectedRows} stale production orders (15+ days old)`
+      `⏰ Closed ${staleProdResult.affectedRows} fully paid stale production orders (15+ days old)`
+    );
+  }
+
+  // Third, close orders in open & printed statuses that are 30+ days past production date
+  const [staleOpenResult] = await db.query(`
+      UPDATE orders 
+      SET status = 'Closed',
+          log = CONCAT(status, ' to Closed. ', NOW(), ', ', COALESCE(log, ''))
+      WHERE status IN ('Open', 'Printed') 
+      AND lastEdited IS NOT NULL
+      AND lastEdited <= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      AND amountPaid >= grandTotal AND grandTotal > 0
+    `);
+
+  if (staleOpenResult.affectedRows > 0) {
+    console.log(
+      `⏰ Closed ${staleOpenResult.affectedRows} fully paid stale open orders (30+ days old)`
     );
   }
 
