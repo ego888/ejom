@@ -5,7 +5,7 @@ import AddOrderDetails from "./AddOrderDetails";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { BiRectangle } from "react-icons/bi";
-//import "./AddOrder.css"; // Import the CSS file
+import "./AddOrder.css"; // Import the CSS file
 //import "./Orders.css";
 import {
   validateDetail,
@@ -115,6 +115,9 @@ function AddOrder() {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
+
+  // Add state for right panel tabs
+  const [activeTab, setActiveTab] = useState("info");
 
   const statusOptions = [
     "Open",
@@ -287,6 +290,7 @@ function AddOrder() {
 
         if (orderResponse.data?.Status && orderResponse.data?.Result?.[0]) {
           const orderData = orderResponse.data.Result[0];
+          console.log("Order data received:", orderData); // Debug log
           setOrder(orderData);
           setClient(orderData);
         }
@@ -394,6 +398,7 @@ function AddOrder() {
         .then((result) => {
           if (result.data.Status) {
             const orderData = result.data.Result;
+            console.log("Order data from second fetch:", orderData); // Debug log
             // Ensure all fields have default values
             setData((prev) => ({
               ...prev,
@@ -410,6 +415,7 @@ function AddOrder() {
               terms: orderData.terms || "",
               amountPaid: orderData.amountPaid || "0",
               totalHrs: orderData.totalHrs || 0, // Set totalHrs from order record
+              log: orderData.log || "", // Add log field
             }));
             setIsHeaderSaved(true);
             setOrderId(id);
@@ -2194,126 +2200,163 @@ function AddOrder() {
             </form>
 
             <div className="right-panel">
+              {/* Tab Navigation */}
+              <div className="tab-navigation">
+                <button
+                  className={`tab-button ${
+                    activeTab === "info" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("info")}
+                >
+                  Info
+                </button>
+                <button
+                  className={`tab-button ${
+                    activeTab === "log" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("log")}
+                >
+                  Log
+                </button>
+              </div>
+
+              {/* Tab Content */}
               <div className="right-panel-content">
-                <div className="info-group">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div className="info-label mb-0">Status:</div>
-                    <span
-                      className={`status-badge ${data.status || "default"}`}
-                      style={{
-                        cursor:
-                          canEdit() && adminOverride
-                            ? "context-menu"
-                            : "default",
-                      }}
-                      onContextMenu={handleStatusRightClick}
-                    >
-                      {data.status || "N/A"}
-                    </span>
-                  </div>
-                </div>
+                {activeTab === "info" && (
+                  <>
+                    <div className="info-group">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="info-label mb-0">Status:</div>
+                        <span
+                          className={`status-badge ${data.status || "default"}`}
+                          style={{
+                            cursor:
+                              canEdit() && adminOverride
+                                ? "context-menu"
+                                : "default",
+                          }}
+                          onContextMenu={handleStatusRightClick}
+                        >
+                          {data.status || "N/A"}
+                        </span>
+                      </div>
+                    </div>
 
-                <div className="info-group">
-                  <div className="info-label">Edited By</div>
-                  <div className="info-value">{data.editedBy || "-"}</div>
-                </div>
+                    <div className="info-group">
+                      <div className="info-label">Edited By</div>
+                      <div className="info-value">{data.editedBy || "-"}</div>
+                    </div>
 
-                <div className="info-group">
-                  <div className="info-label">Last Edited</div>
-                  <div className="info-value">
-                    {data.lastEdited
-                      ? new Date(data.lastEdited)
-                          .toLocaleString("en-CA", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })
-                          .replace(",", "")
-                      : "-"}
-                  </div>
-                </div>
+                    <div className="info-group">
+                      <div className="info-label">Last Edited</div>
+                      <div className="info-value">
+                        {data.lastEdited
+                          ? new Date(data.lastEdited)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : "-"}
+                      </div>
+                    </div>
 
-                <div className="info-group">
-                  <div className="info-label">Total Hours</div>
-                  <div className="info-value">
-                    {formatNumber(data.totalHrs) || "-"}
-                  </div>
-                </div>
+                    <div className="info-group">
+                      <div className="info-label">Total Hours</div>
+                      <div className="info-value">
+                        {formatNumber(data.totalHrs) || "-"}
+                      </div>
+                    </div>
 
-                <div className="info-group">
-                  <div className="info-label">Production Date</div>
-                  <div className="info-value">
-                    {data.productionDate
-                      ? new Date(data.productionDate)
-                          .toLocaleString("en-CA", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })
-                          .replace(",", "")
-                      : "-"}
-                  </div>
-                </div>
+                    <div className="info-group">
+                      <div className="info-label">Production Date</div>
+                      <div className="info-value">
+                        {data.productionDate
+                          ? new Date(data.productionDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : "-"}
+                      </div>
+                    </div>
 
-                <div className="info-group">
-                  <div className="info-label">Ready Date</div>
-                  <div className="info-value">
-                    {data.readyDate
-                      ? new Date(data.readyDate)
-                          .toLocaleString("en-CA", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })
-                          .replace(",", "")
-                      : "-"}
-                  </div>
-                </div>
+                    <div className="info-group">
+                      <div className="info-label">Ready Date</div>
+                      <div className="info-value">
+                        {data.readyDate
+                          ? new Date(data.readyDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : "-"}
+                      </div>
+                    </div>
 
-                <div className="info-group">
-                  <div className="info-label">Delivery Date</div>
-                  <div className="info-value">
-                    {data.deliveryDate
-                      ? new Date(data.deliveryDate)
-                          .toLocaleString("en-CA", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })
-                          .replace(",", "")
-                      : "-"}
-                  </div>
-                </div>
+                    <div className="info-group">
+                      <div className="info-label">Delivery Date</div>
+                      <div className="info-value">
+                        {data.deliveryDate
+                          ? new Date(data.deliveryDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : "-"}
+                      </div>
+                    </div>
 
-                <div className="info-group">
-                  <div className="info-label">Bill Date</div>
-                  <div className="info-value">
-                    {data.billDate
-                      ? new Date(data.billDate)
-                          .toLocaleString("en-CA", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })
-                          .replace(",", "")
-                      : "-"}
+                    <div className="info-group">
+                      <div className="info-label">Bill Date</div>
+                      <div className="info-value">
+                        {data.billDate
+                          ? new Date(data.billDate)
+                              .toLocaleString("en-CA", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })
+                              .replace(",", "")
+                          : "-"}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "log" && (
+                  <div className="log-content">
+                    <div className="info-group">
+                      {data.log ? (
+                        <pre className="log-text">{data.log}</pre>
+                      ) : (
+                        <div className="info-value">No log entries</div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

@@ -464,3 +464,47 @@ datalist option:hover {
   --bs-table-bg: var(--bs-table-warning-bg);
   --bs-table-striped-bg: var(--bs-table-warning-striped-bg);
 }
+
+/* Tab Navigation Styles */
+.tab-navigation {
+  display: flex;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 1rem;
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #6c757d;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  color: #495057;
+  background-color: #f8f9fa;
+}
+
+.tab-button.active {
+  color: #007bff;
+  border-bottom-color: #007bff;
+  font-weight: 600;
+}
+
+/* Log Content Styles */
+.log-content {
+  height: 100%;
+}
+
+.log-text {
+  font-family: var(--font-family);
+  line-height: 1.4;
+  margin: 0;
+  padding: 0.25rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #495057;
+}
