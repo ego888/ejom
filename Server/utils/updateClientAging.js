@@ -126,7 +126,7 @@ async function updateClientAging() {
       overdue.setDate(overdue.getDate() + client.termsDays);
 
       hold = new Date(overdue);
-      hold.setDate(hold.getDate() + 7);
+      hold.setDate(hold.getDate() + 30); // 30 days beyond terms put on hold
     }
 
     const aging31_60 = isNaN(aging.over30) ? 0 : aging.over30;
