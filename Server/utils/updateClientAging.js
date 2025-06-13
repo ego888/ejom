@@ -79,13 +79,10 @@ async function updateClientAging() {
       overdue.setDate(overdue.getDate() + client.termsDays);
 
       // Calculate hold date based on terms
-      const hold = new Date(overdue);
-      hold.setDate(hold.getDate() + 30); // 30 days beyond terms put on hold
+      hold = new Date(overdue);
+      hold.setDate(hold.getDate() + 30);
 
-      // Update hold if client.hold is NULL or older than calculated hold
-      if (!client.hold || new Date(client.hold) < hold) {
-        // use calculated hold
-      } else {
+      if (client.hold && new Date(client.hold) > hold) {
         hold = new Date(client.hold);
       }
     }

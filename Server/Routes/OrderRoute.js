@@ -613,7 +613,7 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
   try {
     // First check current status
     const [currentOrderResults] = await pool.query(
-      "SELECT status, log FROM orders WHERE orderID = ?",
+      "SELECT status, log, productionDate FROM orders WHERE orderID = ?",
       [orderId]
     );
 
@@ -678,11 +678,14 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
       } else if (statusToSet === "Billed") {
         sql += `, billDate = NOW()`;
       }
+      if (currentOrder.productionDate === null) {
+        sql += `, productionDate = NOW()`;
+      }
     }
 
     // Add log update if needed
     if (logMessage) {
-      sql += `, log = RIGHT(CONCAT(IFNULL(log, ''), ?), 255)`;
+      sql += `, log = RIGHT(CONCAT(IFNULL(log, ''), ?), 65535)`;
       values.push(logMessage);
     }
 
