@@ -646,17 +646,21 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     ) {
       // Don't change status, but log the attempt
       statusToSet = currentOrder.status;
-      logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+      logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
       isRestricted = true;
     } else if (currentOrder.status === "Cancel") {
       // Allow status change from Cancel, but log it
       statusToSet = newStatus;
-      logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+      logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
       isRestricted = true;
     } else if (restrictedStatuses.includes(currentOrder.status)) {
       // For other restricted statuses, just log the attempt
-      logMessage = `\n${employeeName}:${currentOrder.status}-${newStatus} ${now}`;
+      logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
       isRestricted = true;
+    }
+
+    if (newStatus === "Closed") {
+      logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
     }
 
     // Prepare update query
@@ -685,7 +689,7 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
 
     // Add log update if needed
     if (logMessage) {
-      sql += `, log = RIGHT(CONCAT(IFNULL(log, ''), ?), 65535)`;
+      sql += `, log = RIGHT(CONCAT(?, IFNULL(log, '')), 65535)`;
       values.push(logMessage);
     }
 

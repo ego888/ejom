@@ -20,6 +20,7 @@ import { formatNumber, formatDate } from "../utils/orderUtils";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import InvoiceModal from "./UI/InvoiceModal";
 import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
+import { jwtDecode } from "jwt-decode";
 //import { handlePrintProduction } from "./ProdPrintProduction";
 //import { handlePrintAllDR } from "./ProdPrintAllDR";
 
@@ -86,6 +87,10 @@ function Prod() {
   const [orderId, setOrderId] = useState(null);
   const [showInvDetailsModal, setShowInvDetailsModal] = useState(false);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [doubleClickClosed, setDoubleClickClosed] = useState(false);
 
   // Define debounced search at component level
   const debouncedSearch = useCallback(
@@ -758,6 +763,54 @@ function Prod() {
     };
   }, [clickTimer]);
 
+  useEffect(() => {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll(
+      '[data-bs-toggle="tooltip"]'
+    );
+    const tooltipList = [...tooltipTriggerList].map(
+      (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
+    );
+
+    // Cleanup tooltips on component unmount
+    return () => {
+      tooltipList.forEach((tooltip) => tooltip.dispose());
+    };
+  }, []);
+
+  useEffect(() => {
+    // Check if user is admin from JWT token
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = jwtDecode(token);
+      setIsAdmin(decoded.categoryId === 1);
+    }
+  }, []);
+
+  const handleDoubleClick = async (orderId, currentStatus) => {
+    if (!doubleClickClosed || !isAdmin || currentStatus === "Closed") return;
+
+    try {
+      const response = await axios.put(
+        `${ServerIP}/auth/update_order_status`,
+        {
+          orderId,
+          newStatus: "Closed",
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      if (response.data.Status) {
+        // Refresh the data after successful update
+        fetchOrders();
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+    }
+  };
+
   return (
     <div className="prod-theme">
       <div className="prod-page-background px-5">
@@ -784,6 +837,15 @@ function Prod() {
                 id="deliveredCheckbox"
                 checked={isDelivered}
                 onChange={(e) => setIsDelivered(e.target.checked)}
+                onMouseOver={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setTooltipPosition({
+                    x: rect.left,
+                    y: rect.bottom + window.scrollY + 5,
+                  });
+                  setShowTooltip(true);
+                }}
+                onMouseLeave={() => setShowTooltip(false)}
               />
               <label className="form-check-label" htmlFor="deliveredCheckbox">
                 Delivered
@@ -803,6 +865,23 @@ function Prod() {
             >
               Print All DR
             </Button>
+            {isAdmin && (
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="doubleClickClosedCheckbox"
+                  checked={doubleClickClosed}
+                  onChange={(e) => setDoubleClickClosed(e.target.checked)}
+                />
+                <label
+                  className="form-check-label"
+                  htmlFor="doubleClickClosedCheckbox"
+                >
+                  Double click closed
+                </label>
+              </div>
+            )}
           </div>
           <input
             id="prod-search-input"
@@ -1024,10 +1103,24 @@ function Prod() {
                         : ""}
                     </td>
                     <td>{order.dueTime || ""}</td>
-                    <td className="text-center">
+                    <td
+                      className="text-center"
+                      onDoubleClick={() =>
+                        handleDoubleClick(order.id, order.status)
+                      }
+                      style={{
+                        cursor:
+                          doubleClickClosed && isAdmin ? "pointer" : "default",
+                      }}
+                    >
                       <span
                         className={`status-badge ${order.status}`}
-                        style={{ cursor: "default" }}
+                        style={{
+                          cursor:
+                            doubleClickClosed && isAdmin
+                              ? "pointer"
+                              : "default",
+                        }}
                       >
                         {order.status}
                       </span>
@@ -1146,6 +1239,14 @@ function Prod() {
         show={showClientInfo}
         onClose={() => setShowClientInfo(false)}
       />
+
+      {/* Tooltip */}
+      <Modal variant="tooltip" show={showTooltip} position={tooltipPosition}>
+        <div className="text-center">
+          Check this and enter the JO number in the Order ID to tag order as
+          delivered.
+        </div>
+      </Modal>
     </div>
   );
 }
