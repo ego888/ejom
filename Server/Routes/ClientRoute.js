@@ -218,6 +218,8 @@ router.post("/client/add", async (req, res) => {
 router.put("/edit_client/:id", async (req, res) => {
   try {
     const id = req.params.id;
+    // Convert empty string to null for hold
+    if (req.body.hold === "") req.body.hold = null;
     const sql = `
           UPDATE client 
           SET clientName = ?, 
@@ -293,6 +295,54 @@ router.get("/client-customer", async (req, res) => {
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {
     console.error("Error fetching client-customer data:", err);
+    return res.json({ Status: false, Error: "Query Error: " + err.message });
+  }
+});
+
+// Add 1 week to hold date if not null
+router.put("/addWeek/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Get current hold value
+    const [rows] = await pool.query("SELECT hold FROM client WHERE id = ?", [
+      id,
+    ]);
+    if (!rows.length) {
+      return res.json({ Status: false, Error: "Client not found" });
+    }
+    const hold = rows[0].hold;
+    if (!hold) {
+      return res.json({
+        Status: false,
+        Error: "Hold date is NULL. Nothing to update.",
+      });
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let newHold;
+    const holdDate = new Date(hold);
+    holdDate.setHours(0, 0, 0, 0);
+    if (holdDate < today) {
+      // If hold is in the past, set to today + 1 week
+      newHold = new Date(today);
+      newHold.setDate(today.getDate() + 7);
+    } else {
+      // Else, add 1 week to hold
+      newHold = new Date(holdDate);
+      newHold.setDate(holdDate.getDate() + 7);
+    }
+    // Format as yyyy-mm-dd
+    const yyyy = newHold.getFullYear();
+    const mm = String(newHold.getMonth() + 1).padStart(2, "0");
+    const dd = String(newHold.getDate()).padStart(2, "0");
+    const newHoldStr = `${yyyy}-${mm}-${dd}`;
+    await pool.query("UPDATE client SET hold = ? WHERE id = ?", [
+      newHoldStr,
+      id,
+    ]);
+    return res.json({ Status: true, newHold: newHoldStr });
+  } catch (err) {
+    console.error("Error in addWeek:", err);
     return res.json({ Status: false, Error: "Query Error: " + err.message });
   }
 });

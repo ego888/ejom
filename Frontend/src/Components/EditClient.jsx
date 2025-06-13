@@ -439,16 +439,38 @@ const EditClient = () => {
             </div>
             <div className="col-md-3 mb-3">
               <label htmlFor="hold">Hold Date:</label>
-              <input
-                id="hold"
-                type="date"
-                name="hold"
-                className="form-control rounded-0"
-                value={client.hold || ""}
-                onChange={(e) => setClient({ ...client, hold: e.target.value })}
-                readOnly={!isAdmin}
-                tabIndex={!isAdmin ? "-1" : "0"}
-              />
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <input
+                  id="hold"
+                  type="date"
+                  name="hold"
+                  className="form-control rounded-0"
+                  value={client.hold || ""}
+                  onChange={(e) =>
+                    setClient({ ...client, hold: e.target.value })
+                  }
+                  readOnly={!isAdmin}
+                  tabIndex={!isAdmin ? "-1" : "0"}
+                  style={{ flex: 1 }}
+                />
+                {isAdmin && client.hold && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    title="Clear Hold Date"
+                    onClick={() => setClient({ ...client, hold: "" })}
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      fontSize: "1rem",
+                      lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </div>
             <div className="col-md-2 mb-3">
               <label htmlFor="over30">Over 30:</label>

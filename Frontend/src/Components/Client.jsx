@@ -8,6 +8,7 @@ import DisplayPage from "./UI/DisplayPage";
 import Pagination from "./UI/Pagination";
 import debounce from "lodash/debounce";
 import { jwtDecode } from "jwt-decode";
+import { BsCalendar2Week } from "react-icons/bs";
 
 const Client = () => {
   const [clients, setClients] = useState([]);
@@ -146,12 +147,49 @@ const Client = () => {
                       }
                     />
                     {isAdmin && (
-                      <Button
-                        variant="delete"
-                        iconOnly
-                        size="sm"
-                        onClick={() => handleDelete(client.id)}
-                      />
+                      <>
+                        <Button
+                          variant="delete"
+                          iconOnly
+                          size="sm"
+                          onClick={() => handleDelete(client.id)}
+                        />
+                        <Button
+                          variant="view"
+                          iconOnly
+                          size="sm"
+                          title="Add 1 Week to Hold Date"
+                          icon={<BsCalendar2Week size={14} />}
+                          onClick={async () => {
+                            try {
+                              const response = await axios.put(
+                                `${ServerIP}/auth/addWeek/${client.id}`
+                              );
+                              if (response.data.Status) {
+                                fetchClients();
+                              } else {
+                                setAlert({
+                                  show: true,
+                                  title: "Error",
+                                  message:
+                                    response.data.Error ||
+                                    "Failed to add week to hold date",
+                                  type: "alert",
+                                });
+                              }
+                            } catch (err) {
+                              setAlert({
+                                show: true,
+                                title: "Error",
+                                message:
+                                  err.message ||
+                                  "Failed to add week to hold date",
+                                type: "alert",
+                              });
+                            }
+                          }}
+                        />
+                      </>
                     )}
                   </div>
                 </td>
