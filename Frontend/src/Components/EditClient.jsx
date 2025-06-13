@@ -159,8 +159,13 @@ const EditClient = () => {
       return;
     }
 
+    const clientData = {
+      ...client,
+      holdDate: client.hold,
+    };
+
     axios
-      .put(`${ServerIP}/auth/edit_client/${id}`, client)
+      .put(`${ServerIP}/auth/edit_client/${id}`, clientData)
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/client");
@@ -173,7 +178,14 @@ const EditClient = () => {
           });
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: err.message,
+          type: "alert",
+        });
+      });
   };
 
   return (

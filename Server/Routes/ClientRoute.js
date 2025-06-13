@@ -234,7 +234,8 @@ router.put("/edit_client/:id", async (req, res) => {
               notes = ?,
               terms = ?, 
               salesId = ?, 
-              creditLimit = ?
+              creditLimit = ?,
+              hold = ?
           WHERE id = ?
       `;
 
@@ -254,6 +255,7 @@ router.put("/edit_client/:id", async (req, res) => {
       req.body.terms,
       req.body.salesId,
       req.body.creditLimit,
+      req.body.hold,
       id,
     ];
 
