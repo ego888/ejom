@@ -125,8 +125,14 @@ async function updateClientAging() {
       overdue = new Date(oldestProductionDate);
       overdue.setDate(overdue.getDate() + client.termsDays);
 
-      hold = new Date(overdue);
+      // Calculate hold date based on terms
+      const hold = new Date(overdue);
       hold.setDate(hold.getDate() + 30); // 30 days beyond terms put on hold
+
+      // If current hold date exists and is greater than calculated hold date, keep current hold date
+      if (client.holdDate && new Date(client.holdDate) > hold) {
+        hold = new Date(client.holdDate);
+      }
     }
 
     const aging31_60 = isNaN(aging.over30) ? 0 : aging.over30;
