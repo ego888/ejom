@@ -122,6 +122,7 @@ const Client = () => {
               <th>Tel No</th>
               <th>Email</th>
               <th>Sales Person</th>
+              <th>Terms</th>
               <th>Credit Limit</th>
               <th className="text-center">Action</th>
             </tr>
@@ -135,6 +136,7 @@ const Client = () => {
                 <td>{client.telNo}</td>
                 <td>{client.email}</td>
                 <td>{client.salesName}</td>
+                <td>{client.terms}</td>
                 <td>${client.creditLimit}</td>
                 <td>
                   <div className="d-flex justify-content-center gap-2">
