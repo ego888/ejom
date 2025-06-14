@@ -7,7 +7,7 @@ async function updateClientAging() {
   const [orders] = await db.query(`
     SELECT orderId, clientId, grandTotal, amountPaid, productionDate
     FROM orders
-    WHERE status IN ('Delivered', 'Billed')
+    WHERE status IN ('Prod', 'Finished', 'Delivered', 'Billed')
   `);
 
   const agingMap = new Map();
