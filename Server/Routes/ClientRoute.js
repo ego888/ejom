@@ -102,77 +102,72 @@ router.get("/client/:id", verifyUser, async (req, res) => {
   }
 });
 
-router.get("/client-list", verifyUser, async (req, res) => {
+router.get("/client-list", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const search = req.query.search || "";
+    const sortBy = req.query.sortBy || "clientName";
+    const sortDirection = req.query.sortDirection || "ascending";
 
-    // First get total count
-    let countSql = `
-      SELECT COUNT(*) as total 
-      FROM client c
-      LEFT JOIN employee e ON c.salesId = e.id
-    `;
-    let countParams = [];
+    // Validate sortBy to prevent SQL injection
+    const allowedSortColumns = [
+      "clientName",
+      "customerName",
+      "salesName",
+      "terms",
+      "creditLimit",
+      "overdue",
+      "hold",
+    ];
 
-    if (search) {
-      countSql += ` WHERE c.clientName LIKE ? 
-        OR c.customerName LIKE ?
-        OR c.contact LIKE ? 
-        OR c.email LIKE ?
-        OR e.name LIKE ?`;
-      const searchParam = `%${search}%`;
-      countParams = [
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-      ];
-    }
+    const validSortBy = allowedSortColumns.includes(sortBy)
+      ? sortBy
+      : "clientName";
+    const validSortDirection = sortDirection === "descending" ? "DESC" : "ASC";
 
-    const countResult = await pool.query(countSql, countParams);
-    const totalCount = countResult[0][0].total;
+    // Map sort columns to their proper table references
+    const sortColumnMap = {
+      clientName: "c.clientName",
+      customerName: "c.customerName",
+      salesName: "e.name",
+      terms: "c.terms",
+      creditLimit: "c.creditLimit",
+      overdue: "c.overdue",
+      hold: "c.hold",
+    };
 
-    // Then get paginated data
-    let sql = `
-      SELECT c.*, e.name as salesName 
-      FROM client c 
-      LEFT JOIN employee e ON c.salesId = e.id
-    `;
-    let params = [];
+    const sortColumn = sortColumnMap[validSortBy] || "c.clientName";
 
-    if (search) {
-      sql += ` WHERE c.clientName LIKE ? 
-        OR c.customerName LIKE ?
-        OR c.contact LIKE ? 
-        OR c.email LIKE ?
-        OR e.name LIKE ?`;
-      const searchParam = `%${search}%`;
-      params = [
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-      ];
-    }
+    // Get total count for pagination
+    const [countResult] = await pool.query(
+      `SELECT COUNT(*) as total 
+       FROM client c
+       LEFT JOIN employee e ON c.salesId = e.id
+       WHERE c.clientName LIKE ? OR c.customerName LIKE ?`,
+      [`%${search}%`, `%${search}%`]
+    );
+    const totalCount = countResult[0].total;
 
-    sql += " ORDER BY c.clientName LIMIT ? OFFSET ?";
-    params.push(limit, offset);
-
-    const result = await pool.query(sql, params);
-    const clients = result[0];
+    // Get paginated and sorted results
+    const [result] = await pool.query(
+      `SELECT c.*, e.name as salesName
+       FROM client c
+       LEFT JOIN employee e ON c.salesId = e.id
+       WHERE c.clientName LIKE ? OR c.customerName LIKE ?
+       ORDER BY ${sortColumn} ${validSortDirection}
+       LIMIT ? OFFSET ?`,
+      [`%${search}%`, `%${search}%`, limit, offset]
+    );
 
     return res.json({
       Status: true,
-      Result: clients,
+      Result: result,
       totalCount: totalCount,
     });
   } catch (err) {
-    console.error("Error fetching client list:", err);
+    console.error("Error fetching clients:", err);
     return res.json({ Status: false, Error: "Query Error" });
   }
 });

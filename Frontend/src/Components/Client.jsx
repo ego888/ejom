@@ -9,6 +9,7 @@ import Pagination from "./UI/Pagination";
 import debounce from "lodash/debounce";
 import { jwtDecode } from "jwt-decode";
 import { BsCalendar2Week } from "react-icons/bs";
+import { formatPeso, formatDate } from "../utils/orderUtils";
 
 const Client = () => {
   const [clients, setClients] = useState([]);
@@ -18,6 +19,10 @@ const Client = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "ascending",
+  });
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -43,6 +48,8 @@ const Client = () => {
           page: currentPage,
           limit: recordsPerPage,
           search: searchTerm,
+          sortBy: sortConfig.key,
+          sortDirection: sortConfig.direction,
         },
       })
       .then((result) => {
@@ -62,7 +69,7 @@ const Client = () => {
 
   useEffect(() => {
     fetchClients();
-  }, [currentPage, recordsPerPage, searchTerm]);
+  }, [currentPage, recordsPerPage, searchTerm, sortConfig]);
 
   const handleDelete = (id) => {
     setAlert({
@@ -85,6 +92,19 @@ const Client = () => {
         });
       },
     });
+  };
+
+  const handleSort = (key) => {
+    let direction = "ascending";
+    if (sortConfig.key === key && sortConfig.direction === "ascending") {
+      direction = "descending";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === "ascending" ? "↑" : "↓";
   };
 
   return (
@@ -116,14 +136,51 @@ const Client = () => {
         <table className="table">
           <thead>
             <tr>
-              <th>Client</th>
-              <th>Customer Name</th>
+              <th
+                onClick={() => handleSort("clientName")}
+                style={{ cursor: "pointer" }}
+              >
+                Client {getSortIcon("clientName")}
+              </th>
+              <th
+                onClick={() => handleSort("customerName")}
+                style={{ cursor: "pointer" }}
+              >
+                Customer Name {getSortIcon("customerName")}
+              </th>
               <th>Contact</th>
               <th>Tel No</th>
               <th>Email</th>
-              <th>Sales Person</th>
-              <th>Terms</th>
-              <th>Credit Limit</th>
+              <th
+                onClick={() => handleSort("salesName")}
+                style={{ cursor: "pointer" }}
+              >
+                Sales Person {getSortIcon("salesName")}
+              </th>
+              <th
+                onClick={() => handleSort("terms")}
+                style={{ cursor: "pointer" }}
+              >
+                Terms {getSortIcon("terms")}
+              </th>
+              <th
+                onClick={() => handleSort("creditLimit")}
+                style={{ cursor: "pointer" }}
+              >
+                Credit Limit {getSortIcon("creditLimit")}
+              </th>
+              <th
+                onClick={() => handleSort("overdue")}
+                style={{ cursor: "pointer" }}
+              >
+                Overdue {getSortIcon("overdue")}
+              </th>
+              <th
+                onClick={() => handleSort("hold")}
+                style={{ cursor: "pointer" }}
+              >
+                Hold {getSortIcon("hold")}
+              </th>
               <th className="text-center">Action</th>
             </tr>
           </thead>
@@ -135,9 +192,15 @@ const Client = () => {
                 <td>{client.contact}</td>
                 <td>{client.telNo}</td>
                 <td>{client.email}</td>
-                <td>{client.salesName}</td>
-                <td>{client.terms}</td>
-                <td>${client.creditLimit}</td>
+                <td className="text-center">{client.salesName}</td>
+                <td className="text-center">{client.terms}</td>
+                <td className="text-end">{formatPeso(client.creditLimit)}</td>
+                <td className="text-center">
+                  {client.overdue ? formatDate(client.overdue) : ""}
+                </td>
+                <td className="text-center">
+                  {client.hold ? formatDate(client.hold) : ""}
+                </td>
                 <td>
                   <div className="d-flex justify-content-center gap-2">
                     <Button
