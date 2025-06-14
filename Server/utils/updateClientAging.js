@@ -46,7 +46,7 @@ async function updateClientAging() {
   const [allClients] = await db.query(`
     SELECT DISTINCT clientId
     FROM orders
-    WHERE status IN ('Delivered', 'Billed') AND clientId IS NOT NULL
+    WHERE status IN ('Prod', 'Finished', 'Delivered', 'Billed') AND clientId IS NOT NULL
   `);
 
   let updatedCount = 0;
@@ -72,7 +72,7 @@ async function updateClientAging() {
     const [oldestUnpaid] = await db.query(
       `SELECT MIN(productionDate) as oldestProdDate
        FROM orders
-       WHERE clientId = ? AND status IN ('Delivered', 'Billed') AND (grandTotal - amountPaid) > 0`,
+       WHERE clientId = ? AND status IN ('Prod', 'Finished', 'Delivered', 'Billed') AND (grandTotal - amountPaid) > 0`,
       [clientId]
     );
 
