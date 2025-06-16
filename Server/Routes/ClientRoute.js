@@ -318,9 +318,9 @@ router.put("/addWeek/:id", async (req, res) => {
     const holdDate = new Date(hold);
     holdDate.setHours(0, 0, 0, 0);
     if (holdDate < today) {
-      // If hold is in the past, set to today + 1 week
+      // If hold is in the past, set to today + 1 day
       newHold = new Date(today);
-      newHold.setDate(today.getDate() + 7);
+      newHold.setDate(today.getDate() + 1);
     } else {
       // Else, add 1 week to hold
       newHold = new Date(holdDate);
