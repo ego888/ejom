@@ -105,20 +105,22 @@ function Orders() {
         localStorage.getItem("orderStatusFilter") || "[]"
       );
 
+      const params = {
+        page: currentPage,
+        limit: recordsPerPage,
+        sortBy: sortConfig.key,
+        sortDirection: sortConfig.direction,
+        statuses: activeStatuses.join(","),
+        sales: selectedSales.length ? selectedSales.join(",") : undefined,
+        clients: selectedClients.length ? selectedClients.join(",") : undefined,
+      };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
       const response = await axios.get(`${ServerIP}/auth/orders`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: {
-          page: currentPage,
-          limit: recordsPerPage,
-          sortBy: sortConfig.key,
-          sortDirection: sortConfig.direction,
-          search: searchTerm,
-          statuses: activeStatuses.join(","),
-          sales: selectedSales.length ? selectedSales.join(",") : undefined,
-          clients: selectedClients.length
-            ? selectedClients.join(",")
-            : undefined,
-        },
+        params,
       });
 
       if (response.data.Status) {
@@ -266,6 +268,13 @@ function Orders() {
   useEffect(() => {
     setTotalPages(Math.ceil(totalCount / recordsPerPage));
   }, [totalCount, recordsPerPage]);
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+      localStorage.setItem("ordersListPage", "1");
+    }
+  }, [totalPages, currentPage]);
 
   // Modify the page change handler
   const handlePageChange = (pageNumber) => {

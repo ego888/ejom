@@ -149,19 +149,22 @@ function Prod() {
       console.log("RUN fetchOrderData");
       console.trace("TRACE fetchOrderData");
       setLoading(true);
+      const params = {
+        page: currentPage,
+        limit: recordsPerPage,
+        sortBy: sortConfig.key,
+        sortDirection: sortConfig.direction,
+        statuses: selectedStatuses.join(","),
+        sales: selectedSales.join(","),
+        clients: selectedClients.join(","),
+      };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
       const response = await axios.get(
         `${ServerIP}/auth/get-order-tempPaymentAllocation`,
         {
-          params: {
-            page: currentPage,
-            limit: recordsPerPage,
-            sortBy: sortConfig.key,
-            sortDirection: sortConfig.direction,
-            statuses: selectedStatuses.join(","),
-            sales: selectedSales.join(","),
-            clients: selectedClients.join(","),
-            search: searchTerm,
-          },
+          params,
         }
       );
 
@@ -328,6 +331,13 @@ function Prod() {
   useEffect(() => {
     setTotalPages(Math.ceil(totalCount / recordsPerPage));
   }, [totalCount, recordsPerPage]);
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+      localStorage.setItem("ordersListPage", "1");
+    }
+  }, [totalPages, currentPage]);
 
   // Modify the page change handler
   const handlePageChange = (pageNumber) => {
