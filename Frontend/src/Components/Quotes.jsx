@@ -36,6 +36,7 @@ function Quotes() {
         };
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [displaySearchTerm, setDisplaySearchTerm] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
     const saved = localStorage.getItem("quoteStatusFilters");
@@ -123,6 +124,11 @@ function Quotes() {
   useEffect(() => {
     const initializeComponent = async () => {
       try {
+        // Initialize search terms from localStorage
+        const savedSearch = localStorage.getItem("quotesSearchTerm") || "";
+        setSearchTerm(savedSearch);
+        setDisplaySearchTerm(savedSearch);
+
         // Fetch all initial data in parallel
         const [statusResponse, salesResponse, clientsResponse] =
           await Promise.all([
@@ -241,13 +247,16 @@ function Quotes() {
   const debouncedSearch = useCallback(
     debounce((term) => {
       setSearchTerm(term);
+      setDisplaySearchTerm(term);
       setCurrentPage(1);
+      localStorage.setItem("quotesSearchTerm", term);
     }, 500),
     []
   );
 
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
+    setDisplaySearchTerm(term);
     debouncedSearch(term);
   };
 
@@ -388,16 +397,51 @@ function Quotes() {
             <label htmlFor="quoteSearch" className="visually-hidden">
               Search quotes
             </label>
-            <input
-              id="quoteSearch"
-              name="quoteSearch"
-              type="text"
-              className="form-control form-control-sm"
-              placeholder="Search by ID, client..."
-              onChange={handleSearch}
-              style={{ width: "400px" }}
-              aria-label="Search quotes"
-            />
+            <div className="position-relative">
+              <input
+                id="quoteSearch"
+                name="quoteSearch"
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="Search by ID, client..."
+                onChange={handleSearch}
+                value={displaySearchTerm}
+                style={{
+                  width: "400px",
+                  paddingRight: displaySearchTerm ? "30px" : "12px",
+                }}
+                aria-label="Search quotes"
+              />
+              {displaySearchTerm && (
+                <button
+                  type="button"
+                  className="btn btn-sm position-absolute"
+                  style={{
+                    right: "5px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: "#6c757d",
+                    fontSize: "14px",
+                    padding: "0",
+                    width: "20px",
+                    height: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  onClick={() => {
+                    setDisplaySearchTerm("");
+                    setSearchTerm("");
+                    localStorage.setItem("quotesSearchTerm", "");
+                  }}
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
