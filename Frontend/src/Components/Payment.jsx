@@ -898,17 +898,51 @@ function Prod() {
             <label htmlFor="paymentSearch" className="visually-hidden">
               Search payments
             </label>
-            <input
-              id="paymentSearch"
-              name="paymentSearch"
-              type="text"
-              className="form-control form-control-sm"
-              placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-              onChange={handleSearch}
-              value={displaySearchTerm}
-              style={{ width: "400px" }}
-              aria-label="Search payments"
-            />
+            <div className="position-relative">
+              <input
+                id="paymentSearch"
+                name="paymentSearch"
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+                onChange={handleSearch}
+                value={displaySearchTerm}
+                style={{
+                  width: "400px",
+                  paddingRight: displaySearchTerm ? "30px" : "12px",
+                }}
+                aria-label="Search payments"
+              />
+              {displaySearchTerm && (
+                <button
+                  type="button"
+                  className="btn btn-sm position-absolute"
+                  style={{
+                    right: "5px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: "#6c757d",
+                    fontSize: "14px",
+                    padding: "0",
+                    width: "20px",
+                    height: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  onClick={() => {
+                    setDisplaySearchTerm("");
+                    setSearchTerm("");
+                    localStorage.setItem("paymentSearchTerm", "");
+                  }}
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

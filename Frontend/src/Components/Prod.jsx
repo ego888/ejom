@@ -894,15 +894,49 @@ function Prod() {
               </div>
             )}
           </div>
-          <input
-            id="prod-search-input"
-            type="text"
-            className="form-control form-control-sm"
-            placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-            onChange={handleSearch}
-            value={displaySearchTerm}
-            style={{ width: "400px" }}
-          />
+          <div className="position-relative">
+            <input
+              id="prod-search-input"
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+              onChange={handleSearch}
+              value={displaySearchTerm}
+              style={{
+                width: "400px",
+                paddingRight: displaySearchTerm ? "30px" : "12px",
+              }}
+            />
+            {displaySearchTerm && (
+              <button
+                type="button"
+                className="btn btn-sm position-absolute"
+                style={{
+                  right: "5px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "#6c757d",
+                  fontSize: "14px",
+                  padding: "0",
+                  width: "20px",
+                  height: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onClick={() => {
+                  setDisplaySearchTerm("");
+                  setSearchTerm("");
+                  localStorage.setItem("prodSearchTerm", "");
+                }}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
         {/* Loading indicator */}
         {loading && (
