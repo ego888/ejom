@@ -607,7 +607,7 @@ router.get("/orders-details-forprod", async (req, res) => {
 
 // Update orders status with corresponding dates and logging
 router.put("/update_order_status", verifyUser, async (req, res) => {
-  const { orderId, newStatus } = req.body;
+  const { orderId, newStatus, isAdmin } = req.body;
   const employeeName = req.user.name;
 
   try {
@@ -640,14 +640,23 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
         currentOrder.status === "Delivered")
     ) {
       statusToSet = currentOrder.status;
-    } else if (
-      currentOrder.status === "Billed" ||
-      currentOrder.status === "Closed"
-    ) {
-      // Don't change status, but log the attempt
+    } else if (currentOrder.status === "Closed") {
+      // Don't change status from Closed, but log the attempt
       statusToSet = currentOrder.status;
       logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
       isRestricted = true;
+    } else if (currentOrder.status === "Billed") {
+      // Handle Billed status based on isAdmin flag
+      if (isAdmin && newStatus === "Closed") {
+        // Allow admin to change from Billed to Closed
+        statusToSet = newStatus;
+        logMessage = `\n${employeeName} (Admin)\n${currentOrder.status}-${newStatus}\n${now}`;
+      } else {
+        // Don't change status, but log the attempt
+        statusToSet = currentOrder.status;
+        logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
+        isRestricted = true;
+      }
     } else if (currentOrder.status === "Cancel") {
       // Allow status change from Cancel, but log it
       statusToSet = newStatus;

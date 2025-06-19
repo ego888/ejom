@@ -796,6 +796,7 @@ function Prod() {
     }
   }, []);
 
+  // Double click closed
   const handleDoubleClick = async (orderId, currentStatus) => {
     if (!doubleClickClosed || !isAdmin || currentStatus === "Closed") return;
 
@@ -805,6 +806,7 @@ function Prod() {
         {
           orderId,
           newStatus: "Closed",
+          isAdmin: isAdmin,
         },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
