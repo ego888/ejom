@@ -185,6 +185,21 @@ async function updateClientAging() {
   }
 
   console.log("✅ Aging update complete.");
+
+  // ✅ Step 9: Auto-deliver logic for old production orders
+  const [autoDeliverResult] = await db.query(`
+    UPDATE orders 
+    SET log = CONCAT(NOW(), CHAR(13), CHAR(10), status, ' to Delivered.',CHAR(13), CHAR(10), COALESCE(log, '')),
+        status = 'Delivered'
+    WHERE status IN ('Prod', 'Finished') 
+      AND productionDate IS NOT NULL
+      AND productionDate <= DATE_SUB(NOW(), INTERVAL 30 DAY)
+  `);
+  if (autoDeliverResult.affectedRows > 0) {
+    console.log(
+      `🚚 Auto-delivered ${autoDeliverResult.affectedRows} production orders (30+ days old)`
+    );
+  }
 }
 
 export default updateClientAging;
