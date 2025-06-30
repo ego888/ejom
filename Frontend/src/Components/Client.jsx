@@ -9,7 +9,7 @@ import Pagination from "./UI/Pagination";
 import debounce from "lodash/debounce";
 import { jwtDecode } from "jwt-decode";
 import { BsCalendar2Week } from "react-icons/bs";
-import { formatPeso, formatDate } from "../utils/orderUtils";
+import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
 
 const Client = () => {
   const [clients, setClients] = useState([]);
@@ -133,7 +133,7 @@ const Client = () => {
       </div>
 
       <div className="mt-3">
-        <table className="table">
+        <table className="table table-striped table-hover">
           <thead>
             <tr>
               <th
@@ -203,84 +203,101 @@ const Client = () => {
             </tr>
           </thead>
           <tbody>
-            {clients.map((client) => (
-              <tr key={client.id}>
-                <td>{client.clientName}</td>
-                <td>{client.customerName}</td>
-                <td>{client.contact}</td>
-                <td>{client.telNo}</td>
-                <td>{client.email}</td>
-                <td className="text-center">{client.salesName}</td>
-                <td className="text-center">{client.terms}</td>
-                <td className="text-end">{formatPeso(client.creditLimit)}</td>
-                <td className="text-end">{formatPeso(client.over30)}</td>
-                <td className="text-end">{formatPeso(client.over60)}</td>
-                <td className="text-end">{formatPeso(client.over90)}</td>
-                <td className="text-center">
-                  {client.overdue ? formatDate(client.overdue) : ""}
-                </td>
-                <td className="text-center">
-                  {client.hold ? formatDate(client.hold) : ""}
-                </td>
-                <td>
-                  <div className="d-flex justify-content-center gap-2">
-                    <Button
-                      variant="edit"
-                      iconOnly
-                      size="sm"
-                      onClick={() =>
-                        navigate(`/dashboard/client/edit/${client.id}`)
-                      }
-                    />
-                    {isAdmin && (
-                      <>
-                        <Button
-                          variant="delete"
-                          iconOnly
-                          size="sm"
-                          onClick={() => handleDelete(client.id)}
-                        />
-                        <Button
-                          variant="view"
-                          iconOnly
-                          size="sm"
-                          title="Add 1 Week to Hold Date"
-                          icon={<BsCalendar2Week size={14} />}
-                          onClick={async () => {
-                            try {
-                              const response = await axios.put(
-                                `${ServerIP}/auth/addWeek/${client.id}`
-                              );
-                              if (response.data.Status) {
-                                fetchClients();
-                              } else {
+            {clients.map((client) => {
+              const currentDate = new Date();
+              const holdDate = client.hold ? new Date(client.hold) : null;
+              const overdueDate = client.overdue
+                ? new Date(client.overdue)
+                : null;
+
+              const rowClass =
+                holdDate && currentDate > holdDate
+                  ? "table-danger"
+                  : overdueDate && currentDate > overdueDate
+                  ? "table-warning"
+                  : "";
+
+              return (
+                <tr key={client.id} className={rowClass}>
+                  <td>{client.clientName}</td>
+                  <td>{client.customerName}</td>
+                  <td>{client.contact}</td>
+                  <td>{client.telNo}</td>
+                  <td>{client.email}</td>
+                  <td className="text-center">{client.salesName}</td>
+                  <td className="text-center">{client.terms}</td>
+                  <td className="text-end">
+                    {formatPesoZ(client.creditLimit)}
+                  </td>
+                  <td className="text-end">{formatPesoZ(client.over30)}</td>
+                  <td className="text-end">{formatPesoZ(client.over60)}</td>
+                  <td className="text-end">{formatPesoZ(client.over90)}</td>
+                  <td className="text-center">
+                    {client.overdue ? formatDate(client.overdue) : ""}
+                  </td>
+                  <td className="text-center">
+                    {client.hold ? formatDate(client.hold) : ""}
+                  </td>
+                  <td>
+                    <div className="d-flex justify-content-center gap-2">
+                      <Button
+                        variant="edit"
+                        iconOnly
+                        size="sm"
+                        onClick={() =>
+                          navigate(`/dashboard/client/edit/${client.id}`)
+                        }
+                      />
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="delete"
+                            iconOnly
+                            size="sm"
+                            onClick={() => handleDelete(client.id)}
+                          />
+                          <Button
+                            variant="view"
+                            iconOnly
+                            size="sm"
+                            title="Add 1 Week to Hold Date"
+                            icon={<BsCalendar2Week size={14} />}
+                            onClick={async () => {
+                              try {
+                                const response = await axios.put(
+                                  `${ServerIP}/auth/addWeek/${client.id}`
+                                );
+                                if (response.data.Status) {
+                                  fetchClients();
+                                } else {
+                                  setAlert({
+                                    show: true,
+                                    title: "Error",
+                                    message:
+                                      response.data.Error ||
+                                      "Failed to add week to hold date",
+                                    type: "alert",
+                                  });
+                                }
+                              } catch (err) {
                                 setAlert({
                                   show: true,
                                   title: "Error",
                                   message:
-                                    response.data.Error ||
+                                    err.message ||
                                     "Failed to add week to hold date",
                                   type: "alert",
                                 });
                               }
-                            } catch (err) {
-                              setAlert({
-                                show: true,
-                                title: "Error",
-                                message:
-                                  err.message ||
-                                  "Failed to add week to hold date",
-                                type: "alert",
-                              });
-                            }
-                          }}
-                        />
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
