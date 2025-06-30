@@ -118,6 +118,9 @@ router.get("/client-list", async (req, res) => {
       "salesName",
       "terms",
       "creditLimit",
+      "over30",
+      "over60",
+      "over90",
       "overdue",
       "hold",
     ];
@@ -134,6 +137,9 @@ router.get("/client-list", async (req, res) => {
       salesName: "e.name",
       terms: "c.terms",
       creditLimit: "c.creditLimit",
+      over30: "c.over30",
+      over60: "c.over60",
+      over90: "c.over90",
       overdue: "c.overdue",
       hold: "c.hold",
     };

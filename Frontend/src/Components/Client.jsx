@@ -170,6 +170,24 @@ const Client = () => {
                 Credit Limit {getSortIcon("creditLimit")}
               </th>
               <th
+                onClick={() => handleSort("over30")}
+                style={{ cursor: "pointer" }}
+              >
+                Over 30 {getSortIcon("over30")}
+              </th>
+              <th
+                onClick={() => handleSort("over60")}
+                style={{ cursor: "pointer" }}
+              >
+                Over 60 {getSortIcon("over60")}
+              </th>
+              <th
+                onClick={() => handleSort("over90")}
+                style={{ cursor: "pointer" }}
+              >
+                Over 90 {getSortIcon("over90")}
+              </th>
+              <th
                 onClick={() => handleSort("overdue")}
                 style={{ cursor: "pointer" }}
               >
@@ -195,6 +213,9 @@ const Client = () => {
                 <td className="text-center">{client.salesName}</td>
                 <td className="text-center">{client.terms}</td>
                 <td className="text-end">{formatPeso(client.creditLimit)}</td>
+                <td className="text-end">{formatPeso(client.over30)}</td>
+                <td className="text-end">{formatPeso(client.over60)}</td>
+                <td className="text-end">{formatPeso(client.over90)}</td>
                 <td className="text-center">
                   {client.overdue ? formatDate(client.overdue) : ""}
                 </td>
