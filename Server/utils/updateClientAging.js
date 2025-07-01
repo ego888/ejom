@@ -97,7 +97,7 @@ async function updateClientAging() {
     let hold = null;
 
     // ✅ Step 6: Calculate overdue and hold if there's an unpaid order
-    if (oldestDate) {
+    if (oldestDate && (over30 > 0 || over60 > 0 || over90 > 0)) {
       overdue = new Date(oldestDate);
       overdue.setDate(overdue.getDate() + termsDays);
       overdue = overdue.toISOString().slice(0, 19).replace("T", " ");
@@ -114,7 +114,9 @@ async function updateClientAging() {
 
       console.log(`🧾 Setting overdue/hold for client ${clientId}`);
     } else {
-      console.log(`ℹ️ Cleared overdue/hold for client ${clientId}`);
+      console.log(
+        `ℹ️ Cleared overdue/hold for client ${clientId} (no aging amounts or no oldest date)`
+      );
     }
 
     // ✅ Step 7: Update client aging and dates
