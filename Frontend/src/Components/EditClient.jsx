@@ -34,6 +34,7 @@ const EditClient = () => {
     lastPaymentAmount: 0,
     lastPaymentDate: "",
     lastUpdated: "",
+    log: "",
   });
   const [salesPeople, setSalesPeople] = useState([]);
   const [paymentTerms, setPaymentTerms] = useState([]);
@@ -135,6 +136,14 @@ const EditClient = () => {
       setTimeout(() => autoExpandTextarea(notesTextarea), 0);
     }
   }, [client.notes]);
+
+  // Auto-expand log textarea when component loads with data
+  useEffect(() => {
+    const logTextarea = document.getElementById("log");
+    if (logTextarea && client.log) {
+      setTimeout(() => autoExpandTextarea(logTextarea), 0);
+    }
+  }, [client.log]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -559,6 +568,25 @@ const EditClient = () => {
                 tabIndex="-1"
               />
             </div>
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="log">Log:</label>
+            <textarea
+              id="log"
+              name="log"
+              className="form-control"
+              value={client.log || ""}
+              readOnly
+              tabIndex="-1"
+              style={{
+                resize: "none",
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+                backgroundColor: "#f8f9fa",
+                minHeight: "100px",
+              }}
+            ></textarea>
           </div>
 
           <div className="d-flex justify-content-end gap-2">

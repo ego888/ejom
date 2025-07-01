@@ -83,6 +83,7 @@ router.get("/client/:id", verifyUser, async (req, res) => {
         c.lastUpdated,
         c.lastPaymentDate,
         c.lastPaymentAmount,
+        c.log,
         e.name as salesName
       FROM client c 
       LEFT JOIN employee e ON c.salesId = e.id
@@ -304,14 +305,16 @@ router.get("/client-customer", async (req, res) => {
 router.put("/addWeek/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    // Get current hold value
-    const [rows] = await pool.query("SELECT hold FROM client WHERE id = ?", [
-      id,
-    ]);
+    // Get current hold value and log
+    const [rows] = await pool.query(
+      "SELECT hold, log FROM client WHERE id = ?",
+      [id]
+    );
     if (!rows.length) {
       return res.json({ Status: false, Error: "Client not found" });
     }
     const hold = rows[0].hold;
+    const currentLog = rows[0].log || "";
     if (!hold) {
       return res.json({
         Status: false,
@@ -337,8 +340,28 @@ router.put("/addWeek/:id", async (req, res) => {
     const mm = String(newHold.getMonth() + 1).padStart(2, "0");
     const dd = String(newHold.getDate()).padStart(2, "0");
     const newHoldStr = `${yyyy}-${mm}-${dd}`;
-    await pool.query("UPDATE client SET hold = ? WHERE id = ?", [
+
+    // Format old hold date for log
+    const oldHoldDate = new Date(hold);
+    const oldHoldStr = `${oldHoldDate.getFullYear()}-${String(
+      oldHoldDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(oldHoldDate.getDate()).padStart(2, "0")}`;
+
+    // Format current date for log
+    const currentDate = new Date();
+    const currentDateStr = `${currentDate.getFullYear()}-${String(
+      currentDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
+
+    // Create new log entry
+    const newLogEntry = `Extend: ${oldHoldStr} to ${newHoldStr} on ${currentDateStr}`;
+    const updatedLog = currentLog
+      ? `${newLogEntry}\n${currentLog}`
+      : newLogEntry;
+
+    await pool.query("UPDATE client SET hold = ?, log = ? WHERE id = ?", [
       newHoldStr,
+      updatedLog,
       id,
     ]);
     return res.json({ Status: true, newHold: newHoldStr });
