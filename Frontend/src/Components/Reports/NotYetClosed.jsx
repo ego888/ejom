@@ -199,6 +199,7 @@ const NotYetClosed = () => {
               <thead>
                 <tr>
                   <th>Order ID</th>
+                  <th>Client</th>
                   <th>Production Date</th>
                   <th>Prepared By</th>
                   <th>Grand Total</th>
@@ -213,6 +214,7 @@ const NotYetClosed = () => {
                     (row) => `
                   <tr>
                     <td>${row.orderId}</td>
+                    <td>${row.clientName}</td>
                     <td>${
                       row.productionDate
                         ? formatDateForDisplay(row.productionDate)
@@ -235,6 +237,7 @@ const NotYetClosed = () => {
               <tfoot>
                 <tr class="table-active">
                   <td>Total</td>
+                  <td></td>
                   <td></td>
                   <td></td>
                   <td class="text-end">${formatNumber(
@@ -358,6 +361,13 @@ const NotYetClosed = () => {
                     </th>
                     <th
                       className="text-center sortable-header"
+                      onClick={() => handleSort("clientName")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Client {getSortIcon("clientName")}
+                    </th>
+                    <th
+                      className="text-center sortable-header"
                       onClick={() => handleSort("productionDate")}
                       style={{ cursor: "pointer" }}
                     >
@@ -399,6 +409,14 @@ const NotYetClosed = () => {
                     <tr key={index}>
                       <td className="text-center">{row.orderId}</td>
                       <td className="text-center">
+                        {row.clientName}
+                        {row.customerName && (
+                          <div style={{ fontSize: "0.8em", color: "#888" }}>
+                            {row.customerName}
+                          </div>
+                        )}
+                      </td>
+                      <td className="text-center">
                         {row.productionDate
                           ? formatDate(row.productionDate)
                           : ""}
@@ -422,6 +440,7 @@ const NotYetClosed = () => {
                 <tfoot>
                   <tr className="table-active">
                     <td className="text-center">Total</td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td className="text-end">

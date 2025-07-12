@@ -456,9 +456,12 @@ router.get("/not-closed-orders", verifyUser, async (req, res) => {
         o.grandTotal,
         o.amountPaid,
         o.datePaid,
-        e.name AS preparedBy
+        e.name AS preparedBy,
+        c.clientName,
+        c.customerName
       FROM orders o
       LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN client c ON o.clientId = c.id
       WHERE o.status IN ('Prod', 'Finished', 'Delivered', 'Billed')
         AND o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
       ORDER BY o.orderId
