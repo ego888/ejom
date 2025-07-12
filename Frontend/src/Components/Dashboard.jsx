@@ -106,6 +106,11 @@ const CHECK_ORDER_TOTAL = {
   icon: "bi-box-seam",
   text: "Check Order Total",
 };
+const NOT_CLOSE = {
+  path: "not-close",
+  icon: "bi-x-circle",
+  text: "Not Close",
+};
 
 // Submenu for Reports
 const REPORTS = {
@@ -118,6 +123,7 @@ const REPORTS = {
     ARTIST_INCENTIVES,
     SALES_INCENTIVES,
     MATERIAL_USAGE_REPORT,
+    NOT_CLOSE,
     CHECK_ORDER_TOTAL,
   ],
 };

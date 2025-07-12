@@ -440,4 +440,40 @@ router.get("/check-order-total", verifyUser, async (req, res) => {
   }
 });
 
+// Not Yet Closed Orders Report
+router.get("/not-closed-orders", verifyUser, async (req, res) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      return res.json({ Status: false, Error: "Date range is required" });
+    }
+
+    const sql = `
+      SELECT 
+        o.orderId,
+        o.productionDate,
+        o.grandTotal,
+        o.amountPaid,
+        o.datePaid,
+        e.name AS preparedBy
+      FROM orders o
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE o.status IN ('Prod', 'Finished', 'Delivered', 'Billed')
+        AND o.productionDate >= ? AND o.productionDate < DATE_ADD(?, INTERVAL 1 DAY)
+      ORDER BY o.orderId
+    `;
+
+    const [results] = await pool.query(sql, [dateFrom, dateTo]);
+
+    return res.json({
+      Status: true,
+      Result: results,
+    });
+  } catch (error) {
+    console.error("Error in not-closed-orders:", error);
+    return res.json({ Status: false, Error: error.message });
+  }
+});
+
 export { router as ReportRouter };
