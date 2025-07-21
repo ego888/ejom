@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import { ServerIP } from "../config";
 import { handleApiError } from "../utils/handleApiError";
@@ -9,6 +9,8 @@ import { QRCodeSVG } from "qrcode.react";
 function PrintOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const showDescription = location.state?.showDescription;
   const [data, setData] = useState(null);
   const [orderDetails, setOrderDetails] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -307,7 +309,16 @@ function PrintOrder() {
                       className="field-value"
                       style={{ whiteSpace: "pre-wrap", fontSize: "10pt" }}
                     >
-                      {detail.remarks && `Remarks: ${detail.remarks}`}
+                      {showDescription && detail.itemDescription && (
+                        <div>
+                          <strong>Description:</strong> {detail.itemDescription}
+                        </div>
+                      )}
+                      {detail.remarks && (
+                        <div>
+                          <strong>Remarks:</strong> {detail.remarks}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}

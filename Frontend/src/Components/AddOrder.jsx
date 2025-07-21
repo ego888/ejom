@@ -141,6 +141,8 @@ function AddOrder() {
   const [isUpdatingFromAmount, setIsUpdatingFromAmount] = useState(false);
   const [isUpdatingFromPercent, setIsUpdatingFromPercent] = useState(false);
 
+  const [showDescription, setShowDescription] = useState(false);
+
   // Modify the handleDiscountChange function
   const handleDiscountChange = (type, value) => {
     const subtotal = orderDetails.reduce(
@@ -1388,8 +1390,10 @@ function AddOrder() {
             status: "Printed",
           }));
 
-          // Navigate to print view
-          navigate(`/dashboard/print_order/${id}`);
+          // Navigate to print view, passing showDescription in state
+          navigate(`/dashboard/print_order/${id}`, {
+            state: { showDescription },
+          });
         } else {
           setAlert({
             show: true,
@@ -1399,7 +1403,7 @@ function AddOrder() {
           });
         }
       } catch (error) {
-        handleApiError(error, setAlert);
+        handleApiError(error, navigate);
       }
     }
   };
@@ -1806,6 +1810,20 @@ function AddOrder() {
                   <Button variant="save" onClick={handleReOrder}>
                     Reorder
                   </Button>
+                  <div className="d-flex gap-2 align-items-center mb-2">
+                    <label
+                      className="form-check-label"
+                      style={{ userSelect: "none" }}
+                    >
+                      <input
+                        type="checkbox"
+                        className="form-check-input me-1"
+                        checked={showDescription}
+                        onChange={(e) => setShowDescription(e.target.checked)}
+                      />
+                      Description
+                    </label>
+                  </div>
                   <Button variant="print" onClick={handlePrintOrder}>
                     Print JO
                   </Button>
