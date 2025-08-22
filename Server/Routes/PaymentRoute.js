@@ -42,6 +42,39 @@ router.post("/post-payment", verifyUser, async (req, res) => {
       [newPayId, payId]
     );
 
+    // 3. Update orders.amountPaid and datePaid for each affected order
+    const [affectedOrders] = await connection.query(
+      `SELECT DISTINCT orderId 
+       FROM tempPaymentAllocation 
+       WHERE payId = ?`,
+      [payId]
+    );
+
+    for (const order of affectedOrders) {
+      // Get total paid amount for this order
+      const [results] = await connection.query(
+        `SELECT COALESCE(SUM(amountApplied), 0) as totalPaid 
+         FROM paymentJoAllocation 
+         WHERE orderId = ?`,
+        [order.orderId]
+      );
+
+      const totalPaid = parseFloat(results[0].totalPaid) || 0;
+      const formattedTotalPaid = parseFloat(totalPaid.toFixed(2));
+
+      // Update orders table
+      await connection.query(
+        `UPDATE orders 
+         SET amountPaid = ?,
+             datePaid = CASE 
+               WHEN ? > 0 THEN COALESCE(datePaid, NOW()) 
+               ELSE NULL 
+             END
+         WHERE orderId = ?`,
+        [formattedTotalPaid, formattedTotalPaid, order.orderId]
+      );
+    }
+
     // 4. Delete temp records
     await connection.query(
       `DELETE FROM tempPaymentAllocation WHERE payId = ?`,

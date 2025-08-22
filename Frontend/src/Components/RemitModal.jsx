@@ -120,20 +120,33 @@ function RemitModal({ show, onClose }) {
             <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Posted Date</th>
           </tr>
           ${Object.entries(groupedPayments)
-            .map(
-              ([type, typePayments]) => `
-            ${typePayments
-              .map(
-                (payment, index) => `
+            .map(([type, typePayments]) => {
+              // Group payments by payId for subtotals
+              const payIdGroups = {};
+              typePayments.forEach((payment) => {
+                if (!payIdGroups[payment.payId]) {
+                  payIdGroups[payment.payId] = [];
+                }
+                payIdGroups[payment.payId].push(payment);
+              });
+
+              return `
+            ${Object.entries(payIdGroups)
+              .map(([payId, payIdPayments]) => {
+                const rows = payIdPayments
+                  .map(
+                    (payment, index) => `
               <tr style="background-color: ${
                 index % 2 === 0 ? "#ffffff" : "#f8f9fa"
               }; border-top: ${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
-                    ? "2px solid #4d4d4d"
-                    : "1px solid #dee2e6"
-                };">
+                      index === 0 ||
+                      payIdPayments[index - 1].payId !== payment.payId
+                        ? "2px solid #4d4d4d"
+                        : "1px solid #dee2e6"
+                    };">
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? payment.payId
                     : ""
                 }</td>
@@ -150,43 +163,71 @@ function RemitModal({ show, onClose }) {
                   payment.amountApplied
                 )}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? payment.ornum || "N/A"
                     : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? payment.payDate
                     : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? payment.payType
                     : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? formatPeso(payment.amount)
                     : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? payment.payReference || ""
                     : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? payment.transactedBy
                     : ""
                 }</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${
-                  index === 0 || typePayments[index - 1].payId !== payment.payId
+                  index === 0 ||
+                  payIdPayments[index - 1].payId !== payment.payId
                     ? payment.postedDate
                     : ""
                 }</td>
               </tr>
-            `
-              )
+                  `
+                  )
+                  .join("");
+
+                // Add payId subtotal row if there are multiple rows for this payId
+                const subtotalRow =
+                  payIdPayments.length > 1
+                    ? `
+              <tr style="background-color: #f1f3f5;">
+                <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>OR Total</strong></td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
+                  payIdPayments.reduce((s, p) => s + Number(p.grandTotal), 0)
+                )}</strong></td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${formatPeso(
+                  payIdPayments.reduce((s, p) => s + Number(p.amountApplied), 0)
+                )}</strong></td>
+                <td colspan="7"></td>
+              </tr>
+                  `
+                    : "";
+
+                return rows + subtotalRow;
+              })
               .join("")}
             
               <tr style="background-color: #e9ecef;">
@@ -217,8 +258,8 @@ function RemitModal({ show, onClose }) {
                 </td>
                 <td colSpan={2}></td>
               </tr>
-          `
-            )
+          `;
+            })
             .join("")}
           <tr style="background-color: #e9ecef;">
             <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Order Grand Total & Amount Applied</strong></td>
@@ -347,75 +388,113 @@ function RemitModal({ show, onClose }) {
             <tbody>
               {Object.entries(groupedPayments).map(([type, typePayments]) => (
                 <React.Fragment key={type}>
-                  {typePayments.map((payment, index) => (
-                    <tr
-                      key={`${payment.payId}-${payment.orderId}-${index}`}
-                      style={{
-                        borderTop:
-                          index === 0 ||
-                          typePayments[index - 1].payId !== payment.payId
-                            ? "2px solid #4d4d4d"
-                            : "1px solid #dee2e6",
-                      }}
-                    >
-                      <td className="text-center">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? payment.payId
-                          : ""}
-                      </td>
-                      <td className="text-center">{payment.orderId}</td>
-                      <td>{payment.clientName}</td>
-                      <td className="text-end">
-                        {formatPeso(payment.grandTotal)}
-                      </td>
-                      <td className="text-end">
-                        {formatPeso(payment.amountApplied)}
-                      </td>
-                      <td className="text-center">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? payment.ornum || "N/A"
-                          : ""}
-                      </td>
-                      <td className="text-center">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? payment.payDate
-                          : ""}
-                      </td>
-                      <td className="text-center">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? payment.payType
-                          : ""}
-                      </td>
-                      <td className="text-end">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? formatPeso(payment.amount)
-                          : ""}
-                      </td>
-                      <td className="text-center">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? payment.payReference || ""
-                          : ""}
-                      </td>
-                      <td className="text-center">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? payment.transactedBy
-                          : ""}
-                      </td>
-                      <td className="text-center">
-                        {index === 0 ||
-                        typePayments[index - 1].payId !== payment.payId
-                          ? payment.postedDate
-                          : ""}
-                      </td>
-                    </tr>
-                  ))}
+                  {typePayments.map((payment, index) => {
+                    const isGroupEnd =
+                      index === typePayments.length - 1 ||
+                      typePayments[index + 1].payId !== payment.payId;
+                    let groupGrandTotal = 0;
+                    let groupAmountApplied = 0;
+                    let groupCount = 0;
+                    if (isGroupEnd) {
+                      for (
+                        let j = index;
+                        j >= 0 && typePayments[j].payId === payment.payId;
+                        j--
+                      ) {
+                        groupGrandTotal +=
+                          Number(typePayments[j].grandTotal) || 0;
+                        groupAmountApplied +=
+                          Number(typePayments[j].amountApplied) || 0;
+                        groupCount += 1;
+                      }
+                    }
+                    return (
+                      <React.Fragment
+                        key={`${payment.payId}-${payment.orderId}-${index}`}
+                      >
+                        <tr
+                          style={{
+                            borderTop:
+                              index === 0 ||
+                              typePayments[index - 1].payId !== payment.payId
+                                ? "2px solid #4d4d4d"
+                                : "1px solid #dee2e6",
+                          }}
+                        >
+                          <td className="text-center">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? payment.payId
+                              : ""}
+                          </td>
+                          <td className="text-center">{payment.orderId}</td>
+                          <td>{payment.clientName}</td>
+                          <td className="text-end">
+                            {formatPeso(payment.grandTotal)}
+                          </td>
+                          <td className="text-end">
+                            {formatPeso(payment.amountApplied)}
+                          </td>
+                          <td className="text-center">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? payment.ornum || "N/A"
+                              : ""}
+                          </td>
+                          <td className="text-center">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? payment.payDate
+                              : ""}
+                          </td>
+                          <td className="text-center">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? payment.payType
+                              : ""}
+                          </td>
+                          <td className="text-end">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? formatPeso(payment.amount)
+                              : ""}
+                          </td>
+                          <td className="text-center">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? payment.payReference || ""
+                              : ""}
+                          </td>
+                          <td className="text-center">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? payment.transactedBy
+                              : ""}
+                          </td>
+                          <td className="text-center">
+                            {index === 0 ||
+                            typePayments[index - 1].payId !== payment.payId
+                              ? payment.postedDate
+                              : ""}
+                          </td>
+                        </tr>
+                        {isGroupEnd && groupCount > 1 && (
+                          <tr className="table-light">
+                            <td colSpan="3" className="text-end">
+                              <strong>{`OR Total`}</strong>
+                            </td>
+                            <td className="text-end">
+                              <strong>{formatPeso(groupGrandTotal)}</strong>
+                            </td>
+                            <td className="text-end">
+                              <strong>{formatPeso(groupAmountApplied)}</strong>
+                            </td>
+                            <td colSpan={showDetails ? 7 : 7}></td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                   <tr className="table-secondary">
                     <td colSpan="3" className="text-end">
                       <strong>Order Total & Amount Applied</strong>

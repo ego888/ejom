@@ -636,18 +636,31 @@ function Prod() {
           `Payment of ${formatPeso(result.amount)} posted successfully`
         );
         setShowSuccessModal(true);
+        // Close the allocation modal
+        setShowAllocationModal(false);
+        // Refresh the data to reflect the new state
+        await fetchOrderData();
+        // Reset payment form state
+        setPaymentInfo({
+          clientName: "",
+          payDate: new Date().toISOString().split("T")[0],
+          payType: "CASH",
+          amount: "",
+          payReference: "",
+          ornum: "",
+        });
+        setOrderPayments({});
+        setCheckPay(new Set());
         setTempPayId(null);
+        setRemainingAmount(0);
+        setAllocatedAmount(0);
+        setAllocationCount(0);
         return;
       }
 
       // Check if total applied matches header amount
-      const totalApplied = Object.values(orderPayments).reduce(
-        (sum, p) => sum + (p.payment || 0),
-        0
-      );
-
-      // Convert both to numbers
-      const applied = Number(totalApplied);
+      // Use allocatedAmount from database instead of calculating from orderPayments state
+      const applied = Number(allocatedAmount);
       const amount = Number(paymentInfo.amount);
 
       // Only show warning if applied amount is less than payment amount
@@ -707,10 +720,23 @@ function Prod() {
       if (response.data.Status) {
         setSuccessMessage("Payment posted successfully");
         setShowSuccessModal(true);
-        setTimeout(() => {
-          setShowSuccessModal(false);
-          navigate("/payments");
-        }, 2000);
+        // Refresh the data to reflect the new state
+        await fetchOrderData();
+        // Reset payment form state
+        setPaymentInfo({
+          clientName: "",
+          payDate: new Date().toISOString().split("T")[0],
+          payType: "CASH",
+          amount: "",
+          payReference: "",
+          ornum: "",
+        });
+        setOrderPayments({});
+        setCheckPay(new Set());
+        setTempPayId(null);
+        setRemainingAmount(0);
+        setAllocatedAmount(0);
+        setAllocationCount(0);
       } else {
         setError(response.data.Error || "Failed to post payment");
       }
@@ -1522,6 +1548,19 @@ function Prod() {
           setAlert((prev) => ({ ...prev, show: false }));
         }}
       />
+      <ModalAlert
+        show={showSuccessModal}
+        title="Success"
+        message={successMessage}
+        type="alert"
+        showCancelButton={true}
+        onClose={() => setShowSuccessModal(false)}
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          navigate("/dashboard/payment");
+        }}
+        confirmText="Ok"
+      />
       <Modal
         variant="tooltip"
         show={showTooltip && !canPost()}
@@ -1529,6 +1568,15 @@ function Prod() {
       >
         <div className="text-center">{getTooltipMessage()}</div>
       </Modal>
+      <ModalAlert
+        show={showModal}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        showCancelButton={modalConfig.showCancelButton}
+        onClose={() => setShowModal(false)}
+        onConfirm={modalConfig.onConfirm}
+      />
       <PaymentAllocationModal
         show={showAllocationModal}
         onClose={() => setShowAllocationModal(false)}
