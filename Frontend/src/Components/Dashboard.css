@@ -256,3 +256,42 @@
   margin-bottom: 5px;
   font-weight: bold;
 }
+
+/* Responsive: mobile sidebar behavior */
+@media (max-width: 576px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+  .sidebar-header {
+    display: none;
+  }
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 200px; /* wider touch target on mobile */
+    z-index: 200; /* above overlay */
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-nav-link {
+    width: 200px;
+    padding: 0.5rem 0.75rem;
+  }
+  /* Ensure labels are visible when sidebar is open */
+  .sidebar.open .sidebar-nav-link span {
+    display: inline !important;
+  }
+  /* Mobile toggle button spacing */
+  .mobile-menu-toggle {
+    margin: 0.25rem 0.5rem;
+  }
+  /* Overlay behind sidebar */
+  .mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    z-index: 150; /* below sidebar but above content */
+  }
+}

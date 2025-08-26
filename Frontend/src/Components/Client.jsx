@@ -148,24 +148,27 @@ const Client = () => {
               >
                 Customer Name {getSortIcon("customerName")}
               </th>
-              <th>Contact</th>
-              <th>Tel No</th>
-              <th>Email</th>
+              <th className="d-none d-sm-table-cell">Contact</th>
+              <th className="d-none d-sm-table-cell">Tel No</th>
+              <th className="d-none d-sm-table-cell">Email</th>
               <th
                 onClick={() => handleSort("salesName")}
                 style={{ cursor: "pointer" }}
+                className="d-none d-sm-table-cell"
               >
                 Sales Person {getSortIcon("salesName")}
               </th>
               <th
                 onClick={() => handleSort("terms")}
                 style={{ cursor: "pointer" }}
+                className="d-none d-sm-table-cell"
               >
                 Terms {getSortIcon("terms")}
               </th>
               <th
                 onClick={() => handleSort("creditLimit")}
                 style={{ cursor: "pointer" }}
+                className="d-none d-sm-table-cell"
               >
                 Credit Limit {getSortIcon("creditLimit")}
               </th>
@@ -190,12 +193,14 @@ const Client = () => {
               <th
                 onClick={() => handleSort("overdue")}
                 style={{ cursor: "pointer" }}
+                className="d-none d-sm-table-cell"
               >
                 Overdue {getSortIcon("overdue")}
               </th>
               <th
                 onClick={() => handleSort("hold")}
                 style={{ cursor: "pointer" }}
+                className="d-none d-sm-table-cell"
               >
                 Hold {getSortIcon("hold")}
               </th>
@@ -221,21 +226,25 @@ const Client = () => {
                 <tr key={client.id} className={rowClass}>
                   <td>{client.clientName}</td>
                   <td>{client.customerName}</td>
-                  <td>{client.contact}</td>
-                  <td>{client.telNo}</td>
-                  <td>{client.email}</td>
-                  <td className="text-center">{client.salesName}</td>
-                  <td className="text-center">{client.terms}</td>
-                  <td className="text-end">
+                  <td className="d-none d-sm-table-cell">{client.contact}</td>
+                  <td className="d-none d-sm-table-cell">{client.telNo}</td>
+                  <td className="d-none d-sm-table-cell">{client.email}</td>
+                  <td className="text-center d-none d-sm-table-cell">
+                    {client.salesName}
+                  </td>
+                  <td className="text-center d-none d-sm-table-cell">
+                    {client.terms}
+                  </td>
+                  <td className="text-end d-none d-sm-table-cell">
                     {formatPesoZ(client.creditLimit)}
                   </td>
                   <td className="text-end">{formatPesoZ(client.over30)}</td>
                   <td className="text-end">{formatPesoZ(client.over60)}</td>
                   <td className="text-end">{formatPesoZ(client.over90)}</td>
-                  <td className="text-center">
+                  <td className="text-center d-none d-sm-table-cell">
                     {client.overdue ? formatDate(client.overdue) : ""}
                   </td>
-                  <td className="text-center">
+                  <td className="text-center d-none d-sm-table-cell">
                     {client.hold ? formatDate(client.hold) : ""}
                   </td>
                   <td>
@@ -255,6 +264,7 @@ const Client = () => {
                             iconOnly
                             size="sm"
                             onClick={() => handleDelete(client.id)}
+                            className="d-none d-sm-table-cell"
                           />
                           <Button
                             variant="view"

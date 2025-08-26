@@ -182,6 +182,7 @@ const Dashboard = () => {
   const [openSubmenu, setOpenSubmenu] = useState("");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -358,13 +359,24 @@ const Dashboard = () => {
     setOpenSubmenu(openSubmenu === path ? "" : path);
   };
 
+  // Close mobile menu on navigation (mobile only)
+  const handleNavClick = () => {
+    if (window.innerWidth <= 576) {
+      setMobileMenuOpen(false);
+    }
+  };
+
   // Get the filtered navigation items based on permissions
   const visibleNavItems = getVisibleMenuItems();
 
   return (
     <div className="container-fluid">
       <div className="row flex-nowrap">
-        <div className="col-auto col-md-2 col-xl-1 px-0 sidebar">
+        <div
+          className={`col-auto col-md-2 col-xl-1 px-0 sidebar ${
+            mobileMenuOpen ? "open" : ""
+          }`}
+        >
           <div className="d-flex flex-column h-100">
             <div className="sidebar-header position-sticky top-0 bg-white">
               <img src={logo} alt="Company Logo" className="img-fluid mb-2" />
@@ -417,6 +429,7 @@ const Dashboard = () => {
                                 className={({ isActive }) =>
                                   `sidebar-nav-link ${isActive ? "active" : ""}`
                                 }
+                                onClick={handleNavClick}
                               >
                                 <i className={`bi ${subItem.icon}`}></i>
                                 <span className="d-none d-sm-inline">
@@ -440,6 +453,7 @@ const Dashboard = () => {
                           `sidebar-nav-link ${isActive ? "active" : ""}`
                         }
                         end={item.path === ""}
+                        onClick={handleNavClick}
                       >
                         <i className={`bi ${item.icon}`}></i>
                         <span className="d-none d-sm-inline">{item.text}</span>
@@ -451,7 +465,10 @@ const Dashboard = () => {
                   <a
                     href="#"
                     className="sidebar-nav-link"
-                    onClick={handleLogout}
+                    onClick={() => {
+                      handleLogout();
+                      handleNavClick();
+                    }}
                   >
                     <i className="bi-power"></i>
                     <span className="d-none d-sm-inline">Logout</span>
@@ -461,7 +478,22 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        {mobileMenuOpen && (
+          <div
+            className="mobile-overlay d-sm-none"
+            onClick={() => setMobileMenuOpen(false)}
+          ></div>
+        )}
         <div className="col p-0 main-content">
+          {/* Mobile menu toggle button */}
+          <button
+            type="button"
+            className="btn btn-link mobile-menu-toggle d-sm-none"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation"
+          >
+            <i className="bi bi-list" style={{ fontSize: "1.6rem" }}></i>
+          </button>
           <Outlet />
         </div>
       </div>
