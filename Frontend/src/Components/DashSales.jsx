@@ -321,21 +321,6 @@ const DashSales = () => {
             </h5>
             <SalesGauge
               value={(() => {
-                console.log(
-                  "Total monthly sales value:",
-                  monthlySales.totalMonthlySales
-                );
-                console.log("monthlySales raw:", monthlySales);
-                console.log(
-                  "typeof totalMonthlySales:",
-                  typeof monthlySales?.totalMonthlySales
-                );
-                console.log(
-                  "sanitized value:",
-                  monthlySales?.totalMonthlySales
-                );
-
-                console.log("Is NaN?", isNaN(monthlySales.totalMonthlySales));
                 return isNaN(monthlySales.totalMonthlySales)
                   ? 0
                   : monthlySales.totalMonthlySales;
