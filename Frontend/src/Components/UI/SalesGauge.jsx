@@ -67,8 +67,10 @@ const SalesGauge = ({
   };
 
   // Calculate the percentage and angle for the needle
+  const safeValue = isNaN(animatedValue) ? 0 : animatedValue;
+  const safeMaxValue = isNaN(maxValue) || maxValue <= 0 ? 1 : maxValue;
   const percentage = Math.min(
-    Math.max((animatedValue / maxValue) * 100, 0),
+    Math.max((safeValue / safeMaxValue) * 100, 0),
     100
   );
   const angle = percentage * 1.8 - 90; // Convert percentage to angle (-90 to 90 degrees)
@@ -86,6 +88,11 @@ const SalesGauge = ({
 
   // Format value to show K or M
   const formatValueWithUnit = (num) => {
+    // Handle NaN, null, undefined, or invalid numbers
+    if (isNaN(num) || num === null || num === undefined) {
+      return "0";
+    }
+
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + "M";
     } else if (num >= 1000) {
@@ -209,10 +216,15 @@ const SalesGauge = ({
   };
 
   // Format the displayed value with ₱ symbol and K/M suffix
-  const formattedValue = `${formatPeso(formatValueWithUnit(value))}`;
+  const formattedValue = formatPeso(value);
 
   // Calculate percentage for display
-  const percentageText = `${Math.round((value / maxValue) * 100)}% of target`;
+  const safeValueForPercentage = isNaN(value) ? 0 : value;
+  const safeMaxValueForPercentage =
+    isNaN(maxValue) || maxValue <= 0 ? 1 : maxValue;
+  const percentageText = `${Math.round(
+    (safeValueForPercentage / safeMaxValueForPercentage) * 100
+  )}% of target`;
 
   return (
     <div

@@ -3,8 +3,10 @@ import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import { jwtDecode } from "jwt-decode";
 import { Link } from "react-router-dom";
-import { formatPeso } from "../utils/orderUtils";
+import { formatNumber } from "../utils/orderUtils";
 import SalesGauge from "./UI/SalesGauge";
+import SalesLineChart from "./UI/SalesLineChart";
+import YearMonthSelector from "./UI/YearMonthSelector";
 import "./Dashboard.css";
 
 const DashSales = () => {
@@ -23,6 +25,9 @@ const DashSales = () => {
     userMonthlySales: 0,
     totalMonthlySales: 0,
   });
+  const [salesLineData, setSalesLineData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [userPermissions, setUserPermissions] = useState({
     isAdmin: false,
     isSales: false,
@@ -50,7 +55,22 @@ const DashSales = () => {
     fetchRecentOrders();
     fetchOverdueOrders();
     fetchMonthlySales();
+    fetchSalesLineData();
   }, []);
+
+  // Refetch data when year/month changes
+  useEffect(() => {
+    fetchSalesLineData();
+    fetchSelectedMonthTotalSales();
+  }, [selectedYear, selectedMonth]);
+
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+  };
+
+  const handleMonthChange = (month) => {
+    setSelectedMonth(month);
+  };
 
   const fetchOrderStats = async () => {
     try {
@@ -120,6 +140,66 @@ const DashSales = () => {
     }
   };
 
+  const fetchSelectedMonthTotalSales = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${ServerIP}/auth/sales_daily_cumulative`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            year: selectedYear,
+            month: selectedMonth,
+          },
+        }
+      );
+
+      if (response.data.Status) {
+        // Calculate total sales from the line chart data
+        const totalSales = response.data.Result.dailySalesData.reduce(
+          (total, employee) => {
+            const lastDay = employee.data[employee.data.length - 1];
+            const employeeTotal = lastDay
+              ? parseFloat(lastDay.cumulativeSales) || 0
+              : 0;
+            return total + employeeTotal;
+          },
+          0
+        );
+
+        setMonthlySales((prev) => ({
+          ...prev,
+          totalMonthlySales: totalSales,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching selected month total sales:", error);
+    }
+  };
+
+  const fetchSalesLineData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${ServerIP}/auth/sales_daily_cumulative`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            year: selectedYear,
+            month: selectedMonth,
+          },
+        }
+      );
+
+      if (response.data.Status) {
+        setSalesLineData(response.data.Result.dailySalesData || []);
+      }
+    } catch (error) {
+      console.error("Error fetching sales line data:", error);
+      setSalesLineData([]);
+    }
+  };
+
   // Function to format date
   const formatDate = (dateString) => {
     if (!dateString) return "-";
@@ -132,8 +212,8 @@ const DashSales = () => {
     return Math.min(Math.max((value / maxValue) * 100, 0), 100);
   };
 
-  // Get current month name
-  const getCurrentMonth = () => {
+  // Get selected month name
+  const getSelectedMonthName = () => {
     const months = [
       "January",
       "February",
@@ -148,7 +228,7 @@ const DashSales = () => {
       "November",
       "December",
     ];
-    return months[new Date().getMonth()];
+    return months[selectedMonth - 1];
   };
 
   return (
@@ -206,33 +286,60 @@ const DashSales = () => {
         </div>
       </div>
 
-      {/* Speedometer Charts for Monthly Sales */}
+      {/* Sales Performance Charts */}
       <div className="row mb-4">
         <div className="col-12">
-          <h4 className="mb-3">{getCurrentMonth()} Sales Performance</h4>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="mb-0">Sales Performance</h4>
+            <YearMonthSelector
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+              onYearChange={handleYearChange}
+              onMonthChange={handleMonthChange}
+            />
+          </div>
         </div>
 
-        {/* User Monthly Sales Chart */}
+        {/* Sales Performance Line Chart */}
         <div className="col-md-6">
-          <div className="dashboard-section p-4" style={{ minHeight: "250px" }}>
-            <h5 className="text-center mb-3">Your Monthly Sales</h5>
-            <SalesGauge
-              value={monthlySales.userMonthlySales}
-              maxValue={800000}
-              targetValue={465000}
-              title="Target: ₱800K"
-              size={250}
-              segments={8}
+          <div className="dashboard-section p-4" style={{ minHeight: "400px" }}>
+            <h5 className="text-center mb-3">Sales Team Performance</h5>
+            <SalesLineChart
+              data={salesLineData}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              size={550}
             />
           </div>
         </div>
 
         {/* Total Monthly Sales Chart */}
         <div className="col-md-6">
-          <div className="dashboard-section p-4" style={{ minHeight: "250px" }}>
-            <h5 className="text-center mb-3">Total Monthly Sales</h5>
+          <div className="dashboard-section p-4" style={{ minHeight: "400px" }}>
+            <h5 className="text-center mb-3">
+              Total Monthly Sales - {getSelectedMonthName()} {selectedYear}
+            </h5>
             <SalesGauge
-              value={monthlySales.totalMonthlySales}
+              value={(() => {
+                console.log(
+                  "Total monthly sales value:",
+                  monthlySales.totalMonthlySales
+                );
+                console.log("monthlySales raw:", monthlySales);
+                console.log(
+                  "typeof totalMonthlySales:",
+                  typeof monthlySales?.totalMonthlySales
+                );
+                console.log(
+                  "sanitized value:",
+                  monthlySales?.totalMonthlySales
+                );
+
+                console.log("Is NaN?", isNaN(monthlySales.totalMonthlySales));
+                return isNaN(monthlySales.totalMonthlySales)
+                  ? 0
+                  : monthlySales.totalMonthlySales;
+              })()}
               maxValue={2500000}
               targetValue={2200000}
               title="Target: ₱2.5M"

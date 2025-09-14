@@ -2086,6 +2086,100 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
   }
 });
 
+// Route to get daily cumulative sales data for all active sales employees
+router.get("/sales_daily_cumulative", verifyUser, async (req, res) => {
+  try {
+    const { year, month } = req.query;
+
+    // Use provided year/month or current month
+    const currentDate = new Date();
+    const targetYear = year ? parseInt(year) : currentDate.getFullYear();
+    const targetMonth = month ? parseInt(month) - 1 : currentDate.getMonth(); // month is 0-indexed in JS
+
+    const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
+    const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
+
+    // Format date to YYYY-MM-DD for MySQL compatibility
+    const formatDate = (date) =>
+      date.getFullYear() +
+      "-" +
+      String(date.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(date.getDate()).padStart(2, "0");
+
+    const formattedFirstDay = formatDate(firstDayOfMonth);
+    const formattedLastDay = formatDate(lastDayOfMonth);
+
+    // Get all active sales employees
+    const salesEmployeesSql = `
+      SELECT id, name 
+      FROM employee 
+      WHERE sales = 1 AND active = 1 
+      ORDER BY name
+    `;
+
+    const [employees] = await pool.query(salesEmployeesSql);
+
+    // Get daily cumulative sales for each employee
+    const dailySalesData = [];
+
+    for (const employee of employees) {
+      const sql = `
+        SELECT 
+          DATE(o.productionDate) as saleDate,
+          COALESCE(SUM(o.grandTotal), 0) as dailySales
+        FROM orders o
+        WHERE o.preparedBy = ? 
+          AND o.productionDate >= ? 
+          AND o.productionDate <= ?
+          AND o.status IN ('Prod', 'Finished', 'Delivered', 'Billed', 'Closed')
+        GROUP BY DATE(o.productionDate)
+        ORDER BY saleDate
+      `;
+
+      const [dailySales] = await pool.query(sql, [
+        employee.id,
+        formattedFirstDay,
+        formattedLastDay,
+      ]);
+
+      // Calculate cumulative sales
+      let cumulativeSales = 0;
+      const cumulativeData = dailySales.map((day) => {
+        cumulativeSales += parseFloat(day.dailySales) || 0;
+        return {
+          date: day.saleDate,
+          dailySales: parseFloat(day.dailySales) || 0,
+          cumulativeSales: parseFloat(cumulativeSales) || 0,
+        };
+      });
+
+      dailySalesData.push({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        data: cumulativeData,
+      });
+    }
+
+    return res.json({
+      Status: true,
+      Result: {
+        dailySalesData,
+        month: targetMonth + 1,
+        year: targetYear,
+        firstDay: formattedFirstDay,
+        lastDay: formattedLastDay,
+      },
+    });
+  } catch (err) {
+    console.log("Query Error:", err);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch daily cumulative sales data",
+    });
+  }
+});
+
 router.get("/recent_orders", async (req, res) => {
   try {
     const sql = `
