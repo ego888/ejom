@@ -94,7 +94,7 @@ const DTRBatchList = ({
                   </td>
                   <td className="text-center">{batch.fileCount || 0}</td>
                   <td className="text-center">{batch.entryCount || 0}</td>
-                  <td>{formatDateTime(batch.createdAt || batch.created_at)}</td>
+                  <td>{formatDateTime(batch.createdAt)}</td>
                   <td className="text-center">
                     <div className="d-flex justify-content-center gap-2 flex-wrap">
                       <Button
@@ -105,17 +105,6 @@ const DTRBatchList = ({
                       >
                         <i className="bi bi-plus-circle"></i> Add Files
                       </Button>
-                      {/* <Button
-                        variant="view"
-                        size="sm"
-                        onClick={() => {
-                          console.log("Selecting batch for report:", batch);
-                          onBatchSelect(batch);
-                        }}
-                        title="View summary report"
-                      >
-                        <i className="bi bi-file-earmark-text"></i> Report
-                      </Button> */}
                       <Button
                         variant="view"
                         size="sm"
@@ -124,22 +113,24 @@ const DTRBatchList = ({
                       >
                         <i className="bi bi-table"></i> View Batch
                       </Button>
-                      {/* <Button
-                        variant="edit"
-                        size="sm"
-                        onClick={() => onExportBatch(batch)}
-                        title="Export batch data as CSV"
-                      >
-                        <i className="bi bi-download"></i> Export
-                      </Button> */}
-                      <Button
-                        variant="delete"
-                        size="sm"
-                        onClick={() => onDeleteBatch(batch)}
-                        title="Delete this batch"
-                      >
-                        <i className="bi bi-trash"></i>
-                      </Button>
+                      {(() => {
+                        const createdAt = new Date(batch.createdAt); // ensure Date object
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                        if (createdAt > oneMonthAgo) {
+                          return (
+                            <Button
+                              variant="delete"
+                              size="sm"
+                              onClick={() => onDeleteBatch(batch)}
+                              title="Delete this batch"
+                            >
+                              <i className="bi bi-trash"></i>
+                            </Button>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </td>
                 </tr>
