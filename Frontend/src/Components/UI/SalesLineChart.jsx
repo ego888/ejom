@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { formatPeso } from "../../utils/orderUtils";
+import Modal from "./Modal";
 
 const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
   const [animatedData, setAnimatedData] = useState([]);
@@ -8,6 +9,12 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
   const animationRef = useRef(null);
   const startTimeRef = useRef(null);
   const animationDuration = 3000; // 3 seconds
+  const containerRef = useRef(null);
+
+  // Local tooltip state
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [tooltipDetail, setTooltipDetail] = useState(null);
 
   // Color palette for different sales staff
   const colors = [
@@ -202,7 +209,10 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
   }
 
   return (
-    <div style={{ width: size, height: size * 0.6 + 60 }}>
+    <div
+      ref={containerRef}
+      style={{ width: size, height: size * 0.6 + 60, position: "relative" }}
+    >
       <svg width={size} height={size * 0.6} style={{ overflow: "visible" }}>
         {/* Grid lines */}
         {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
@@ -271,6 +281,29 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
                   r="4"
                   fill={colors[employeeIndex % colors.length]}
                   opacity={day.showDot !== false ? 1 : 0}
+                  onMouseEnter={(e) => {
+                    const rect =
+                      containerRef.current?.getBoundingClientRect?.();
+                    const x = (e.clientX || 0) - (rect?.left || 0) + 10;
+                    const y = (e.clientY || 0) - (rect?.top || 0) + 10;
+                    setTooltipDetail({
+                      total: parseFloat(day.cumulativeSales) || 0,
+                      employeeName: employee.employeeName,
+                      date: day.date,
+                    });
+                    setTooltipPosition({ x, y });
+                    setShowTooltip(true);
+                  }}
+                  onMouseMove={(e) => {
+                    const rect =
+                      containerRef.current?.getBoundingClientRect?.();
+                    const x = (e.clientX || 0) - (rect?.left || 0) + 10;
+                    const y = (e.clientY || 0) - (rect?.top || 0) + 10;
+                    setTooltipPosition({ x, y });
+                  }}
+                  onMouseLeave={() => {
+                    setShowTooltip(false);
+                  }}
                 />
               ))}
             </g>
@@ -301,6 +334,17 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
           ))}
         </g>
       </svg>
+
+      {/* Tooltip for data points */}
+      <Modal
+        variant="tooltip"
+        show={showTooltip && !!tooltipDetail}
+        position={tooltipPosition}
+      >
+        <div className="text-center">
+          {formatPeso(tooltipDetail?.total || 0)}
+        </div>
+      </Modal>
 
       {/* Month/Year display */}
       <div className="text-center mt-1">
