@@ -289,7 +289,7 @@ const DashSales = () => {
       {/* Sales Performance Charts */}
       <div className="row mb-4">
         <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="d-flex justify-content-between align-items-center mb-1">
             <h4 className="mb-0">Sales Performance</h4>
             <YearMonthSelector
               selectedYear={selectedYear}
@@ -302,8 +302,7 @@ const DashSales = () => {
 
         {/* Sales Performance Line Chart */}
         <div className="col-md-6">
-          <div className="dashboard-section p-4" style={{ minHeight: "400px" }}>
-            <h5 className="text-center mb-3">Sales Team Performance</h5>
+          <div className="dashboard-section p-4" style={{ minHeight: "380px" }}>
             <SalesLineChart
               data={salesLineData}
               selectedMonth={selectedMonth}
@@ -316,7 +315,7 @@ const DashSales = () => {
         {/* Total Monthly Sales Chart */}
         <div className="col-md-6">
           <div className="dashboard-section p-4" style={{ minHeight: "400px" }}>
-            <h5 className="text-center mb-3">
+            <h5 className="text-center mt-5 mb-5">
               Total Monthly Sales - {getSelectedMonthName()} {selectedYear}
             </h5>
             <SalesGauge

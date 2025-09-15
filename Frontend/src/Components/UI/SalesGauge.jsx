@@ -231,7 +231,7 @@ const SalesGauge = ({
       className="gauge-container"
       style={{
         width: size * 2, // Increased to make room for text on the right
-        height: size * 0.75, // Reduced from 0.7 to prevent overflow
+        height: size * 0.6, // Reduced from 0.7 to prevent overflow
         margin: "0 auto",
         position: "relative",
       }}
