@@ -211,7 +211,12 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
   return (
     <div
       ref={containerRef}
-      style={{ width: size, height: size * 0.6 + 35, position: "relative" }}
+      style={{
+        width: size,
+        height: size * 0.6 + 35,
+        position: "relative",
+        margin: "0 auto",
+      }}
     >
       <svg width={size} height={size * 0.6} style={{ overflow: "visible" }}>
         {/* Grid lines */}
