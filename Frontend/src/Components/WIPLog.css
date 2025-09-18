@@ -2,31 +2,8 @@
   max-width: 300px;
   margin: 0 auto;
 }
-/*
-.card {
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-  */
 
 .card-title {
-  color: white;
+  color: grey;
   margin-bottom: 1.5rem;
 }
-
-/*
-.input-group .form-control {
-  border-right: none;
-}
-
-.input-group .btn {
-  border-left: none;
-}
-
-.alert {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  min-width: 300px;
-  z-index: 1000;
-} */
