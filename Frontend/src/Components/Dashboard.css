@@ -233,22 +233,29 @@
   text-decoration: none;
 }
 
-.recent-prod-list li {
-  background-color: transparent;
+.recent-prod-table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #6c757d;
+  border-top: none;
 }
 
-.recent-prod-list li:hover,
-.recent-prod-list li:focus-within {
-  background-color: transparent;
+.recent-prod-table td {
+  font-size: 0.9rem;
+  border-color: #f1f3f5;
 }
 
-.recent-prod-item {
-  background-color: transparent !important;
+.recent-prod-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
-.recent-prod-item:hover,
-.recent-prod-item:focus-within {
-  background-color: transparent !important;
+.recent-prod-client {
+  gap: 0.5rem;
+}
+
+.recent-prod-project {
+  margin-top: 0.25rem;
 }
 
 /* Speedometer Gauge Styles */

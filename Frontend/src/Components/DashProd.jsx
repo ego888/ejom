@@ -91,7 +91,7 @@ const DashProd = () => {
           headers: { Authorization: `Bearer ${token}` },
           params: {
             page: 1,
-            limit: 5,
+            limit: 9999,
             statuses: status,
             sortBy: "productionDate",
             sortDirection: "asc",
@@ -197,41 +197,54 @@ const DashProd = () => {
                         <span className={`status-badge ${status}`}>{status}</span>
                       </div>
                       {orders.length ? (
-                        <ul className="list-unstyled mb-0 recent-prod-list">
-                          {orders.map((production, index) => {
-                            const isLast = index === orders.length - 1;
-                            const itemClass = isLast
-                              ? "recent-prod-item small"
-                              : "recent-prod-item small pb-2 mb-2 border-bottom";
-                            const orderLink = `/dashboard/prod/view/${production.orderID}`;
-
-                            return (
-                              <li key={production.orderID} className={itemClass}>
-                                <div className="d-flex justify-content-between align-items-start">
-                                  <Link to={orderLink}>{production.orderID}</Link>
-                                  <div className="text-end small">
-                                    <span className="d-block text-muted">
+                        <div className="table-responsive">
+                          <table className="table table-sm align-middle recent-prod-table">
+                            <thead>
+                              <tr>
+                                <th scope="col">Order #</th>
+                                <th scope="col">Client / Sales / Project</th>
+                                <th scope="col" className="text-end">
+                                  Production Date
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {orders.map((production) => {
+                                const orderLink = `/dashboard/prod/view/${production.orderID}`;
+                                return (
+                                  <tr key={production.orderID}>
+                                    <td>
+                                        <Link
+                                          to={orderLink}
+                                          className="recent-prod-link"
+                                        >
+                                          {production.orderID}
+                                        </Link>
+                                    </td>
+                                    <td>
+                                      <div className="d-flex justify-content-between align-items-center recent-prod-client">
+                                        <span className="text-truncate">
+                                          {production.clientName || "-"}
+                                        </span>
+                                        <span className="text-muted small ms-2 text-truncate">
+                                          {production.salesName || "-"}
+                                        </span>
+                                      </div>
+                                      <div className="text-muted small text-truncate recent-prod-project">
+                                        {production.projectName || "-"}
+                                      </div>
+                                    </td>
+                                    <td className="text-end text-muted small text-nowrap">
                                       {formatDate(
                                         getProductionDisplayDate(production)
                                       )}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="fw-semibold text-truncate mt-1 d-flex justify-content-between align-items-center">
-                                  <span className="text-truncate">
-                                    {production.clientName || "-"}
-                                  </span>
-                                  <span className="text-muted ms-2 text-truncate">
-                                    {production.salesName || "-"}
-                                  </span>
-                                </div>
-                                <div className="text-muted text-truncate">
-                                  {production.projectName || "-"}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       ) : (
                         <p className="text-muted small mb-0">
                           No orders in this stage
