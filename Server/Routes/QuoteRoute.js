@@ -816,9 +816,13 @@ router.post("/quote-makeJO", verifyUser, async (req, res) => {
       // 3. Create order data from quote
       const currentDate = new Date().toISOString().slice(0, 10);
 
+      const cleanProjectName = quoteData.projectName
+        ? quoteData.projectName.replace(/\(Requote\)/gi, "").trim()
+        : quoteData.projectName;
+
       const orderData = {
         clientId: quoteData.clientId,
-        projectName: quoteData.projectName,
+        projectName: cleanProjectName,
         preparedBy: quoteData.preparedBy,
         orderDate: currentDate,
         orderedBy: quoteData.orderedBy,
