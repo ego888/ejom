@@ -170,10 +170,10 @@ router.get("/client-list", async (req, res) => {
          SELECT 
            clientId,
            SUM(CASE WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered') 
-                    THEN grandTotal - IFNULL(amountPaid, 0) 
+                    THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
                     ELSE 0 END) AS productionTotal,
            SUM(CASE WHEN status = 'Billed'
-                    THEN grandTotal - IFNULL(amountPaid, 0) 
+                    THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
                     ELSE 0 END) AS billedTotal
          FROM orders
          GROUP BY clientId
