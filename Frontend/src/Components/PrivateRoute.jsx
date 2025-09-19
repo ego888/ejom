@@ -67,6 +67,7 @@ const checkRouteAccess = (route, permissions) => {
     case "print_production":
     case "prod_print_dr":
     case "prod_print_one_dr":
+    case "dashprod":
       return permissions.isProduction;
     case "wiplog":
       return permissions.isProduction || permissions.isOperator;

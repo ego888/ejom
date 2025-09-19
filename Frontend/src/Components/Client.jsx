@@ -136,17 +136,14 @@ const Client = () => {
         <table className="table table-striped table-hover">
           <thead>
             <tr>
-              <th
-                onClick={() => handleSort("clientName")}
-                style={{ cursor: "pointer" }}
-              >
-                Client {getSortIcon("clientName")}
-              </th>
-              <th
-                onClick={() => handleSort("customerName")}
-                style={{ cursor: "pointer" }}
-              >
-                Customer Name {getSortIcon("customerName")}
+              <th className="align-top">
+                <div
+                  onClick={() => handleSort("clientName")}
+                  style={{ cursor: "pointer" }}
+                  className="fw-semibold"
+                >
+                  Client {getSortIcon("clientName")}
+                </div>
               </th>
               <th className="d-none d-sm-table-cell">Contact</th>
               <th className="d-none d-sm-table-cell">Tel No</th>
@@ -172,11 +169,15 @@ const Client = () => {
               >
                 Credit Limit {getSortIcon("creditLimit")}
               </th>
-              <th
-                onClick={() => handleSort("over30")}
-                style={{ cursor: "pointer" }}
-              >
-                Over 30 {getSortIcon("over30")}
+              <th className="align-top">
+                <div
+                  onClick={() => handleSort("over30")}
+                  style={{ cursor: "pointer" }}
+                  className="fw-semibold"
+                >
+                  Over 30 {getSortIcon("over30")}
+                </div>
+                <div className="text-muted small">Prod/Finished/Delivered</div>
               </th>
               <th
                 onClick={() => handleSort("over60")}
@@ -184,11 +185,15 @@ const Client = () => {
               >
                 Over 60 {getSortIcon("over60")}
               </th>
-              <th
-                onClick={() => handleSort("over90")}
-                style={{ cursor: "pointer" }}
-              >
-                Over 90 {getSortIcon("over90")}
+              <th className="align-top">
+                <div
+                  onClick={() => handleSort("over90")}
+                  style={{ cursor: "pointer" }}
+                  className="fw-semibold"
+                >
+                  Over 90 {getSortIcon("over90")}
+                </div>
+                <div className="text-muted small">Billed</div>
               </th>
               <th
                 onClick={() => handleSort("overdue")}
@@ -223,9 +228,22 @@ const Client = () => {
                   : "";
 
               return (
-                <tr key={client.id} className={rowClass}>
-                  <td>{client.clientName}</td>
-                  <td>{client.customerName}</td>
+                <tr
+                  key={client.id}
+                  className={rowClass}
+                  onClick={() =>
+                    navigate(`/dashboard/client/edit/${client.id}`)
+                  }
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>
+                    <div>{client.clientName}</div>
+                    {client.customerName && (
+                      <div className="text-muted small">
+                        {client.customerName}
+                      </div>
+                    )}
+                  </td>
                   <td className="d-none d-sm-table-cell">{client.contact}</td>
                   <td className="d-none d-sm-table-cell">{client.telNo}</td>
                   <td className="d-none d-sm-table-cell">{client.email}</td>
@@ -238,9 +256,19 @@ const Client = () => {
                   <td className="text-end d-none d-sm-table-cell">
                     {formatPesoZ(client.creditLimit)}
                   </td>
-                  <td className="text-end">{formatPesoZ(client.over30)}</td>
+                  <td className="text-end">
+                    <div>{formatPesoZ(client.over30)}</div>
+                    <div className="text-muted small">
+                      {formatPesoZ(client.productionTotal)}
+                    </div>
+                  </td>
                   <td className="text-end">{formatPesoZ(client.over60)}</td>
-                  <td className="text-end">{formatPesoZ(client.over90)}</td>
+                  <td className="text-end">
+                    <div>{formatPesoZ(client.over90)}</div>
+                    <div className="text-muted small">
+                      {formatPesoZ(client.billedTotal)}
+                    </div>
+                  </td>
                   <td className="text-center d-none d-sm-table-cell">
                     {client.overdue ? formatDate(client.overdue) : ""}
                   </td>
@@ -249,21 +277,16 @@ const Client = () => {
                   </td>
                   <td>
                     <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="edit"
-                        iconOnly
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/client/edit/${client.id}`)
-                        }
-                      />
                       {isAdmin && (
                         <>
                           <Button
                             variant="delete"
                             iconOnly
                             size="sm"
-                            onClick={() => handleDelete(client.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(client.id);
+                            }}
                             className="d-none d-sm-table-cell"
                           />
                           <Button
@@ -272,7 +295,8 @@ const Client = () => {
                             size="sm"
                             title="Add 1 Week to Hold Date"
                             icon={<BsCalendar2Week size={14} />}
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation();
                               try {
                                 const response = await axios.put(
                                   `${ServerIP}/auth/addWeek/${client.id}`

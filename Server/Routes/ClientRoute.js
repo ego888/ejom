@@ -159,9 +159,25 @@ router.get("/client-list", async (req, res) => {
 
     // Get paginated and sorted results
     const [result] = await pool.query(
-      `SELECT c.*, e.name as salesName
+      `SELECT 
+         c.*, 
+         e.name as salesName,
+         COALESCE(t.productionTotal, 0) AS productionTotal,
+         COALESCE(t.billedTotal, 0) AS billedTotal
        FROM client c
        LEFT JOIN employee e ON c.salesId = e.id
+       LEFT JOIN (
+         SELECT 
+           clientId,
+           SUM(CASE WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered') 
+                    THEN grandTotal - IFNULL(amountPaid, 0) 
+                    ELSE 0 END) AS productionTotal,
+           SUM(CASE WHEN status = 'Billed'
+                    THEN grandTotal - IFNULL(amountPaid, 0) 
+                    ELSE 0 END) AS billedTotal
+         FROM orders
+         GROUP BY clientId
+       ) t ON t.clientId = c.id
        WHERE c.clientName LIKE ? OR c.customerName LIKE ?
        ORDER BY ${sortColumn} ${validSortDirection}
        LIMIT ? OFFSET ?`,
