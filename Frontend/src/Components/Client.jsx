@@ -177,7 +177,7 @@ const Client = () => {
                 >
                   Over 30 {getSortIcon("over30")}
                 </div>
-                <div className="text-muted small">Prod/Finished/Delivered</div>
+                <div className="text-muted small">All Prod</div>
               </th>
               <th
                 onClick={() => handleSort("over60")}
