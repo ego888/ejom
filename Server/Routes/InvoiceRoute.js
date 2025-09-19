@@ -230,6 +230,7 @@ router.get("/billing", verifyUser, async (req, res) => {
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN employee e ON o.preparedBy = e.id
       WHERE 1=1
+        AND (o.status IS NULL OR o.status <> 'Closed')
     `;
 
     // Add search conditions
@@ -281,6 +282,7 @@ router.get("/billing", verifyUser, async (req, res) => {
       FROM invoice i
       LEFT JOIN orders o ON i.orderId = o.orderID
       WHERE 1=1
+        AND (o.status IS NULL OR o.status <> 'Closed')
       ${
         search
           ? `
