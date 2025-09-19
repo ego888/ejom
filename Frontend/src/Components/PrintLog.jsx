@@ -1,5 +1,11 @@
 import axios from "../utils/axiosConfig";
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import DisplayPage from "./UI/DisplayPage";
@@ -15,7 +21,10 @@ import { formatNumber } from "../utils/orderUtils";
 
 function PrintLog() {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState([]);
+  const [detailRows, setDetailRows] = useState([]);
+  const [machineSummary, setMachineSummary] = useState([]);
+  const [machineOptions, setMachineOptions] = useState(["All"]);
+  const [selectedMachineType, setSelectedMachineType] = useState("All");
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
@@ -28,19 +37,22 @@ function PrintLog() {
     return saved
       ? JSON.parse(saved)
       : {
-          key: "id",
+          key: "orderID",
           direction: "desc",
         };
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
-    const saved = localStorage.getItem("orderStatusFilters");
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem("orderStatusFilter");
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.warn("Error reading status filters:", error);
+      return [];
+    }
   });
   const [selectedSales, setSelectedSales] = useState([]);
-  const [isProdChecked, setIsProdChecked] = useState(false);
-  const [isAllChecked, setIsAllChecked] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
@@ -48,7 +60,6 @@ function PrintLog() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
-  const [machineHourStats, setMachineHourStats] = useState([]);
   const machineTypeColors = useMemo(
     () => [
       "Prod",
@@ -62,16 +73,15 @@ function PrintLog() {
     []
   );
 
-  const fetchOrders = async () => {
+  const fetchPrintLogData = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const activeStatuses = JSON.parse(
-        localStorage.getItem("orderStatusFilter") || "[]"
-      );
-      console.log("Fetching with statuses:", activeStatuses);
+      const statusFilter = selectedStatuses.length
+        ? selectedStatuses
+        : ["Prod", "Finish", "Finished", "Delivered"];
 
-      const response = await axios.get(`${ServerIP}/auth/orders`, {
+      const response = await axios.get(`${ServerIP}/auth/printlog/details`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           page: currentPage,
@@ -79,55 +89,71 @@ function PrintLog() {
           sortBy: sortConfig.key,
           sortDirection: sortConfig.direction,
           search: searchTerm,
-          statuses: activeStatuses.join(","),
+          statuses: statusFilter.join(","),
           sales: selectedSales.length ? selectedSales.join(",") : undefined,
           clients: selectedClients.length
             ? selectedClients.join(",")
             : undefined,
+          machineType:
+            selectedMachineType && selectedMachineType !== "All"
+              ? selectedMachineType
+              : undefined,
         },
       });
+
       if (response.data.Status) {
-        console.log("PrintLog orders data:", response.data.Result.orders);
-        // Check if customerName is present in the first order (if any)
-        if (response.data.Result.orders.length > 0) {
-          console.log(
-            "First order contains customerName?",
-            Boolean(response.data.Result.orders[0].customerName)
-          );
-        }
+        const result = response.data.Result || {};
+        const rows = result.data || [];
+        const total = result.totalCount || 0;
 
-        // Map orders to ensure customerName is included (with fallback to orderedBy)
-        const mappedOrders = response.data.Result.orders.map((order) => ({
-          ...order,
-          customerName: order.customerName || order.orderedBy,
-        }));
-
-        setOrders(mappedOrders);
-        setTotalCount(response.data.Result.total);
-        setTotalPages(Math.ceil(response.data.Result.total / recordsPerPage));
+        setDetailRows(rows);
+        setTotalCount(total);
+        setTotalPages(Math.ceil(total / recordsPerPage));
+      } else {
+        setDetailRows([]);
+        setTotalCount(0);
       }
     } catch (error) {
-      console.error("Error fetching orders:", error);
-      setOrders([]);
+      console.error("Error fetching print log details:", error);
+      setDetailRows([]);
       setTotalCount(0);
     } finally {
       setLoading(false);
+      fetchMachineSummary();
     }
   };
 
-  const fetchMachineHourStats = async () => {
+  const fetchMachineSummary = async () => {
     try {
       const response = await axios.get(
         `${ServerIP}/auth/print-hours/machine-types`
       );
       if (response.data.Status) {
-        setMachineHourStats(response.data.Result || []);
+        const summary = response.data.Result || [];
+        setMachineSummary(summary);
+        const options = [
+          "All",
+          ...summary
+            .map((item) => item.machineType)
+            .filter((value, index, self) => self.indexOf(value) === index),
+        ];
+        setMachineOptions(options);
+        if (
+          selectedMachineType !== "All" &&
+          !options.includes(selectedMachineType)
+        ) {
+          setSelectedMachineType("All");
+        }
       } else {
-        setMachineHourStats([]);
+        setMachineSummary([]);
+        setMachineOptions(["All"]);
+        setSelectedMachineType("All");
       }
     } catch (error) {
-      console.error("Error fetching machine hour stats:", error);
-      setMachineHourStats([]);
+      console.error("Error fetching machine summary:", error);
+      setMachineSummary([]);
+      setMachineOptions(["All"]);
+      setSelectedMachineType("All");
     }
   };
 
@@ -149,16 +175,35 @@ function PrintLog() {
           );
           setStatusOptions(sortedStatuses);
 
-          // Set initial prod statuses
-          const prodStatuses = sortedStatuses
-            .slice(2, 6)
-            .map((s) => s.statusId);
-          setSelectedStatuses(prodStatuses);
-          setIsProdChecked(true);
-          localStorage.setItem(
-            "orderStatusFilters",
-            JSON.stringify(prodStatuses)
-          );
+          // Set default production statuses if none are stored
+          const savedStatuses = (() => {
+            try {
+              return JSON.parse(
+                localStorage.getItem("orderStatusFilter") || "[]"
+              );
+            } catch (error) {
+              console.warn("Error parsing saved statuses:", error);
+              return [];
+            }
+          })();
+
+          if (!savedStatuses.length) {
+            const defaultStatuses = sortedStatuses
+              .filter((status) =>
+                ["Prod", "Finish", "Finished", "Delivered"].includes(
+                  status.statusId
+                )
+              )
+              .map((status) => status.statusId);
+
+            setSelectedStatuses(defaultStatuses);
+            localStorage.setItem(
+              "orderStatusFilter",
+              JSON.stringify(defaultStatuses)
+            );
+          } else {
+            setSelectedStatuses(savedStatuses);
+          }
         }
 
         // Handle other responses
@@ -172,11 +217,11 @@ function PrintLog() {
     };
 
     initializeComponent();
-    fetchMachineHourStats();
+    fetchMachineSummary();
   }, []);
 
   useEffect(() => {
-    const timeoutId = setTimeout(fetchOrders, searchTerm ? 500 : 0);
+    const timeoutId = setTimeout(fetchPrintLogData, searchTerm ? 500 : 0);
     return () => clearTimeout(timeoutId);
   }, [
     selectedStatuses,
@@ -186,6 +231,7 @@ function PrintLog() {
     searchTerm,
     selectedSales,
     selectedClients,
+    selectedMachineType,
   ]);
 
   // Debounced search handler
@@ -223,21 +269,17 @@ function PrintLog() {
   //     } else {
   //       newStatuses = [...prev, statusId];
   //     }
-  //     console.log("New statuses after toggle:", newStatuses); // Debugging log
   //     // Update Prod checkbox state
   //     const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
   //     const selectedProdStatuses = newStatuses.filter((s) =>
   //       prodStatuses.includes(s)
   //     );
-  //     console.log("Prod statuses:", prodStatuses); // Debugging log
-  //     console.log("Selected prod statuses:", selectedProdStatuses); // Debugging log
   //     setIsProdChecked(selectedProdStatuses.length === prodStatuses.length);
 
   //     // Update All checkbox state
   //     setIsAllChecked(newStatuses.length === statusOptions.length);
 
   //     // Save to localStorage
-  //     localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
   //     return newStatuses;
   //   });
   //   setCurrentPage(1);
@@ -268,61 +310,6 @@ function PrintLog() {
   //   setCurrentPage(1); // Reset to first page
   // };
 
-  // const isProdIndeterminate = () => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
-  //     prodStatuses.includes(s)
-  //   );
-  //   return (
-  //     selectedProdStatuses.length > 0 &&
-  //     selectedProdStatuses.length < prodStatuses.length
-  //   );
-  // };
-
-  // const handleProdCheckbox = (e) => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   let newStatuses;
-  //   if (e.target.checked) {
-  //     newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-  //   } else {
-  //     newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
-  //   }
-
-  //   setSelectedStatuses(newStatuses);
-  //   setIsProdChecked(e.target.checked);
-  //   setIsAllChecked(newStatuses.length === statusOptions.length);
-
-  //   // Save to localStorage
-  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  // };
-
-  // const isAllIndeterminate = () => {
-  //   return (
-  //     selectedStatuses.length > 0 &&
-  //     selectedStatuses.length < statusOptions.length
-  //   );
-  // };
-
-  // const handleAllCheckbox = (e) => {
-  //   let newStatuses = [];
-  //   if (e.target.checked) {
-  //     newStatuses = statusOptions.map((s) => s.statusId);
-  //   }
-  //   setSelectedStatuses(newStatuses);
-  //   setIsAllChecked(e.target.checked);
-  //   setIsProdChecked(e.target.checked);
-
-  //   // Save to localStorage
-  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  // };
-
-  // Add a cleanup effect to save the page when unmounting
-  // useEffect(() => {
-  //   return () => {
-  //     localStorage.setItem("ordersListPage", currentPage.toString());
-  //   };
-  // }, [currentPage]);
-
   return (
     <div className="printlog">
       <div className="printlog-page-background px-5">
@@ -331,9 +318,9 @@ function PrintLog() {
         </div>
         <div className="dashboard-section h-100 p-3 mb-4">
           <h4 className="section-title mb-3">Print Hours by Machine Type</h4>
-          {machineHourStats.length ? (
+          {machineSummary.length ? (
             <div className="row g-3">
-              {machineHourStats.map((stat, index) => (
+              {machineSummary.map((stat, index) => (
                 <div
                   className="col-12 col-sm-6 col-md-4 col-lg-3"
                   key={stat.machineType}
@@ -355,17 +342,158 @@ function PrintLog() {
             <div className="text-muted">No production print hours found.</div>
           )}
         </div>
-        {/* Search and filters row */}
-        <div className="d-flex justify-content-between mb-3">
+        <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
           <input
             id="search-input"
             type="text"
             className="form-control form-control-sm"
-            placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+            placeholder="Search by JO #, client, project, material..."
             onChange={handleSearch}
             style={{ width: "400px" }}
           />
+          <select
+            className="form-select form-select-sm"
+            style={{ maxWidth: "220px" }}
+            value={selectedMachineType}
+            onChange={(e) => {
+              setSelectedMachineType(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            {machineOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
+        <div className="table-responsive mb-4">
+          <table className="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("machineType")}
+                >
+                  Machine Type {getSortIndicator("machineType")}
+                </th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("orderID")}
+                >
+                  JO # {getSortIndicator("orderID")}
+                </th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("clientName")}
+                >
+                  Client {getSortIndicator("clientName")}
+                </th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("projectName")}
+                >
+                  Project Name {getSortIndicator("projectName")}
+                </th>
+                <th
+                  className="text-end"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("quantity")}
+                >
+                  Qty {getSortIndicator("quantity")}
+                </th>
+                <th
+                  className="text-end"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("width")}
+                >
+                  Width {getSortIndicator("width")}
+                </th>
+                <th
+                  className="text-end"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("height")}
+                >
+                  Height {getSortIndicator("height")}
+                </th>
+                <th>Unit</th>
+                <th
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("material")}
+                >
+                  Material {getSortIndicator("material")}
+                </th>
+                <th className="text-center">Top</th>
+                <th className="text-center">Bottom</th>
+                <th className="text-center">Left</th>
+                <th className="text-center">Right</th>
+                <th
+                  className="text-end"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("printHrs")}
+                >
+                  Print Hrs {getSortIndicator("printHrs")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {detailRows.length ? (
+                detailRows.map((detail) => (
+                  <tr key={detail.detailId}>
+                    <td>{detail.machineType}</td>
+                    <td
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        navigate(`/dashboard/printlog/view/${detail.orderId}`)
+                      }
+                    >
+                      {detail.orderId}
+                      {detail.revision > 0 && `-${detail.revision}`}
+                    </td>
+                    <td>
+                      <div>{detail.clientName}</div>
+                      {detail.customerName && (
+                        <div className="small text-muted">
+                          {detail.customerName}
+                        </div>
+                      )}
+                    </td>
+                    <td>{detail.projectName}</td>
+                    <td className="text-end">
+                      <strong>{formatNumber(detail.quantity)}</strong>
+                    </td>
+                    <td className="text-end">{formatNumber(detail.width)}</td>
+                    <td className="text-end">{formatNumber(detail.height)}</td>
+                    <td>{detail.unit}</td>
+                    <td>{detail.material}</td>
+                    <td className="text-center">
+                      {detail.top > 0 ? detail.top : ""}
+                    </td>
+                    <td className="text-center">
+                      {detail.bottom > 0 ? detail.bottom : ""}
+                    </td>
+                    <td className="text-center">
+                      {detail.allowanceLeft > 0 ? detail.allowanceLeft : ""}
+                    </td>
+                    <td className="text-center">
+                      {detail.allowanceRight > 0 ? detail.allowanceRight : ""}
+                    </td>
+                    <td className="text-end">
+                      {formatNumber(detail.printHrs)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={14} className="text-center text-muted py-3">
+                    No records found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
         {/* Loading indicator */}
         {loading && (
           <div className="text-center my-3">
@@ -375,155 +503,35 @@ function PrintLog() {
           </div>
         )}
 
-        <div className="table-responsive">
-          <SalesFilter
-            ref={salesFilterRef}
-            salesEmployees={salesEmployees}
-            selectedSales={selectedSales}
-            setSelectedSales={setSelectedSales}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasSalesFilter(isFilterActive)
-            }
-          />
-          <ClientFilter
-            ref={clientFilterRef}
-            clientList={clientList}
-            selectedClients={selectedClients}
-            setSelectedClients={setSelectedClients}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasClientFilter(isFilterActive)
-            }
-          />
-          <table className="table">
-            <thead>
-              <tr>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("id")}
-                  style={{ cursor: "pointer" }}
-                >
-                  JO # {getSortIndicator("id")}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("clientName")}
-                  style={{
-                    cursor: "pointer",
-                  }}
-                >
-                  Client {getSortIndicator("clientName")}
-                </th>
-                <th className="text-center">Project Name</th>
-                <th className="text-center">Ordered By</th>
-                {/* <th>Order Date</th> */}
-                <th className="text-center">Due Date</th>
-                <th className="text-center">Due Time</th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("status")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Status {getSortIndicator("status")}
-                </th>
-                {/*     <th
-                  className="text-center"
-                  onClick={() => handleSort("drnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  DR# {getSortIndicator("drnum")}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("invnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  INV# {getSortIndicator("invnum")}
-            </th>
-                <th className="text-center">Grand Total</th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("ornum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  OR# {getSortIndicator("ornum")}
-                </th>
-                <th className="text-center">Amount Paid</th> */}
-                <th className="text-center">Date Paid</th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("salesName")}
-                  style={{
-                    cursor: "pointer",
-                  }}
-                >
-                  Sales {getSortIndicator("salesName")}
-                </th>
-                <th className="text-center">Order Ref</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td
-                    style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      navigate(`/dashboard/printlog/view/${order.id}`)
-                    }
-                  >
-                    {order.id}
-                    {order.revision > 0 && `-${order.revision}`}
-                  </td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (clientFilterRef.current) {
-                        clientFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div>{order.clientName}</div>
-                    {order.customerName && (
-                      <div className="small text-muted">
-                        {order.customerName}
-                      </div>
-                    )}
-                  </td>
-                  <td>{order.projectName}</td>
-                  <td>{order.orderedBy}</td>
-                  {/* <td>
-                    {order.orderDate
-                      ? new Date(order.orderDate).toLocaleDateString()
-                      : ""}
-                  </td> */}
-                  <td>
-                    {order.dueDate
-                      ? new Date(order.dueDate).toLocaleDateString()
-                      : ""}
-                  </td>
-                  <td>{order.dueTime || ""}</td>
-                  <td className="text-center">
-                    <span className={`status-badge ${order.status}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>{order.drnum || ""}</td>
-                  <td
-                    className="client-cell"
-                    onClick={(e) => {
-                      if (salesFilterRef.current) {
-                        salesFilterRef.current.toggleFilterMenu(e);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {order.salesName}
-                  </td>
-                  <td>{order.orderReference}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="d-flex flex-wrap gap-3 mb-3">
+          <div className={hasSalesFilter ? "active-filter" : ""}>
+            <SalesFilter
+              ref={salesFilterRef}
+              salesEmployees={salesEmployees}
+              selectedSales={selectedSales}
+              setSelectedSales={(values) => {
+                setSelectedSales(values);
+                setCurrentPage(1);
+              }}
+              onFilterUpdate={({ isFilterActive }) =>
+                setHasSalesFilter(isFilterActive)
+              }
+            />
+          </div>
+          <div className={hasClientFilter ? "active-filter" : ""}>
+            <ClientFilter
+              ref={clientFilterRef}
+              clientList={clientList}
+              selectedClients={selectedClients}
+              setSelectedClients={(values) => {
+                setSelectedClients(values);
+                setCurrentPage(1);
+              }}
+              onFilterUpdate={({ isFilterActive }) =>
+                setHasClientFilter(isFilterActive)
+              }
+            />
+          </div>
         </div>
 
         {/* Pagination and Filters Section */}
@@ -542,9 +550,10 @@ function PrintLog() {
             onStatusChange={(newStatuses) => {
               setSelectedStatuses(newStatuses);
               localStorage.setItem(
-                "orderStatusFilters",
+                "orderStatusFilter",
                 JSON.stringify(newStatuses)
               );
+              setCurrentPage(1);
             }}
           />
 

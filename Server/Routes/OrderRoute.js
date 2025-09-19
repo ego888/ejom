@@ -2040,7 +2040,7 @@ router.get("/print-hours/machine-types", verifyUser, async (req, res) => {
       FROM orders o
       JOIN order_details od ON o.orderID = od.orderId
       LEFT JOIN material m ON m.material = od.material
-      WHERE UPPER(TRIM(o.status)) = 'PROD'
+      WHERE UPPER(TRIM(o.status)) = 'PROD' AND IFNULL(od.noPrint, 0) = 0
       GROUP BY COALESCE(NULLIF(m.machineType, ''), 'Unassigned')
       ORDER BY machineType
     `;
@@ -2051,7 +2051,9 @@ router.get("/print-hours/machine-types", verifyUser, async (req, res) => {
         machineType: row.machineType,
         totalPrintHours: parseFloat(row.totalPrintHours) || 0,
       }))
-      .filter((row) => row.totalPrintHours > 0 && row.machineType !== "Unassigned");
+      .filter(
+        (entry) => entry.totalPrintHours > 0 && entry.machineType !== "Unassigned"
+      );
 
     return res.json({ Status: true, Result: result });
   } catch (err) {
@@ -2059,6 +2061,224 @@ router.get("/print-hours/machine-types", verifyUser, async (req, res) => {
     return res.status(500).json({
       Status: false,
       Error: "Failed to fetch print hours by machine type",
+    });
+  }
+});
+
+router.get("/printlog/details", verifyUser, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
+    const search = (req.query.search || "").trim();
+    const sortBy = req.query.sortBy || "orderID";
+    const sortDirection =
+      req.query.sortDirection && req.query.sortDirection.toLowerCase() === "asc"
+        ? "ASC"
+        : "DESC";
+
+    const statuses = req.query.statuses
+      ? req.query.statuses.split(",").map((status) => status.trim())
+      : [];
+    const sales = req.query.sales
+      ? req.query.sales.split(",").map((id) => id.trim())
+      : [];
+    const clients = req.query.clients
+      ? req.query.clients.split(",").map((id) => id.trim())
+      : [];
+
+    const machineTypeFilter =
+      req.query.machineType && req.query.machineType !== "All"
+        ? req.query.machineType.trim()
+        : null;
+
+    const effectiveStatuses =
+      statuses.length > 0
+        ? statuses
+        : ["Prod", "Finish", "Finished", "Delivered"];
+
+    const whereClauses = ["IFNULL(od.noPrint, 0) = 0"];
+    const params = [];
+
+    if (effectiveStatuses.length) {
+      whereClauses.push(`o.status IN (?)`);
+      params.push(effectiveStatuses);
+    }
+
+    if (sales.length) {
+      whereClauses.push(`o.preparedBy IN (?)`);
+      params.push(sales);
+    }
+
+    if (clients.length) {
+      whereClauses.push(`o.clientId IN (?)`);
+      params.push(clients);
+    }
+
+    if (machineTypeFilter) {
+      whereClauses.push(
+        `COALESCE(NULLIF(m.machineType, ''), 'Unassigned') = ?`
+      );
+      params.push(machineTypeFilter);
+    }
+
+    if (search) {
+      whereClauses.push(`(
+          o.orderID LIKE ? OR
+          c.clientName LIKE ? OR
+          c.customerName LIKE ? OR
+          o.projectName LIKE ? OR
+          o.orderedBy LIKE ? OR
+          od.material LIKE ? OR
+          od.unit LIKE ? OR
+          e.name LIKE ?
+        )`);
+      const searchParam = `%${search}%`;
+      params.push(
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam
+      );
+    }
+
+    const whereClause = whereClauses.join(" AND ");
+
+    const sortColumnMap = {
+      orderID: "o.orderID",
+      clientName: "c.clientName",
+      projectName: "o.projectName",
+      dueDate: "o.dueDate",
+      dueTime: "o.dueTime",
+      machineType: "COALESCE(NULLIF(m.machineType, ''), 'Unassigned')",
+      material: "od.material",
+      quantity: "od.quantity",
+      width: "od.width",
+      height: "od.height",
+      printHrs: "od.printHrs",
+    };
+
+    const sortColumn = sortColumnMap[sortBy] || "o.orderID";
+
+    const dataSql = `
+      SELECT 
+        od.Id AS detailId,
+        o.orderID,
+        o.revision,
+        o.status,
+        COALESCE(NULLIF(m.machineType, ''), 'Unassigned') AS machineType,
+        c.clientName,
+        c.customerName,
+        o.projectName,
+        o.orderedBy,
+        o.dueDate,
+        o.dueTime,
+        e.name AS salesName,
+        od.quantity,
+        od.width,
+        od.height,
+        od.unit,
+        od.material,
+        od.top,
+        od.bottom,
+        od.allowanceLeft,
+        od.allowanceRight,
+        od.printHrs,
+        od.displayOrder
+      FROM orders o
+      JOIN order_details od ON o.orderID = od.orderId
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN material m ON m.material = od.material
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+      ORDER BY ${sortColumn} ${sortDirection}, o.orderID ${sortDirection}, od.displayOrder ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    const dataParams = [...params, limit, offset];
+    const [dataRows] = await pool.query(dataSql, dataParams);
+
+    const formattedRows = dataRows.map((row) => ({
+      detailId: row.detailId,
+      orderId: row.orderID,
+      revision: row.revision,
+      status: row.status,
+      machineType: row.machineType,
+      clientName: row.clientName,
+      customerName: row.customerName,
+      projectName: row.projectName,
+      orderedBy: row.orderedBy,
+      dueDate: row.dueDate,
+      dueTime: row.dueTime,
+      salesName: row.salesName,
+      quantity: parseFloat(row.quantity) || 0,
+      width: parseFloat(row.width) || 0,
+      height: parseFloat(row.height) || 0,
+      unit: row.unit,
+      material: row.material,
+      top: row.top,
+      bottom: row.bottom,
+      allowanceLeft: row.allowanceLeft,
+      allowanceRight: row.allowanceRight,
+      printHrs: parseFloat(row.printHrs) || 0,
+      displayOrder: row.displayOrder,
+    }));
+
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM orders o
+      JOIN order_details od ON o.orderID = od.orderId
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN material m ON m.material = od.material
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+    `;
+
+    const [countRows] = await pool.query(countSql, params);
+    const totalCount = countRows?.[0]?.total || 0;
+
+    const summarySql = `
+      SELECT 
+        COALESCE(NULLIF(m.machineType, ''), 'Unassigned') AS machineType,
+        SUM(od.printHrs) AS totalPrintHours
+      FROM orders o
+      JOIN order_details od ON o.orderID = od.orderId
+      LEFT JOIN client c ON o.clientId = c.id
+      LEFT JOIN material m ON m.material = od.material
+      LEFT JOIN employee e ON o.preparedBy = e.id
+      WHERE ${whereClause}
+      GROUP BY COALESCE(NULLIF(m.machineType, ''), 'Unassigned')
+      ORDER BY machineType
+    `;
+
+    const [summaryRows] = await pool.query(summarySql, params);
+
+    const machineSummary = summaryRows
+      .map((row) => ({
+        machineType: row.machineType,
+        totalPrintHours: parseFloat(row.totalPrintHours) || 0,
+      }))
+      .filter(
+        (entry) => entry.totalPrintHours > 0 && entry.machineType !== "Unassigned"
+      );
+
+    return res.json({
+      Status: true,
+      Result: {
+        data: formattedRows,
+        totalCount,
+        machineSummary,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching print log details:", err);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch print log details",
     });
   }
 });
