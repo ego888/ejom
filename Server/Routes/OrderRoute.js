@@ -2026,6 +2026,43 @@ router.get("/order_stats", async (req, res) => {
   }
 });
 
+router.get("/print-hours/machine-types", verifyUser, async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        COALESCE(NULLIF(m.machineType, ''), 'Unassigned') AS machineType,
+        SUM(
+          CASE
+            WHEN IFNULL(od.noPrint, 0) = 0 THEN IFNULL(od.printHrs, 0)
+            ELSE 0
+          END
+        ) AS totalPrintHours
+      FROM orders o
+      JOIN order_details od ON o.orderID = od.orderId
+      LEFT JOIN material m ON m.material = od.material
+      WHERE UPPER(TRIM(o.status)) = 'PROD'
+      GROUP BY COALESCE(NULLIF(m.machineType, ''), 'Unassigned')
+      ORDER BY machineType
+    `;
+
+    const [rows] = await pool.query(query);
+    const result = rows
+      .map((row) => ({
+        machineType: row.machineType,
+        totalPrintHours: parseFloat(row.totalPrintHours) || 0,
+      }))
+      .filter((row) => row.totalPrintHours > 0 && row.machineType !== "Unassigned");
+
+    return res.json({ Status: true, Result: result });
+  } catch (err) {
+    console.error("Error fetching print hours by machine type:", err);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch print hours by machine type",
+    });
+  }
+});
+
 // Route to get monthly sales data for user and total
 router.get("/monthly_sales", verifyUser, async (req, res) => {
   try {

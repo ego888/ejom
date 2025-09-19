@@ -1,8 +1,7 @@
 import axios from "../utils/axiosConfig";
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
-import Button from "./UI/Button";
 import DisplayPage from "./UI/DisplayPage";
 import Pagination from "./UI/Pagination";
 import { ServerIP } from "../config";
@@ -11,6 +10,8 @@ import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
 import "./Orders.css";
 import "./PrintLog.css";
+import "./Dashboard.css";
+import { formatNumber } from "../utils/orderUtils";
 
 function PrintLog() {
   const navigate = useNavigate();
@@ -47,6 +48,19 @@ function PrintLog() {
   const [salesEmployees, setSalesEmployees] = useState([]);
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
+  const [machineHourStats, setMachineHourStats] = useState([]);
+  const machineTypeColors = useMemo(
+    () => [
+      "Prod",
+      "Finished",
+      "Delivered",
+      "Billed",
+      "Printed",
+      "Open",
+      "default",
+    ],
+    []
+  );
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -101,6 +115,22 @@ function PrintLog() {
     }
   };
 
+  const fetchMachineHourStats = async () => {
+    try {
+      const response = await axios.get(
+        `${ServerIP}/auth/print-hours/machine-types`
+      );
+      if (response.data.Status) {
+        setMachineHourStats(response.data.Result || []);
+      } else {
+        setMachineHourStats([]);
+      }
+    } catch (error) {
+      console.error("Error fetching machine hour stats:", error);
+      setMachineHourStats([]);
+    }
+  };
+
   useEffect(() => {
     const initializeComponent = async () => {
       try {
@@ -142,6 +172,7 @@ function PrintLog() {
     };
 
     initializeComponent();
+    fetchMachineHourStats();
   }, []);
 
   useEffect(() => {
@@ -297,6 +328,32 @@ function PrintLog() {
       <div className="printlog-page-background px-5">
         <div className="printlog-header d-flex justify-content-center">
           <h3>Print Log</h3>
+        </div>
+        <div className="dashboard-section h-100 p-3 mb-4">
+          <h4 className="section-title mb-3">Print Hours by Machine Type</h4>
+          {machineHourStats.length ? (
+            <div className="row g-3">
+              {machineHourStats.map((stat, index) => (
+                <div
+                  className="col-12 col-sm-6 col-md-4 col-lg-3"
+                  key={stat.machineType}
+                >
+                  <div
+                    className={`dashboard-card status-badge ${
+                      machineTypeColors[index % machineTypeColors.length]
+                    }`}
+                  >
+                    <div className="card-label">{stat.machineType}</div>
+                    <div className="card-value">
+                      {formatNumber(stat.totalPrintHours)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-muted">No production print hours found.</div>
+          )}
         </div>
         {/* Search and filters row */}
         <div className="d-flex justify-content-between mb-3">
