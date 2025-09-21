@@ -2028,19 +2028,40 @@ router.get("/order_stats", async (req, res) => {
 
 router.get("/print-hours/machine-types", verifyUser, async (req, res) => {
   try {
+    const remainingHoursExpression =
+      "GREATEST(IFNULL(od.printHrs, 0) - CASE WHEN od.quantity > 0 THEN (IFNULL(pl.totalPrintedQty, 0) / od.quantity) * IFNULL(od.printHrs, 0) ELSE 0 END, 0)";
+    const remainingQtyExpression =
+      "GREATEST(IFNULL(od.quantity, 0) - IFNULL(pl.totalPrintedQty, 0), 0)";
+    const includeZeroParam = req.query.includeZeroQty;
+    const includeZeroQty =
+      includeZeroParam === undefined
+        ? true
+        : !["0", "false", "False", "FALSE"].includes(includeZeroParam);
+
+    const baseConditions = [
+      "UPPER(TRIM(o.status)) = 'PROD'",
+      "IFNULL(od.noPrint, 0) = 0",
+    ];
+
+    if (!includeZeroQty) {
+      baseConditions.push(`${remainingQtyExpression} > 0`);
+    }
+
     const query = `
       SELECT 
         COALESCE(NULLIF(m.machineType, ''), 'Unassigned') AS machineType,
-        SUM(
-          CASE
-            WHEN IFNULL(od.noPrint, 0) = 0 THEN IFNULL(od.printHrs, 0)
-            ELSE 0
-          END
-        ) AS totalPrintHours
+        SUM(${remainingHoursExpression}) AS totalPrintHours
       FROM orders o
       JOIN order_details od ON o.orderID = od.orderId
       LEFT JOIN material m ON m.material = od.material
-      WHERE UPPER(TRIM(o.status)) = 'PROD' AND IFNULL(od.noPrint, 0) = 0
+      LEFT JOIN (
+        SELECT 
+          order_detail_id,
+          SUM(printedQty) AS totalPrintedQty
+        FROM print_logs
+        GROUP BY order_detail_id
+      ) pl ON pl.order_detail_id = od.Id
+      WHERE ${baseConditions.join(" AND ")}
       GROUP BY COALESCE(NULLIF(m.machineType, ''), 'Unassigned')
       ORDER BY machineType
     `;
@@ -2097,6 +2118,12 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
         ? statuses
         : ["Prod", "Finish", "Finished", "Delivered"];
 
+    const includeZeroParam = req.query.includeZeroQty;
+    const includeZeroQty =
+      includeZeroParam === undefined
+        ? true
+        : !["0", "false", "False", "FALSE"].includes(includeZeroParam);
+
     const whereClauses = ["IFNULL(od.noPrint, 0) = 0"];
     const params = [];
 
@@ -2146,6 +2173,15 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
       );
     }
 
+    const remainingHoursExpression =
+      "GREATEST(IFNULL(od.printHrs, 0) - CASE WHEN od.quantity > 0 THEN (IFNULL(pl.totalPrintedQty, 0) / od.quantity) * IFNULL(od.printHrs, 0) ELSE 0 END, 0)";
+    const remainingQtyExpression =
+      "GREATEST(IFNULL(od.quantity, 0) - IFNULL(pl.totalPrintedQty, 0), 0)";
+
+    if (!includeZeroQty) {
+      whereClauses.push(`${remainingQtyExpression} > 0`);
+    }
+
     const whereClause = whereClauses.join(" AND ");
 
     const sortColumnMap = {
@@ -2161,6 +2197,7 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
       height: "od.height",
       printHrs: "od.printHrs",
       printedQty: "IFNULL(pl.totalPrintedQty, 0)",
+      remainingPrintHrs: remainingHoursExpression,
     };
 
     const sortColumn = sortColumnMap[sortBy] || "o.orderID";
@@ -2191,7 +2228,13 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
         od.printHrs,
         od.displayOrder,
         IFNULL(pl.totalPrintedQty, 0) AS printedQty,
-        GREATEST(od.quantity - IFNULL(pl.totalPrintedQty, 0), 0) AS balance
+        GREATEST(IFNULL(od.quantity, 0) - IFNULL(pl.totalPrintedQty, 0), 0) AS remainingQty,
+        CASE
+          WHEN od.quantity > 0 THEN
+            (IFNULL(pl.totalPrintedQty, 0) / od.quantity) * IFNULL(od.printHrs, 0)
+          ELSE 0
+        END AS printedHrs,
+        ${remainingHoursExpression} AS remainingPrintHrs
       FROM orders o
       JOIN order_details od ON o.orderID = od.orderId
       LEFT JOIN client c ON o.clientId = c.id
@@ -2237,7 +2280,9 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
       printHrs: parseFloat(row.printHrs) || 0,
       displayOrder: row.displayOrder,
       printedQty: parseFloat(row.printedQty) || 0,
-      balance: parseFloat(row.balance) || 0,
+      remainingQty: parseFloat(row.remainingQty) || 0,
+      printedHrs: parseFloat(row.printedHrs) || 0,
+      remainingPrintHrs: parseFloat(row.remainingPrintHrs) || 0,
     }));
 
     const countSql = `
@@ -2247,6 +2292,13 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN material m ON m.material = od.material
       LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN (
+        SELECT 
+          order_detail_id,
+          SUM(printedQty) AS totalPrintedQty
+        FROM print_logs
+        GROUP BY order_detail_id
+      ) pl ON pl.order_detail_id = od.Id
       WHERE ${whereClause}
     `;
 
@@ -2256,12 +2308,19 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
     const summarySql = `
       SELECT 
         COALESCE(NULLIF(m.machineType, ''), 'Unassigned') AS machineType,
-        SUM(od.printHrs) AS totalPrintHours
+        SUM(${remainingHoursExpression}) AS totalPrintHours
       FROM orders o
       JOIN order_details od ON o.orderID = od.orderId
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN material m ON m.material = od.material
       LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN (
+        SELECT 
+          order_detail_id,
+          SUM(printedQty) AS totalPrintedQty
+        FROM print_logs
+        GROUP BY order_detail_id
+      ) pl ON pl.order_detail_id = od.Id
       WHERE ${whereClause}
       GROUP BY COALESCE(NULLIF(m.machineType, ''), 'Unassigned')
       ORDER BY machineType
@@ -2328,7 +2387,7 @@ router.post(
 
     try {
       const [[detail]] = await pool.query(
-        "SELECT quantity FROM order_details WHERE Id = ?",
+        "SELECT quantity, printHrs FROM order_details WHERE Id = ?",
         [detailId]
       );
 
@@ -2346,6 +2405,7 @@ router.post(
 
       const currentPrinted = parseFloat(sumRow?.totalPrintedQty) || 0;
       const orderedQty = parseFloat(detail.quantity) || 0;
+      const plannedPrintHrs = parseFloat(detail.printHrs) || 0;
       const newTotal = currentPrinted + printedQty;
 
       if (orderedQty && newTotal - orderedQty > 0.000001) {
@@ -2388,11 +2448,19 @@ router.post(
         }
       }
 
+      const printedHrs =
+        orderedQty > 0 ? (newTotal / orderedQty) * plannedPrintHrs : 0;
+      const remainingQty = Math.max(orderedQty - newTotal, 0);
+      const remainingPrintHrs = Math.max(plannedPrintHrs - printedHrs, 0);
+
       return res.json({
         Status: true,
         Result: {
           printedQty: newTotal,
-          balance: Math.max(orderedQty - newTotal, 0),
+          balance: remainingQty,
+          remainingQty,
+          printedHrs,
+          remainingPrintHrs,
           logEntry,
         },
       });

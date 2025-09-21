@@ -25,6 +25,7 @@ function PrintLog() {
   const [machineSummary, setMachineSummary] = useState([]);
   const [machineOptions, setMachineOptions] = useState(["All"]);
   const [selectedMachineType, setSelectedMachineType] = useState("All");
+  const [includeZeroQty, setIncludeZeroQty] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
@@ -105,6 +106,7 @@ function PrintLog() {
             selectedMachineType && selectedMachineType !== "All"
               ? selectedMachineType
               : undefined,
+          includeZeroQty: includeZeroQty ? 1 : 0,
         },
       });
 
@@ -133,7 +135,12 @@ function PrintLog() {
   const fetchMachineSummary = async () => {
     try {
       const response = await axios.get(
-        `${ServerIP}/auth/print-hours/machine-types`
+        `${ServerIP}/auth/print-hours/machine-types`,
+        {
+          params: {
+            includeZeroQty: includeZeroQty ? 1 : 0,
+          },
+        }
       );
       if (response.data.Status) {
         const summary = response.data.Result || [];
@@ -239,6 +246,7 @@ function PrintLog() {
     selectedSales,
     selectedClients,
     selectedMachineType,
+    includeZeroQty,
   ]);
 
   // Debounced search handler
@@ -351,18 +359,40 @@ function PrintLog() {
             typeof result.printedQty === "number"
               ? result.printedQty
               : (row.printedQty || 0) + numericValue;
-          const nextBalance =
-            typeof result.balance === "number"
-              ? result.balance
-              : Math.max((row.quantity || 0) - nextPrintedQty, 0);
+
+          const totalQty = row.quantity || 0;
+          const plannedPrintHrs = row.printHrs || 0;
+
+          const nextRemainingQty =
+            typeof result.remainingQty === "number"
+              ? result.remainingQty
+              : Math.max(totalQty - nextPrintedQty, 0);
+
+          let nextPrintedHrs;
+          if (typeof result.printedHrs === "number") {
+            nextPrintedHrs = result.printedHrs;
+          } else if (totalQty > 0) {
+            nextPrintedHrs = (nextPrintedQty / totalQty) * plannedPrintHrs;
+          } else {
+            nextPrintedHrs = 0;
+          }
+
+          const nextRemainingPrintHrs =
+            typeof result.remainingPrintHrs === "number"
+              ? result.remainingPrintHrs
+              : Math.max(plannedPrintHrs - nextPrintedHrs, 0);
 
           return {
             ...row,
             printedQty: nextPrintedQty,
-            balance: nextBalance,
+            remainingQty: nextRemainingQty,
+            printedHrs: nextPrintedHrs,
+            remainingPrintHrs: nextRemainingPrintHrs,
           };
         })
       );
+
+      fetchMachineSummary();
 
       if (result.logEntry) {
         setLogHistory((prev) => {
@@ -394,10 +424,12 @@ function PrintLog() {
       const remaining = error.response?.data?.Result?.remaining;
       const remainingMessage =
         typeof remaining === "number"
-          ? ` Remaining: ${formatNumber(remaining)}`
+          ? ` Remaining Qty: ${formatNumber(remaining)}`
           : "";
       const errorMessage =
-        error.response?.data?.Error || error.message || "Failed to log quantity.";
+        error.response?.data?.Error ||
+        error.message ||
+        "Failed to log quantity.";
       setLogErrors((prev) => ({
         ...prev,
         [detailId]: `${errorMessage}${remainingMessage}`,
@@ -521,6 +553,22 @@ function PrintLog() {
             onChange={handleSearch}
             style={{ width: "400px" }}
           />
+          <div className="form-check form-check-inline">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              id="include-zero-qty"
+              checked={includeZeroQty}
+              onChange={(e) => {
+                setIncludeZeroQty(e.target.checked);
+                setCurrentPage(1);
+                localStorage.setItem("ordersListPage", "1");
+              }}
+            />
+            <label className="form-check-label" htmlFor="include-zero-qty">
+              Include zero qty
+            </label>
+          </div>
           <select
             className="form-select form-select-sm"
             style={{ maxWidth: "220px" }}
@@ -633,10 +681,10 @@ function PrintLog() {
                       <td>{detail.projectName}</td>
                       <td className="text-end">
                         <div>
-                          Balance: <strong>{formatNumber(detail.balance)}</strong>
+                          <strong>{formatNumber(detail.remainingQty)}</strong>
                         </div>
                         <div className="small text-muted">
-                          Qty: {formatNumber(detail.quantity)}
+                          Orig Qty: {formatNumber(detail.quantity)}
                         </div>
                       </td>
                       <td>
@@ -669,22 +717,23 @@ function PrintLog() {
                               onClick={() => handleLogSubmit(detail.detailId)}
                               disabled={logLoading[detail.detailId]}
                             >
-                              {logLoading[detail.detailId] ? "Saving..." : "Log"}
+                              {logLoading[detail.detailId]
+                                ? "Saving..."
+                                : "Log"}
                             </button>
                           </div>
                           <div className="d-flex justify-content-between align-items-center">
                             <button
                               type="button"
                               className="btn btn-link btn-sm px-0"
-                              onClick={() => handleToggleLogHistory(detail.detailId)}
+                              onClick={() =>
+                                handleToggleLogHistory(detail.detailId)
+                              }
                             >
                               {expandedRows[detail.detailId]
                                 ? "Hide Log"
                                 : "View Log"}
                             </button>
-                            <span className="small text-muted">
-                              Printed: {formatNumber(detail.printedQty)}
-                            </span>
                           </div>
                           {logErrors[detail.detailId] && (
                             <div className="small text-danger">
@@ -694,7 +743,9 @@ function PrintLog() {
                         </div>
                       </td>
                       <td className="text-end">{formatNumber(detail.width)}</td>
-                      <td className="text-end">{formatNumber(detail.height)}</td>
+                      <td className="text-end">
+                        {formatNumber(detail.height)}
+                      </td>
                       <td>{detail.unit}</td>
                       <td>{detail.material}</td>
                       <td className="text-center">
@@ -710,7 +761,14 @@ function PrintLog() {
                         {detail.allowanceRight > 0 ? detail.allowanceRight : ""}
                       </td>
                       <td className="text-end">
-                        {formatNumber(detail.printHrs)}
+                        <div>
+                          <strong>
+                            {formatNumber(detail.remainingPrintHrs)}
+                          </strong>
+                        </div>
+                        <div className="small text-muted">
+                          Printed: {formatNumber(detail.printedHrs)}
+                        </div>
                       </td>
                     </tr>
                     {expandedRows[detail.detailId] && (
@@ -719,8 +777,13 @@ function PrintLog() {
                           <div className="bg-light border rounded p-3">
                             {logHistoryLoading[detail.detailId] ? (
                               <div className="d-flex align-items-center gap-2">
-                                <div className="spinner-border spinner-border-sm" role="status">
-                                  <span className="visually-hidden">Loading...</span>
+                                <div
+                                  className="spinner-border spinner-border-sm"
+                                  role="status"
+                                >
+                                  <span className="visually-hidden">
+                                    Loading...
+                                  </span>
                                 </div>
                                 <span>Loading log...</span>
                               </div>
@@ -733,9 +796,13 @@ function PrintLog() {
                                 <table className="table table-sm mb-0">
                                   <thead>
                                     <tr>
-                                      <th style={{ width: "140px" }}>Printed Qty</th>
+                                      <th style={{ width: "140px" }}>
+                                        Printed Qty
+                                      </th>
                                       <th>Employee</th>
-                                      <th style={{ width: "220px" }}>Logged At</th>
+                                      <th style={{ width: "220px" }}>
+                                        Logged At
+                                      </th>
                                     </tr>
                                   </thead>
                                   <tbody>
