@@ -58,6 +58,13 @@ function PrintLog() {
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
   const [clientList, setClientList] = useState([]);
   const [salesEmployees, setSalesEmployees] = useState([]);
+  const [logInputs, setLogInputs] = useState({});
+  const [logErrors, setLogErrors] = useState({});
+  const [logLoading, setLogLoading] = useState({});
+  const [logHistory, setLogHistory] = useState({});
+  const [logHistoryLoading, setLogHistoryLoading] = useState({});
+  const [logHistoryError, setLogHistoryError] = useState({});
+  const [expandedRows, setExpandedRows] = useState({});
   const salesFilterRef = useRef(null);
   const clientFilterRef = useRef(null);
   const machineTypeColors = useMemo(
@@ -260,6 +267,169 @@ function PrintLog() {
     localStorage.setItem("printLogSortConfig", JSON.stringify(newSortConfig));
   };
 
+  const handleLogQtyChange = (detailId, value) => {
+    setLogInputs((prev) => ({ ...prev, [detailId]: value }));
+    setLogErrors((prev) => {
+      if (!prev[detailId]) return prev;
+      const next = { ...prev };
+      delete next[detailId];
+      return next;
+    });
+  };
+
+  const fetchLogHistory = async (detailId) => {
+    setLogHistoryLoading((prev) => ({ ...prev, [detailId]: true }));
+    setLogHistoryError((prev) => {
+      if (!prev[detailId]) return prev;
+      const next = { ...prev };
+      delete next[detailId];
+      return next;
+    });
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${ServerIP}/auth/printlog/details/${detailId}/logs`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.data.Status) {
+        throw new Error(response.data.Error || "Failed to load logs.");
+      }
+
+      const logs = Array.isArray(response.data.Result)
+        ? response.data.Result
+        : [];
+
+      setLogHistory((prev) => ({ ...prev, [detailId]: logs }));
+    } catch (error) {
+      console.error("Error fetching print logs:", error);
+      const message =
+        error.response?.data?.Error || error.message || "Failed to load logs.";
+      setLogHistoryError((prev) => ({ ...prev, [detailId]: message }));
+    } finally {
+      setLogHistoryLoading((prev) => ({ ...prev, [detailId]: false }));
+    }
+  };
+
+  const handleLogSubmit = async (detailId) => {
+    const inputValue = logInputs[detailId];
+    const numericValue = parseFloat(inputValue);
+
+    if (!inputValue || !Number.isFinite(numericValue) || numericValue <= 0) {
+      setLogErrors((prev) => ({
+        ...prev,
+        [detailId]: "Enter a positive number.",
+      }));
+      return;
+    }
+
+    try {
+      setLogLoading((prev) => ({ ...prev, [detailId]: true }));
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${ServerIP}/auth/printlog/details/${detailId}/log`,
+        { printedQty: numericValue },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.data.Status) {
+        throw new Error(response.data.Error || "Failed to log quantity.");
+      }
+
+      const result = response.data.Result || {};
+
+      setDetailRows((prevRows) =>
+        prevRows.map((row) => {
+          if (row.detailId !== detailId) return row;
+
+          const nextPrintedQty =
+            typeof result.printedQty === "number"
+              ? result.printedQty
+              : (row.printedQty || 0) + numericValue;
+          const nextBalance =
+            typeof result.balance === "number"
+              ? result.balance
+              : Math.max((row.quantity || 0) - nextPrintedQty, 0);
+
+          return {
+            ...row,
+            printedQty: nextPrintedQty,
+            balance: nextBalance,
+          };
+        })
+      );
+
+      if (result.logEntry) {
+        setLogHistory((prev) => {
+          const existing = prev[detailId] || [];
+          return {
+            ...prev,
+            [detailId]: [
+              {
+                ...result.logEntry,
+              },
+              ...existing,
+            ],
+          };
+        });
+      } else if (expandedRows[detailId]) {
+        // Ensure history stays up-to-date
+        fetchLogHistory(detailId);
+      }
+
+      setLogInputs((prev) => ({ ...prev, [detailId]: "" }));
+      setLogErrors((prev) => {
+        if (!prev[detailId]) return prev;
+        const next = { ...prev };
+        delete next[detailId];
+        return next;
+      });
+    } catch (error) {
+      console.error("Error logging quantity:", error);
+      const remaining = error.response?.data?.Result?.remaining;
+      const remainingMessage =
+        typeof remaining === "number"
+          ? ` Remaining: ${formatNumber(remaining)}`
+          : "";
+      const errorMessage =
+        error.response?.data?.Error || error.message || "Failed to log quantity.";
+      setLogErrors((prev) => ({
+        ...prev,
+        [detailId]: `${errorMessage}${remainingMessage}`,
+      }));
+    } finally {
+      setLogLoading((prev) => ({ ...prev, [detailId]: false }));
+    }
+  };
+
+  const handleToggleLogHistory = async (detailId) => {
+    const isExpanded = !!expandedRows[detailId];
+    if (isExpanded) {
+      setExpandedRows((prev) => ({ ...prev, [detailId]: false }));
+      return;
+    }
+
+    setExpandedRows((prev) => ({ ...prev, [detailId]: true }));
+
+    if (!logHistory[detailId]) {
+      await fetchLogHistory(detailId);
+    }
+  };
+
+  const formatLogDate = (value) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString();
+  };
+
   // Status filter handlers
   // const handleStatusFilter = (statusId) => {
   //   setSelectedStatuses((prev) => {
@@ -402,6 +572,7 @@ function PrintLog() {
                 >
                   Qty {getSortIndicator("quantity")}
                 </th>
+                <th className="text-center">Log Qty</th>
                 <th
                   className="text-end"
                   style={{ cursor: "pointer" }}
@@ -439,53 +610,159 @@ function PrintLog() {
             <tbody>
               {detailRows.length ? (
                 detailRows.map((detail) => (
-                  <tr key={detail.detailId}>
-                    <td>{detail.machineType}</td>
-                    <td
-                      style={{ cursor: "pointer" }}
-                      onClick={() =>
-                        navigate(`/dashboard/printlog/view/${detail.orderId}`)
-                      }
-                    >
-                      {detail.orderId}
-                      {detail.revision > 0 && `-${detail.revision}`}
-                    </td>
-                    <td>
-                      <div>{detail.clientName}</div>
-                      {detail.customerName && (
-                        <div className="small text-muted">
-                          {detail.customerName}
+                  <React.Fragment key={detail.detailId}>
+                    <tr>
+                      <td>{detail.machineType}</td>
+                      <td
+                        style={{ cursor: "pointer" }}
+                        onClick={() =>
+                          navigate(`/dashboard/printlog/view/${detail.orderId}`)
+                        }
+                      >
+                        {detail.orderId}
+                        {detail.revision > 0 && `-${detail.revision}`}
+                      </td>
+                      <td>
+                        <div>{detail.clientName}</div>
+                        {detail.customerName && (
+                          <div className="small text-muted">
+                            {detail.customerName}
+                          </div>
+                        )}
+                      </td>
+                      <td>{detail.projectName}</td>
+                      <td className="text-end">
+                        <div>
+                          Balance: <strong>{formatNumber(detail.balance)}</strong>
                         </div>
-                      )}
-                    </td>
-                    <td>{detail.projectName}</td>
-                    <td className="text-end">
-                      <strong>{formatNumber(detail.quantity)}</strong>
-                    </td>
-                    <td className="text-end">{formatNumber(detail.width)}</td>
-                    <td className="text-end">{formatNumber(detail.height)}</td>
-                    <td>{detail.unit}</td>
-                    <td>{detail.material}</td>
-                    <td className="text-center">
-                      {detail.top > 0 ? detail.top : ""}
-                    </td>
-                    <td className="text-center">
-                      {detail.bottom > 0 ? detail.bottom : ""}
-                    </td>
-                    <td className="text-center">
-                      {detail.allowanceLeft > 0 ? detail.allowanceLeft : ""}
-                    </td>
-                    <td className="text-center">
-                      {detail.allowanceRight > 0 ? detail.allowanceRight : ""}
-                    </td>
-                    <td className="text-end">
-                      {formatNumber(detail.printHrs)}
-                    </td>
-                  </tr>
+                        <div className="small text-muted">
+                          Qty: {formatNumber(detail.quantity)}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex flex-column gap-1">
+                          <div className="d-flex align-items-center gap-2">
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              className="form-control form-control-sm"
+                              value={logInputs[detail.detailId] ?? ""}
+                              onChange={(e) =>
+                                handleLogQtyChange(
+                                  detail.detailId,
+                                  e.target.value
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleLogSubmit(detail.detailId);
+                                }
+                              }}
+                              placeholder="Qty"
+                              aria-label="Log printed quantity"
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleLogSubmit(detail.detailId)}
+                              disabled={logLoading[detail.detailId]}
+                            >
+                              {logLoading[detail.detailId] ? "Saving..." : "Log"}
+                            </button>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <button
+                              type="button"
+                              className="btn btn-link btn-sm px-0"
+                              onClick={() => handleToggleLogHistory(detail.detailId)}
+                            >
+                              {expandedRows[detail.detailId]
+                                ? "Hide Log"
+                                : "View Log"}
+                            </button>
+                            <span className="small text-muted">
+                              Printed: {formatNumber(detail.printedQty)}
+                            </span>
+                          </div>
+                          {logErrors[detail.detailId] && (
+                            <div className="small text-danger">
+                              {logErrors[detail.detailId]}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-end">{formatNumber(detail.width)}</td>
+                      <td className="text-end">{formatNumber(detail.height)}</td>
+                      <td>{detail.unit}</td>
+                      <td>{detail.material}</td>
+                      <td className="text-center">
+                        {detail.top > 0 ? detail.top : ""}
+                      </td>
+                      <td className="text-center">
+                        {detail.bottom > 0 ? detail.bottom : ""}
+                      </td>
+                      <td className="text-center">
+                        {detail.allowanceLeft > 0 ? detail.allowanceLeft : ""}
+                      </td>
+                      <td className="text-center">
+                        {detail.allowanceRight > 0 ? detail.allowanceRight : ""}
+                      </td>
+                      <td className="text-end">
+                        {formatNumber(detail.printHrs)}
+                      </td>
+                    </tr>
+                    {expandedRows[detail.detailId] && (
+                      <tr className="printlog-history-row">
+                        <td colSpan={15}>
+                          <div className="bg-light border rounded p-3">
+                            {logHistoryLoading[detail.detailId] ? (
+                              <div className="d-flex align-items-center gap-2">
+                                <div className="spinner-border spinner-border-sm" role="status">
+                                  <span className="visually-hidden">Loading...</span>
+                                </div>
+                                <span>Loading log...</span>
+                              </div>
+                            ) : logHistoryError[detail.detailId] ? (
+                              <div className="text-danger small">
+                                {logHistoryError[detail.detailId]}
+                              </div>
+                            ) : logHistory[detail.detailId]?.length ? (
+                              <div className="table-responsive">
+                                <table className="table table-sm mb-0">
+                                  <thead>
+                                    <tr>
+                                      <th style={{ width: "140px" }}>Printed Qty</th>
+                                      <th>Employee</th>
+                                      <th style={{ width: "220px" }}>Logged At</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {logHistory[detail.detailId].map((log) => (
+                                      <tr key={log.id}>
+                                        <td>{formatNumber(log.printedQty)}</td>
+                                        <td>{log.employeeName || ""}</td>
+                                        <td>{formatLogDate(log.logDate)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="text-muted small">
+                                No log entries yet.
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={14} className="text-center text-muted py-3">
+                  <td colSpan={15} className="text-center text-muted py-3">
                     No records found.
                   </td>
                 </tr>

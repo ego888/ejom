@@ -2160,6 +2160,7 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
       width: "od.width",
       height: "od.height",
       printHrs: "od.printHrs",
+      printedQty: "IFNULL(pl.totalPrintedQty, 0)",
     };
 
     const sortColumn = sortColumnMap[sortBy] || "o.orderID";
@@ -2188,12 +2189,21 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
         od.allowanceLeft,
         od.allowanceRight,
         od.printHrs,
-        od.displayOrder
+        od.displayOrder,
+        IFNULL(pl.totalPrintedQty, 0) AS printedQty,
+        GREATEST(od.quantity - IFNULL(pl.totalPrintedQty, 0), 0) AS balance
       FROM orders o
       JOIN order_details od ON o.orderID = od.orderId
       LEFT JOIN client c ON o.clientId = c.id
       LEFT JOIN material m ON m.material = od.material
       LEFT JOIN employee e ON o.preparedBy = e.id
+      LEFT JOIN (
+        SELECT 
+          order_detail_id,
+          SUM(printedQty) AS totalPrintedQty
+        FROM print_logs
+        GROUP BY order_detail_id
+      ) pl ON pl.order_detail_id = od.Id
       WHERE ${whereClause}
       ORDER BY ${sortColumn} ${sortDirection}, o.orderID ${sortDirection}, od.displayOrder ASC
       LIMIT ? OFFSET ?
@@ -2226,6 +2236,8 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
       allowanceRight: row.allowanceRight,
       printHrs: parseFloat(row.printHrs) || 0,
       displayOrder: row.displayOrder,
+      printedQty: parseFloat(row.printedQty) || 0,
+      balance: parseFloat(row.balance) || 0,
     }));
 
     const countSql = `
@@ -2282,6 +2294,164 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
     });
   }
 });
+
+router.post(
+  "/printlog/details/:detailId/log",
+  verifyUser,
+  async (req, res) => {
+    const detailId = parseInt(req.params.detailId, 10);
+    const employeeId = req.user?.id;
+    const rawQty = req.body?.printedQty;
+
+    if (!employeeId) {
+      return res.status(403).json({
+        Status: false,
+        Error: "Missing employee context",
+      });
+    }
+
+    if (!Number.isInteger(detailId) || detailId <= 0) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Invalid order detail id",
+      });
+    }
+
+    const printedQty = parseFloat(rawQty);
+
+    if (!Number.isFinite(printedQty) || printedQty <= 0) {
+      return res.status(400).json({
+        Status: false,
+        Error: "printedQty must be a positive number",
+      });
+    }
+
+    try {
+      const [[detail]] = await pool.query(
+        "SELECT quantity FROM order_details WHERE Id = ?",
+        [detailId]
+      );
+
+      if (!detail) {
+        return res.status(404).json({
+          Status: false,
+          Error: "Order detail not found",
+        });
+      }
+
+      const [[sumRow]] = await pool.query(
+        "SELECT IFNULL(SUM(printedQty), 0) AS totalPrintedQty FROM print_logs WHERE order_detail_id = ?",
+        [detailId]
+      );
+
+      const currentPrinted = parseFloat(sumRow?.totalPrintedQty) || 0;
+      const orderedQty = parseFloat(detail.quantity) || 0;
+      const newTotal = currentPrinted + printedQty;
+
+      if (orderedQty && newTotal - orderedQty > 0.000001) {
+        return res.status(400).json({
+          Status: false,
+          Error: "Logged quantity exceeds ordered quantity",
+          Result: {
+            remaining: Math.max(orderedQty - currentPrinted, 0),
+          },
+        });
+      }
+
+      const [insertResult] = await pool.query(
+        "INSERT INTO print_logs (order_detail_id, printedQty, employeeId, logDate) VALUES (?, ?, ?, NOW())",
+        [detailId, printedQty, employeeId]
+      );
+
+      const insertedId = insertResult?.insertId;
+
+      let logEntry = null;
+      if (insertedId) {
+        const [[row]] = await pool.query(
+          `SELECT 
+              pl.id,
+              pl.printedQty,
+              pl.logDate,
+              e.name AS employeeName
+            FROM print_logs pl
+            LEFT JOIN employee e ON e.id = pl.employeeId
+            WHERE pl.id = ?`,
+          [insertedId]
+        );
+        if (row) {
+          logEntry = {
+            id: row.id,
+            printedQty: parseFloat(row.printedQty) || 0,
+            logDate: row.logDate,
+            employeeName: row.employeeName || "",
+          };
+        }
+      }
+
+      return res.json({
+        Status: true,
+        Result: {
+          printedQty: newTotal,
+          balance: Math.max(orderedQty - newTotal, 0),
+          logEntry,
+        },
+      });
+    } catch (error) {
+      console.error("Error logging printed quantity:", error);
+      return res.status(500).json({
+        Status: false,
+        Error: "Failed to log printed quantity",
+      });
+    }
+  }
+);
+
+router.get(
+  "/printlog/details/:detailId/logs",
+  verifyUser,
+  async (req, res) => {
+    const detailId = parseInt(req.params.detailId, 10);
+
+    if (!Number.isInteger(detailId) || detailId <= 0) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Invalid order detail id",
+      });
+    }
+
+    try {
+      const [rows] = await pool.query(
+        `SELECT 
+            pl.id,
+            pl.printedQty,
+            pl.logDate,
+            pl.employeeId,
+            e.name AS employeeName
+          FROM print_logs pl
+          LEFT JOIN employee e ON e.id = pl.employeeId
+          WHERE pl.order_detail_id = ?
+          ORDER BY pl.logDate DESC, pl.id DESC`,
+        [detailId]
+      );
+
+      const logs = rows.map((row) => ({
+        id: row.id,
+        printedQty: parseFloat(row.printedQty) || 0,
+        logDate: row.logDate,
+        employeeId: row.employeeId,
+        employeeName: row.employeeName || "",
+      }));
+
+      return res.json({ Status: true, Result: logs });
+    } catch (error) {
+      console.error("Error fetching print logs:", error);
+      return res.status(500).json({
+        Status: false,
+        Error: "Failed to fetch print logs",
+      });
+    }
+  }
+);
 
 // Route to get monthly sales data for user and total
 router.get("/monthly_sales", verifyUser, async (req, res) => {
