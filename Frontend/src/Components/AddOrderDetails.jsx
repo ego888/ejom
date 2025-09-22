@@ -383,7 +383,6 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                 <th scope="col">Description</th>
                 <th scope="col">Per SqFt</th>
                 <th scope="col">Unit Price</th>
-                <th scope="col">Disc</th>
                 <th scope="col">Amount</th>
                 <th scope="col">Remarks</th>
                 <th scope="col">Action</th>
@@ -546,21 +545,6 @@ function AddOrderDetails({ orderId, onDetailAdded }) {
                     value={detail.unitPrice}
                     onChange={handleInputChange}
                     aria-label="Unit Price"
-                  />
-                </td>
-                <td>
-                  <label htmlFor="discount" className="visually-hidden">
-                    Discount
-                  </label>
-                  <input
-                    id="discount"
-                    type="number"
-                    step="1.0"
-                    className="form-input detail"
-                    name="discount"
-                    value={detail.discount}
-                    onChange={handleInputChange}
-                    aria-label="Discount"
                   />
                 </td>
                 <td>

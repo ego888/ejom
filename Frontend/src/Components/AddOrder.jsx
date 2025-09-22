@@ -1772,8 +1772,8 @@ function AddOrder() {
     <div className="orders-page-background">
       <div className="px-4 mt-3">
         <div className="p-3 rounded border">
-          <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
-            <div className="d-flex align-items-center gap-3">
+          <div className="mb-3 pb-2 border-bottom orders-toolbar">
+            <div className="orders-toolbar__primary d-flex align-items-center gap-3">
               <h3 className="m-0">
                 {id ? `Edit Order #${data.orderId}` : "Add New Order"}
                 {data.revision > 0 && (
@@ -1795,7 +1795,7 @@ function AddOrder() {
                 </div>
               )}
             </div>
-            <div className="d-flex gap-2">
+            <div className="orders-toolbar__actions d-flex flex-wrap gap-2">
               {isHeaderSaved && (
                 <>
                   {data.status === "Printed" && (
@@ -1810,7 +1810,7 @@ function AddOrder() {
                   <Button variant="save" onClick={handleReOrder}>
                     Reorder
                   </Button>
-                  <div className="d-flex gap-2 align-items-center mb-2">
+                  <div className="d-flex gap-2 align-items-center">
                     <label
                       className="form-check-label"
                       style={{ userSelect: "none" }}
@@ -1847,7 +1847,7 @@ function AddOrder() {
             </div>
           </div>
 
-          <div className="d-flex">
+          <div className="d-flex flex-column flex-xl-row gap-3">
             <form
               className="row g-1 flex-grow-1"
               onSubmit={handleSubmit}
@@ -2382,7 +2382,7 @@ function AddOrder() {
           {isHeaderSaved && (
             <div className="mt-4">
               <h5>Order Details List</h5>
-              <table className="table detail table-striped">
+              <table className="table detail table-striped order-details-table">
                 <thead>
                   <tr>
                     <th
@@ -2398,10 +2398,9 @@ function AddOrder() {
                     <th>Material</th>
                     <th>Per Sq Ft</th>
                     <th>Price</th>
-                    <th>Disc%</th>
                     <th>Amount</th>
-                    <th>Description</th>
-                    <th>JO Remarks</th>
+                    <th className="col-description">Description</th>
+                    <th className="col-remarks">JO Remarks</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -2601,73 +2600,12 @@ function AddOrder() {
                                 }}
                               />
                             </td>
-                            <td>
-                              <input
-                                type="text"
-                                className="form-input detail text-end"
-                                value={
-                                  editedValues[uniqueId]?.discount
-                                    ? editingRowId === uniqueId
-                                      ? editedValues[uniqueId].discount
-                                      : Number(
-                                          editedValues[uniqueId].discount
-                                        ).toLocaleString(undefined, {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        })
-                                    : Number(detail.discount).toLocaleString(
-                                        undefined,
-                                        {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        }
-                                      )
-                                }
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(
-                                    /[^\d.-]/g,
-                                    ""
-                                  );
-                                  if (!isNaN(value) || value === "") {
-                                    // Just update the display value, don't calculate yet
-                                    handleDetailInputChange(
-                                      uniqueId,
-                                      "discount",
-                                      value
-                                    );
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    const value = e.target.value.replace(
-                                      /[^\d.-]/g,
-                                      ""
-                                    );
-                                    if (!isNaN(value)) {
-                                      handleDiscountInputChange(
-                                        uniqueId,
-                                        value
-                                      );
-                                    }
-                                  }
-                                }}
-                                onBlur={(e) => {
-                                  const value = e.target.value.replace(
-                                    /[^\d.-]/g,
-                                    ""
-                                  );
-                                  if (!isNaN(value)) {
-                                    handleDiscountInputChange(uniqueId, value);
-                                  }
-                                }}
-                              />
-                            </td>
                             <td className="numeric-cell">
                               {formatNumber(
                                 editedValues[uniqueId]?.amount || detail.amount
                               )}
                             </td>
-                            <td>
+                            <td className="col-description">
                               <textarea
                                 className="form-input autosize"
                                 data-id={`${detail.Id}-itemDescription`}
@@ -2723,7 +2661,7 @@ function AddOrder() {
                                 rows="1"
                               />
                             </td>
-                            <td>
+                            <td className="col-remarks">
                               <textarea
                                 className="form-input autosize"
                                 data-id={`${detail.Id}-remarks`}
@@ -2894,7 +2832,7 @@ function AddOrder() {
                               {detail.perSqFt}
                             </td>
                             <td
-                              className="numeric-cell"
+                              className="numeric-cell col-disc"
                               style={{
                                 cursor: canEdit() ? "pointer" : "default",
                               }}
@@ -2923,25 +2861,10 @@ function AddOrder() {
                                 }
                               }}
                             >
-                              {formatNumber(detail.discount)}
-                            </td>
-                            <td
-                              className="numeric-cell"
-                              style={{
-                                cursor: canEdit() ? "pointer" : "default",
-                              }}
-                              onDoubleClick={() => {
-                                if (canEdit()) {
-                                  handleNoPrintToggle(
-                                    detail.Id,
-                                    detail.noPrint
-                                  );
-                                }
-                              }}
-                            >
                               {formatNumber(detail.amount)}
                             </td>
                             <td
+                              className="col-description"
                               style={{
                                 whiteSpace: "pre-line",
                                 cursor: canEdit() ? "pointer" : "default",
@@ -2958,7 +2881,7 @@ function AddOrder() {
                               {detail.itemDescription}
                             </td>
                             <td
-                              className="multiline-cell"
+                              className="multiline-cell col-remarks"
                               style={{
                                 whiteSpace: "pre-line",
                                 cursor: canEdit() ? "pointer" : "default",
@@ -3051,7 +2974,6 @@ function AddOrder() {
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td></td>
                     <td className="text-end pe-2">Subtotal:</td>
                     <td className="numeric-cell">
                       {formatNumber(data.totalAmount)}
@@ -3068,7 +2990,6 @@ function AddOrder() {
                     </td>
                   </tr>
                   <tr>
-                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -3106,7 +3027,6 @@ function AddOrder() {
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td></td>
                     <td className="text-end pe-2">Percent Disc.:</td>
                     <td className="numeric-cell">
                       <input
@@ -3135,7 +3055,6 @@ function AddOrder() {
                     </td>
                   </tr>
                   <tr>
-                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>

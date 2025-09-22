@@ -195,6 +195,14 @@ a:hover {
   min-width: 100px;
 }
 
+.orders-toolbar__actions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 .orders-search__input-wrapper {
   position: relative;
 }
@@ -272,6 +280,11 @@ a:hover {
 }
 
 @media (max-width: 768px) {
+  .orders-toolbar__actions {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
   .orders-controls__section--right {
     justify-content: center;
   }
