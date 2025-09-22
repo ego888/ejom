@@ -246,6 +246,27 @@
   border-color: #f1f3f5;
 }
 
+.recent-prod-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.recent-prod-table th:nth-child(1),
+.recent-prod-table td:nth-child(1) {
+  width: 20%;
+}
+
+.recent-prod-table th:nth-child(2),
+.recent-prod-table td:nth-child(2) {
+  width: 50%;
+  min-width: 0;
+}
+
+.recent-prod-table th:nth-child(3),
+.recent-prod-table td:nth-child(3) {
+  width: 30%;
+}
+
 .recent-prod-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -254,8 +275,21 @@
   gap: 0.5rem;
 }
 
+.recent-prod-client span {
+  min-width: 0;
+}
+
+.recent-prod-client span.text-truncate {
+  display: block;
+}
+
 .recent-prod-project {
   margin-top: 0.25rem;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Speedometer Gauge Styles */
