@@ -188,7 +188,7 @@ const Client = () => {
         <table className="table table-striped table-hover">
           <thead>
             <tr>
-              <th className="align-top">
+              <th className="align-middle text-center">
                 <div
                   onClick={() => handleSort("clientName")}
                   style={{ cursor: "pointer" }}
@@ -197,32 +197,38 @@ const Client = () => {
                   Client {getSortIcon("clientName")}
                 </div>
               </th>
-              <th className="d-none d-sm-table-cell">Contact</th>
-              <th className="d-none d-sm-table-cell">Tel No</th>
-              <th className="d-none d-sm-table-cell">Email</th>
+              <th className="d-none d-sm-table-cell align-middle text-center">
+                Contact
+              </th>
+              <th className="d-none d-sm-table-cell align-middle text-center">
+                Tel No
+              </th>
+              <th className="d-none d-sm-table-cell align-middle text-center">
+                Email
+              </th>
               <th
                 onClick={() => handleSort("salesName")}
                 style={{ cursor: "pointer" }}
-                className="d-none d-sm-table-cell"
+                className="d-none d-sm-table-cell align-middle text-center"
               >
                 Sales Person {getSortIcon("salesName")}
               </th>
               <th
                 onClick={() => handleSort("terms")}
                 style={{ cursor: "pointer" }}
-                className="d-none d-sm-table-cell"
+                className="d-none d-sm-table-cell align-middle text-center"
               >
                 Terms {getSortIcon("terms")}
               </th>
               <th
                 onClick={() => handleSort("creditLimit")}
                 style={{ cursor: "pointer" }}
-                className="d-none d-sm-table-cell"
+                className="d-none d-sm-table-cell align-middle text-center"
               >
                 Credit Limit {getSortIcon("creditLimit")}
                 <div className="text-success small">Total orders</div>
               </th>
-              <th className="align-top">
+              <th className="align-middle text-center">
                 <div
                   onClick={() => handleSort("over30")}
                   style={{ cursor: "pointer" }}
@@ -235,11 +241,12 @@ const Client = () => {
               <th
                 onClick={() => handleSort("over60")}
                 style={{ cursor: "pointer" }}
+                className="align-middle text-center"
               >
                 Over 60 {getSortIcon("over60")}
                 <div className="text-success small">Billed</div>
               </th>
-              <th className="align-top">
+              <th className="align-middle text-center">
                 <div
                   onClick={() => handleSort("over90")}
                   style={{ cursor: "pointer" }}
@@ -252,18 +259,18 @@ const Client = () => {
               <th
                 onClick={() => handleSort("overdue")}
                 style={{ cursor: "pointer" }}
-                className="d-none d-sm-table-cell"
+                className="d-none d-sm-table-cell align-middle text-center"
               >
                 Overdue {getSortIcon("overdue")}
               </th>
               <th
                 onClick={() => handleSort("hold")}
                 style={{ cursor: "pointer" }}
-                className="d-none d-sm-table-cell"
+                className="d-none d-sm-table-cell align-middle text-center"
               >
                 Hold {getSortIcon("hold")}
               </th>
-              <th className="text-center">Action</th>
+              <th className="align-middle text-center">Action</th>
             </tr>
           </thead>
           <tbody>
