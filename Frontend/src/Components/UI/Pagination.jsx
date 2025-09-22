@@ -75,7 +75,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             disabled={currentPage === 1}
             aria-label="Previous page"
           >
-            Previous
+            Prev
           </button>
         </li>
 
