@@ -378,7 +378,7 @@ const DashSales = () => {
             <h4 className="section-title">Recent Orders</h4>
             {recentOrders.length > 0 ? (
               <div className="table-responsive">
-                <table className="table table-sm table-hover">
+                <table className="table table-sm table-hover dashboard-table">
                   <thead>
                     <tr>
                       <th>Order #</th>
@@ -396,8 +396,16 @@ const DashSales = () => {
                             {order.orderID}
                           </Link>
                         </td>
-                        <td>{order.clientName}</td>
-                        <td>{order.projectName}</td>
+                        <td>
+                          <span className="d-block text-truncate">
+                            {order.clientName || "-"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="d-block text-truncate">
+                            {order.projectName || "-"}
+                          </span>
+                        </td>
                         <td>
                           <span className={`status-badge ${order.status}`}>
                             {order.status}
@@ -421,7 +429,7 @@ const DashSales = () => {
             <h4 className="section-title text-danger">Overdue Orders</h4>
             {overdueOrders.length > 0 ? (
               <div className="table-responsive">
-                <table className="table table-sm table-hover">
+                <table className="table table-sm table-hover dashboard-table">
                   <thead>
                     <tr>
                       <th>Order #</th>
@@ -439,8 +447,16 @@ const DashSales = () => {
                             {order.orderID}
                           </Link>
                         </td>
-                        <td>{order.clientName}</td>
-                        <td>{order.projectName}</td>
+                        <td>
+                          <span className="d-block text-truncate">
+                            {order.clientName || "-"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="d-block text-truncate">
+                            {order.projectName || "-"}
+                          </span>
+                        </td>
                         <td className="text-danger fw-bold">
                           {formatDate(order.dueDate)}
                         </td>

@@ -292,6 +292,48 @@
   white-space: nowrap;
 }
 
+.dashboard-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+  vertical-align: middle;
+}
+
+.dashboard-table th:nth-child(1),
+.dashboard-table td:nth-child(1) {
+  width: 15%;
+}
+
+.dashboard-table th:nth-child(2),
+.dashboard-table td:nth-child(2) {
+  width: 25%;
+}
+
+.dashboard-table th:nth-child(3),
+.dashboard-table td:nth-child(3) {
+  width: 30%;
+}
+
+.dashboard-table th:nth-child(4),
+.dashboard-table td:nth-child(4) {
+  width: 15%;
+}
+
+.dashboard-table th:nth-child(5),
+.dashboard-table td:nth-child(5) {
+  width: 15%;
+}
+
+.dashboard-table .text-truncate {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Speedometer Gauge Styles */
 .speedometer-container {
   width: 100%;
