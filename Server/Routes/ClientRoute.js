@@ -186,57 +186,48 @@ router.get("/client-list", async (req, res) => {
                ELSE 0
              END
            ) AS billedTotal,
-            SUM(
-              CASE
-                WHEN TRIM(status) = 'Billed'
-                  AND COALESCE(billDate, productionDate) IS NOT NULL
-                THEN
-                  CASE
-                    WHEN TIMESTAMPDIFF(
-                      DAY,
-                      COALESCE(billDate, productionDate),
-                      NOW()
-                    ) BETWEEN 31 AND 60
-                    THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
-                    ELSE 0
-                  END
-                ELSE 0
-              END
-            ) AS over30Billed,
-            SUM(
-              CASE
-                WHEN TRIM(status) = 'Billed'
-                  AND COALESCE(billDate, productionDate) IS NOT NULL
-                THEN
-                  CASE
-                    WHEN TIMESTAMPDIFF(
-                      DAY,
-                      COALESCE(billDate, productionDate),
-                      NOW()
-                    ) BETWEEN 61 AND 90
-                    THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
-                    ELSE 0
-                  END
-                ELSE 0
-              END
-            ) AS over60Billed,
-            SUM(
-              CASE
-                WHEN TRIM(status) = 'Billed'
-                  AND COALESCE(billDate, productionDate) IS NOT NULL
-                THEN
-                  CASE
-                    WHEN TIMESTAMPDIFF(
-                      DAY,
-                      COALESCE(billDate, productionDate),
-                      NOW()
-                    ) > 90
-                    THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
-                    ELSE 0
-                  END
-                ELSE 0
-              END
-            ) AS over90Billed
+           SUM(
+             CASE
+               WHEN TRIM(status) = 'Billed'
+                 AND productionDate IS NOT NULL
+                 AND grandTotal > IFNULL(amountPaid, 0)
+               THEN
+                 CASE
+                   WHEN TIMESTAMPDIFF(DAY, productionDate, NOW()) BETWEEN 31 AND 60
+                   THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
+                   ELSE 0
+                 END
+               ELSE 0
+             END
+           ) AS over30Billed,
+           SUM(
+             CASE
+               WHEN TRIM(status) = 'Billed'
+                 AND productionDate IS NOT NULL
+                 AND grandTotal > IFNULL(amountPaid, 0)
+               THEN
+                 CASE
+                   WHEN TIMESTAMPDIFF(DAY, productionDate, NOW()) BETWEEN 61 AND 90
+                   THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
+                   ELSE 0
+                 END
+               ELSE 0
+             END
+           ) AS over60Billed,
+           SUM(
+             CASE
+               WHEN TRIM(status) = 'Billed'
+                 AND productionDate IS NOT NULL
+                 AND grandTotal > IFNULL(amountPaid, 0)
+               THEN
+                 CASE
+                   WHEN TIMESTAMPDIFF(DAY, productionDate, NOW()) > 90
+                   THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
+                   ELSE 0
+                 END
+               ELSE 0
+             END
+           ) AS over90Billed
          FROM orders
          GROUP BY clientId
        ) t ON t.clientId = c.id
