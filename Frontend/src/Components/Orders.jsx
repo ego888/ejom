@@ -8,7 +8,7 @@ import { ServerIP } from "../config";
 import ClientFilter from "./Logic/ClientFilter";
 import SalesFilter from "./Logic/SalesFilter";
 import { formatPeso, formatDate } from "../utils/orderUtils";
-//import "./Orders.css";
+import "./Orders.css";
 import StatusBadges from "./UI/StatusBadges";
 import ModalAlert from "./UI/ModalAlert";
 import axios from "../utils/axiosConfig"; // Import configured axios
@@ -341,51 +341,34 @@ function Orders() {
         </div>
 
         {/* Search and filters row */}
-        <div className="d-flex justify-content-between mb-3">
-          <Button
-            variant="add"
-            onClick={() => navigate("/dashboard/orders/add")}
-          >
-            Add Order
-          </Button>
-          <div className="search-container">
+        <div className="orders-toolbar mb-3">
+          <div className="orders-toolbar__primary">
+            <Button
+              variant="add"
+              onClick={() => navigate("/dashboard/orders/add")}
+            >
+              Add Order
+            </Button>
+          </div>
+          <div className="orders-search">
             <label htmlFor="orderSearch" className="visually-hidden">
               Search orders
             </label>
-            <div className="position-relative">
+            <div className="orders-search__input-wrapper">
               <input
                 id="orderSearch"
                 name="orderSearch"
                 type="text"
-                className="form-control form-control-sm"
+                className="form-control form-control-sm orders-search__input"
                 placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
                 onChange={handleSearch}
                 value={displaySearchTerm}
-                style={{
-                  width: "400px",
-                  paddingRight: displaySearchTerm ? "30px" : "12px",
-                }}
                 aria-label="Search orders"
               />
               {displaySearchTerm && (
                 <button
                   type="button"
-                  className="btn btn-sm position-absolute"
-                  style={{
-                    right: "5px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    color: "#6c757d",
-                    fontSize: "14px",
-                    padding: "0",
-                    width: "20px",
-                    height: "20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className="orders-search__clear"
                   onClick={() => {
                     setDisplaySearchTerm("");
                     setSearchTerm("");
@@ -620,32 +603,38 @@ function Orders() {
         </div>
 
         {/* Pagination and Filters Section */}
-        <div className="d-flex justify-content-between align-items-start mt-3">
-          <DisplayPage
-            recordsPerPage={recordsPerPage}
-            setRecordsPerPage={setRecordsPerPage}
-            currentPage={currentPage}
-            totalCount={totalCount}
-            setCurrentPage={setCurrentPage}
-            selectProps={{
-              id: "ordersPerPage",
-              name: "ordersPerPage",
-              "aria-label": "Number of orders per page",
-            }}
-          />
+        <div className="orders-controls mt-3">
+          <div className="orders-controls__section orders-controls__section--left">
+            <DisplayPage
+              recordsPerPage={recordsPerPage}
+              setRecordsPerPage={setRecordsPerPage}
+              currentPage={currentPage}
+              totalCount={totalCount}
+              setCurrentPage={setCurrentPage}
+              selectProps={{
+                id: "ordersPerPage",
+                name: "ordersPerPage",
+                "aria-label": "Number of orders per page",
+              }}
+            />
+          </div>
 
-          <StatusBadges
-            statusOptions={statusOptions}
-            onStatusChange={handleStatusChange}
-            showProdFilter={true}
-            isDisabled={false}
-          />
+          <div className="orders-controls__section orders-controls__section--filters">
+            <StatusBadges
+              statusOptions={statusOptions}
+              onStatusChange={handleStatusChange}
+              showProdFilter={true}
+              isDisabled={false}
+            />
+          </div>
 
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
+          <div className="orders-controls__section orders-controls__section--right">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
         </div>
 
         <ModalAlert
