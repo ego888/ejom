@@ -172,39 +172,39 @@ router.get("/client-list", async (req, res) => {
        LEFT JOIN (
          SELECT 
            clientId,
-           SUM(CASE WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered') 
+           SUM(CASE WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed') 
                     THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
                     ELSE 0 END) AS productionTotal,
-           SUM(CASE WHEN status = 'Billed'
+           SUM(CASE WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed') 
                     THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
                     ELSE 0 END) AS billedTotal,
             SUM(
               CASE
-                WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed')
-                  AND productionDate IS NOT NULL
+                WHEN status = 'Billed'
+                  AND COALESCE(billDate, productionDate) IS NOT NULL
                   AND grandTotal > IFNULL(amountPaid, 0)
-                  AND DATEDIFF(CURDATE(), productionDate) BETWEEN 31 AND 60
-                THEN grandTotal - IFNULL(amountPaid, 0)
+                  AND DATEDIFF(CURDATE(), COALESCE(billDate, productionDate)) BETWEEN 31 AND 60
+                THEN grandTotal
                 ELSE 0
               END
             ) AS over30Billed,
             SUM(
               CASE
-                WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed')
-                  AND productionDate IS NOT NULL
-                  AND grandTotal > IFNULL(amountPaid, 0)
-                  AND DATEDIFF(CURDATE(), productionDate) BETWEEN 61 AND 90
-                THEN grandTotal - IFNULL(amountPaid, 0)
+                WHEN status = 'Billed'
+                  AND COALESCE(billDate, productionDate) IS NOT NULL
+                  AND grandTotal
+                  AND DATEDIFF(CURDATE(), COALESCE(billDate, productionDate)) BETWEEN 61 AND 90
+                THEN grandTotal
                 ELSE 0
               END
             ) AS over60Billed,
             SUM(
               CASE
-                WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed')
-                  AND productionDate IS NOT NULL
+                WHEN status = 'Billed'
+                  AND COALESCE(billDate, productionDate) IS NOT NULL
                   AND grandTotal > IFNULL(amountPaid, 0)
-                  AND DATEDIFF(CURDATE(), productionDate) > 90
-                THEN grandTotal - IFNULL(amountPaid, 0)
+                  AND DATEDIFF(CURDATE(), COALESCE(billDate, productionDate)) > 90
+                THEN grandTotal
                 ELSE 0
               END
             ) AS over90Billed

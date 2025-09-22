@@ -168,6 +168,7 @@ const Client = () => {
                 className="d-none d-sm-table-cell"
               >
                 Credit Limit {getSortIcon("creditLimit")}
+                <div className="text-success small">Total orders</div>
               </th>
               <th className="align-top">
                 <div
@@ -177,13 +178,14 @@ const Client = () => {
                 >
                   Over 30 {getSortIcon("over30")}
                 </div>
-                <div className="text-muted small">All Prod</div>
+                <div className="text-success small">Billed</div>
               </th>
               <th
                 onClick={() => handleSort("over60")}
                 style={{ cursor: "pointer" }}
               >
                 Over 60 {getSortIcon("over60")}
+                <div className="text-success small">Billed</div>
               </th>
               <th className="align-top">
                 <div
@@ -193,7 +195,7 @@ const Client = () => {
                 >
                   Over 90 {getSortIcon("over90")}
                 </div>
-                <div className="text-muted small">Billed</div>
+                <div className="text-success small">Billed</div>
               </th>
               <th
                 onClick={() => handleSort("overdue")}
@@ -255,25 +257,25 @@ const Client = () => {
                   </td>
                   <td className="text-end d-none d-sm-table-cell">
                     <div>{formatPesoZ(client.creditLimit)}</div>
-                    <div className="text-success small fw-semibold">
+                    <div className="text-success small">
                       {formatPesoZ(client.productionTotal)}
                     </div>
                   </td>
                   <td className="text-end">
                     <div>{formatPesoZ(client.over30)}</div>
-                    <div className="text-success small fw-semibold">
+                    <div className="text-success small">
                       {formatPesoZ(client.over30Billed)}
                     </div>
                   </td>
                   <td className="text-end">
                     <div>{formatPesoZ(client.over60)}</div>
-                    <div className="text-success small fw-semibold">
+                    <div className="text-success small">
                       {formatPesoZ(client.over60Billed)}
                     </div>
                   </td>
                   <td className="text-end">
                     <div>{formatPesoZ(client.over90)}</div>
-                    <div className="text-success small fw-semibold">
+                    <div className="text-success small">
                       {formatPesoZ(client.over90Billed)}
                     </div>
                   </td>
