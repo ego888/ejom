@@ -1,5 +1,5 @@
 import axios from "../utils/axiosConfig"; // Import configured axios
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
@@ -11,13 +11,20 @@ import { jwtDecode } from "jwt-decode";
 import { BsCalendar2Week } from "react-icons/bs";
 import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
 
+const CLIENT_SEARCH_KEY = "clientListSearch";
+
 const Client = () => {
   const [clients, setClients] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState(
+    () => localStorage.getItem(CLIENT_SEARCH_KEY) || ""
+  );
+  const [searchTerm, setSearchTerm] = useState(
+    () => localStorage.getItem(CLIENT_SEARCH_KEY) || ""
+  );
   const [isAdmin, setIsAdmin] = useState(false);
   const [sortConfig, setSortConfig] = useState({
     key: null,
@@ -62,10 +69,34 @@ const Client = () => {
   };
 
   // Debounced search handler
-  const debouncedSearch = debounce((value) => {
-    setSearchTerm(value);
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value) => {
+        setSearchTerm(value);
+        setCurrentPage(1);
+        localStorage.setItem(CLIENT_SEARCH_KEY, value);
+      }, 300),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
+
+  const handleSearchChange = (value) => {
+    setSearchInput(value);
+    debouncedSearch(value);
+  };
+
+  const handleClearSearch = () => {
+    debouncedSearch.cancel();
+    setSearchInput("");
+    setSearchTerm("");
     setCurrentPage(1);
-  }, 300);
+    localStorage.removeItem(CLIENT_SEARCH_KEY);
+  };
 
   useEffect(() => {
     fetchClients();
@@ -119,15 +150,36 @@ const Client = () => {
 
         <div className="d-flex gap-3 align-items-center">
           <div className="mb-3">
-            <input
-              type="text"
-              className="form-input"
-              id="search"
-              name="search"
-              autoComplete="off"
-              placeholder="Search clients..."
-              onChange={(e) => debouncedSearch(e.target.value)}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                className="form-input"
+                id="search"
+                name="search"
+                autoComplete="off"
+                placeholder="Search clients..."
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                style={{ paddingRight: "2rem" }}
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  aria-label="Clear search"
+                  className="btn btn-sm btn-link text-muted"
+                  style={{
+                    position: "absolute",
+                    right: "0.25rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    textDecoration: "none",
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
