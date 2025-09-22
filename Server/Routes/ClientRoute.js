@@ -163,7 +163,10 @@ router.get("/client-list", async (req, res) => {
          c.*, 
          e.name as salesName,
          COALESCE(t.productionTotal, 0) AS productionTotal,
-         COALESCE(t.billedTotal, 0) AS billedTotal
+         COALESCE(t.billedTotal, 0) AS billedTotal,
+         COALESCE(t.over30Billed, 0) AS over30Billed,
+         COALESCE(t.over60Billed, 0) AS over60Billed,
+         COALESCE(t.over90Billed, 0) AS over90Billed
        FROM client c
        LEFT JOIN employee e ON c.salesId = e.id
        LEFT JOIN (
@@ -174,7 +177,37 @@ router.get("/client-list", async (req, res) => {
                     ELSE 0 END) AS productionTotal,
            SUM(CASE WHEN status = 'Billed'
                     THEN GREATEST(grandTotal - IFNULL(amountPaid, 0), 0)
-                    ELSE 0 END) AS billedTotal
+                    ELSE 0 END) AS billedTotal,
+            SUM(
+              CASE
+                WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed')
+                  AND productionDate IS NOT NULL
+                  AND grandTotal > IFNULL(amountPaid, 0)
+                  AND DATEDIFF(CURDATE(), productionDate) BETWEEN 31 AND 60
+                THEN grandTotal - IFNULL(amountPaid, 0)
+                ELSE 0
+              END
+            ) AS over30Billed,
+            SUM(
+              CASE
+                WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed')
+                  AND productionDate IS NOT NULL
+                  AND grandTotal > IFNULL(amountPaid, 0)
+                  AND DATEDIFF(CURDATE(), productionDate) BETWEEN 61 AND 90
+                THEN grandTotal - IFNULL(amountPaid, 0)
+                ELSE 0
+              END
+            ) AS over60Billed,
+            SUM(
+              CASE
+                WHEN status IN ('Prod', 'Finish', 'Finished', 'Delivered', 'Billed')
+                  AND productionDate IS NOT NULL
+                  AND grandTotal > IFNULL(amountPaid, 0)
+                  AND DATEDIFF(CURDATE(), productionDate) > 90
+                THEN grandTotal - IFNULL(amountPaid, 0)
+                ELSE 0
+              END
+            ) AS over90Billed
          FROM orders
          GROUP BY clientId
        ) t ON t.clientId = c.id

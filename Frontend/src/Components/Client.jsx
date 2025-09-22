@@ -254,19 +254,27 @@ const Client = () => {
                     {client.terms}
                   </td>
                   <td className="text-end d-none d-sm-table-cell">
-                    {formatPesoZ(client.creditLimit)}
+                    <div>{formatPesoZ(client.creditLimit)}</div>
+                    <div className="text-muted small">
+                      Prod/Finished/Delivered/Billed: {formatPesoZ(client.productionTotal)}
+                    </div>
                   </td>
                   <td className="text-end">
                     <div>{formatPesoZ(client.over30)}</div>
                     <div className="text-muted small">
-                      {formatPesoZ(client.productionTotal)}
+                      Billed: {formatPesoZ(client.over30Billed)}
                     </div>
                   </td>
-                  <td className="text-end">{formatPesoZ(client.over60)}</td>
+                  <td className="text-end">
+                    <div>{formatPesoZ(client.over60)}</div>
+                    <div className="text-muted small">
+                      Billed: {formatPesoZ(client.over60Billed)}
+                    </div>
+                  </td>
                   <td className="text-end">
                     <div>{formatPesoZ(client.over90)}</div>
                     <div className="text-muted small">
-                      {formatPesoZ(client.billedTotal)}
+                      Billed: {formatPesoZ(client.over90Billed)}
                     </div>
                   </td>
                   <td className="text-center d-none d-sm-table-cell">
