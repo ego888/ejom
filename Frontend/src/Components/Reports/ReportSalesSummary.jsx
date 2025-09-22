@@ -102,9 +102,9 @@ const ReportSalesSummary = ({ data, groupBy }) => {
   };
 
   return (
-    <div>
+    <div className="report-summary-wrapper">
       <h4 className="report-title">{getReportTitle()}</h4>
-      <div className="table-responsive w-50 mx-auto">
+      <div className="table-responsive">
         <table className="table table-hover table-striped">
           <thead>
             <tr>
