@@ -334,6 +334,53 @@
   white-space: nowrap;
 }
 
+.sales-linechart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.sales-linechart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.sales-linechart-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sales-analytics-card {
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sales-analytics-card > .flex-grow-1,
+.sales-analytics-card > .d-flex.flex-grow-1 {
+  flex: 1;
+}
+
+.sales-analytics-card .gauge-container {
+  height: 100%;
+}
+
+@media (max-width: 1105px) {
+  .sales-analytics-card {
+    min-height: 380px;
+  }
+
+  .sales-analytics-card .gauge-container {
+    max-height: 360px;
+  }
+}
+
 /* Speedometer Gauge Styles */
 .speedometer-container {
   width: 100%;

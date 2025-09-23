@@ -16,6 +16,8 @@ const SalesGauge = ({
   const startTimeRef = useRef(null);
   const animationDuration = 4000; // Animation duration in ms
   const prevValueRef = useRef(value);
+  const containerRef = useRef(null);
+  const [isCompact, setIsCompact] = useState(false);
 
   // Reset animation when value changes
   useEffect(() => {
@@ -45,6 +47,32 @@ const SalesGauge = ({
       };
     }
   }, [value]); // Depend on value to retrigger animation when it changes
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    const handleResize = () => {
+      const width = element.getBoundingClientRect().width;
+      if (width) {
+        setIsCompact(width <= 1105);
+      }
+    };
+
+    handleResize();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
+    }
+
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
 
   // Animation function
   const animateNeedle = (timestamp) => {
@@ -76,15 +104,13 @@ const SalesGauge = ({
   const angle = percentage * 1.8 - 90; // Convert percentage to angle (-90 to 90 degrees)
 
   // Size calculations - adjust positioning to move gauge up
-  const radius = (size * 0.8) / 2;
-  const centerX = size / 2 - 6;
-  const centerY = size * 0.65 - 100; // Reduced from 0.8 to move up
-  const textCenterX = centerX;
-  const textCenterY = centerY - 40;
-  const strokeWidth = size * 0.08;
-  const fontSize = size / 14;
-  const labelFontSize = size / 16;
-  const valueFontSize = size / 10;
+  const viewBoxWidth = isCompact ? size * 1.1 : size * 1.6;
+  const baseScale = isCompact ? 0.65 : 0.8;
+  const gaugeScale = Math.min(baseScale * 1.5, 0.95);
+  const radius = (size * gaugeScale) / 2;
+  const strokeWidth = size * (isCompact ? 0.09 : 0.12);
+  const centerX = isCompact ? viewBoxWidth / 2 : size / 2 - 6;
+  const centerY = radius + strokeWidth + size * (isCompact ? 0.08 : 0.1);
 
   // Format value to show K or M
   const formatValueWithUnit = (num) => {
@@ -218,28 +244,54 @@ const SalesGauge = ({
   // Format the displayed value with ₱ symbol and K/M suffix
   const formattedValue = formatPeso(value);
 
-  // Calculate percentage for display
+  // Calculate percentage for display, prioritising the provided target value
   const safeValueForPercentage = isNaN(value) ? 0 : value;
   const safeMaxValueForPercentage =
     isNaN(maxValue) || maxValue <= 0 ? 1 : maxValue;
-  const percentageText = `${Math.round(
-    (safeValueForPercentage / safeMaxValueForPercentage) * 100
-  )}% of target`;
+  const safeTargetValue =
+    !targetValue || isNaN(targetValue) || targetValue <= 0
+      ? safeMaxValueForPercentage
+      : targetValue;
+  const rawTargetPercentage =
+    safeTargetValue === 0
+      ? 0
+      : (safeValueForPercentage / safeTargetValue) * 100;
+  const percentageText = `${Math.round(rawTargetPercentage)}% of target`;
+
+  const textAnchor = isCompact ? "middle" : "start";
+  const textBaseX = isCompact
+    ? centerX
+    : centerX + radius + strokeWidth + size * 0.12;
+  const valueTextY = isCompact
+    ? centerY + radius * 0.42
+    : centerY - radius * 0.28;
+  const titleTextY = valueTextY + (isCompact ? 16 : 20);
+  const percentTextY = titleTextY + (isCompact ? 13 : 18);
+  const valueFontSize = isCompact ? "20px" : "22px";
+  const titleFontSize = "12px";
+  const percentageFontSize = "10px";
 
   return (
     <div
       className="gauge-container"
+      ref={containerRef}
       style={{
-        width: size * 2, // Increased to make room for text on the right
-        height: size * 0.6, // Reduced from 0.7 to prevent overflow
+        width: "100%",
+        maxWidth: isCompact ? size * 1.1 : size * 2.4,
+        height: isCompact ? "auto" : "100%",
         margin: "0 auto",
         position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: isCompact ? "0.5rem 0 1rem" : 0,
       }}
     >
       <svg
-        width={size * 2.4}
-        height={size * 2.1}
-        viewBox={`0 0 ${size * 1.6} ${size}`}
+        width="100%"
+        viewBox={`0 0 ${viewBoxWidth} ${size}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block", height: "auto" }}
       >
         {/* Background */}
         <path
@@ -267,31 +319,31 @@ const SalesGauge = ({
 
         {/* Current value - moved to right side */}
         <text
-          x={textCenterX + radius + 20}
-          y={textCenterY - 10}
-          fontSize="18px"
+          x={textBaseX}
+          y={valueTextY}
+          fontSize={valueFontSize}
           fontWeight="bold"
-          textAnchor="start"
+          textAnchor={textAnchor}
         >
           {formattedValue}
         </text>
 
         {/* Title - moved to right side */}
         <text
-          x={textCenterX + radius + 20}
-          y={textCenterY + 10}
-          fontSize="12px"
-          textAnchor="start"
+          x={textBaseX}
+          y={titleTextY}
+          fontSize={titleFontSize}
+          textAnchor={textAnchor}
         >
           {title}
         </text>
 
         {/* Percentage - added below title */}
         <text
-          x={textCenterX + radius + 20}
-          y={textCenterY + 27}
-          fontSize="10px"
-          textAnchor="start"
+          x={textBaseX}
+          y={percentTextY}
+          fontSize={percentageFontSize}
+          textAnchor={textAnchor}
           fill="#666"
         >
           {percentageText}

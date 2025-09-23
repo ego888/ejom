@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import PropTypes from "prop-types";
 import { formatPeso } from "../../utils/orderUtils";
 import Modal from "./Modal";
@@ -10,6 +10,7 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
   const startTimeRef = useRef(null);
   const animationDuration = 3000; // 3 seconds
   const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(size);
 
   // Local tooltip state
   const [showTooltip, setShowTooltip] = useState(false);
@@ -80,11 +81,48 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
     return filledData;
   };
 
+  const allDays = useMemo(() => generateAllDays(), [selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    const updateWidth = () => {
+      const width = element.getBoundingClientRect().width;
+      if (width) {
+        setContainerWidth(width);
+      }
+    };
+
+    updateWidth();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateWidth);
+      return () => {
+        window.removeEventListener("resize", updateWidth);
+      };
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries?.[0];
+      if (!entry) return;
+      const width = entry.contentRect?.width || element.offsetWidth;
+      if (width) {
+        setContainerWidth(width);
+      }
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   // Animation effect
   useEffect(() => {
     if (!data || data.length === 0) return;
 
-    const allDays = generateAllDays();
     const processedData = data.map((employee) => ({
       ...employee,
       data: fillMissingDays(employee.data, allDays),
@@ -103,7 +141,7 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [data, selectedMonth, selectedYear]);
+  }, [data, allDays]);
 
   const animateChart = (timestamp) => {
     if (!startTimeRef.current) startTimeRef.current = timestamp;
@@ -134,9 +172,17 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
   };
 
   // Calculate chart dimensions
-  const margin = { top: 20, right: 80, bottom: 40, left: 60 };
-  const chartWidth = size - margin.left - margin.right;
-  const chartHeight = size * 0.6 - margin.top - margin.bottom;
+  const isCompact = containerWidth < 600;
+  const computedWidth = containerWidth > 0 ? containerWidth : size;
+  const computedHeight = computedWidth * 0.6;
+  const margin = {
+    top: 20,
+    right: isCompact ? 28 : 80,
+    bottom: 40,
+    left: 60,
+  };
+  const chartWidth = Math.max(computedWidth - margin.left - margin.right, 0);
+  const chartHeight = Math.max(computedHeight - margin.top - margin.bottom, 0);
 
   // Get max value for scaling
   const maxValue = Math.max(
@@ -148,7 +194,7 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
 
   // Scale functions
   const scaleX = (dayIndex) =>
-    (dayIndex / (generateAllDays().length - 1)) * chartWidth;
+    allDays.length > 1 ? (dayIndex / (allDays.length - 1)) * chartWidth : 0;
   const scaleY = (value) => {
     const safeValue = parseFloat(value) || 0;
     const safeMaxValue = maxValue || 1;
@@ -168,7 +214,6 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
 
   // Generate path for line
   const generatePath = (employeeData) => {
-    const allDays = generateAllDays();
     let path = "";
     let hasStarted = false;
 
@@ -193,8 +238,8 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
     return (
       <div
         style={{
-          width: size,
-          height: size * 0.6,
+          width: "100%",
+          minHeight: size * 0.6,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -212,13 +257,19 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
     <div
       ref={containerRef}
       style={{
-        width: size,
-        height: size * 0.6 + 35,
+        width: "100%",
+        height: computedHeight + 35,
         position: "relative",
         margin: "0 auto",
       }}
     >
-      <svg width={size} height={size * 0.6} style={{ overflow: "visible" }}>
+      <svg
+        width="100%"
+        height={computedHeight}
+        viewBox={`0 0 ${computedWidth} ${computedHeight}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ overflow: "visible" }}
+      >
         {/* Grid lines */}
         {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
           <g key={index}>
@@ -243,8 +294,9 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
         ))}
 
         {/* Day labels */}
-        {generateAllDays().map((day, index) => {
-          if (index % Math.ceil(generateAllDays().length / 8) === 0) {
+        {allDays.map((day, index) => {
+          const labelFrequency = Math.ceil((allDays.length || 1) / 8);
+          if (labelFrequency && index % labelFrequency === 0) {
             const dayNumber = new Date(day).getDate();
             return (
               <text
@@ -315,29 +367,30 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
           ))}
         </g>
 
-        {/* Legend */}
-        <g
-          transform={`translate(${margin.left + chartWidth + 10}, ${
-            margin.top
-          })`}
-        >
-          {animatedData.map((employee, index) => (
-            <g
-              key={employee.employeeId}
-              transform={`translate(0, ${index * 20})`}
-            >
-              <circle
-                cx="5"
-                cy="5"
-                r="5"
-                fill={colors[index % colors.length]}
-              />
-              <text x="15" y="8" fontSize="11" fill="#495057">
-                {employee.employeeName}
-              </text>
-            </g>
-          ))}
-        </g>
+        {!isCompact && (
+          <g
+            transform={`translate(${margin.left + chartWidth + 10}, ${
+              margin.top
+            })`}
+          >
+            {animatedData.map((employee, index) => (
+              <g
+                key={employee.employeeId}
+                transform={`translate(0, ${index * 20})`}
+              >
+                <circle
+                  cx="5"
+                  cy="5"
+                  r="5"
+                  fill={colors[index % colors.length]}
+                />
+                <text x="15" y="8" fontSize="11" fill="#495057">
+                  {employee.employeeName}
+                </text>
+              </g>
+            ))}
+          </g>
+        )}
       </svg>
 
       {/* Tooltip for data points */}
@@ -363,6 +416,24 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
           )}
         </small>
       </div>
+      {isCompact && animatedData.length > 0 && (
+        <div className="sales-linechart-legend">
+          {animatedData.map((employee, index) => (
+            <div
+              className="sales-linechart-legend-item"
+              key={employee.employeeId}
+            >
+              <span
+                className="sales-linechart-legend-swatch"
+                style={{
+                  backgroundColor: colors[index % colors.length],
+                }}
+              />
+              <span className="text-muted small">{employee.employeeName}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -302,34 +302,38 @@ const DashSales = () => {
 
         {/* Sales Performance Line Chart */}
         <div className="col-md-6">
-          <div className="dashboard-section p-4" style={{ minHeight: "380px" }}>
-            <SalesLineChart
-              data={salesLineData}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
-              size={550}
-            />
+          <div className="dashboard-section p-4 sales-analytics-card">
+            <div className="flex-grow-1">
+              <SalesLineChart
+                data={salesLineData}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                size={550}
+              />
+            </div>
           </div>
         </div>
 
         {/* Total Monthly Sales Chart */}
         <div className="col-md-6">
-          <div className="dashboard-section p-4" style={{ minHeight: "400px" }}>
-            <h5 className="text-center mt-5 mb-5">
+          <div className="dashboard-section p-4 sales-analytics-card">
+            <h5 className="text-center mb-4">
               Total Monthly Sales - {getSelectedMonthName()} {selectedYear}
             </h5>
-            <SalesGauge
-              value={(() => {
-                return isNaN(monthlySales.totalMonthlySales)
-                  ? 0
-                  : monthlySales.totalMonthlySales;
-              })()}
-              maxValue={2500000}
-              targetValue={2200000}
-              title="Target: ₱2.5M"
-              size={250}
-              segments={10}
-            />
+            <div className="flex-grow-1 d-flex align-items-center justify-content-center">
+              <SalesGauge
+                value={(() => {
+                  return isNaN(monthlySales.totalMonthlySales)
+                    ? 0
+                    : monthlySales.totalMonthlySales;
+                })()}
+                maxValue={3500000}
+                targetValue={2500000}
+                title="Target: ₱2.5M"
+                size={390}
+                segments={10}
+              />
+            </div>
           </div>
         </div>
       </div>
