@@ -287,7 +287,7 @@ const DashSales = () => {
       </div>
 
       {/* Sales Performance Charts */}
-      <div className="row mb-4">
+      <div className="row mb-4 g-3 align-items-stretch">
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center mb-1">
             <h4 className="mb-0">Sales Performance</h4>
@@ -301,9 +301,9 @@ const DashSales = () => {
         </div>
 
         {/* Sales Performance Line Chart */}
-        <div className="col-md-6">
-          <div className="dashboard-section p-4 sales-analytics-card">
-            <div className="flex-grow-1">
+        <div className="col-md-6 d-flex">
+          <div className="dashboard-section p-4 sales-analytics-card flex-fill w-100">
+            <div className="flex-grow-1 d-flex">
               <SalesLineChart
                 data={salesLineData}
                 selectedMonth={selectedMonth}
@@ -315,11 +315,8 @@ const DashSales = () => {
         </div>
 
         {/* Total Monthly Sales Chart */}
-        <div className="col-md-6">
-          <div className="dashboard-section p-4 sales-analytics-card">
-            <h5 className="text-center mb-4">
-              Total Monthly Sales - {getSelectedMonthName()} {selectedYear}
-            </h5>
+        <div className="col-md-6 d-flex">
+          <div className="dashboard-section p-4 sales-analytics-card flex-fill w-100">
             <div className="flex-grow-1 d-flex align-items-center justify-content-center">
               <SalesGauge
                 value={(() => {

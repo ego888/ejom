@@ -173,12 +173,13 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
 
   // Calculate chart dimensions
   const isCompact = containerWidth < 600;
+  const legendBelow = isCompact || containerWidth < 900;
   const computedWidth = containerWidth > 0 ? containerWidth : size;
   const computedHeight = computedWidth * 0.6;
   const margin = {
     top: 20,
-    right: isCompact ? 28 : 80,
-    bottom: 40,
+    right: legendBelow ? 32 : 80,
+    bottom: legendBelow ? 28 : 40,
     left: 60,
   };
   const chartWidth = Math.max(computedWidth - margin.left - margin.right, 0);
@@ -302,7 +303,7 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
               <text
                 key={day}
                 x={margin.left + scaleX(index)}
-                y={margin.top + chartHeight + 20}
+                y={margin.top + chartHeight + (legendBelow ? 12 : 20)}
                 textAnchor="middle"
                 fontSize="10"
                 fill="#6c757d"
@@ -405,7 +406,7 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
       </Modal>
 
       {/* Month/Year display */}
-      <div className="text-center mt-1">
+      <div className="text-center" style={{ marginTop: legendBelow ? 4 : 12 }}>
         <small className="text-muted">
           {new Date(selectedYear, selectedMonth - 1).toLocaleDateString(
             "en-US",
@@ -416,8 +417,11 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
           )}
         </small>
       </div>
-      {isCompact && animatedData.length > 0 && (
-        <div className="sales-linechart-legend">
+      {legendBelow && animatedData.length > 0 && (
+        <div
+          className="sales-linechart-legend"
+          style={{ marginTop: legendBelow ? 8 : undefined }}
+        >
           {animatedData.map((employee, index) => (
             <div
               className="sales-linechart-legend-item"

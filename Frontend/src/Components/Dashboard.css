@@ -357,7 +357,7 @@
 }
 
 .sales-analytics-card {
-  min-height: 540px;
+  min-height: 432px;
   display: flex;
   flex-direction: column;
 }
@@ -373,11 +373,11 @@
 
 @media (max-width: 1105px) {
   .sales-analytics-card {
-    min-height: 380px;
+    min-height: 304px;
   }
 
   .sales-analytics-card .gauge-container {
-    max-height: 360px;
+    max-height: 288px;
   }
 }
 
