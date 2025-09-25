@@ -308,7 +308,8 @@ router.put("/edit_client/:id", async (req, res) => {
               terms = ?, 
               salesId = ?, 
               creditLimit = ?,
-              hold = ?
+              hold = ?,
+              lastUpdated = CURDATE()
           WHERE id = ?
       `;
 

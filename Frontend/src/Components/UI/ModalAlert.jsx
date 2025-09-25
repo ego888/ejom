@@ -18,7 +18,11 @@ const ModalAlert = ({
       if (!show) return;
 
       if (event.key === "Escape") {
-        onClose();
+        if (type === "confirm" && onCancel) {
+          onCancel();
+        } else {
+          onClose();
+        }
       } else if (event.key === "Enter") {
         if (type === "confirm") {
           onConfirm();
@@ -30,7 +34,7 @@ const ModalAlert = ({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [show, onClose, onConfirm, type]);
+  }, [show, onClose, onConfirm, onCancel, type]);
 
   if (!show) return null;
 
@@ -85,7 +89,13 @@ const ModalAlert = ({
                   </Button>
                   <Button
                     variant="cancel"
-                    onClick={onClose}
+                    onClick={() => {
+                      if (onCancel) {
+                        onCancel();
+                      } else {
+                        onClose();
+                      }
+                    }}
                     aria-label={cancelText}
                   >
                     {cancelText}

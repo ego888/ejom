@@ -1,5 +1,5 @@
 import axios from "../utils/axiosConfig"; // Import configured axios
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import Button from "./UI/Button";
@@ -48,6 +48,10 @@ const EditClient = () => {
   });
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const handleCancel = useCallback(() => {
+    navigate("/dashboard/client");
+  }, [navigate]);
 
   // Auto-expand textarea function
   const autoExpandTextarea = (textarea) => {
@@ -144,6 +148,20 @@ const EditClient = () => {
       setTimeout(() => autoExpandTextarea(logTextarea), 0);
     }
   }, [client.log]);
+
+  useEffect(() => {
+    if (alert.show) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        handleCancel();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleCancel, alert.show]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -592,7 +610,7 @@ const EditClient = () => {
           <div className="d-flex justify-content-end gap-2">
             <Button
               variant="cancel"
-              onClick={() => navigate("/dashboard/client")}
+              onClick={handleCancel}
             >
               Cancel
             </Button>
