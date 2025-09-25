@@ -551,20 +551,71 @@ router.put("/update-forprod/:id", async (req, res) => {
 
 // Update orders to change status to 'Prod' and productionDate to NOW() where forProd is 1 and status is 'Open'
 router.put("/update_orders_to_prod", async (req, res) => {
+  let connection;
   try {
-    const sql = `
-      UPDATE orders
-      SET status = 'Prod',
-          productionDate = NOW(),
-          forProd = 0
-      WHERE forProd = 1
-        AND (status = 'Open' OR status = 'Printed');
-    `;
-    const [result] = await pool.query(sql);
-    return res.json({ Status: true, Result: result });
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [ordersToUpdate] = await connection.query(
+      `SELECT orderID, clientId
+       FROM orders
+       WHERE forProd = 1
+         AND (status = 'Open' OR status = 'Printed')`
+    );
+
+    if (!ordersToUpdate.length) {
+      await connection.commit();
+      return res.json({ Status: true, Result: { affectedRows: 0 } });
+    }
+
+    const orderIds = ordersToUpdate.map((order) => order.orderID);
+    const clientIds = [
+      ...new Set(
+        ordersToUpdate
+          .map((order) => order.clientId)
+          .filter((clientId) => clientId !== null && clientId !== undefined)
+      ),
+    ];
+
+    const [[nowRow]] = await connection.query(`SELECT NOW() AS currentTime`);
+    const currentTime = nowRow.currentTime;
+
+    await connection.query(
+      `UPDATE orders
+       SET status = 'Prod',
+           productionDate = ?,
+           forProd = 0
+       WHERE orderID IN (?)`,
+      [currentTime, orderIds]
+    );
+
+    if (clientIds.length) {
+      await connection.query(
+        `UPDATE client
+         SET lastTransaction = DATE(?)
+         WHERE id IN (?)`,
+        [currentTime, clientIds]
+      );
+    }
+
+    await connection.commit();
+
+    return res.json({
+      Status: true,
+      Result: {
+        affectedRows: orderIds.length,
+      },
+    });
   } catch (err) {
+    if (connection) {
+      await connection.rollback();
+    }
     console.log("Update Error:", err);
     return res.json({ Status: false, Error: "Failed to update orders" });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

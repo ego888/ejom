@@ -343,60 +343,6 @@ function Prod() {
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
-  // Handle records per page change
-  // const handleRecordsPerPageChange = (e) => {
-  //   setRecordsPerPage(Number(e.target.value));
-  //   setCurrentPage(1); // Reset to first page
-  // };
-
-  // const isProdIndeterminate = () => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   const selectedProdStatuses = selectedStatuses.filter((s) =>
-  //     prodStatuses.includes(s)
-  //   );
-  //   return (
-  //     selectedProdStatuses.length > 0 &&
-  //     selectedProdStatuses.length < prodStatuses.length
-  //   );
-  // };
-
-  // const handleProdCheckbox = (e) => {
-  //   const prodStatuses = statusOptions.slice(2, 6).map((s) => s.statusId);
-  //   let newStatuses;
-  //   if (e.target.checked) {
-  //     newStatuses = [...new Set([...selectedStatuses, ...prodStatuses])];
-  //   } else {
-  //     newStatuses = selectedStatuses.filter((s) => !prodStatuses.includes(s));
-  //   }
-
-  //   setSelectedStatuses(newStatuses);
-  //   setIsProdChecked(e.target.checked);
-  //   setIsAllChecked(newStatuses.length === statusOptions.length);
-
-  //   // Save to localStorage
-  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  // };
-
-  // const isAllIndeterminate = () => {
-  //   return (
-  //     selectedStatuses.length > 0 &&
-  //     selectedStatuses.length < statusOptions.length
-  //   );
-  // };
-
-  // const handleAllCheckbox = (e) => {
-  //   let newStatuses = [];
-  //   if (e.target.checked) {
-  //     newStatuses = statusOptions.map((s) => s.statusId);
-  //   }
-  //   setSelectedStatuses(newStatuses);
-  //   setIsAllChecked(e.target.checked);
-  //   setIsProdChecked(e.target.checked);
-
-  //   // Save to localStorage
-  //   localStorage.setItem("orderStatusFilters", JSON.stringify(newStatuses));
-  // };
-
   // Add function to handle forProd update
   const handleForProdChange = async (orderId, newValue) => {
     // Find the order to check its status
@@ -1137,11 +1083,6 @@ function Prod() {
                     </td>
                     <td>{order.projectName}</td>
                     <td>{order.orderedBy}</td>
-                    {/* <td>
-                      {order.orderDate
-                        ? new Date(order.orderDate).toLocaleDateString()
-                        : ""}
-                    </td> */}
                     <td>
                       {order.dueDate
                         ? new Date(order.dueDate).toLocaleDateString()
