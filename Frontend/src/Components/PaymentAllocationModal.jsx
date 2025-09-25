@@ -317,13 +317,6 @@ const PaymentAllocationModal = ({
           >
             Delete Payment
           </Button>
-          {/* <Button
-            variant="save"
-            onClick={handlePostPayment}
-            disabled={loading || remainingAmount > 0}
-          >
-            Post Payment
-          </Button> */}
         </div>
       </div>
       <ModalAlert

@@ -70,12 +70,54 @@ router.post("/post-payment", verifyUser, async (req, res) => {
                WHEN ? > 0 THEN COALESCE(datePaid, NOW()) 
                ELSE NULL 
              END
-         WHERE orderId = ?`,
+        WHERE orderId = ?`,
         [formattedTotalPaid, formattedTotalPaid, order.orderId]
       );
     }
 
-    // 4. Delete temp records
+    // 4. Update client last payment info
+    const [[paymentRow]] = await connection.query(
+      `SELECT payDate 
+       FROM payments 
+       WHERE payId = ?`,
+      [newPayId]
+    );
+
+    if (paymentRow?.payDate) {
+      const paymentDate = paymentRow.payDate;
+
+      const [clientAllocations] = await connection.query(
+        `SELECT o.clientId, SUM(pja.amountApplied) AS amountApplied
+         FROM paymentJoAllocation pja
+         JOIN orders o ON pja.orderId = o.orderId
+         WHERE pja.payId = ?
+         GROUP BY o.clientId`,
+        [newPayId]
+      );
+
+      for (const allocation of clientAllocations) {
+        const clientId = allocation.clientId;
+        const amountApplied = parseFloat(allocation.amountApplied) || 0;
+
+        if (!clientId || amountApplied <= 0) {
+          continue;
+        }
+
+        await connection.query(
+          `UPDATE client
+           SET
+             lastPaymentAmount = CASE
+               WHEN lastPaymentDate = DATE(?) THEN COALESCE(lastPaymentAmount, 0) + ?
+               ELSE ?
+             END,
+             lastPaymentDate = DATE(?)
+           WHERE id = ?`,
+          [paymentDate, amountApplied, amountApplied, paymentDate, clientId]
+        );
+      }
+    }
+
+    // 5. Delete temp records
     await connection.query(
       `DELETE FROM tempPaymentAllocation WHERE payId = ?`,
       [payId]

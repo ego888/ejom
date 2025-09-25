@@ -612,23 +612,38 @@ function Prod() {
   };
 
   // Update handlePostPayment to validate OR# first
-  const handlePostPayment = async (result) => {
+  const handlePostPayment = async (result, options = {}) => {
+    const { skipConfirmation = false } = options;
+
+    // Require OR before asking for confirmation
+    if (!result && !paymentInfo.ornum.trim()) {
+      setModalConfig({
+        title: "Validation Error",
+        message: "Please enter OR#",
+        type: "error",
+        showCancelButton: false,
+        onConfirm: () => setShowModal(false),
+      });
+      setShowModal(true);
+      return;
+    }
+
+    // Ask for confirmation before proceeding when posting from the form
+    if (!result && !skipConfirmation) {
+      setAlert({
+        show: true,
+        title: "Post Payment",
+        message: "Are you sure you want to post this payment?",
+        type: "confirm",
+        onConfirm: () =>
+          handlePostPayment(result, { skipConfirmation: true }),
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-
-      // Validate OR# if posting directly from form
-      if (!result && !paymentInfo.ornum.trim()) {
-        setModalConfig({
-          title: "Validation Error",
-          message: "Please enter OR#",
-          type: "error",
-          showCancelButton: false,
-          onConfirm: () => setShowModal(false),
-        });
-        setShowModal(true);
-        return;
-      }
 
       // If result is provided, it means we're posting from the allocation modal
       if (result) {
@@ -674,7 +689,6 @@ function Prod() {
             amount
           )}). Do you want to proceed with this partial payment?`,
           type: "confirm",
-          showOkButton: true,
           onConfirm: () => postPaymentToServer(),
         });
         return;
