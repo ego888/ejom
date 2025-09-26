@@ -89,44 +89,48 @@ const Login = () => {
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100 loginPage">
-      <div className="p-3 rounded-3 w-25 border loginForm">
-        <h2 className="text-center">Login</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label htmlFor="name">
-              <strong>Username: </strong>
-            </label>
-            <input
-              type="text"
-              name="name"
-              autoComplete="off"
-              placeholder="Enter Username"
-              className="login-input rounded-2"
-              value={values.name}
-              onChange={(e) => setValues({ ...values, name: e.target.value })}
-            />
-          </div>
-          <div className="mb-3">
-            <label htmlFor="password">
-              <strong>Password: </strong>
-            </label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Enter Password"
-              className="login-input rounded-2"
-              value={values.password}
-              onChange={(e) =>
-                setValues({ ...values, password: e.target.value })
-              }
-            />
-          </div>
-          <button className="btn btn-success w-100 rounded-2 mb-2">
-            Log in
-          </button>
-          {error && <div className="alert alert-danger">{error}</div>}
-        </form>
+    <div className="loginPage">
+      <div className="loginFormContainer">
+        <div className="loginForm rounded-3 shadow-lg">
+          <h2 className="text-center mb-4">Login</h2>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label htmlFor="name" className="login-label">
+                Username
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                autoComplete="off"
+                placeholder="Enter Username"
+                className="login-input rounded-2"
+                value={values.name}
+                onChange={(e) => setValues({ ...values, name: e.target.value })}
+              />
+            </div>
+            <div className="mb-3">
+              <label htmlFor="password" className="login-label">
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter Password"
+                className="login-input rounded-2"
+                value={values.password}
+                onChange={(e) =>
+                  setValues({ ...values, password: e.target.value })
+                }
+              />
+            </div>
+            <button className="btn btn-success w-100 rounded-2 mb-2 login-submit">
+              Log in
+            </button>
+            {error && <div className="alert alert-danger">{error}</div>}
+          </form>
+        </div>
       </div>
 
       {showProfileModal && userId && (
