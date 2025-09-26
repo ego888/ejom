@@ -76,6 +76,7 @@ const Modal = ({
   size = "md", // "sm" | "md" | "lg" | "xl" | "full"
   closeOnOutsideClick = true,
   closeOnEsc = true,
+  hideCloseButton = false,
 }) => {
   const modalRef = useRef(null);
 
@@ -129,13 +130,15 @@ const Modal = ({
             <h5 className="modal-title" id={`modal-title-${id}`}>
               {title}
             </h5>
-            <Button
-              variant="cancel"
-              iconOnly
-              size="sm"
-              onClick={onClose}
-              aria-label="Close modal"
-            />
+            {!hideCloseButton && (
+              <Button
+                variant="cancel"
+                iconOnly
+                size="sm"
+                onClick={onClose}
+                aria-label="Close modal"
+              />
+            )}
           </div>
           <div className="modal-body">{children}</div>
           {footer && <div className="modal-footer">{footer}</div>}

@@ -375,6 +375,7 @@ router.get("/client-customer", async (req, res) => {
 router.put("/addWeek/:id", async (req, res) => {
   try {
     const id = req.params.id;
+    const note = (req.body?.note || "").trim();
     // Get current hold value, log, and aging data
     const [rows] = await pool.query(
       "SELECT hold, log, over30, over60, over90 FROM client WHERE id = ?",
@@ -424,7 +425,8 @@ router.put("/addWeek/:id", async (req, res) => {
     ).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
 
     // Create new log entry with aging data
-    const newLogEntry = `Extend: ${oldHoldStr} to ${newHoldStr} on ${currentDateStr}. 30: ${rows[0].over30}, 60: ${rows[0].over60}, 90: ${rows[0].over90}`;
+    const noteSuffix = note ? ` | Note: ${note}` : "";
+    const newLogEntry = `Extend: ${oldHoldStr} to ${newHoldStr} on ${currentDateStr}. 30: ${rows[0].over30}, 60: ${rows[0].over60}, 90: ${rows[0].over90}${noteSuffix}`;
     const updatedLog = currentLog
       ? `${newLogEntry}\n${currentLog}`
       : newLogEntry;

@@ -1,5 +1,5 @@
 import axios from "../utils/axiosConfig"; // Import configured axios
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
@@ -10,6 +10,7 @@ import debounce from "lodash/debounce";
 import { jwtDecode } from "jwt-decode";
 import { BsCalendar2Week } from "react-icons/bs";
 import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
+import Modal from "./UI/Modal";
 
 const CLIENT_SEARCH_KEY = "clientListSearch";
 
@@ -37,6 +38,12 @@ const Client = () => {
     type: "alert",
     onConfirm: null,
   });
+  const [holdNoteModal, setHoldNoteModal] = useState({
+    open: false,
+    client: null,
+    note: "",
+  });
+  const [isSubmittingHold, setIsSubmittingHold] = useState(false);
   const navigate = useNavigate();
 
   // Update admin check to use JWT token
@@ -48,7 +55,7 @@ const Client = () => {
     }
   }, []);
 
-  const fetchClients = () => {
+  const fetchClients = useCallback(() => {
     axios
       .get(`${ServerIP}/auth/client-list`, {
         params: {
@@ -66,7 +73,7 @@ const Client = () => {
           setTotalPages(Math.ceil(result.data.totalCount / recordsPerPage));
         }
       });
-  };
+  }, [currentPage, recordsPerPage, searchTerm, sortConfig]);
 
   // Debounced search handler
   const debouncedSearch = useMemo(
@@ -100,29 +107,79 @@ const Client = () => {
 
   useEffect(() => {
     fetchClients();
-  }, [currentPage, recordsPerPage, searchTerm, sortConfig]);
+  }, [fetchClients]);
 
-  const handleDelete = (id) => {
-    setAlert({
-      show: true,
-      title: "Confirm Delete",
-      message: "Are you sure you want to delete this client?",
-      type: "confirm",
-      onConfirm: () => {
-        axios.delete(`${ServerIP}/auth/client/delete/${id}`).then((result) => {
-          if (result.data.Status) {
-            fetchClients();
-          } else {
-            setAlert({
-              show: true,
-              title: "Error",
-              message: result.data.Error || "Failed to delete client",
-              type: "alert",
+  const handleDelete = useCallback(
+    (id) => {
+      setAlert({
+        show: true,
+        title: "Confirm Delete",
+        message: "Are you sure you want to delete this client?",
+        type: "confirm",
+        onConfirm: () => {
+          axios
+            .delete(`${ServerIP}/auth/client/delete/${id}`)
+            .then((result) => {
+              if (result.data.Status) {
+                fetchClients();
+              } else {
+                setAlert({
+                  show: true,
+                  title: "Error",
+                  message: result.data.Error || "Failed to delete client",
+                  type: "alert",
+                });
+              }
             });
-          }
+        },
+      });
+    },
+    [fetchClients]
+  );
+
+  const openHoldNoteModal = (client) => {
+    setHoldNoteModal({ open: true, client, note: "" });
+  };
+
+  const closeHoldNoteModal = () => {
+    setHoldNoteModal({ open: false, client: null, note: "" });
+  };
+
+  const handleHoldNoteSubmit = async () => {
+    if (!holdNoteModal.client) return;
+
+    try {
+      setIsSubmittingHold(true);
+      const payload = holdNoteModal.note.trim()
+        ? { note: holdNoteModal.note.trim() }
+        : {};
+
+      const response = await axios.put(
+        `${ServerIP}/auth/addWeek/${holdNoteModal.client.id}`,
+        payload
+      );
+
+      if (response.data.Status) {
+        closeHoldNoteModal();
+        fetchClients();
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to add week to hold date",
+          type: "alert",
         });
-      },
-    });
+      }
+    } catch (err) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.message || "Failed to add week to hold date",
+        type: "alert",
+      });
+    } finally {
+      setIsSubmittingHold(false);
+    }
   };
 
   const handleSort = (key) => {
@@ -362,36 +419,11 @@ const Client = () => {
                             variant="view"
                             iconOnly
                             size="sm"
-                            title="Add 1 Week to Hold Date"
+                            title="Add 1 day to Hold Date"
                             icon={<BsCalendar2Week size={14} />}
-                            onClick={async (e) => {
+                            onClick={(e) => {
                               e.stopPropagation();
-                              try {
-                                const response = await axios.put(
-                                  `${ServerIP}/auth/addWeek/${client.id}`
-                                );
-                                if (response.data.Status) {
-                                  fetchClients();
-                                } else {
-                                  setAlert({
-                                    show: true,
-                                    title: "Error",
-                                    message:
-                                      response.data.Error ||
-                                      "Failed to add week to hold date",
-                                    type: "alert",
-                                  });
-                                }
-                              } catch (err) {
-                                setAlert({
-                                  show: true,
-                                  title: "Error",
-                                  message:
-                                    err.message ||
-                                    "Failed to add week to hold date",
-                                  type: "alert",
-                                });
-                              }
+                              openHoldNoteModal(client);
                             }}
                           />
                         </>
@@ -433,6 +465,51 @@ const Client = () => {
           setAlert((prev) => ({ ...prev, show: false }));
         }}
       />
+
+      <Modal
+        show={holdNoteModal.open}
+        size="sm"
+        hideCloseButton
+        onClose={() => {
+          if (!isSubmittingHold) closeHoldNoteModal();
+        }}
+      >
+        <div className="mb-3">
+          <label htmlFor="hold-note" className="form-label">
+            Log note
+          </label>
+          <textarea
+            id="hold-note"
+            className="form-control"
+            rows={3}
+            value={holdNoteModal.note}
+            onChange={(e) =>
+              setHoldNoteModal((prev) => ({
+                ...prev,
+                note: e.target.value,
+              }))
+            }
+            placeholder="Enter note"
+            disabled={isSubmittingHold}
+          />
+        </div>
+        <div className="d-flex justify-content-end gap-2">
+          <Button
+            variant="cancel"
+            onClick={closeHoldNoteModal}
+            disabled={isSubmittingHold}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="save"
+            onClick={handleHoldNoteSubmit}
+            disabled={isSubmittingHold}
+          >
+            {isSubmittingHold ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };
