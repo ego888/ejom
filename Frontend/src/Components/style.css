@@ -39,7 +39,7 @@ html {
 
 .loginFormContainer {
   width: 100%;
-  max-width: 420px;
+  max-width: min(250px, 90vw);
 }
 
 .loginForm {
@@ -48,6 +48,8 @@ html {
   color: #fff;
   padding: 2.25rem 2rem;
   backdrop-filter: blur(6px);
+  max-height: min(92vh, 700px);
+  overflow: auto;
 }
 
 .login-label {
