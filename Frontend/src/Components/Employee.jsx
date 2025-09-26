@@ -1,5 +1,5 @@
 import axios from "../utils/axiosConfig"; // Import configured axios
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import { ServerIP } from "../config";
@@ -7,6 +7,7 @@ import ModalAlert from "./UI/ModalAlert";
 
 const Employee = () => {
   const [employee, setEmployee] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
   const navigate = useNavigate();
   const [alert, setAlert] = useState({
     show: false,
@@ -74,6 +75,112 @@ const Employee = () => {
     );
   };
 
+  const columns = useMemo(
+    () => [
+      { key: "name", label: "Name", sortable: true, render: (row) => row.name },
+      {
+        key: "image",
+        label: "Image",
+        sortable: false,
+        render: (row) => (
+          <img
+            src={`${ServerIP}/Images/` + row.image}
+            alt=""
+            className="employee_image"
+          />
+        ),
+      },
+      {
+        key: "category_id",
+        label: "Category ID",
+        sortable: true,
+        render: (row) => row.category_id,
+      },
+      { key: "active", label: "Active", sortable: true, render: (row) => renderStatus(row.active) },
+      { key: "admin", label: "Admin", sortable: true, render: (row) => renderStatus(row.admin) },
+      { key: "sales", label: "Sales", sortable: true, render: (row) => renderStatus(row.sales) },
+      {
+        key: "accounting",
+        label: "Accounting",
+        sortable: true,
+        render: (row) => renderStatus(row.accounting),
+      },
+      { key: "artist", label: "Artist", sortable: true, render: (row) => renderStatus(row.artist) },
+      {
+        key: "production",
+        label: "Production",
+        sortable: true,
+        render: (row) => renderStatus(row.production),
+      },
+      {
+        key: "operator",
+        label: "Operator",
+        sortable: true,
+        render: (row) => renderStatus(row.operator),
+      },
+      {
+        key: "action",
+        label: "Action",
+        sortable: false,
+        render: (row) => (
+          <div className="d-flex justify-content-center gap-2">
+            <Button
+              variant="edit"
+              iconOnly
+              size="sm"
+              onClick={() => navigate(`/dashboard/employee/edit/${row.id}`)}
+            />
+            <Button
+              variant="delete"
+              iconOnly
+              size="sm"
+              onClick={() => handleDelete(row.id)}
+            />
+          </div>
+        ),
+      },
+    ],
+    [navigate, handleDelete]
+  );
+
+  const sortedEmployees = useMemo(() => {
+    if (!sortConfig.key) return employee;
+
+    const sortableData = [...employee];
+    sortableData.sort((a, b) => {
+      const aVal = a[sortConfig.key];
+      const bVal = b[sortConfig.key];
+
+      if (aVal === bVal) return 0;
+
+      // Handle booleans/numbers/strings
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      const aString = aVal ? aVal.toString().toLowerCase() : "";
+      const bString = bVal ? bVal.toString().toLowerCase() : "";
+
+      if (aString < bString) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aString > bString) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sortableData;
+  }, [employee, sortConfig]);
+
+  const handleSort = (columnKey) => {
+    setSortConfig((prev) => {
+      if (prev.key === columnKey) {
+        return {
+          key: columnKey,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+      return { key: columnKey, direction: "asc" };
+    });
+  };
+
   return (
     <div className="px-5 py-3">
       <div className="d-flex justify-content-center">
@@ -91,56 +198,31 @@ const Employee = () => {
         <table className="table">
           <thead>
             <tr>
-              <th className="text-center">Name</th>
-              <th className="text-center">Image</th>
-              <th className="text-center">Category ID</th>
-              <th className="text-center">Active</th>
-              <th className="text-center">Admin</th>
-              <th className="text-center">Sales</th>
-              <th className="text-center">Accounting</th>
-              <th className="text-center">Artist</th>
-              <th className="text-center">Production</th>
-              <th className="text-center">Operator</th>
-              <th className="text-center">Action</th>
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className="text-center"
+                  onClick={() => column.sortable && handleSort(column.key)}
+                  style={{ cursor: column.sortable ? "pointer" : "default" }}
+                >
+                  {column.label}
+                  {column.sortable && sortConfig.key === column.key && (
+                    <span className="ms-1">
+                      {sortConfig.direction === "asc" ? "▲" : "▼"}
+                    </span>
+                  )}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {employee.map((e, index) => (
-              <tr key={e.id || index}>
-                <td className="text-center">{e.name}</td>
-                <td className="text-center">
-                  <img
-                    src={`${ServerIP}/Images/` + e.image}
-                    alt=""
-                    className="employee_image"
-                  />
-                </td>
-                <td className="text-center">{e.category_id}</td>
-                <td className="text-center">{renderStatus(e.active)}</td>
-                <td className="text-center">{renderStatus(e.admin)}</td>
-                <td className="text-center">{renderStatus(e.sales)}</td>
-                <td className="text-center">{renderStatus(e.accounting)}</td>
-                <td className="text-center">{renderStatus(e.artist)}</td>
-                <td className="text-center">{renderStatus(e.production)}</td>
-                <td className="text-center">{renderStatus(e.operator)}</td>
-                <td>
-                  <div className="d-flex justify-content-center gap-2">
-                    <Button
-                      variant="edit"
-                      iconOnly
-                      size="sm"
-                      onClick={() =>
-                        navigate(`/dashboard/employee/edit/${e.id}`)
-                      }
-                    />
-                    <Button
-                      variant="delete"
-                      iconOnly
-                      size="sm"
-                      onClick={() => handleDelete(e.id)}
-                    />
-                  </div>
-                </td>
+            {sortedEmployees.map((row, index) => (
+              <tr key={row.id ?? index}>
+                {columns.map((column) => (
+                  <td key={column.key} className="text-center">
+                    {column.render(row)}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
