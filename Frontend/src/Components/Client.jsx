@@ -355,7 +355,25 @@ const Client = () => {
                   style={{ cursor: "pointer" }}
                 >
                   <td>
-                    <div>{client.clientName}</div>
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 fw-semibold text-start"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        localStorage.setItem(
+                          "ordersSearchTerm",
+                          client.clientName || ""
+                        );
+                        navigate(`/dashboard/orders`, {
+                          state: {
+                            clientId: client.id,
+                            clientName: client.clientName,
+                          },
+                        });
+                      }}
+                    >
+                      {client.clientName}
+                    </button>
                     {client.customerName && (
                       <div className="text-muted small">
                         {client.customerName}
