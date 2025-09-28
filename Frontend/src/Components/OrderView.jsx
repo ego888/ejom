@@ -38,6 +38,9 @@ function OrderView() {
   });
   const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
   const [vatRate, setVatRate] = useState(0);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   // Add state for right panel tabs
   const [activeTab, setActiveTab] = useState("info");
@@ -103,6 +106,8 @@ function OrderView() {
           if (orderResult.data.Status) {
             console.log("OrderView data received:", orderResult.data.Result); // Debug log
             setData(orderResult.data.Result);
+            setNoteDraft(orderResult.data.Result?.note || "");
+            setIsEditingNote(false);
           }
           if (detailsResult.data.Status) {
             setOrderDetails(detailsResult.data.Result);
@@ -114,7 +119,6 @@ function OrderView() {
         .catch((err) => handleApiError(err, navigate));
     }
   }, [id, navigate]);
-  console.log("Order View Data", data);
 
   // Add function to handle DR printing
   const handlePrintDR = (showAmounts = true) => {
@@ -216,6 +220,63 @@ function OrderView() {
 
   const handleCancelEdit = () => {
     setIsEditing(false);
+  };
+
+  const handleEditNote = () => {
+    setNoteDraft(data.note || "");
+    setIsEditingNote(true);
+  };
+
+  const handleCancelNoteEdit = () => {
+    setNoteDraft(data.note || "");
+    setIsEditingNote(false);
+  };
+
+  const handleSaveNote = async () => {
+    try {
+      setIsSavingNote(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${ServerIP}/auth/update-order-note`,
+        {
+          orderId: id,
+          note: noteDraft,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.Status) {
+        setData((prev) => ({
+          ...prev,
+          note: noteDraft,
+        }));
+        setIsEditingNote(false);
+        setAlert({
+          show: true,
+          title: "Success",
+          message: "Note saved successfully",
+          type: "alert",
+        });
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to save note",
+          type: "alert",
+        });
+      }
+    } catch (err) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.message || "Failed to save note",
+        type: "alert",
+      });
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   return (
@@ -522,6 +583,14 @@ function OrderView() {
                 >
                   Log
                 </button>
+                <button
+                  className={`tab-button ${
+                    activeTab === "note" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("note")}
+                >
+                  Note
+                </button>
               </div>
 
               {/* Tab Content */}
@@ -659,6 +728,52 @@ function OrderView() {
                         <div className="info-value">No log entries</div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {activeTab === "note" && (
+                  <div className="note-content">
+                    {!isEditingNote ? (
+                      <>
+                        <div className="note-display">
+                          {data.note ? (
+                            <pre className="note-text">{data.note}</pre>
+                          ) : (
+                            <span className="text-muted">No note saved.</span>
+                          )}
+                        </div>
+                        <Button variant="edit" onClick={handleEditNote}>
+                          {data.note ? "Edit Note" : "Add Note"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <textarea
+                          id="order-note"
+                          className="form-control"
+                          rows={6}
+                          value={noteDraft}
+                          onChange={(e) => setNoteDraft(e.target.value)}
+                          disabled={isSavingNote}
+                        />
+                        <div className="d-flex justify-content-end gap-2 mt-3">
+                          <Button
+                            variant="cancel"
+                            onClick={handleCancelNoteEdit}
+                            disabled={isSavingNote}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="save"
+                            onClick={handleSaveNote}
+                            disabled={isSavingNote}
+                          >
+                            {isSavingNote ? "Saving..." : "Save"}
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

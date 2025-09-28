@@ -992,8 +992,8 @@ router.post(
       orderedBy, orderReference, cellNumber, specialInst, 
       deliveryInst, graphicsBy, dueDate, dueTime, 
       sample, reprint, totalAmount, amountDisc, 
-      percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited, note
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
       const values = [
@@ -1020,6 +1020,7 @@ router.post(
         req.body.totalHrs,
         req.user.name, // Always use the authenticated user's name
         new Date().toLocaleString("sv-SE").replace(",", ""),
+        req.body.note || null,
       ];
 
       const [result] = await connection.query(sql, values);
@@ -1091,6 +1092,7 @@ router.put(
       percentDisc = ?,
       grandTotal = ?,
       terms = ?,
+      note = ?,
       editedBy = ?,
       lastEdited = CURRENT_TIMESTAMP
     WHERE orderID = ?
@@ -1119,6 +1121,7 @@ router.put(
         req.body.percentDisc || 0,
         req.body.grandTotal || 0,
         req.body.terms || null,
+        req.body.note || null,
         req.user.name, // Always use the current user as editedBy
         req.params.id,
       ];
@@ -2843,6 +2846,32 @@ router.put(
     }
   }
 );
+
+// Update order note
+router.put("/update-order-note", verifyUser, async (req, res) => {
+  const { orderId, note } = req.body;
+  const userName = req.user.name;
+
+  if (!orderId) {
+    return res.json({ Status: false, Error: "Missing orderId" });
+  }
+
+  try {
+    await pool.query(
+      `UPDATE orders
+       SET note = ?,
+           lastEdited = NOW(),
+           editedBy = ?
+       WHERE orderId = ?`,
+      [note ?? null, userName, orderId]
+    );
+
+    res.json({ Status: true, Message: "Order note updated successfully" });
+  } catch (error) {
+    console.error("Error updating order note:", error);
+    res.json({ Status: false, Error: "Failed to update order note" });
+  }
+});
 
 // Renumber display order for an order's details
 router.put("/renumber-displayOrder/:orderId", async (req, res) => {

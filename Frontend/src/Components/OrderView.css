@@ -73,3 +73,26 @@
 .order-header-container {
   height: 340px !important;
 }
+
+.note-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.note-display {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0.75rem;
+  min-height: 120px;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  overflow-y: auto;
+}
+
+.note-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
