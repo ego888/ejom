@@ -219,7 +219,7 @@ const DTR = () => {
       console.log(`Deleting batch: ${batch.id} - ${batch.batchName}`);
 
       const response = await axios.delete(
-        `${ServerIP}/auth/dtr/batch/${batch.id}`
+        `${ServerIP}/auth/dtr/DTRdelete/${batch.id}`
       );
 
       if (response.data.Status) {
@@ -234,7 +234,13 @@ const DTR = () => {
       }
     } catch (err) {
       console.error("Error deleting batch:", err);
-      alert(`Failed to delete batch: ${err.message || "Unknown error"}`);
+      const errorMessage =
+        err?.response?.data?.Error ||
+        (err?.response?.status === 404
+          ? "Batch not found. It may have been deleted already."
+          : err?.message) ||
+        "Unknown error";
+      alert(`Failed to delete batch: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
