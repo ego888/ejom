@@ -134,8 +134,11 @@ const DTRAbsences = () => {
                           scope="col"
                           className="text-end"
                         >
-                          {MONTH_LABELS[monthNumber - 1]}{" "}
-                          {report.workingDays[monthNumber - 1]}
+                          {MONTH_LABELS[monthNumber - 1]}
+                          <span className="text-muted">
+                            {": "}
+                            {report.workingDays[monthNumber - 1]}
+                          </span>
                         </th>
                       ))}
                       <th scope="col" className="text-end">
