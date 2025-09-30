@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "../../utils/axiosConfig";
 import { ServerIP } from "../../config";
 import Button from "../UI/Button";
+import AbsencesLineChart from "../UI/AbsencesLineChart";
 import "./Reports.css";
 
 const MONTH_LABELS = [
@@ -30,6 +31,7 @@ const DTRAbsences = () => {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const [report, setReport] = useState(null);
+  const [viewMode, setViewMode] = useState("table");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -100,6 +102,29 @@ const DTRAbsences = () => {
         </div>
       </div>
 
+      {!loading && !error && report && report.activeMonths.length > 0 && (
+        <ul className="nav nav-tabs mb-3">
+          <li className="nav-item">
+            <button
+              type="button"
+              className={`nav-link ${viewMode === "table" ? "active" : ""}`}
+              onClick={() => setViewMode("table")}
+            >
+              Table
+            </button>
+          </li>
+          <li className="nav-item">
+            <button
+              type="button"
+              className={`nav-link ${viewMode === "chart" ? "active" : ""}`}
+              onClick={() => setViewMode("chart")}
+            >
+              Chart
+            </button>
+          </li>
+        </ul>
+      )}
+
       {loading && (
         <div className="text-center my-4">
           <div className="spinner-border text-primary" role="status">
@@ -117,11 +142,17 @@ const DTRAbsences = () => {
       {!loading && !error && report && (
         <div className="card shadow-sm">
           <div className="card-body">
-            {report.activeMonths.length === 0 ||
-            report.employees.length === 0 ? (
+            {report.activeMonths.length === 0 || report.employees.length === 0 ? (
               <div className="alert alert-info mb-0" role="alert">
                 No DTR entries were found for {year}.
               </div>
+            ) : viewMode === "chart" ? (
+              <AbsencesLineChart
+                employees={report.employees}
+                months={report.activeMonths}
+                year={year}
+                workingDays={report.workingDays}
+              />
             ) : (
               <div className="table-responsive">
                 <table className="table table-bordered table-hover align-middle">
