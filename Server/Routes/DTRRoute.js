@@ -1905,7 +1905,11 @@ router.get("/absences", verifyUser, async (req, res) => {
         const actualKey = `${employee.empId}__${monthNumber}`;
         const actualHours = hoursMap.get(actualKey) || 0;
 
-        const deficitHours = Math.max(0, expectedHours - actualHours);
+        if (actualHours > 0) {
+          const deficitHours = Math.max(0, expectedHours - actualHours);
+        } else {
+          const deficitHours = 0;
+        }
         const absenceDays = Math.max(
           0,
           parseFloat((deficitHours / 8).toFixed(2))
@@ -1928,9 +1932,7 @@ router.get("/absences", verifyUser, async (req, res) => {
       year,
       workingDays,
       activeMonths,
-      monthlyTotals: monthlyTotals.map((total) =>
-        parseFloat(total.toFixed(2))
-      ),
+      monthlyTotals: monthlyTotals.map((total) => parseFloat(total.toFixed(2))),
       grandTotal: parseFloat(
         monthlyTotals.reduce((sum, value) => sum + value, 0).toFixed(2)
       ),
