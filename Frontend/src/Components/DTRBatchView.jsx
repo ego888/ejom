@@ -97,11 +97,39 @@ const DTRBatchView = ({ batch, onBack }) => {
     variant: "success",
   });
   const [resumeAnalysis, setResumeAnalysis] = useState(false);
+  const [isBatchLocked, setIsBatchLocked] = useState(false);
 
   useEffect(() => {
     fetchHolidays();
     fetchEntries();
+    evaluateBatchLock(batch);
   }, [batch]);
+
+  const evaluateBatchLock = (batchInfo) => {
+    if (!batchInfo?.periodEnd) {
+      setIsBatchLocked(false);
+      return;
+    }
+
+    const periodEndDate = new Date(batchInfo.periodEnd);
+    const today = new Date();
+    const monthAgo = new Date(
+      today.getFullYear(),
+      today.getMonth() - 1,
+      today.getDate()
+    );
+
+    setIsBatchLocked(periodEndDate < monthAgo);
+  };
+
+  const showBatchLockedAlert = () => {
+    setAlert({
+      show: true,
+      title: "Batch Locked",
+      message: "This batch is older than one month and cannot be modified.",
+      variant: "warning",
+    });
+  };
 
   useEffect(() => {
     // Load hide deleted preference from localStorage
@@ -778,6 +806,11 @@ const DTRBatchView = ({ batch, onBack }) => {
   };
 
   const handleTimeClick = (entry, type, event) => {
+    if (isBatchLocked) {
+      showBatchLockedAlert();
+      return;
+    }
+
     // Only allow clicking if the record isn't deleted and either:
     // 1. The field is empty, or
     // 2. The field has been manually edited before
@@ -967,6 +1000,12 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const handleDateClick = (entry, event) => {
     event.preventDefault();
+
+    if (isBatchLocked) {
+      showBatchLockedAlert();
+      return;
+    }
+
     setContextMenuEntry(entry);
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
     setShowDateContextMenu(true);
@@ -1048,6 +1087,11 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const handleTimeRightClick = async (e, entry, type) => {
     e.preventDefault();
+
+    if (isBatchLocked) {
+      showBatchLockedAlert();
+      return;
+    }
 
     if (entry.deleteRecord) return;
 
@@ -1192,6 +1236,11 @@ const DTRBatchView = ({ batch, onBack }) => {
   };
 
   const handleUpdatePeriod = async (newStartDate, newEndDate) => {
+    if (isBatchLocked) {
+      showBatchLockedAlert();
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await axios.post(
@@ -1208,6 +1257,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         batch.periodEnd = newEndDate;
         // Refresh the data to recalculate totals
         await fetchEntries();
+        evaluateBatchLock({ ...batch, periodEnd: newEndDate });
       } else {
         setError(response.data.Error || "Failed to update period dates");
       }
@@ -1243,22 +1293,38 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const renderButtons = () => (
     <div className="mb-3 d-flex gap-2">
-      <Button variant="edit" onClick={handleDeleteRepeat} disabled={loading}>
+      <Button
+        variant="edit"
+        onClick={handleDeleteRepeat}
+        disabled={loading || isBatchLocked}
+      >
         Delete Repeat
       </Button>
-      <Button variant="cancel" onClick={handleAnalyze} disabled={loading}>
+      <Button
+        variant="cancel"
+        onClick={handleAnalyze}
+        disabled={loading || isBatchLocked}
+      >
         Analyze Time In/Out
       </Button>
-      <Button variant="view" onClick={handleCalculateHours} disabled={loading}>
+      <Button
+        variant="view"
+        onClick={handleCalculateHours}
+        disabled={loading || isBatchLocked}
+      >
         Calculate Hours
       </Button>
-      <Button variant="add" onClick={handleSundayHoliday} disabled={loading}>
+      <Button
+        variant="add"
+        onClick={handleSundayHoliday}
+        disabled={loading || isBatchLocked}
+      >
         Check Sun/Hol
       </Button>
       <Button
         variant="danger"
         onClick={handleReset}
-        disabled={loading}
+        disabled={loading || isBatchLocked}
         className="ms-auto"
       >
         RESET
