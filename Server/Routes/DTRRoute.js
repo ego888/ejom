@@ -1905,10 +1905,9 @@ router.get("/absences", verifyUser, async (req, res) => {
         const actualKey = `${employee.empId}__${monthNumber}`;
         const actualHours = hoursMap.get(actualKey) || 0;
 
+        let deficitHours = 0;
         if (actualHours > 0) {
-          const deficitHours = Math.max(0, expectedHours - actualHours);
-        } else {
-          const deficitHours = 0;
+          deficitHours = Math.max(0, expectedHours - actualHours);
         }
         const absenceDays = Math.max(
           0,
