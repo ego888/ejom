@@ -24,7 +24,7 @@ const formatNumber = (value) => {
   if (value === null || value === undefined) return "";
 
   const rounded = Number(value.toFixed(2));
-  return rounded === 0 ? "0.00" : rounded.toFixed(2);
+  return rounded === 0 ? "" : rounded.toFixed(2);
 };
 
 const DTRAbsences = () => {

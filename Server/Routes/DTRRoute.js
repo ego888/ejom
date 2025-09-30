@@ -1896,41 +1896,33 @@ router.get("/absences", verifyUser, async (req, res) => {
 
     const monthlyTotals = Array(activeMonths.length).fill(0);
 
-    const employees = employeeRows
-      .map((employee) => {
-        const monthlyAbsences = [];
-        let totalAbsence = 0;
+    const employees = employeeRows.map((employee) => {
+      const monthlyAbsences = [];
+      let totalAbsence = 0;
 
-        activeMonths.forEach((monthNumber, index) => {
-          const expectedHours = workingDays[monthNumber - 1] * 8;
-          const actualKey = `${employee.empId}__${monthNumber}`;
-          const actualHours = hoursMap.get(actualKey) || 0;
+      activeMonths.forEach((monthNumber, index) => {
+        const expectedHours = workingDays[monthNumber - 1] * 8;
+        const actualKey = `${employee.empId}__${monthNumber}`;
+        const actualHours = hoursMap.get(actualKey) || 0;
 
-          const deficitHours = Math.max(0, expectedHours - actualHours);
-          const absenceDays = Math.max(
-            0,
-            parseFloat((deficitHours / 8).toFixed(2))
-          );
+        const deficitHours = Math.max(0, expectedHours - actualHours);
+        const absenceDays = Math.max(
+          0,
+          parseFloat((deficitHours / 8).toFixed(2))
+        );
 
-          monthlyAbsences.push(absenceDays);
-          totalAbsence += absenceDays;
-          monthlyTotals[index] += absenceDays;
-        });
+        monthlyAbsences.push(absenceDays);
+        totalAbsence += absenceDays;
+        monthlyTotals[index] += absenceDays;
+      });
 
-        const roundedTotal = parseFloat(totalAbsence.toFixed(2));
-
-        if (roundedTotal === 0) {
-          return null;
-        }
-
-        return {
-          empId: employee.empId,
-          empName: employee.empName,
-          monthlyAbsences,
-          totalAbsence: roundedTotal,
-        };
-      })
-      .filter(Boolean);
+      return {
+        empId: employee.empId,
+        empName: employee.empName,
+        monthlyAbsences,
+        totalAbsence: parseFloat(totalAbsence.toFixed(2)),
+      };
+    });
 
     const response = {
       year,
