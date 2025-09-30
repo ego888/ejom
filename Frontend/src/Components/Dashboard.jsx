@@ -161,12 +161,12 @@ const MASTERFILES = {
 // Reports submenus for different roles
 const REPORTS_SALES = {
   ...REPORTS,
-  subItems: [SALES_REPORT, SOA],
+  subItems: [SALES_REPORT, SOA, DTR_ABSENCES],
 };
 
 const REPORTS_PRODUCTION = {
   ...REPORTS,
-  subItems: [MATERIAL_USAGE_REPORT],
+  subItems: [MATERIAL_USAGE_REPORT, DTR_ABSENCES],
 };
 
 const DTR = { path: "dtr", icon: "bi-clock-history", text: "DTR" };
@@ -326,7 +326,8 @@ const Dashboard = () => {
         PAYMENT_INQUIRY,
         INVOICE_INQUIRY,
         BILLING,
-        SOA
+        SOA,
+        DTR_ABSENCES
       );
     } else if (permissions.isProduction) {
       items.push(
@@ -341,9 +342,9 @@ const Dashboard = () => {
         SOA
       );
     } else if (permissions.isArtist) {
-      items.push(ARTISTLOG);
+      items.push(ARTISTLOG, DTR_ABSENCES);
     } else if (permissions.isOperator) {
-      items.push(PRINTLOG);
+      items.push(PRINTLOG, DTR_ABSENCES);
     }
 
     items.push(PROFILE);

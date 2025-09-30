@@ -31,7 +31,7 @@ const DTRAbsences = () => {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const [report, setReport] = useState(null);
-  const [viewMode, setViewMode] = useState("table");
+  const [viewMode, setViewMode] = useState("chart");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -107,19 +107,19 @@ const DTRAbsences = () => {
           <li className="nav-item">
             <button
               type="button"
-              className={`nav-link ${viewMode === "table" ? "active" : ""}`}
-              onClick={() => setViewMode("table")}
+              className={`nav-link ${viewMode === "chart" ? "active" : ""}`}
+              onClick={() => setViewMode("chart")}
             >
-              Table
+              Chart
             </button>
           </li>
           <li className="nav-item">
             <button
               type="button"
-              className={`nav-link ${viewMode === "chart" ? "active" : ""}`}
-              onClick={() => setViewMode("chart")}
+              className={`nav-link ${viewMode === "table" ? "active" : ""}`}
+              onClick={() => setViewMode("table")}
             >
-              Chart
+              Table
             </button>
           </li>
         </ul>
@@ -142,7 +142,8 @@ const DTRAbsences = () => {
       {!loading && !error && report && (
         <div className="card shadow-sm">
           <div className="card-body">
-            {report.activeMonths.length === 0 || report.employees.length === 0 ? (
+            {report.activeMonths.length === 0 ||
+            report.employees.length === 0 ? (
               <div className="alert alert-info mb-0" role="alert">
                 No DTR entries were found for {year}.
               </div>
