@@ -49,6 +49,7 @@ import DashProd from "./Components/DashProd";
 import DTR from "./Components/DTR";
 import MaterialUsageReport from "./Components/Reports/MaterialUsageReport";
 import NotYetClosed from "./Components/Reports/NotYetClosed";
+import DTRAbsences from "./Components/Reports/DTRAbsences";
 import PaymentInquiry from "./Components/PaymentInquiry";
 import InvoiceInquiry from "./Components/InvoiceInquiry";
 import DeliveryQR from "./Components/deliveryQR";
@@ -258,6 +259,7 @@ function App() {
             path="material-usage-report"
             element={<MaterialUsageReport />}
           />
+          <Route path="dtr-absences" element={<DTRAbsences />} />
           <Route path="not-close" element={<NotYetClosed />} />
           <Route path="dashprod" element={<DashProd />} />
           <Route path="check-order-total" element={<ReportCheckTotal />} />

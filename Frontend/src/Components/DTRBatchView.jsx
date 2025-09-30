@@ -1510,7 +1510,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Time In {getSortIndicator("timeIn")}
                     </th>
                     <th
-                      onClick={() => handleSort("date")}
+                      onClick={() => handleSort("dateOut")}
                       style={{ cursor: "pointer" }}
                     >
                       Date Out {getSortIndicator("dateOut")}
@@ -1577,9 +1577,24 @@ const DTRBatchView = ({ batch, onBack }) => {
                     >
                       Night Diff {getSortIndicator("nightDifferential")}
                     </th>
-                    <th style={{ textAlign: "center" }}>Raw State</th>
-                    <th style={{ textAlign: "center" }}>Remarks</th>
-                    <th style={{ textAlign: "center" }}>Processed</th>
+                    <th
+                      onClick={() => handleSort("rawState")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Raw State {getSortIndicator("rawState")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("remarks")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Remarks {getSortIndicator("remarks")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("processed")}
+                      style={{ cursor: "pointer", textAlign: "center" }}
+                    >
+                      Processed {getSortIndicator("processed")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

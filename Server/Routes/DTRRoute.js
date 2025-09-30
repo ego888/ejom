@@ -1796,6 +1796,167 @@ router.get("/holidays", async (req, res) => {
   }
 });
 
+// DTR absences report
+router.get("/absences", verifyUser, async (req, res) => {
+  let connection;
+
+  const parseDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const calculateWorkingDays = (year, holidaySet) => {
+    const workingDays = Array(12).fill(0);
+
+    for (let month = 0; month < 12; month++) {
+      const date = new Date(year, month, 1);
+
+      while (date.getMonth() === month) {
+        const isSunday = date.getDay() === 0;
+        const dateKey = parseDateKey(date);
+
+        if (!isSunday && !holidaySet.has(dateKey)) {
+          workingDays[month] += 1;
+        }
+
+        date.setDate(date.getDate() + 1);
+      }
+    }
+
+    return workingDays;
+  };
+
+  try {
+    const requestedYear = parseInt(req.query.year, 10);
+    const year = Number.isNaN(requestedYear)
+      ? new Date().getFullYear()
+      : requestedYear;
+
+    connection = await pool.getConnection();
+
+    const [holidayRows] = await connection.query(
+      "SELECT holidayDate FROM DTRHolidays WHERE YEAR(holidayDate) = ?",
+      [year]
+    );
+
+    const holidaySet = new Set(
+      holidayRows.map((row) => parseDateKey(new Date(row.holidayDate)))
+    );
+
+    const workingDays = calculateWorkingDays(year, holidaySet);
+
+    const [employeeRows] = await connection.query(
+      `SELECT DISTINCT empId, empName
+       FROM DTREntries
+       WHERE YEAR(date) = ? AND deleteRecord = 0
+       ORDER BY empName, empId`,
+      [year]
+    );
+
+    const [hourRows] = await connection.query(
+      `SELECT empId, empName, MONTH(date) AS month,
+              SUM(COALESCE(hours, 0) + COALESCE(overtime, 0)) AS totalHours
+       FROM DTREntries
+       WHERE YEAR(date) = ? AND deleteRecord = 0
+       GROUP BY empId, empName, MONTH(date)
+       ORDER BY empName, empId, month`,
+      [year]
+    );
+
+    const monthSet = new Set();
+    hourRows.forEach((row) => {
+      if (row.totalHours && row.totalHours > 0) {
+        monthSet.add(row.month);
+      }
+    });
+
+    if (monthSet.size === 0) {
+      return res.json({
+        Status: true,
+        Result: {
+          year,
+          workingDays,
+          activeMonths: [],
+          monthlyTotals: [],
+          grandTotal: 0,
+          employees: [],
+        },
+      });
+    }
+
+    const activeMonths = Array.from(monthSet).sort((a, b) => a - b);
+
+    const hoursMap = new Map();
+    hourRows.forEach((row) => {
+      const key = `${row.empId}__${row.month}`;
+      hoursMap.set(key, Number(row.totalHours) || 0);
+    });
+
+    const monthlyTotals = Array(activeMonths.length).fill(0);
+
+    const employees = employeeRows
+      .map((employee) => {
+        const monthlyAbsences = [];
+        let totalAbsence = 0;
+
+        activeMonths.forEach((monthNumber, index) => {
+          const expectedHours = workingDays[monthNumber - 1] * 8;
+          const actualKey = `${employee.empId}__${monthNumber}`;
+          const actualHours = hoursMap.get(actualKey) || 0;
+
+          const deficitHours = Math.max(0, expectedHours - actualHours);
+          const absenceDays = Math.max(
+            0,
+            parseFloat((deficitHours / 8).toFixed(2))
+          );
+
+          monthlyAbsences.push(absenceDays);
+          totalAbsence += absenceDays;
+          monthlyTotals[index] += absenceDays;
+        });
+
+        const roundedTotal = parseFloat(totalAbsence.toFixed(2));
+
+        if (roundedTotal === 0) {
+          return null;
+        }
+
+        return {
+          empId: employee.empId,
+          empName: employee.empName,
+          monthlyAbsences,
+          totalAbsence: roundedTotal,
+        };
+      })
+      .filter(Boolean);
+
+    const response = {
+      year,
+      workingDays,
+      activeMonths,
+      monthlyTotals: monthlyTotals.map((total) =>
+        parseFloat(total.toFixed(2))
+      ),
+      grandTotal: parseFloat(
+        monthlyTotals.reduce((sum, value) => sum + value, 0).toFixed(2)
+      ),
+      employees,
+    };
+
+    res.json({ Status: true, Result: response });
+  } catch (error) {
+    console.error("Error generating DTR absence report:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to generate DTR absence report: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 // Add holiday API endpoint
 router.post("/add-holiday", async (req, res) => {
   let connection;

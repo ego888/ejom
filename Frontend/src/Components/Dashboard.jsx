@@ -111,6 +111,11 @@ const NOT_CLOSE = {
   icon: "bi-x-circle",
   text: "Not Close",
 };
+const DTR_ABSENCES = {
+  path: "dtr-absences",
+  icon: "bi-person-dash",
+  text: "DTR Absences",
+};
 
 // Submenu for Reports
 const REPORTS = {
@@ -123,6 +128,7 @@ const REPORTS = {
     ARTIST_INCENTIVES,
     SALES_INCENTIVES,
     MATERIAL_USAGE_REPORT,
+    DTR_ABSENCES,
     NOT_CLOSE,
     CHECK_ORDER_TOTAL,
   ],
