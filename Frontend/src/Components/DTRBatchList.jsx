@@ -97,14 +97,24 @@ const DTRBatchList = ({
                   <td>{formatDateTime(batch.createdAt)}</td>
                   <td className="text-center">
                     <div className="d-flex justify-content-center gap-2 flex-wrap">
-                      <Button
-                        variant="add"
-                        size="sm"
-                        onClick={() => onAddFilesToBatch(batch)}
-                        title="Add more files to this batch"
-                      >
-                        <i className="bi bi-plus-circle"></i> Add Files
-                      </Button>
+                      {(() => {
+                        const createdAt = new Date(batch.createdAt); // ensure Date object
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                        if (createdAt > oneMonthAgo) {
+                          return (
+                            <Button
+                              variant="add"
+                              size="sm"
+                              onClick={() => onAddFilesToBatch(batch)}
+                              title="Add more files to this batch"
+                            >
+                              <i className="bi bi-plus-circle"></i> Add Files
+                            </Button>
+                          );
+                        }
+                        return null;
+                      })()}
                       <Button
                         variant="view"
                         size="sm"

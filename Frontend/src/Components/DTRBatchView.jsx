@@ -96,6 +96,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     message: "",
     variant: "success",
   });
+  const [resumeAnalysis, setResumeAnalysis] = useState(false);
 
   useEffect(() => {
     fetchHolidays();
@@ -138,6 +139,12 @@ const DTRBatchView = ({ batch, onBack }) => {
       document.removeEventListener("contextmenu", handleGlobalRightClick);
     };
   }, []);
+
+  useEffect(() => {
+    if (!resumeAnalysis) return;
+    setResumeAnalysis(false);
+    handleAnalyze();
+  }, [resumeAnalysis]);
 
   const fetchHolidays = async () => {
     try {
@@ -537,17 +544,17 @@ const DTRBatchView = ({ batch, onBack }) => {
 
       // Reset modal state
       setShowConfirmModal(false);
-      setCurrentEntry(null);
+      //      setCurrentEntry(null);
       setLoading(false);
 
-      // Continue analyzing from the next record
-      handleAnalyze();
+      // Continue analyzing from the next record when state updates
+      setResumeAnalysis(true);
     } catch (error) {
       console.error("Error updating entries:", error);
       setError("Failed to update entries. Please try again.");
       setLoading(false);
       setShowConfirmModal(false);
-      setCurrentEntry(null);
+      //      setCurrentEntry(null);
     }
   };
 
@@ -556,99 +563,126 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
-      // Go through records one by one
-      for (let i = 0; i < entries.length - 1; i++) {
-        const current = entries[i];
+      const batchStartDate = new Date(batch.periodStart);
+      batchStartDate.setHours(0, 0, 0, 0);
+      const batchEndDate = new Date(batch.periodEnd);
+      batchEndDate.setHours(0, 0, 0, 0);
 
-        // Skip if already deleted
-        if (current.deleteRecord) {
+      const updates = [];
+      let lastKeptEntry = null;
+
+      const toMinutes = (timeString) => {
+        if (!timeString) return null;
+        const [hours, minutes] = timeString.split(":").map(Number);
+        if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+          return null;
+        }
+        return hours * 60 + minutes;
+      };
+
+      const buildRemark = (prefix, existing) => {
+        const trimmed = existing?.trim();
+        return trimmed ? `${prefix} ${trimmed}` : prefix;
+      };
+
+      const sanitizeEntryForUpdate = (entry, overrides = {}) => {
+        const normalizeTime = (value) => (value ? value : null);
+        const normalizeNumber = (value) =>
+          value === undefined || value === null ? 0 : Number(value);
+
+        return {
+          id: entry.id,
+          batchId: entry.batchId,
+          date: entry.date ?? null,
+          dateOut: entry.dateOut ?? null,
+          timeIn: normalizeTime(entry.timeIn),
+          timeOut: normalizeTime(entry.timeOut),
+          editedIn: normalizeNumber(entry.editedIn),
+          editedOut: normalizeNumber(entry.editedOut),
+          processed: normalizeNumber(
+            overrides.processed !== undefined
+              ? overrides.processed
+              : entry.processed
+          ),
+          deleteRecord: normalizeNumber(
+            overrides.deleteRecord !== undefined
+              ? overrides.deleteRecord
+              : entry.deleteRecord
+          ),
+          remarks:
+            overrides.remarks !== undefined
+              ? overrides.remarks
+              : entry.remarks ?? null,
+        };
+      };
+
+      for (const entry of entries) {
+        if (!entry || entry.deleteRecord) {
           continue;
         }
 
-        // Check if date is within batch period
-        const currentDate = new Date(current.date);
-        currentDate.setHours(0, 0, 0, 0); // Set time to midnight
+        const entryDate = new Date(entry.date);
+        entryDate.setHours(0, 0, 0, 0);
 
-        const batchStartDate = new Date(batch.periodStart);
-        batchStartDate.setHours(0, 0, 0, 0); // Set time to midnight
+        const isOutsidePeriod =
+          entryDate < batchStartDate || entryDate > batchEndDate;
 
-        const batchEndDate = new Date(batch.periodEnd);
-        batchEndDate.setHours(0, 0, 0, 0); // Set time to midnight
-
-        if (currentDate < batchStartDate || currentDate > batchEndDate) {
-          console.log(currentDate, batchStartDate, batchEndDate);
-          try {
-            await axios.post(
-              `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
-              {
-                entries: [
-                  {
-                    ...current,
-                    processed: 0,
-                    remarks: "OUTSIDE PERIOD " + (current.remarks || ""),
-                    deleteRecord: 1,
-                  },
-                ],
-              }
-            );
-          } catch (error) {
-            console.error("Error updating entry:", error);
-          }
+        if (isOutsidePeriod) {
+          updates.push(
+            sanitizeEntryForUpdate(entry, {
+              processed: 0,
+              deleteRecord: 1,
+              remarks: buildRemark("OUTSIDE PERIOD", entry.remarks),
+            })
+          );
           continue;
         }
 
-        // Convert current time to minutes for comparison
-        const [currentHours, currentMinutes] = current.time
-          .split(":")
-          .map(Number);
-        const currentTotalMinutes = currentHours * 60 + currentMinutes;
+        const currentMinutes = toMinutes(entry.time);
 
-        // Check subsequent records
-        for (let j = i + 1; j < entries.length; j++) {
-          const next = entries[j];
+        const isDuplicate =
+          lastKeptEntry &&
+          lastKeptEntry.empId === entry.empId &&
+          lastKeptEntry.date === entry.date &&
+          currentMinutes !== null &&
+          lastKeptEntry.minutes !== null &&
+          Math.abs(currentMinutes - lastKeptEntry.minutes) <= 3;
 
-          // Skip if not same person or date
-          if (next.empId !== current.empId || next.date !== current.date) {
-            break;
-          }
-
-          // Skip if already deleted
-          if (next.deleteRecord) {
-            continue;
-          }
-
-          // Convert next time to minutes
-          const [nextHours, nextMinutes] = next.time.split(":").map(Number);
-          const nextTotalMinutes = nextHours * 60 + nextMinutes;
-
-          // If within 3 minutes, mark for deletion
-          if (Math.abs(nextTotalMinutes - currentTotalMinutes) <= 3) {
-            try {
-              await axios.post(
-                `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
-                {
-                  entries: [
-                    {
-                      ...next,
-                      processed: 0,
-                      remarks: "REPEAT " + (next.remarks || ""),
-                      deleteRecord: 1,
-                    },
-                  ],
-                }
-              );
-            } catch (error) {
-              console.error("Error updating entry:", error);
-            }
-          }
+        if (isDuplicate) {
+          updates.push(
+            sanitizeEntryForUpdate(entry, {
+              processed: 0,
+              deleteRecord: 1,
+              remarks: buildRemark("REPEAT", entry.remarks),
+            })
+          );
+          continue;
         }
+
+        lastKeptEntry = {
+          empId: entry.empId,
+          date: entry.date,
+          minutes: currentMinutes,
+        };
+      }
+
+      if (updates.length > 0) {
+        await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
+          entries: updates,
+        });
       }
 
       // Refresh data after all processing is complete
       await fetchEntries();
     } catch (error) {
       console.error("Error in delete repeat process:", error);
-      setError("Failed to process repeating records. Please try again.");
+      const serverMessage =
+        error?.response?.data?.Error || error?.message || null;
+      setError(
+        serverMessage
+          ? `Failed to process repeating records: ${serverMessage}`
+          : "Failed to process repeating records. Please try again."
+      );
     } finally {
       setLoading(false);
     }

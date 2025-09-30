@@ -150,6 +150,25 @@ const DTRTotalView = ({ entries, batch, holidays }) => {
     }
   };
 
+  const getEffectiveHoursStyle = (effectiveHours) => {
+    const totalPeriodHours = Number(grandTotal.periodHours ?? 0);
+    const hoursValue = Number(effectiveHours ?? 0);
+
+    if (!Number.isFinite(totalPeriodHours) || !Number.isFinite(hoursValue)) {
+      return {};
+    }
+
+    if (hoursValue < totalPeriodHours - 16) {
+      return { backgroundColor: "red" };
+    }
+
+    if (hoursValue < totalPeriodHours - 8) {
+      return { backgroundColor: "orange" };
+    }
+
+    return {};
+  };
+
   const formatNumber = (value) => {
     const num = Number(value);
     return num === 0 ? null : Number(num.toFixed(2));
@@ -423,7 +442,12 @@ const DTRTotalView = ({ entries, batch, holidays }) => {
                 >
                   <td>{employee.empId}</td>
                   <td>{employee.empName}</td>
-                  <td className="text-end fw-bold">
+                  <td
+                    className="text-end fw-bold"
+                    style={getEffectiveHoursStyle(
+                      employee.totals.effectiveHours
+                    )}
+                  >
                     {formatNumberZ(employee.totals.effectiveHours)}
                   </td>
                   <td className="text-end fw-bold">
