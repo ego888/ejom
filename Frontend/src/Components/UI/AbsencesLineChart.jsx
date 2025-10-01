@@ -58,10 +58,15 @@ const buildSeriesPoints = (employees, months) => {
   });
 };
 
-const AbsencesLineChart = ({ employees, months }) => {
+const AbsencesLineChart = ({ employees, months, year }) => {
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [visibleMap, setVisibleMap] = useState({});
+
+  const storageKey = useMemo(
+    () => (year ? `dtrAbsencesVisibility-${year}` : "dtrAbsencesVisibility"),
+    [year]
+  );
 
   useEffect(() => {
     const element = containerRef.current;
@@ -100,12 +105,67 @@ const AbsencesLineChart = ({ employees, months }) => {
       return;
     }
 
-    const initialMap = {};
-    employees.forEach((employee) => {
-      initialMap[employee.empId] = true;
+    let storedMap = {};
+    if (storageKey) {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            storedMap = parsed;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to parse stored DTR absences visibility", err);
+      }
+    }
+
+    setVisibleMap((prev) => {
+      const next = {};
+      let changed = false;
+
+      employees.forEach((employee) => {
+        const storedValue = storedMap.hasOwnProperty(employee.empId)
+          ? !!storedMap[employee.empId]
+          : undefined;
+        const previousValue = prev.hasOwnProperty(employee.empId)
+          ? prev[employee.empId]
+          : undefined;
+        const value =
+          storedValue !== undefined
+            ? storedValue
+            : previousValue !== undefined
+            ? previousValue
+            : true;
+
+        next[employee.empId] = value;
+        if (!changed && previousValue !== value) {
+          changed = true;
+        }
+      });
+
+      if (!changed && Object.keys(prev).length !== Object.keys(next).length) {
+        changed = true;
+      }
+
+      return changed ? next : prev;
     });
-    setVisibleMap(initialMap);
-  }, [employees]);
+  }, [employees, storageKey]);
+
+  useEffect(() => {
+    if (!storageKey || !employees || employees.length === 0) return;
+
+    const toStore = {};
+    employees.forEach((employee) => {
+      toStore[employee.empId] = !!visibleMap[employee.empId];
+    });
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(toStore));
+    } catch (err) {
+      console.warn("Failed to store DTR absences visibility", err);
+    }
+  }, [visibleMap, employees, storageKey]);
 
   const series = useMemo(() => {
     const mapped = buildSeriesPoints(employees, months);
@@ -373,6 +433,7 @@ AbsencesLineChart.propTypes = {
     })
   ).isRequired,
   months: PropTypes.arrayOf(PropTypes.number).isRequired,
+  year: PropTypes.number.isRequired,
 };
 
 export default AbsencesLineChart;
