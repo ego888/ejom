@@ -82,6 +82,14 @@ const checkRouteAccess = (route, permissions) => {
       return permissions.isArtist;
     case "printlog":
       return permissions.isOperator;
+    case "dtr-absences":
+      return (
+        permissions.isSales ||
+        permissions.isAccounting ||
+        permissions.isProduction ||
+        permissions.isArtist ||
+        permissions.isOperator
+      );
     case "material":
     case "employee":
     case "category":
