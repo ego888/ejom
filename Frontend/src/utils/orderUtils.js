@@ -311,17 +311,27 @@ export const parseDateValue = (input) => {
 
 // API error handler
 export const handleApiError = (err, navigate, setAlert) => {
+  const showAlert = (payload) => {
+    if (typeof setAlert === "function") {
+      setAlert(payload);
+    } else {
+      console.error(payload.title, payload.message);
+    }
+  };
+
   if (err.response?.status === 401) {
-    setAlert({
+    showAlert({
       show: true,
       title: "Error",
       message: "Your session has expired. Please log out and log in again.",
       type: "alert",
     });
     localStorage.removeItem("token");
-    navigate("/");
+    if (navigate) {
+      navigate("/");
+    }
   } else {
-    setAlert({
+    showAlert({
       show: true,
       title: "Error",
       message: err.response?.data?.Error || "An error occurred",
