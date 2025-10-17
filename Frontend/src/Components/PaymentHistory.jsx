@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
-import { formatNumber, formatPeso } from "../utils/orderUtils";
+import { formatPeso, formatDateDisplay } from "../utils/orderUtils";
 import PropTypes from "prop-types";
 
 function PaymentHistory({ orderId, onPaymentSelect }) {
@@ -69,7 +69,7 @@ function PaymentHistory({ orderId, onPaymentSelect }) {
               </button>
             </td>
             <td id="paydate" className="text-center">
-              {new Date(payment.payDate).toLocaleDateString()}
+              {formatDateDisplay(payment.payDate)}
             </td>
             <td id="paytype" className="text-center">
               {payment.payType}
@@ -87,15 +87,11 @@ function PaymentHistory({ orderId, onPaymentSelect }) {
               {payment.transactedBy}
             </td>
             <td id="posteddate" className="text-center">
-              {payment.postedDate
-                ? new Date(payment.postedDate).toLocaleDateString()
-                : ""}
+              {formatDateDisplay(payment.postedDate)}
             </td>
             <td id="remittedby">{payment.remittedBy}</td>
             <td id="remitteddate">
-              {payment.remittedDate
-                ? new Date(payment.remittedDate).toLocaleDateString()
-                : ""}
+              {formatDateDisplay(payment.remittedDate)}
             </td>
           </tr>
         ))}

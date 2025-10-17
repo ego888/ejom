@@ -364,6 +364,12 @@ export const formatDateTime = (date) => {
     .replace(",", "");
 };
 
+export const formatDateDisplay = (date, locale, options) => {
+  const parsed = parseDateValue(date);
+  if (!parsed) return "";
+  return parsed.toLocaleDateString(locale, options);
+};
+
 // export const formatDate = (date) => {
 //   return new Date(date)
 //     .toLocaleDateString("en-CA", {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
-import { formatNumber, formatPeso, handleApiError } from "../utils/orderUtils";
+import { formatPeso, handleApiError, formatDateDisplay } from "../utils/orderUtils";
 import "./PaymentAllocation.css";
 
 function PaymentAllocation({ payId }) {
@@ -134,9 +134,7 @@ function PaymentAllocation({ payId }) {
                   {index === 0 ? allocation.payId : ""}
                 </td>
                 <td className="text-center">
-                  {index === 0
-                    ? new Date(allocation.payDate).toLocaleDateString()
-                    : ""}
+                  {index === 0 ? formatDateDisplay(allocation.payDate) : ""}
                 </td>
                 <td className="text-end">
                   {index === 0 ? formatPeso(allocation.totalPayment) : ""}
@@ -158,7 +156,7 @@ function PaymentAllocation({ payId }) {
                 <td className="text-center">
                   {index === 0
                     ? allocation.postedDate
-                      ? new Date(allocation.postedDate).toLocaleDateString()
+                      ? formatDateDisplay(allocation.postedDate)
                       : "N/A"
                     : ""}
                 </td>
@@ -168,7 +166,7 @@ function PaymentAllocation({ payId }) {
                 <td className="text-center">
                   {index === 0
                     ? allocation.remittedDate
-                      ? new Date(allocation.remittedDate).toLocaleDateString()
+                      ? formatDateDisplay(allocation.remittedDate)
                       : ""
                     : ""}
                 </td>
