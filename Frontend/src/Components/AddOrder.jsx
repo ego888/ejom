@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import AddOrderDetails from "./AddOrderDetails";
@@ -20,6 +20,7 @@ import {
   calculatePerSqFt,
   calculatePrintHrs,
   autoExpandTextarea,
+  parseDateValue,
 } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import Input from "./UI/Input";
@@ -1315,6 +1316,90 @@ function AddOrder() {
       .catch((err) => handleApiError(err, navigate));
   }, []);
 
+  const printPermissions = useMemo(() => {
+    const normalizeDate = (value) => {
+      const parsed = parseDateValue(value);
+      if (!parsed) return null;
+      parsed.setHours(0, 0, 0, 0);
+      return parsed;
+    };
+
+    const toNumber = (value) => {
+      if (typeof value === "number") return value;
+      if (typeof value === "string") {
+        const cleaned = value.replace(/,/g, "");
+        const parsed = parseFloat(cleaned);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      return 0;
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const holdDate = normalizeDate(data.hold);
+    const overdueDate = normalizeDate(data.overdue);
+
+    const amountPaid = toNumber(data.amountPaid);
+    const total = toNumber(data.grandTotal);
+    const ratio = total > 0 ? amountPaid / total : 0;
+
+    const isFullyPaid = total <= 0 ? true : ratio >= 0.999;
+    const isHalfPaid = total > 0 && ratio >= 0.5;
+
+    const isHoldActive = holdDate ? today >= holdDate : false;
+    const isOverdueActive = overdueDate ? today >= overdueDate : false;
+
+    const daysOverdue = isOverdueActive
+      ? Math.floor(
+          (today.getTime() - overdueDate.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      : 0;
+
+    const overdueWithinThreshold = isOverdueActive ? daysOverdue <= 30 : true;
+
+    const meetsPartialPaymentCondition =
+      isOverdueActive && isHalfPaid && overdueWithinThreshold;
+
+    const isPrintDisabled =
+      (isHoldActive && !isFullyPaid) ||
+      (isOverdueActive && !(isFullyPaid || meetsPartialPaymentCondition));
+
+    let reason = "";
+    if (isPrintDisabled) {
+      if (isHoldActive && !isFullyPaid) {
+        reason = "Client is currently on hold.";
+      } else if (isOverdueActive && !(isFullyPaid || meetsPartialPaymentCondition)) {
+        if (!isHalfPaid) {
+          reason =
+            "Requires at least 50% payment when customer has overdue invoices.";
+        } else if (!overdueWithinThreshold) {
+          reason = "Overdue exceeds the 30-day allowance.";
+        } else {
+          reason = "Client has overdue invoices.";
+        }
+      }
+    }
+
+    return {
+      isPrintDisabled,
+      reason,
+      holdDate,
+      isOverdueActive,
+      isFullyPaid,
+      meetsPartialPaymentCondition,
+    };
+  }, [data.hold, data.overdue, data.amountPaid, data.grandTotal]);
+
+  const {
+    isPrintDisabled,
+    reason: printDisabledReason,
+    holdDate,
+    isOverdueActive,
+    isFullyPaid,
+    meetsPartialPaymentCondition,
+  } = printPermissions;
+
   const handlePrintOrder = async () => {
     console.log("orderDetails.length", orderDetails.length);
     if (orderDetails.length === 0) {
@@ -1328,49 +1413,38 @@ function AddOrder() {
       return; // Add return to prevent navigation if no details
     }
 
-    // Check client hold status
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
-
-    if (data.hold) {
-      const holdDate = new Date(data.hold);
-      holdDate.setHours(0, 0, 0, 0);
-
-      if (holdDate <= currentDate) {
-        setAlert({
-          show: true,
-          title: "Error",
-          message: "Cannot print order because client is on Hold.",
-          type: "alert",
-        });
-        return;
-      }
+    if (isPrintDisabled) {
+      setAlert({
+        show: true,
+        title: "Cannot Print",
+        message:
+          printDisabledReason ||
+          "Printing is currently disabled due to client credit status.",
+        type: "alert",
+      });
+      return;
     }
 
-    // Check client overdue status
-    if (data.overdue) {
-      const overdueDate = new Date(data.overdue);
-      overdueDate.setHours(0, 0, 0, 0);
-
-      if (overdueDate <= currentDate && data.hold) {
-        const holdDate = new Date(data.hold);
-        const formattedHoldDate = holdDate.toLocaleDateString();
-
-        setAlert({
-          show: true,
-          title: "Warning",
-          message: `Client will be on hold by ${formattedHoldDate}`,
-          type: "confirm",
-          onConfirm: () => {
-            // Proceed with printing
-            proceedWithPrint();
-          },
-        });
-        return;
-      }
+    if (
+      isOverdueActive &&
+      holdDate &&
+      !isFullyPaid &&
+      meetsPartialPaymentCondition
+    ) {
+      const formattedHoldDate = holdDate.toLocaleDateString();
+      setAlert({
+        show: true,
+        title: "Warning",
+        message: `Client will be on hold by ${formattedHoldDate}`,
+        type: "confirm",
+        onConfirm: () => {
+          proceedWithPrint();
+        },
+      });
+      return;
     }
 
-    // If no hold/overdue issues, proceed directly
+    // If within allowed rules, proceed directly
     proceedWithPrint();
 
     async function proceedWithPrint() {
@@ -1894,7 +1968,12 @@ const handleNoPrintToggle = async (orderId, currentNoPrint) => {
                       Description
                     </label>
                   </div>
-                  <Button variant="print" onClick={handlePrintOrder}>
+                  <Button
+                    variant="print"
+                    onClick={handlePrintOrder}
+                    disabled={isPrintDisabled}
+                    title={isPrintDisabled ? printDisabledReason : undefined}
+                  >
                     Print JO
                   </Button>
                 </>
