@@ -55,14 +55,6 @@ const checkRouteAccess = (route, permissions) => {
     case "reports":
     case "sales-report":
       return permissions.isSales;
-    case "dtr-absences":
-      return (
-        permissions.isSales ||
-        permissions.isAccounting ||
-        permissions.isProduction ||
-        permissions.isArtist ||
-        permissions.isOperator
-      );
     case "soa":
     case "print_soa":
     case "client":
