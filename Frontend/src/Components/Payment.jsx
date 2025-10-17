@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
@@ -102,6 +103,27 @@ function Prod() {
   const [clickTimer, setClickTimer] = useState(null);
   const [allocationCount, setAllocationCount] = useState(0);
   const [allocatedAmount, setAllocatedAmount] = useState(0);
+
+  // iOS detection (Safari on iPhone/iPad)
+  const isIOS = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }, []);
+
+  // Limit datalist options for performance on mobile Safari
+  const filteredClients = useMemo(() => {
+    const term = (searchClientName || "").toLowerCase().trim();
+    const source = Array.isArray(clientList) ? clientList : [];
+    const results = term
+      ? source.filter((client) => {
+          const a = (client.clientName || "").toLowerCase();
+          const b = (client.customerName || "").toLowerCase();
+          return a.includes(term) || b.includes(term);
+        })
+      : source;
+    // Cap to first 50 to avoid Safari freeze with huge datalists
+    return results.slice(0, 50);
+  }, [clientList, searchClientName]);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -361,13 +383,14 @@ function Prod() {
     }
   };
 
-  // Add useEffect to focus on client name input when component mounts
+  // Focus client input on mount, but skip on iOS to avoid Safari issues
   useEffect(() => {
+    if (isIOS) return;
     const clientNameInput = document.querySelector('input[name="clientName"]');
     if (clientNameInput) {
       clientNameInput.focus();
     }
-  }, []);
+  }, [isIOS]);
 
   // Add debounced save function
   const debouncedSavePayment = useCallback(
@@ -635,8 +658,7 @@ function Prod() {
         title: "Post Payment",
         message: "Are you sure you want to post this payment?",
         type: "confirm",
-        onConfirm: () =>
-          handlePostPayment(result, { skipConfirmation: true }),
+        onConfirm: () => handlePostPayment(result, { skipConfirmation: true }),
       });
       return;
     }
@@ -1044,7 +1066,7 @@ function Prod() {
                   autoComplete="off"
                 />
                 <datalist id="clientList">
-                  {clientList.map((client) => (
+                  {filteredClients.map((client) => (
                     <option key={client.id} value={client.clientName}>
                       {client.customerName}
                     </option>
