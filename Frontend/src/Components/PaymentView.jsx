@@ -6,13 +6,19 @@ import { BiRectangle } from "react-icons/bi";
 import "./AddOrder.css";
 import "./Orders.css";
 import "./PaymentView.css";
-import { formatNumber, formatPeso, handleApiError } from "../utils/orderUtils";
+import {
+  formatNumber,
+  formatPeso,
+  handleApiError,
+  formatDateTime,
+  formatDate,
+  parseDateValue,
+} from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import PaymentHistory from "./PaymentHistory";
-import { formatDateTime } from "../utils/orderUtils";
 import PaymentAllocation from "./PaymentAllocation";
 import { getClientBackgroundStyle } from "../utils/clientOverdueStyle";
 
@@ -232,8 +238,8 @@ function PaymentView() {
   currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
 
   // Safely handle hold and overdue dates
-  const holdDate = data.hold ? new Date(data.hold) : null;
-  const overdueDate = data.overdue ? new Date(data.overdue) : null;
+  const holdDate = parseDateValue(data.hold);
+  const overdueDate = parseDateValue(data.overdue);
 
   // Only apply styling if dates are valid
   const rowClass =
@@ -317,9 +323,7 @@ function PaymentView() {
               <div className="col-3 order-info-row">
                 <div className="d-flex flex-column">
                   <label className="form-label">DR Date</label>
-                  <div className="form-input">
-                    {new Date(data.drDate).toLocaleDateString() || ""}
-                  </div>
+                  <div className="form-input">{formatDate(data.drDate)}</div>
                 </div>
               </div>
               <div className="col-4 order-info-row">
@@ -534,18 +538,7 @@ function PaymentView() {
                     <div className="info-group">
                       <div className="info-label">Last Edited</div>
                       <div className="info-value">
-                        {data.lastEdited
-                          ? new Date(data.lastEdited)
-                              .toLocaleString("en-CA", {
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: false,
-                              })
-                              .replace(",", "")
-                          : ""}
+                        {formatDateTime(data.lastEdited)}
                       </div>
                     </div>
 
@@ -881,7 +874,7 @@ function PaymentView() {
                           <div
                             style={{ paddingLeft: "33px", textAlign: "right" }}
                           >
-                            {new Date(data.datePaid).toLocaleDateString() || ""}
+                            {formatDate(data.datePaid)}
                           </div>
                         </div>
                       </td>

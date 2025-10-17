@@ -246,6 +246,69 @@ export const formatPesoZ = (num) => {
   return formatPeso(num);
 };
 
+/**
+ * Normalizes various backend date string formats into Date instances that work on Safari.
+ * Returns null when parsing fails instead of throwing.
+ */
+export const parseDateValue = (input) => {
+  if (!input) return null;
+
+  if (input instanceof Date) {
+    return new Date(input.getTime());
+  }
+
+  if (typeof input === "number") {
+    const dateFromNumber = new Date(input);
+    return Number.isNaN(dateFromNumber.getTime()) ? null : dateFromNumber;
+  }
+
+  if (typeof input === "string") {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    const replaceSpaceWithT = trimmed.replace(" ", "T");
+
+    const candidates = [
+      trimmed,
+      replaceSpaceWithT,
+      /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+        ? `${trimmed}T00:00:00`
+        : null,
+      /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(trimmed)
+        ? `${trimmed.replace(" ", "T")}:00`
+        : null,
+    ].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const parsed = new Date(candidate);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    const fallbackMatch = trimmed.match(
+      /^(\d{4})[-/](\d{2})[-/](\d{2})(?:\s+\d{2}:\d{2}(?::\d{2})?)?$/
+    );
+
+    if (fallbackMatch) {
+      const [, year, month, day] = fallbackMatch;
+      const parsed = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        0,
+        0,
+        0
+      );
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
+
 // API error handler
 export const handleApiError = (err, navigate, setAlert) => {
   if (err.response?.status === 401) {
@@ -286,7 +349,10 @@ export const calculatePrintHrs = (
 
 // Helper function for date formatting
 export const formatDateTime = (date) => {
-  return new Date(date)
+  const parsed = parseDateValue(date);
+  if (!parsed) return "";
+
+  return parsed
     .toLocaleString("en-CA", {
       year: "numeric",
       month: "2-digit",
@@ -311,12 +377,8 @@ export const formatDateTime = (date) => {
 export const formatDate = (input) => {
   if (!input) return ""; // Return empty string for null, undefined, or empty input
 
-  const d = new Date(input);
-
-  if (isNaN(d.getTime())) {
-    throw new Error(`Invalid date passed to formatDate: ${input}`);
-  }
-
+  const d = parseDateValue(input);
+  if (!d) return typeof input === "string" ? input : "";
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
