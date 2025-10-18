@@ -169,3 +169,63 @@
 .payment-allocation-modal .text-right {
   text-align: right;
 }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .payment-page-background {
+    padding: 12px;
+  }
+
+  .payment-header h3 {
+    font-size: 1.25rem;
+  }
+
+  .search-container input.form-control.form-control-sm {
+    width: 100% !important;
+  }
+
+  .d-flex.justify-content-between.mb-3 {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .payment-info-header .row > [class^="col-"],
+  .payment-info-header .row > [class*=" col-"] {
+    margin-bottom: 10px;
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table.table th,
+  table.table td {
+    white-space: nowrap;
+    font-size: 0.9rem;
+  }
+
+  .form-input {
+    font-size: 0.9rem;
+    padding: 6px 8px;
+  }
+
+  #vat-select.form-input {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .payment-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .btn,
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+}

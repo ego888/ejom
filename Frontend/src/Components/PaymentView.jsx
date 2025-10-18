@@ -300,191 +300,193 @@ function PaymentView() {
             </div>
           </div>
 
-          <div className="d-flex order-header-container">
-            <div className="row g-0 flex-grow-1 order-content">
-              <div className="col-3 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Order Date</label>
-                  <div className="form-input">{data.orderDate || ""}</div>
-                </div>
-              </div>
-              <div className="col-3 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Prepared By</label>
-                  <div className="form-input">{data.preparedByName || ""}</div>
-                </div>
-              </div>
-              <div className="col-3 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Terms</label>
-                  <div className="form-input">{data.terms || ""}</div>
-                </div>
-              </div>
-              <div className="col-3 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">DR Date</label>
-                  <div className="form-input">{formatDate(data.drDate)}</div>
-                </div>
-              </div>
-              <div className="col-4 order-info-row">
-                <div className="d-flex flex-column">
-                  <label
-                    htmlFor="client"
-                    className="form-label"
-                    style={getClientBackgroundStyle(data)}
-                  >
-                    Client
-                  </label>
-                  <div className="form-input">{data.clientName || ""}</div>
-                </div>
-              </div>
-              <div className="col-8 order-info-row">
-                <div className="d-flex flex-column">
-                  <label
-                    htmlFor="client"
-                    className="form-label"
-                    style={getClientBackgroundStyle(data)}
-                  >
-                    Customer Name
-                  </label>
-                  <div className="form-input">{data.customerName || ""}</div>
-                </div>
-              </div>
-              <div className="col-4 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Project Name</label>
-                  <div className="form-input">{data.projectName || ""}</div>
-                </div>
-              </div>{" "}
-              <div className="col-4 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Ordered By</label>
-                  <div className="form-input">{data.orderedBy || ""}</div>
-                </div>
-              </div>
-              <div className="col-4 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Order Reference</label>
-                  <div className="form-input">{data.orderReference || ""}</div>
-                </div>
-              </div>
-              <div className="col-2 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Cell Number</label>
-                  <div className="form-input">{data.cellNumber || ""}</div>
-                </div>
-              </div>
-              <div className="col-2 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Due Date</label>
-                  <div className="form-input">{data.dueDate || ""}</div>
-                </div>
-              </div>
-              <div className="col-2 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Graphics By</label>
-                  <div className="form-input">{data.graphicsByName || ""}</div>
-                </div>
-              </div>
-              <div className="col-2 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Grand Total</label>
-                  <div className="form-input">
-                    <strong>{formatPeso(data.grandTotal)}</strong>
+          <div className="order-header-container d-flex flex-column flex-lg-row align-items-stretch gap-3">
+            <div className="order-content flex-grow-1">
+              <div className="row g-0">
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Order Date</label>
+                    <div className="form-input">{data.orderDate || ""}</div>
                   </div>
                 </div>
-              </div>
-              <div className="col-2 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Amount Paid</label>
-                  <div className="form-input">
-                    <strong>{formatPeso(data.amountPaid)}</strong>
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Prepared By</label>
+                    <div className="form-input">{data.preparedByName || ""}</div>
                   </div>
                 </div>
-              </div>
-              <div className="col-2 order-info-row">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Balance</label>
-                  <div className="form-input">
-                    <strong>
-                      {/* {formatPeso(data.grandTotal - data.amountPaid)}{" "} */}
-                      {(() => {
-                        const balance =
-                          data.grandTotal - (data.amountPaid || 0);
-                        const grandTotalNetOfVat =
-                          data.grandTotal / (1 + vatRate / 100);
-                        const balancePercentage =
-                          (balance / grandTotalNetOfVat) * 100;
-                        return balance > 0 ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "baseline",
-                              gap: "0.5rem",
-                            }}
-                          >
-                            <div>{formatPeso(balance)}</div>
-                            <div className="text-muted small">
-                              {balancePercentage.toFixed(2)}%
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Terms</label>
+                    <div className="form-input">{data.terms || ""}</div>
+                  </div>
+                </div>
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">DR Date</label>
+                    <div className="form-input">{formatDate(data.drDate)}</div>
+                  </div>
+                </div>
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label
+                      htmlFor="client"
+                      className="form-label"
+                      style={getClientBackgroundStyle(data)}
+                    >
+                      Client
+                    </label>
+                    <div className="form-input">{data.clientName || ""}</div>
+                  </div>
+                </div>
+                <div className="col-8 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label
+                      htmlFor="client"
+                      className="form-label"
+                      style={getClientBackgroundStyle(data)}
+                    >
+                      Customer Name
+                    </label>
+                    <div className="form-input">{data.customerName || ""}</div>
+                  </div>
+                </div>
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Project Name</label>
+                    <div className="form-input">{data.projectName || ""}</div>
+                  </div>
+                </div>{" "}
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Ordered By</label>
+                    <div className="form-input">{data.orderedBy || ""}</div>
+                  </div>
+                </div>
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Order Reference</label>
+                    <div className="form-input">{data.orderReference || ""}</div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Cell Number</label>
+                    <div className="form-input">{data.cellNumber || ""}</div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Due Date</label>
+                    <div className="form-input">{data.dueDate || ""}</div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Graphics By</label>
+                    <div className="form-input">{data.graphicsByName || ""}</div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Grand Total</label>
+                    <div className="form-input">
+                      <strong>{formatPeso(data.grandTotal)}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Amount Paid</label>
+                    <div className="form-input">
+                      <strong>{formatPeso(data.amountPaid)}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Balance</label>
+                    <div className="form-input">
+                      <strong>
+                        {/* {formatPeso(data.grandTotal - data.amountPaid)}{" "} */}
+                        {(() => {
+                          const balance =
+                            data.grandTotal - (data.amountPaid || 0);
+                          const grandTotalNetOfVat =
+                            data.grandTotal / (1 + vatRate / 100);
+                          const balancePercentage =
+                            (balance / grandTotalNetOfVat) * 100;
+                          return balance > 0 ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "baseline",
+                                gap: "0.5rem",
+                              }}
+                            >
+                              <div>{formatPeso(balance)}</div>
+                              <div className="text-muted small">
+                                {balancePercentage.toFixed(2)}%
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            ""
+                          );
+                        })()}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Special Instructions</label>
+                    <textarea
+                      className="form-input multiline"
+                      value={data.specialInst || ""}
+                      readOnly
+                    />
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Delivery Instructions</label>
+                    <textarea
+                      className="form-input multiline"
+                      value={data.deliveryInst || ""}
+                      readOnly
+                    />
+                  </div>
+                </div>
+                <div className="col-12 mt-2 d-flex">
+                  <div className="me-3">
+                    <span>
+                      <label className="form-label me-2">
+                        Sample:
+                        {data.sample ? (
+                          <i className="bi bi-check-circle text-success ms-1"></i>
                         ) : (
                           ""
-                        );
-                      })()}
-                    </strong>
+                        )}
+                      </label>
+                    </span>
                   </div>
-                </div>
-              </div>
-              <div className="col-6">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Special Instructions</label>
-                  <textarea
-                    className="form-input multiline"
-                    value={data.specialInst || ""}
-                    readOnly
-                  />
-                </div>
-              </div>
-              <div className="col-6">
-                <div className="d-flex flex-column">
-                  <label className="form-label">Delivery Instructions</label>
-                  <textarea
-                    className="form-input multiline"
-                    value={data.deliveryInst || ""}
-                    readOnly
-                  />
-                </div>
-              </div>
-              <div className="col-12 mt-2 d-flex">
-                <div className="me-3">
-                  <span>
-                    <label className="form-label me-2">
-                      Sample:
-                      {data.sample ? (
-                        <i className="bi bi-check-circle text-success ms-1"></i>
-                      ) : (
-                        ""
-                      )}
-                    </label>
-                  </span>
-                </div>
-                <div>
-                  <span>
-                    <label className="form-label me-2">
-                      Reprint:
-                      {data.reprint ? (
-                        <i className="bi bi-check-circle text-success ms-1"></i>
-                      ) : (
-                        ""
-                      )}
-                    </label>
-                  </span>
+                  <div>
+                    <span>
+                      <label className="form-label me-2">
+                        Reprint:
+                        {data.reprint ? (
+                          <i className="bi bi-check-circle text-success ms-1"></i>
+                        ) : (
+                          ""
+                        )}
+                      </label>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="right-panel">
+            <div className="right-panel flex-lg-shrink-0">
               {/* Tab Navigation */}
               <div className="tab-navigation">
                 <button
