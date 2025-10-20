@@ -1347,8 +1347,10 @@ function AddOrder() {
     const isFullyPaid = total <= 0 ? true : ratio >= 0.999;
     const isHalfPaid = total > 0 && ratio >= 0.5;
 
-    const isHoldActive = holdDate ? today >= holdDate : false;
-    const isOverdueActive = overdueDate ? today >= overdueDate : false;
+    const hasHold = !!data.hold;
+    const isHoldActive = hasHold && holdDate ? today >= holdDate : false;
+    const isOverdueActive =
+      hasHold && overdueDate ? today >= overdueDate : false;
 
     const daysOverdue = isOverdueActive
       ? Math.floor(
@@ -1356,17 +1358,19 @@ function AddOrder() {
         )
       : 0;
 
-    const overdueWithinThreshold = isOverdueActive ? daysOverdue <= 30 : true;
+    const overdueWithinThreshold =
+      isOverdueActive && hasHold ? daysOverdue <= 30 : true;
 
     const meetsPartialPaymentCondition =
-      isOverdueActive && isHalfPaid && overdueWithinThreshold;
+      hasHold && isOverdueActive && isHalfPaid && overdueWithinThreshold;
 
     const isPrintDisabled =
-      (isHoldActive && !isFullyPaid) ||
-      (isOverdueActive && !(isFullyPaid || meetsPartialPaymentCondition));
+      hasHold &&
+      ((isHoldActive && !isFullyPaid) ||
+        (isOverdueActive && !(isFullyPaid || meetsPartialPaymentCondition)));
 
     let reason = "";
-    if (isPrintDisabled) {
+    if (isPrintDisabled && hasHold) {
       if (isHoldActive && !isFullyPaid) {
         reason = "Client is currently on hold.";
       } else if (isOverdueActive && !(isFullyPaid || meetsPartialPaymentCondition)) {
