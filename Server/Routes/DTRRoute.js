@@ -1807,13 +1807,22 @@ router.get("/absences", verifyUser, async (req, res) => {
     return `${year}-${month}-${day}`;
   };
 
-  const calculateWorkingDays = (year, holidaySet) => {
+  const calculateWorkingDays = (year, holidaySet, monthEndDays = {}) => {
     const workingDays = Array(12).fill(0);
 
     for (let month = 0; month < 12; month++) {
       const date = new Date(year, month, 1);
+      const limitDay = monthEndDays[month + 1];
 
       while (date.getMonth() === month) {
+        if (
+          typeof limitDay === "number" &&
+          !Number.isNaN(limitDay) &&
+          date.getDate() > limitDay
+        ) {
+          break;
+        }
+
         const isSunday = date.getDay() === 0;
         const dateKey = parseDateKey(date);
 
@@ -1845,7 +1854,22 @@ router.get("/absences", verifyUser, async (req, res) => {
       holidayRows.map((row) => parseDateKey(new Date(row.holidayDate)))
     );
 
-    const workingDays = calculateWorkingDays(year, holidaySet);
+    const [latestEntryRows] = await connection.query(
+      `SELECT MAX(date) AS latestDate
+       FROM DTREntries
+       WHERE YEAR(date) = ? AND deleteRecord = 0`,
+      [year]
+    );
+
+    let monthEndDays = {};
+    if (latestEntryRows[0]?.latestDate) {
+      const latestDate = new Date(latestEntryRows[0].latestDate);
+      monthEndDays = {
+        [latestDate.getMonth() + 1]: latestDate.getDate(),
+      };
+    }
+
+    const workingDays = calculateWorkingDays(year, holidaySet, monthEndDays);
 
     const [employeeRows] = await connection.query(
       `SELECT DISTINCT empId, empName
