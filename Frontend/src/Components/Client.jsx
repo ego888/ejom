@@ -97,6 +97,19 @@ const Client = () => {
     debouncedSearch(value);
   };
 
+  const handleSearchFocus = (event) => {
+    if (event.target.value) {
+      event.target.select();
+    }
+  };
+
+  const handleSearchMouseDown = (event) => {
+    if (event.target.value && document.activeElement === event.target) {
+      event.preventDefault();
+      event.target.select();
+    }
+  };
+
   const handleClearSearch = () => {
     debouncedSearch.cancel();
     setSearchInput("");
@@ -217,6 +230,8 @@ const Client = () => {
                 placeholder="Search clients..."
                 value={searchInput}
                 onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={handleSearchFocus}
+                onMouseDown={handleSearchMouseDown}
                 style={{ paddingRight: "2rem" }}
               />
               {searchInput && (
