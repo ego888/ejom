@@ -1920,8 +1920,8 @@ const handleNoPrintToggle = async (orderId, currentNoPrint) => {
     <div className="orders-page-background">
       <div className="px-4 mt-3">
         <div className="p-3 rounded border">
-          <div className="mb-3 pb-2 border-bottom orders-toolbar">
-            <div className="orders-toolbar__primary d-flex align-items-center gap-3">
+          <div className="mb-3 pb-2 border-bottom orders-toolbar add-order-header">
+            <div className="orders-toolbar__primary d-flex gap-3">
               <h3 className="m-0">
                 {id ? `Edit Order #${data.orderId}` : "Add New Order"}
                 {data.revision > 0 && (
