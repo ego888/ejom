@@ -149,6 +149,7 @@ function ReceivePayment() {
             "salesName",
             "amount",
             "orderReference",
+            "remittedDate",
           ],
         }),
       };
