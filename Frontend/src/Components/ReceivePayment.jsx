@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
@@ -83,6 +83,7 @@ function ReceivePayment() {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
+  const selectAllCheckboxRef = useRef(null);
 
   // Payment state variables
   const [payments, setPayments] = useState([]);
@@ -98,6 +99,26 @@ function ReceivePayment() {
   const [selectedPayments, setSelectedPayments] = useState([]);
   const [includeReceived, setIncludeReceived] = useState(false);
   const [remittedDateFilter, setRemittedDateFilter] = useState("");
+
+  const selectablePayments = useMemo(
+    () => payments.filter((payment) => payment.receivedBy === null),
+    [payments]
+  );
+  const allSelectableChecked =
+    selectablePayments.length > 0 &&
+    selectablePayments.every((payment) => payment.received === 1);
+  const someSelectableChecked = selectablePayments.some(
+    (payment) => payment.received === 1
+  );
+  const selectAllChecked = allSelectableChecked;
+  const selectAllDisabled = selectablePayments.length === 0;
+
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      selectAllCheckboxRef.current.indeterminate =
+        !allSelectableChecked && someSelectableChecked;
+    }
+  }, [allSelectableChecked, someSelectableChecked]);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -594,60 +615,134 @@ function ReceivePayment() {
     }
   };
 
+  const togglePaymentReceived = async (payment, checked, tokenOverride) => {
+    const token = tokenOverride || localStorage.getItem("token");
+
+    if (!token) {
+      throw new Error("Please log in again to continue");
+    }
+
+    const response = await axios.post(
+      `${ServerIP}/auth/toggle-payment-received`,
+      {
+        payId: payment.payId,
+        received: checked ? 1 : 0,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.data.Status) {
+      throw new Error(response.data.Error || "Failed to update payment status");
+    }
+  };
+
   // Add this to the payments table row
   const handlePaymentSelect = async (payment, checked) => {
     try {
-      const response = await axios.post(
-        `${ServerIP}/auth/toggle-payment-received`,
-        {
-          payId: payment.payId,
-          received: checked ? 1 : 0,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+      await togglePaymentReceived(payment, checked);
+
+      setPayments((prevPayments) =>
+        prevPayments.map((p) =>
+          p.payId === payment.payId
+            ? {
+                ...p,
+                received: checked ? 1 : 0,
+              }
+            : p
+        )
       );
 
-      if (response.data.Status) {
-        // Update the local state to reflect the new payment status
-        setPayments((prevPayments) =>
-          prevPayments.map((p) =>
-            p.payId === payment.payId
-              ? {
-                  ...p,
-                  received: checked ? 1 : 0,
-                }
-              : p
-          )
-        );
+      setSelectedPayments((prev) => {
+        if (checked) {
+          const updated = new Set(prev);
+          updated.add(payment.payId);
+          return Array.from(updated);
+        }
+        return prev.filter((id) => id !== payment.payId);
+      });
 
-        // Update selected payments
-        setSelectedPayments((prev) =>
-          checked
-            ? [...prev, payment.payId]
-            : prev.filter((id) => id !== payment.payId)
-        );
-
-        // Refresh payment type totals
-        await fetchPaymentTypeTotals();
-      } else {
-        setAlert({
-          show: true,
-          title: "Error",
-          message: response.data.Error || "Failed to update payment status",
-          type: "alert",
-        });
-      }
+      await fetchPaymentTypeTotals();
     } catch (error) {
       console.error("Error updating payment status:", error);
       setAlert({
         show: true,
         title: "Error",
-        message: "Failed to update payment status",
+        message:
+          error.response?.data?.Error ||
+          error.message ||
+          "Failed to update payment status",
         type: "alert",
       });
+    }
+  };
+
+  const handleSelectAllChange = async (e) => {
+    const shouldSelectAll = e.target.checked;
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Please log in again to continue",
+        type: "error",
+      });
+      return;
+    }
+
+    const paymentsToUpdate = selectablePayments.filter((payment) =>
+      shouldSelectAll ? payment.received !== 1 : payment.received === 1
+    );
+
+    if (paymentsToUpdate.length === 0) {
+      return;
+    }
+
+    try {
+      for (const payment of paymentsToUpdate) {
+        await togglePaymentReceived(payment, shouldSelectAll, token);
+      }
+
+      const updatedIds = new Set(
+        paymentsToUpdate.map((payment) => payment.payId)
+      );
+
+      setPayments((prevPayments) =>
+        prevPayments.map((p) =>
+          updatedIds.has(p.payId)
+            ? {
+                ...p,
+                received: shouldSelectAll ? 1 : 0,
+              }
+            : p
+        )
+      );
+
+      setSelectedPayments((prev) => {
+        if (shouldSelectAll) {
+          const combined = new Set([...prev, ...updatedIds]);
+          return Array.from(combined);
+        }
+        return prev.filter((id) => !updatedIds.has(id));
+      });
+
+      await fetchPaymentTypeTotals();
+    } catch (error) {
+      console.error("Error updating payment status in bulk:", error);
+      setAlert({
+        show: true,
+        title: "Error",
+        message:
+          error.response?.data?.Error ||
+          error.message ||
+          "Failed to update payment status",
+        type: "error",
+      });
+      await fetchPayments();
     }
   };
 
@@ -1177,14 +1272,26 @@ function ReceivePayment() {
                       {paymentSortConfig.key === "amount" &&
                         (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
-                    <th
-                      className="text-center"
-                      onClick={() => handlePaymentSort("received")}
-                      style={{ cursor: "pointer" }}
-                    >
-                      Select{" "}
-                      {paymentSortConfig.key === "received" &&
-                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    <th className="text-center select-all-column">
+                      <button
+                        type="button"
+                        className="select-all-sort"
+                        onClick={() => handlePaymentSort("received")}
+                      >
+                        Select{" "}
+                        {paymentSortConfig.key === "received" &&
+                          (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                      </button>
+                      <div className="select-all-checkbox-wrapper mt-1">
+                        <input
+                          ref={selectAllCheckboxRef}
+                          type="checkbox"
+                          className="form-check-input select-all-checkbox"
+                          onChange={handleSelectAllChange}
+                          checked={selectAllChecked}
+                          disabled={selectAllDisabled}
+                        />
+                      </div>
                     </th>
                     <th
                       className="text-center"
@@ -1288,15 +1395,18 @@ function ReceivePayment() {
                       <td className="text-right">
                         {formatPeso(payment.amount)}
                       </td>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={payment.received === 1}
-                          onChange={(e) =>
-                            handlePaymentSelect(payment, e.target.checked)
-                          }
-                          disabled={payment.receivedBy !== null}
-                        />
+                      <td className="select-checkbox-cell">
+                        <div className="select-checkbox-wrapper">
+                          <input
+                            type="checkbox"
+                            className="form-check-input select-checkbox"
+                            checked={payment.received === 1}
+                            onChange={(e) =>
+                              handlePaymentSelect(payment, e.target.checked)
+                            }
+                            disabled={payment.receivedBy !== null}
+                          />
+                        </div>
                       </td>
                       <td className="text-center">{payment.payType}</td>
                       <td className="text-center">{payment.ornum}</td>

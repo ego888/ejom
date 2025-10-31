@@ -91,6 +91,114 @@
   font-weight: 600;
 }
 
+.select-all-column {
+  background-color: inherit;
+  vertical-align: top;
+}
+
+.select-all-sort {
+  background: transparent;
+  border: none;
+  color: var(--payment-text-color);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.select-all-sort:hover,
+.select-all-sort:focus {
+  color: var(--payment-border-color);
+  outline: none;
+}
+
+.select-all-checkbox-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.select-all-checkbox {
+  margin: 0;
+}
+
+.select-checkbox-cell {
+  text-align: center;
+}
+
+.select-checkbox-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.select-checkbox {
+  margin: 0;
+}
+
+.remitted-date-header {
+  background-color: inherit;
+  vertical-align: top;
+}
+
+.remitted-date-sort {
+  background: transparent;
+  border: none;
+  color: var(--payment-text-color);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.remitted-date-sort:hover,
+.remitted-date-sort:focus {
+  color: var(--payment-border-color);
+  outline: none;
+}
+
+.remitted-date-filter {
+  background-color: inherit;
+  border: 1px solid var(--payment-border-light);
+  border-radius: 6px;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.remitted-date-filter-input {
+  background-color: inherit;
+  border: 1px solid var(--payment-border-light);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  color: var(--payment-text-color);
+}
+
+.remitted-date-filter-input:focus {
+  border-color: var(--payment-border-hover);
+  box-shadow: none;
+  outline: none;
+}
+
+.remitted-date-clear {
+  background-color: inherit;
+  border: 1px solid var(--payment-border-light);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 2px 8px;
+  color: var(--payment-text-color);
+  cursor: pointer;
+}
+
+.remitted-date-clear:hover,
+.remitted-date-clear:focus {
+  background-color: var(--payment-border-hover);
+  color: #fff;
+  outline: none;
+}
+
 .payment-records-info {
   background-color: var(--payment-content-bg);
   padding: 5px 10px;
