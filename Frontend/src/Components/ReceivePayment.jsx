@@ -97,6 +97,7 @@ function ReceivePayment() {
   const [paymentTypeTotals, setPaymentTypeTotals] = useState([]);
   const [selectedPayments, setSelectedPayments] = useState([]);
   const [includeReceived, setIncludeReceived] = useState(false);
+  const [remittedDateFilter, setRemittedDateFilter] = useState("");
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -353,15 +354,17 @@ function ReceivePayment() {
 
   const fetchPayments = async () => {
     try {
-      const response = await axios.get(
-        `${ServerIP}/auth/payments?page=${paymentCurrentPage}&limit=${recordsPerPage}&sortBy=${
-          paymentSortConfig.key
-        }&sortDirection=${
-          paymentSortConfig.direction
-        }&search=${paymentSearchTerm}&includeReceived=${
-          includeReceived ? "true" : "false"
-        }`
-      );
+      const response = await axios.get(`${ServerIP}/auth/payments`, {
+        params: {
+          page: paymentCurrentPage,
+          limit: recordsPerPage,
+          sortBy: paymentSortConfig.key,
+          sortDirection: paymentSortConfig.direction,
+          search: paymentSearchTerm,
+          includeReceived: includeReceived ? "true" : "false",
+          ...(remittedDateFilter && { remittedDate: remittedDateFilter }),
+        },
+      });
 
       console.log("Payments API Response:", response.data.Result);
       if (response.data.Status) {
@@ -409,6 +412,16 @@ function ReceivePayment() {
     setPaymentCurrentPage(1);
   };
 
+  const handleRemittedDateFilterChange = (e) => {
+    setRemittedDateFilter(e.target.value);
+    setPaymentCurrentPage(1);
+  };
+
+  const clearRemittedDateFilter = () => {
+    setRemittedDateFilter("");
+    setPaymentCurrentPage(1);
+  };
+
   // Add useEffect for payments
   useEffect(() => {
     if (activeTab === "payments") {
@@ -421,6 +434,7 @@ function ReceivePayment() {
     paymentSortConfig,
     paymentSearchTerm,
     includeReceived,
+    remittedDateFilter,
   ]);
 
   // Add this function near the other payment handlers
@@ -1217,14 +1231,34 @@ function ReceivePayment() {
                       {paymentSortConfig.key === "postedDate" &&
                         (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
-                    <th
-                      className="text-center"
-                      onClick={() => handlePaymentSort("remittedDate")}
-                      style={{ cursor: "pointer" }}
-                    >
-                      Remitted Date{" "}
-                      {paymentSortConfig.key === "remittedDate" &&
-                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                    <th className="text-center">
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-decoration-none fw-semibold"
+                        onClick={() => handlePaymentSort("remittedDate")}
+                      >
+                        Remitted Date{" "}
+                        {paymentSortConfig.key === "remittedDate" &&
+                          (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
+                      </button>
+                      <div className="d-flex align-items-center gap-1 mt-1">
+                        <input
+                          type="date"
+                          className="form-control form-control-sm"
+                          value={remittedDateFilter}
+                          onChange={handleRemittedDateFilterChange}
+                        />
+                        {remittedDateFilter && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={clearRemittedDateFilter}
+                            title="Clear remitted date filter"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
                     </th>
                     <th
                       className="text-center"

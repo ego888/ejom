@@ -330,6 +330,7 @@ router.get("/payments", verifyUser, async (req, res) => {
       sortDirection = "desc",
       search = "",
       includeReceived = "false",
+      remittedDate = "",
     } = req.query;
     const offset = (page - 1) * limit;
 
@@ -348,6 +349,11 @@ router.get("/payments", verifyUser, async (req, res) => {
         "(p.ornum LIKE ? OR p.payReference LIKE ? OR p.transactedBy LIKE ?)"
       );
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    if (remittedDate) {
+      whereConditions.push("DATE(p.remittedDate) = ?");
+      params.push(remittedDate);
     }
 
     const whereClause = whereConditions.join(" AND ");
