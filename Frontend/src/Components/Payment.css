@@ -131,6 +131,16 @@
   background-color: #e9ecef !important;
 }
 
+/* Scoped overrides for the payments table */
+.payments-table thead th.select-all-column,
+.payments-table thead th.remitted-date-header {
+  background-color: #e9ecef !important;
+}
+
+.payments-table thead th {
+  background-color: #e9ecef;
+}
+
 .header-sort-label {
   display: inline-flex;
   align-items: center;

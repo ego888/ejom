@@ -889,7 +889,7 @@ function ReceivePayment() {
                   setHasClientFilter(isFilterActive)
                 }
               />
-              <table className="table table-hover">
+              <table className="table table-hover payments-table">
                 <thead className="table table-head">
                   <tr>
                     <th
