@@ -92,23 +92,8 @@
 }
 
 .select-all-column {
-  background-color: inherit;
+  background-color: #e9ecef; /* match default table header background */
   vertical-align: top;
-}
-
-.select-all-sort {
-  background: transparent;
-  border: none;
-  color: var(--payment-text-color);
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-}
-
-.select-all-sort:hover,
-.select-all-sort:focus {
-  color: var(--payment-border-color);
-  outline: none;
 }
 
 .select-all-checkbox-wrapper {
@@ -136,23 +121,23 @@
 }
 
 .remitted-date-header {
-  background-color: inherit;
+  background-color: #e9ecef; /* match default table header background */
   vertical-align: top;
 }
 
-.remitted-date-sort {
-  background: transparent;
-  border: none;
-  color: var(--payment-text-color);
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
+/* Ensure Bootstrap's table cell background doesn't override header color */
+.table thead th.select-all-column,
+.table thead th.remitted-date-header {
+  background-color: #e9ecef !important;
 }
 
-.remitted-date-sort:hover,
-.remitted-date-sort:focus {
-  color: var(--payment-border-color);
-  outline: none;
+.header-sort-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--payment-text-color);
 }
 
 .remitted-date-filter {
@@ -336,4 +321,23 @@
     padding: 4px 8px;
     font-size: 0.85rem;
   }
+}
+
+/* Processing overlay shown during bulk select/unselect */
+.processing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.spinner-lg {
+  width: 3rem;
+  height: 3rem;
 }

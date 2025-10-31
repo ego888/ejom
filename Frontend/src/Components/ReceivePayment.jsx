@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import Button from "./UI/Button";
@@ -99,6 +105,7 @@ function ReceivePayment() {
   const [selectedPayments, setSelectedPayments] = useState([]);
   const [includeReceived, setIncludeReceived] = useState(false);
   const [remittedDateFilter, setRemittedDateFilter] = useState("");
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   const selectablePayments = useMemo(
     () => payments.filter((payment) => payment.receivedBy === null),
@@ -703,6 +710,7 @@ function ReceivePayment() {
     }
 
     try {
+      setBulkUpdating(true);
       for (const payment of paymentsToUpdate) {
         await togglePaymentReceived(payment, shouldSelectAll, token);
       }
@@ -743,6 +751,8 @@ function ReceivePayment() {
         type: "error",
       });
       await fetchPayments();
+    } finally {
+      setBulkUpdating(false);
     }
   };
 
@@ -780,6 +790,16 @@ function ReceivePayment() {
   return (
     <div className="payment-theme">
       <div className="payment-page-background px-5">
+        {bulkUpdating && (
+          <div
+            className="processing-overlay"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <div className="spinner-border text-primary spinner-lg" />
+          </div>
+        )}
         <div className="payment-header d-flex justify-content-center">
           <h3>Receive Payment</h3>
         </div>
@@ -1272,17 +1292,20 @@ function ReceivePayment() {
                       {paymentSortConfig.key === "amount" &&
                         (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
-                    <th className="text-center select-all-column">
-                      <button
-                        type="button"
-                        className="select-all-sort"
-                        onClick={() => handlePaymentSort("received")}
-                      >
+                    <th
+                      className="text-center select-all-column"
+                      onClick={() => handlePaymentSort("received")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className="header-sort-label">
                         Select{" "}
                         {paymentSortConfig.key === "received" &&
                           (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
-                      </button>
-                      <div className="select-all-checkbox-wrapper mt-1">
+                      </div>
+                      <div
+                        className="select-all-checkbox-wrapper mt-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <input
                           ref={selectAllCheckboxRef}
                           type="checkbox"
@@ -1338,27 +1361,30 @@ function ReceivePayment() {
                       {paymentSortConfig.key === "postedDate" &&
                         (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
-                    <th className="text-center">
-                      <button
-                        type="button"
-                        className="btn btn-link p-0 text-decoration-none fw-semibold"
-                        onClick={() => handlePaymentSort("remittedDate")}
-                      >
+                    <th
+                      className="text-center remitted-date-header"
+                      onClick={() => handlePaymentSort("remittedDate")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className="header-sort-label">
                         Remitted Date{" "}
                         {paymentSortConfig.key === "remittedDate" &&
                           (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
-                      </button>
-                      <div className="d-flex align-items-center gap-1 mt-1">
+                      </div>
+                      <div
+                        className="remitted-date-filter mt-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <input
                           type="date"
-                          className="form-control form-control-sm"
+                          className="remitted-date-filter-input"
                           value={remittedDateFilter}
                           onChange={handleRemittedDateFilterChange}
                         />
                         {remittedDateFilter && (
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline-secondary"
+                            className="remitted-date-clear"
                             onClick={clearRemittedDateFilter}
                             title="Clear remitted date filter"
                           >
