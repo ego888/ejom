@@ -131,12 +131,18 @@
   background-color: #e9ecef !important;
 }
 
-/* Scoped overrides for the payments table */
-.payments-table thead th.select-all-column,
-.payments-table thead th.remitted-date-header {
-  background-color: #e9ecef !important;
+/* Filter row above header */
+.payments-table thead .header-filter-row th {
+  background-color: #ffffff; /* white background for filter controls row */
+  padding: 0.25rem 0.5rem;
+  border-bottom: none;
 }
 
+.payments-table thead .header-filter-row th:empty {
+  padding: 0.25rem;
+}
+
+/* Scoped overrides for the payments table */
 .payments-table thead th {
   background-color: #e9ecef;
 }

@@ -368,18 +368,6 @@ function ReceivePayment() {
     };
   }, []);
 
-  // // Add handleApiError function
-  // const handleApiError = (error) => {
-  //   console.error("API Error:", error);
-  //   setAlert({
-  //     show: true,
-  //     title: "Error",
-  //     message:
-  //       error.response?.data?.Error || "An error occurred while fetching data",
-  //     type: "error",
-  //   });
-  // };
-
   const fetchPayments = async () => {
     try {
       const response = await axios.get(`${ServerIP}/auth/payments`, {
@@ -464,55 +452,6 @@ function ReceivePayment() {
     includeReceived,
     remittedDateFilter,
   ]);
-
-  // Add this function near the other payment handlers
-  // const handlePaymentReceivedToggle = async (payment) => {
-  //   try {
-  //     const token = localStorage.getItem("token");
-  //     const response = await axios.post(
-  //       `${ServerIP}/auth/toggle-payment-received`,
-  //       {
-  //         payId: payment.payId,
-  //         received: !payment.received,
-  //       },
-  //       {
-  //         headers: { Authorization: `Bearer ${token}` },
-  //       }
-  //     );
-
-  //     if (response.data.Status) {
-  //       // Update the payment in the state
-  //       setPayments((prevPayments) =>
-  //         prevPayments.map((p) =>
-  //           p.payId === payment.payId
-  //             ? {
-  //                 ...p,
-  //                 received: !p.received,
-  //               }
-  //             : p
-  //         )
-  //       );
-
-  //       // Trigger recalculation of payment type totals
-  //       await fetchPaymentTypeTotals();
-  //     } else {
-  //       setAlert({
-  //         show: true,
-  //         title: "Error",
-  //         message: response.data.Error || "Failed to update payment status",
-  //         type: "error",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("Error toggling payment received status:", error);
-  //     setAlert({
-  //       show: true,
-  //       title: "Error",
-  //       message: "Failed to update payment status",
-  //       type: "error",
-  //     });
-  //   }
-  // };
 
   // Add this function near the other fetch functions
   const fetchPaymentTypeTotals = async () => {
@@ -1262,8 +1201,60 @@ function ReceivePayment() {
                   </div>
                 </div>
               )}
-              <table className="table table-hover">
+              <table className="table table-hover payments-table">
                 <thead className="table table-head">
+                  {/* Filter row above header */}
+                  <tr className="header-filter-row">
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th className="text-center">
+                      <div
+                        className="select-all-checkbox-wrapper"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          ref={selectAllCheckboxRef}
+                          type="checkbox"
+                          className="form-check-input select-all-checkbox"
+                          onChange={handleSelectAllChange}
+                          checked={selectAllChecked}
+                          disabled={selectAllDisabled}
+                        />
+                      </div>
+                    </th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th className="text-center">
+                      <div
+                        className="remitted-date-filter"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="date"
+                          className="remitted-date-filter-input"
+                          value={remittedDateFilter}
+                          onChange={handleRemittedDateFilterChange}
+                        />
+                        {remittedDateFilter && (
+                          <button
+                            type="button"
+                            className="remitted-date-clear"
+                            onClick={clearRemittedDateFilter}
+                            title="Clear remitted date filter"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </th>
+                    <th></th>
+                    <th></th>
+                  </tr>
+                  {/* Main header row */}
                   <tr>
                     <th
                       className="text-center"
@@ -1293,28 +1284,13 @@ function ReceivePayment() {
                         (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
                     <th
-                      className="text-center select-all-column"
+                      className="text-center"
                       onClick={() => handlePaymentSort("received")}
                       style={{ cursor: "pointer" }}
                     >
-                      <div className="header-sort-label">
-                        Select{" "}
-                        {paymentSortConfig.key === "received" &&
-                          (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
-                      </div>
-                      <div
-                        className="select-all-checkbox-wrapper mt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          ref={selectAllCheckboxRef}
-                          type="checkbox"
-                          className="form-check-input select-all-checkbox"
-                          onChange={handleSelectAllChange}
-                          checked={selectAllChecked}
-                          disabled={selectAllDisabled}
-                        />
-                      </div>
+                      Select{" "}
+                      {paymentSortConfig.key === "received" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
                     <th
                       className="text-center"
@@ -1362,36 +1338,13 @@ function ReceivePayment() {
                         (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
                     <th
-                      className="text-center remitted-date-header"
+                      className="text-center"
                       onClick={() => handlePaymentSort("remittedDate")}
                       style={{ cursor: "pointer" }}
                     >
-                      <div className="header-sort-label">
-                        Remitted Date{" "}
-                        {paymentSortConfig.key === "remittedDate" &&
-                          (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
-                      </div>
-                      <div
-                        className="remitted-date-filter mt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          type="date"
-                          className="remitted-date-filter-input"
-                          value={remittedDateFilter}
-                          onChange={handleRemittedDateFilterChange}
-                        />
-                        {remittedDateFilter && (
-                          <button
-                            type="button"
-                            className="remitted-date-clear"
-                            onClick={clearRemittedDateFilter}
-                            title="Clear remitted date filter"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </div>
+                      Remitted Date{" "}
+                      {paymentSortConfig.key === "remittedDate" &&
+                        (paymentSortConfig.direction === "asc" ? "↑" : "↓")}
                     </th>
                     <th
                       className="text-center"
