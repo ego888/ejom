@@ -1,1626 +1,1003 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import debounce from "lodash/debounce";
+import axios from "../utils/axiosConfig";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Button from "./UI/Button";
-import DisplayPage from "./UI/DisplayPage";
-import Pagination from "./UI/Pagination";
-import { ServerIP } from "../config";
-import ClientFilter from "./Logic/ClientFilter";
-import SalesFilter from "./Logic/SalesFilter";
-import StatusBadges from "./UI/StatusBadges";
-import "./Payment.css";
-import axios from "../utils/axiosConfig"; // Import configured axios
-import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
-import ModalAlert from "../Components/UI/ModalAlert";
+import { BiRectangle } from "react-icons/bi";
+import "./AddOrder.css";
+import "./Orders.css";
+import "./PaymentView.css";
+import {
+  formatNumber,
+  formatPeso,
+  handleApiError,
+  formatDateTime,
+  formatDate,
+  parseDateValue,
+} from "../utils/orderUtils";
 import Modal from "./UI/Modal";
-import PaymentAllocationModal from "./PaymentAllocationModal";
-import RemitModal from "./RemitModal";
-import ViewCustomerInfo from "./UI/ViewCustomerInfo";
-import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
+import { ServerIP } from "../config";
+import ModalAlert from "./UI/ModalAlert";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import PaymentHistory from "./PaymentHistory";
+import PaymentAllocation from "./PaymentAllocation";
+import { getClientBackgroundStyle } from "../utils/clientOverdueStyle";
 
-function Prod() {
+function PaymentView() {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(() => {
-    return parseInt(localStorage.getItem("ordersListPage")) || 1;
-  });
-  const [recordsPerPage, setRecordsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(0);
-  const [sortConfig, setSortConfig] = useState(() => {
-    const saved = localStorage.getItem("ordersSortConfig");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          key: "id",
-          direction: "desc",
-        };
-  });
-  const [searchClientName, setSearchClientName] = useState("");
-  const [statusOptions, setStatusOptions] = useState([]);
-  const [selectedStatuses, setSelectedStatuses] = useState(() => {
-    const saved = localStorage.getItem("orderStatusFilter");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [selectedSales, setSelectedSales] = useState([]);
-  const [isProdChecked, setIsProdChecked] = useState(false);
-  const [isAllChecked, setIsAllChecked] = useState(false);
-  const [selectedClients, setSelectedClients] = useState([]);
-  const [hasClientFilter, setHasClientFilter] = useState(false);
-  const [hasSalesFilter, setHasSalesFilter] = useState(false);
-  const [clientList, setClientList] = useState([]);
-  const [salesEmployees, setSalesEmployees] = useState([]);
-  const salesFilterRef = useRef(null);
-  const clientFilterRef = useRef(null);
-  const [paymentTypes, setPaymentTypes] = useState([]);
-  const [paymentInfo, setPaymentInfo] = useState({
-    clientName: "",
-    payDate: new Date().toISOString().split("T")[0], // Format as YYYY-MM-DD
-    payType: "CASH",
-    amount: "",
-    payReference: "",
-    ornum: "",
-  });
-  const [remainingAmount, setRemainingAmount] = useState(0);
-  const [checkPay, setCheckPay] = useState(new Set());
-  const [orderPayments, setOrderPayments] = useState({});
-  const [wtaxTypes, setWtaxTypes] = useState([]);
-  const [selectedWtax, setSelectedWtax] = useState(null);
-  const [vatRate, setVatRate] = useState(0);
-  const [showModal, setShowModal] = useState(false);
-  const [modalConfig, setModalConfig] = useState({});
+  const { id } = useParams();
+  const [data, setData] = useState({});
+  const [orderDetails, setOrderDetails] = useState([]);
+  const [showAllowanceTooltip, setShowAllowanceTooltip] = useState(false);
+  const [tooltipDetail, setTooltipDetail] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [alert, setAlert] = useState({
     show: false,
     title: "",
     message: "",
-    type: "",
-    onConfirm: null,
+    type: "alert",
   });
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [showAllocationModal, setShowAllocationModal] = useState(false);
-  const [tempPayId, setTempPayId] = useState(null);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [error, setError] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [amount, setAmount] = useState("");
-  const [showRemitModal, setShowRemitModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(() => {
-    return localStorage.getItem("paymentSearchTerm") || "";
-  });
-  const [displaySearchTerm, setDisplaySearchTerm] = useState(() => {
-    return localStorage.getItem("paymentSearchTerm") || "";
-  });
-  const [showClientInfo, setShowClientInfo] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const hoverTimerRef = useRef(null);
-  const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [clickTimer, setClickTimer] = useState(null);
-  const [allocationCount, setAllocationCount] = useState(0);
-  const [allocatedAmount, setAllocatedAmount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusOptions, setStatusOptions] = useState([]);
+  const [selectedPayId, setSelectedPayId] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [show, setShow] = useState(true);
+  const [vatRate, setVatRate] = useState(0);
 
-  // Debounced search handler
-  const debouncedSearch = useCallback(
-    debounce((term) => {
-      setSearchTerm(term);
-      // Only reset page if this is a new search, not a restore from localStorage
-      if (term !== localStorage.getItem("paymentSearchTerm")) {
-        setCurrentPage(1);
-      }
-      localStorage.setItem("paymentSearchTerm", term);
-    }, 500),
-    []
-  );
+  // Add state for right panel tabs
+  const [activeTab, setActiveTab] = useState("info");
+  const [noteDraft, setNoteDraft] = useState("");
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
-  // Update handleSearch to use debounce
-  const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    setDisplaySearchTerm(term);
-    debouncedSearch(term);
-  };
+  const location = useLocation(); // Get the current route path
 
-  // Add useEffect to sync state with localStorage on mount
+  let backgroundColor = "#fcd8f3";
+
+  // Add ESC key handler
   useEffect(() => {
-    const savedPage = parseInt(localStorage.getItem("ordersListPage")) || 1;
-    const savedSort = localStorage.getItem("ordersSortConfig");
-    const savedSearch = localStorage.getItem("paymentSearchTerm") || "";
-
-    if (savedPage !== currentPage) {
-      setCurrentPage(savedPage);
-    }
-
-    if (savedSort && JSON.parse(savedSort) !== sortConfig) {
-      setSortConfig(JSON.parse(savedSort));
-    }
-
-    if (savedSearch !== searchTerm) {
-      setSearchTerm(savedSearch);
-      setDisplaySearchTerm(savedSearch);
-    }
-  }, []);
-
-  // Update fetchOrderData to use new endpoint
-  const fetchOrderData = async () => {
-    try {
-      console.log("RUN fetchOrderData");
-      console.trace("TRACE fetchOrderData");
-      setLoading(true);
-      const params = {
-        page: currentPage,
-        limit: recordsPerPage,
-        sortBy: sortConfig.key,
-        sortDirection: sortConfig.direction,
-        statuses: selectedStatuses.join(","),
-        sales: selectedSales.join(","),
-        clients: selectedClients.join(","),
-      };
-      if (searchTerm) {
-        params.search = searchTerm;
+    console.log("useEffect handleEscKey");
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        navigate(-1);
       }
-      const response = await axios.get(
-        `${ServerIP}/auth/get-order-tempPaymentAllocation`,
-        {
-          params,
-        }
-      );
+    };
+    window.addEventListener("keydown", handleEscKey);
+    return () => {
+      window.removeEventListener("keydown", handleEscKey);
+    };
+  }, [navigate]);
 
-      if (response.data.Status) {
-        setOrders(response.data.Result.orders);
-        setTotalPages(response.data.Result.totalPages);
-        setTotalCount(response.data.Result.total);
-
-        // Get total allocated amount if we have a tempPayId
-        if (tempPayId) {
-          const totalAllocated = await getTotalAllocated(tempPayId);
-          setRemainingAmount(paymentInfo.amount - totalAllocated);
-        }
-
-        // Update payment states based on server data
-        const newOrderPayments = {};
-        const newCheckPay = new Set();
-        let hasTempPayments = false;
-
-        response.data.Result.orders.forEach((order) => {
-          if (order.tempPayment && order.tempPaymentOrderId === order.id) {
-            hasTempPayments = true;
-            newOrderPayments[order.id] = {
-              payment: order.tempPayment,
-              wtax: 0, // WTax will be calculated when needed
-            };
-            newCheckPay.add(order.id);
-          }
-        });
-
-        // Only update payment states if we found temp payments
-        if (hasTempPayments) {
-          setOrderPayments(newOrderPayments);
-          setCheckPay(newCheckPay);
-        } else {
-          // Clear payment states if no temp payments found
-          setOrderPayments({});
-          setCheckPay(new Set());
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      handleApiError(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 2. Update the initialization effect
-  useEffect(() => {
-    console.log("RUN initializeComponent");
-    const initializeComponent = async () => {
+  // Cache static data in localStorage
+  const getCachedData = (key, fetchFn) => {
+    const cached = localStorage.getItem(key);
+    if (cached) {
       try {
-        const [
-          statusResponse,
-          wtaxResponse,
-          paymentTypesResponse,
-          clientResponse,
-          salesResponse,
-          vatResponse,
-        ] = await Promise.all([
+        const { data, timestamp } = JSON.parse(cached);
+        // Cache for 1 hour
+        if (Date.now() - timestamp < 3600000) {
+          return data;
+        }
+      } catch (e) {
+        localStorage.removeItem(key);
+      }
+    }
+    return null;
+  };
+
+  // Use cached data where appropriate
+  useEffect(() => {
+    console.log("useEffect loadStaticData");
+    const loadStaticData = async () => {
+      try {
+        const [statusResponse, vatResponse] = await Promise.all([
           axios.get(`${ServerIP}/auth/order-statuses`),
-          axios.get(`${ServerIP}/auth/wtax-types`),
-          axios.get(`${ServerIP}/auth/payment-types`),
-          axios.get(`${ServerIP}/auth/clients`),
-          axios.get(`${ServerIP}/auth/sales_employees`),
           axios.get(`${ServerIP}/auth/jomcontrol/VAT`),
         ]);
 
-        // Handle all responses
         if (statusResponse.data.Status) {
-          const sortedStatuses = statusResponse.data.Result.sort(
-            (a, b) => a.step - b.step
+          const statuses = statusResponse.data.Result;
+          localStorage.setItem(
+            "orderStatuses",
+            JSON.stringify({
+              data: statuses,
+              timestamp: Date.now(),
+            })
           );
-          setStatusOptions(sortedStatuses);
-
-          // Only set initial prod statuses if no saved filters exist
-          const savedFilters = localStorage.getItem("orderStatusFilter");
-          if (!savedFilters) {
-            const prodStatuses = sortedStatuses
-              .slice(2, 6)
-              .map((s) => s.statusId);
-            setSelectedStatuses(prodStatuses);
-            setIsProdChecked(true);
-            localStorage.setItem(
-              "orderStatusFilter",
-              JSON.stringify(prodStatuses)
-            );
-          }
-        }
-
-        if (wtaxResponse.data.Status) {
-          setWtaxTypes(wtaxResponse.data.Result);
-          // Set V2 as default WTax type
-          const defaultWTax = wtaxResponse.data.Result.find(
-            (wt) => wt.WTax === "V2"
-          );
-          if (defaultWTax) {
-            setSelectedWtax(defaultWTax);
-          }
+          setStatusOptions(statuses);
         }
 
         if (vatResponse.data.Status) {
           setVatRate(vatResponse.data.Result.vatPercent);
         }
-        if (paymentTypesResponse.data.Status)
-          setPaymentTypes(paymentTypesResponse.data.Result);
-        if (clientResponse.data.Status)
-          setClientList(clientResponse.data.Result);
-        if (salesResponse.data.Status)
-          setSalesEmployees(salesResponse.data.Result);
-
-        console.log("FINISH initializeComponent");
-        // Set initialLoad to false before fetching data
-        setInitialLoad(false);
-        // Call fetchOrderData after initialization is complete
-        await fetchOrderData();
       } catch (error) {
-        console.error("Error in initialization:", error);
+        console.error("Error loading static data:", error);
       }
     };
 
-    initializeComponent();
-  }, []); // Run once on mount
-
-  // Update useEffect dependencies
-  useEffect(() => {
-    // Skip the initial fetch since it's handled by initializeComponent
-    if (initialLoad) {
-      return;
-    }
-    fetchOrderData();
-  }, [
-    currentPage,
-    recordsPerPage,
-    sortConfig,
-    selectedSales,
-    selectedStatuses,
-    selectedClients,
-    searchTerm,
-  ]);
-
-  // Update handleSort to preserve page number
-  const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    const newSortConfig = { key, direction };
-    setSortConfig(newSortConfig);
-    // Remove the page reset
-    localStorage.setItem("paymentsSortConfig", JSON.stringify(newSortConfig));
-  };
-
-  // Helper function for sort indicator
-  const getSortIndicator = (key) => {
-    if (sortConfig.key === key) {
-      return sortConfig.direction === "asc" ? " ↑" : " ↓";
-    }
-    return "";
-  };
-
-  // Calculate pagination values
-  useEffect(() => {
-    setTotalPages(Math.ceil(totalCount / recordsPerPage));
-  }, [totalCount, recordsPerPage]);
-
-  useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(1);
-      localStorage.setItem("ordersListPage", "1");
-    }
-  }, [totalPages, currentPage]);
-
-  // Modify the page change handler
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    console.log("pageNumber 2", pageNumber);
-    localStorage.setItem("ordersListPage", pageNumber.toString());
-  };
-
-  // Update handleClientSearch to preserve page number
-  const handleClientSearch = async (e) => {
-    const value = e.target.value.trim();
-
-    // Only run if value is different from current
-    if (value && value !== paymentInfo.clientName) {
-      setPaymentInfo((prev) => ({
-        ...prev,
-        clientName: value,
-      }));
-
-      await fetchOrderData();
-    }
-  };
-
-  // Add useEffect to focus on client name input when component mounts
-  useEffect(() => {
-    const clientNameInput = document.querySelector('input[name="clientName"]');
-    if (clientNameInput) {
-      clientNameInput.focus();
-    }
+    loadStaticData();
   }, []);
 
-  // Add debounced save function
-  const debouncedSavePayment = useCallback(
-    debounce(async (paymentData) => {
-      try {
-        // Only save if we have all required fields
-        if (
-          paymentData.payDate &&
-          paymentData.payType &&
-          paymentData.amount > 0 &&
-          paymentData.transactedBy
-        ) {
-          const response = await axios.post(
-            `${ServerIP}/auth/save-temp-payment`,
-            {
-              payment: paymentData,
-            }
-          );
+  useEffect(() => {
+    console.log("useEffect fetchOrderData");
+    const fetchOrderData = async () => {
+      if (!id) return;
 
-          if (response.data.Status) {
-            setTempPayId(response.data.Result.payId);
-            setPaymentInfo((prev) => ({
-              ...prev,
-              payId: response.data.Result.payId,
-            }));
-          }
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      try {
+        const [orderResponse, detailsResponse] = await Promise.all([
+          axios.get(`${ServerIP}/auth/order/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`${ServerIP}/auth/order_details/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        if (orderResponse.data.Status) {
+          console.log("PaymentView data received:", orderResponse.data.Result); // Debug log
+          setData(orderResponse.data.Result);
+          setNoteDraft(orderResponse.data.Result?.note || "");
+          setIsEditingNote(false);
         }
-      } catch (error) {
-        console.error("Error saving temp payment:", error);
+        if (detailsResponse.data.Status) {
+          setOrderDetails(detailsResponse.data.Result);
+        }
+      } catch (err) {
+        handleApiError(err, navigate);
+        setAlert({
+          show: true,
+          title: "Error",
+          message: "Failed to load payment details",
+          type: "error",
+        });
+      } finally {
+        setIsLoading(false);
       }
-    }, 1000),
-    []
+    };
+
+    fetchOrderData();
+  }, [id, navigate]);
+
+  // Memoize formatted dates
+  const formattedDates = useMemo(
+    () => ({
+      readyDate: data.readyDate ? formatDateTime(data.readyDate) : "",
+      billDate: data.billDate ? formatDateTime(data.billDate) : "",
+      productionDate: data.productionDate
+        ? formatDateTime(data.productionDate)
+        : "",
+      deliveryDate: data.deliveryDate ? formatDateTime(data.deliveryDate) : "",
+    }),
+    [data.readyDate, data.billDate, data.productionDate, data.deliveryDate]
   );
 
-  const handlePaymentInfoChange = (field, value) => {
-    const updatedPaymentInfo = {
-      ...paymentInfo,
-      [field]: value || "", // Convert null to empty string
-      transactedBy: localStorage.getItem("userName") || "",
-    };
-
-    setPaymentInfo(updatedPaymentInfo);
-
-    // Update remaining amount when total amount changes
-    if (field === "amount") {
-      setRemainingAmount(Number(value || 0));
-    }
-
-    // Call debounced save function
-    debouncedSavePayment(updatedPaymentInfo);
+  // Add handler for payment selection
+  const handlePaymentSelect = (payId) => {
+    setSelectedPayId(payId);
+    // Switch to Payment Info tab
+    document.getElementById("other-info-tab").click();
   };
 
-  // Add function to check if payment inputs should be enabled
-  const canEditPayments = () => {
-    return (
-      paymentInfo.payDate &&
-      paymentInfo.payType &&
-      searchClientName.trim() &&
-      paymentInfo.amount > 0
-    );
+  const handleEditNote = () => {
+    setNoteDraft(data.note || "");
+    setIsEditingNote(true);
   };
 
-  // Add function to get total allocated amount
-  const getTotalAllocated = async (payId) => {
+  const handleCancelNoteEdit = () => {
+    setNoteDraft(data.note || "");
+    setIsEditingNote(false);
+  };
+
+  const handleSaveNote = async () => {
     try {
-      const response = await axios.get(
-        `${ServerIP}/auth/get-total-tempPaymentAllocated`,
-        { params: { payId } }
+      setIsSavingNote(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${ServerIP}/auth/update-order-note`,
+        {
+          orderId: id,
+          note: noteDraft,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
       if (response.data.Status) {
-        return response.data.Result.totalAllocated;
+        setData((prev) => ({ ...prev, note: noteDraft }));
+        setIsEditingNote(false);
+        setAlert({
+          show: true,
+          title: "Success",
+          message: "Note saved successfully",
+          type: "alert",
+        });
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: response.data.Error || "Failed to save note",
+          type: "alert",
+        });
       }
-      return 0;
-    } catch (error) {
-      console.error("Error getting total allocated amount:", error);
-      return 0;
-    }
-  };
-
-  // Update handlePayCheck to preserve page number
-  const handlePayCheck = async (orderId, orderAmount, orderTotal) => {
-    if (!canEditPayments()) return;
-
-    const newCheckPay = new Set(checkPay);
-    const newOrderPayments = { ...orderPayments };
-
-    if (newCheckPay.has(orderId)) {
-      // Uncheck: Remove payment and add amount back to remaining
-      newCheckPay.delete(orderId);
-      const removedPayment = newOrderPayments[orderId]?.payment || 0;
-      delete newOrderPayments[orderId];
-
-      // Delete from temp allocation if tempPayId exists
-      if (tempPayId) {
-        try {
-          const response = await axios.post(
-            `${ServerIP}/auth/delete-temp-allocation`,
-            {
-              payId: tempPayId,
-              orderId: orderId,
-            }
-          );
-
-          if (response.data.Status) {
-            setAllocationCount(response.data.Result.count);
-            setAllocatedAmount(response.data.Result.totalAllocated);
-            setRemainingAmount(
-              paymentInfo.amount - response.data.Result.totalAllocated
-            );
-          }
-        } catch (error) {
-          console.error("Error deleting temp allocation:", error);
-        }
-      }
-    } else {
-      // Check: Calculate and apply new payment
-      const availableAmount = Math.min(remainingAmount, orderAmount);
-      if (availableAmount > 0) {
-        let wtaxAmount = 0;
-        let paymentAmount = availableAmount;
-
-        // Calculate WTax if selected
-        if (selectedWtax) {
-          if (selectedWtax.withVAT === 1) {
-            const baseAmount = orderTotal / (1 + vatRate / 100);
-            wtaxAmount =
-              Math.round(baseAmount * (selectedWtax.taxRate / 100) * 100) / 100;
-            if (wtaxAmount === paymentAmount) {
-              wtaxAmount = 0;
-            } else {
-              if (availableAmount >= orderAmount) {
-                paymentAmount = orderAmount - wtaxAmount;
-              } else {
-                paymentAmount = availableAmount;
-              }
-            }
-          } else {
-            wtaxAmount =
-              Math.round(orderAmount * (selectedWtax.taxRate / 100) * 100) /
-              100;
-          }
-        }
-        // Save to temp allocation if tempPayId exists
-        if (tempPayId && paymentAmount > 0) {
-          try {
-            const response = await axios.post(
-              `${ServerIP}/auth/save-temp-allocation`,
-              {
-                payId: tempPayId,
-                allocation: {
-                  orderId: orderId,
-                  amount: paymentAmount,
-                },
-              }
-            );
-
-            if (response.data.Status) {
-              setAllocationCount(response.data.Result.count);
-              setAllocatedAmount(response.data.Result.totalAllocated);
-              setRemainingAmount(
-                paymentInfo.amount - response.data.Result.totalAllocated
-              );
-
-              newCheckPay.add(orderId);
-              newOrderPayments[orderId] = {
-                payment: paymentAmount.toFixed(2),
-                wtax: wtaxAmount.toFixed(2),
-              };
-            }
-          } catch (error) {
-            console.error("Error saving temp allocation:", error);
-          }
-        }
-      }
-    }
-
-    setCheckPay(newCheckPay);
-    setOrderPayments(newOrderPayments);
-  };
-
-  // Update handlePaymentChange to preserve page number
-  const handlePaymentChange = async (orderId, field, value) => {
-    const numValue = Number(value);
-    const newOrderPayments = { ...orderPayments };
-    const oldPayment = newOrderPayments[orderId]?.payment || 0;
-
-    if (field === "payment") {
-      // Calculate max allowed payment
-      const maxPayment = remainingAmount + oldPayment;
-      const payment = Math.min(numValue, maxPayment);
-
-      newOrderPayments[orderId] = {
-        ...newOrderPayments[orderId],
-        payment,
-      };
-
-      // Update temp allocation if we have a tempPayId
-      if (tempPayId && payment > 0) {
-        try {
-          await axios.post(`${ServerIP}/auth/update-temp-allocation`, {
-            payId: tempPayId,
-            allocation: {
-              orderId: orderId,
-              amount: payment,
-            },
-          });
-
-          // Get updated total allocated amount
-          const totalAllocated = await getTotalAllocated(tempPayId);
-          setRemainingAmount(paymentInfo.amount - totalAllocated);
-        } catch (error) {
-          console.error("Error updating temp allocation:", error);
-        }
-      }
-    } else if (field === "wtax") {
-      newOrderPayments[orderId] = {
-        ...newOrderPayments[orderId],
-        wtax: numValue,
-      };
-    }
-
-    setOrderPayments(newOrderPayments);
-  };
-
-  // Update canPost to check for OR#
-  const canPost = () => {
-    return (
-      canEditPayments() &&
-      remainingAmount === 0 &&
-      paymentInfo.ornum.trim() !== ""
-    ); // Add OR# validation
-  };
-
-  // Add function to get tooltip message
-  const getTooltipMessage = () => {
-    if (!searchClientName.trim()) return "Please select a client";
-    if (!paymentInfo.ornum.trim()) return "Please enter OR#";
-    if (!paymentInfo.amount) return "Please enter payment amount";
-    if (checkPay.size === 0) return "Please select at least one order to pay";
-    return "Please fill in all required fields";
-  };
-
-  // Update handlePostPayment to validate OR# first
-  const handlePostPayment = async (result, options = {}) => {
-    const { skipConfirmation = false } = options;
-
-    // Require OR before asking for confirmation
-    if (!result && !paymentInfo.ornum.trim()) {
-      setModalConfig({
-        title: "Validation Error",
-        message: "Please enter OR#",
-        type: "error",
-        showCancelButton: false,
-        onConfirm: () => setShowModal(false),
-      });
-      setShowModal(true);
-      return;
-    }
-
-    // Ask for confirmation before proceeding when posting from the form
-    if (!result && !skipConfirmation) {
+    } catch (err) {
       setAlert({
         show: true,
-        title: "Post Payment",
-        message: "Are you sure you want to post this payment?",
-        type: "confirm",
-        onConfirm: () => handlePostPayment(result, { skipConfirmation: true }),
+        title: "Error",
+        message: err.message || "Failed to save note",
+        type: "alert",
       });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // If result is provided, it means we're posting from the allocation modal
-      if (result) {
-        setSuccessMessage(
-          `Payment of ${formatPeso(result.amount)} posted successfully`
-        );
-        setShowSuccessModal(true);
-        // Close the allocation modal
-        setShowAllocationModal(false);
-        // Refresh the data to reflect the new state
-        await fetchOrderData();
-        // Reset payment form state
-        setPaymentInfo({
-          clientName: "",
-          payDate: new Date().toISOString().split("T")[0],
-          payType: "CASH",
-          amount: "",
-          payReference: "",
-          ornum: "",
-        });
-        setOrderPayments({});
-        setCheckPay(new Set());
-        setTempPayId(null);
-        setRemainingAmount(0);
-        setAllocatedAmount(0);
-        setAllocationCount(0);
-        return;
-      }
-
-      // Check if total applied matches header amount
-      // Use allocatedAmount from database instead of calculating from orderPayments state
-      const applied = Number(allocatedAmount);
-      const amount = Number(paymentInfo.amount);
-
-      // Only show warning if applied amount is less than payment amount
-      if (applied < amount) {
-        setAlert({
-          show: true,
-          title: "Payment Amount Mismatch",
-          message: `The total applied amount (${formatPeso(
-            applied
-          )}) is less than the payment amount (${formatPeso(
-            amount
-          )}). Do you want to proceed with this partial payment?`,
-          type: "confirm",
-          onConfirm: () => postPaymentToServer(),
-        });
-        return;
-      }
-
-      // If applied amount is greater than payment amount, show error
-      if (applied > amount) {
-        setAlert({
-          show: true,
-          title: "Invalid Payment",
-          message: `The total applied amount (${formatPeso(
-            applied
-          )}) cannot be greater than the payment amount (${formatPeso(
-            amount
-          )}). Please adjust the allocations.`,
-          type: "alert",
-          showOkButton: true,
-        });
-        return;
-      }
-
-      // If amounts match, proceed directly
-      await postPaymentToServer();
-    } catch (error) {
-      setError("Failed to post payment");
-      console.error("Error posting payment:", error);
     } finally {
-      setLoading(false);
+      setIsSavingNote(false);
     }
   };
 
-  // Function to post payment to server
-  const postPaymentToServer = async () => {
+  const currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
+
+  // Safely handle hold and overdue dates
+  const holdDate = parseDateValue(data.hold);
+  const overdueDate = parseDateValue(data.overdue);
+
+  // Only apply styling if dates are valid
+  const rowClass =
+    holdDate && currentDate > holdDate
+      ? "table-danger"
+      : overdueDate && currentDate > overdueDate
+      ? "table-warning"
+      : "";
+
+  // Add function to fetch invoices
+  const fetchInvoices = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await axios.post(`${ServerIP}/auth/post-payment`, {
-        payId: tempPayId,
-        transactedBy: localStorage.getItem("userName"),
-      });
-
+      setLoadingInvoices(true);
+      const response = await axios.get(`${ServerIP}/auth/invoices/${id}`);
       if (response.data.Status) {
-        setSuccessMessage("Payment posted successfully");
-        setShowSuccessModal(true);
-        // Refresh the data to reflect the new state
-        await fetchOrderData();
-        // Reset payment form state
-        setPaymentInfo({
-          clientName: "",
-          payDate: new Date().toISOString().split("T")[0],
-          payType: "CASH",
-          amount: "",
-          payReference: "",
-          ornum: "",
-        });
-        setOrderPayments({});
-        setCheckPay(new Set());
-        setTempPayId(null);
-        setRemainingAmount(0);
-        setAllocatedAmount(0);
-        setAllocationCount(0);
-      } else {
-        setError(response.data.Error || "Failed to post payment");
+        setInvoices(response.data.Result);
       }
     } catch (error) {
-      setError("Failed to post payment: " + error.message);
-      console.error("Error posting payment:", error);
+      console.error("Error fetching invoices:", error);
     } finally {
-      setLoading(false);
+      setLoadingInvoices(false);
     }
   };
 
-  // Add function to check OR#
-  const checkORNumber = async (ornum) => {
-    if (!ornum.trim()) return;
-
-    try {
-      const response = await axios.get(`${ServerIP}/auth/check-ornum`, {
-        params: { ornum },
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
-      if (response.data.exists) {
-        setAlert({
-          show: true,
-          title: "Warning",
-          message: `OR# ${ornum} already exists`,
-          type: "alert",
-          showOkButton: true,
-        });
-
-        document.querySelector('input[placeholder="Enter amount"]').focus();
-      }
-    } catch (error) {
-      console.error("Error checking OR#:", error);
-    }
-  };
-
+  // Add useEffect to fetch invoices when component mounts
   useEffect(() => {
-    checkForTempPayments();
-  }, []);
-
-  // Update checkForTempPayments to use the combined response
-  const checkForTempPayments = async () => {
-    try {
-      const response = await axios.get(`${ServerIP}/auth/check-temp-payments`);
-      if (response.data.Status && response.data.hasTempPayments) {
-        const tempPayment = response.data.tempPayments[0];
-        setPaymentInfo({
-          payId: tempPayment.payId,
-          amount: tempPayment.amount || "",
-          payType: tempPayment.payType || "",
-          payReference: tempPayment.payReference || "",
-          payDate: tempPayment.payDate
-            ? new Date(tempPayment.payDate).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
-          ornum: tempPayment.ornum || "",
-          transactedBy: tempPayment.transactedBy || "",
-        });
-        setTempPayId(tempPayment.payId);
-        setRemainingAmount(Number(tempPayment.amount || 0));
-
-        // If there are allocations, fetch them
-        if (tempPayment.allocationCount > 0) {
-          const allocationResponse = await axios.get(
-            `${ServerIP}/auth/view-allocation`,
-            {
-              params: { payId: tempPayment.payId },
-            }
-          );
-
-          if (allocationResponse.data.Status) {
-            const allocations =
-              allocationResponse.data.paymentAllocation.allocations;
-            const newOrderPayments = {};
-            allocations.forEach((allocation) => {
-              newOrderPayments[allocation.orderId] = {
-                payment: Number(allocation.amountApplied || 0),
-                wtax: 0,
-              };
-            });
-            setOrderPayments(newOrderPayments);
-            setCheckPay(new Set(allocations.map((a) => a.orderId)));
-            setAllocationCount(allocationResponse.data.paymentAllocation.count);
-            setAllocatedAmount(
-              allocationResponse.data.paymentAllocation.totalAllocated
-            );
-            setRemainingAmount(
-              tempPayment.amount -
-                allocationResponse.data.paymentAllocation.totalAllocated
-            );
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error checking temp payments:", error);
+    if (show) {
+      fetchInvoices();
     }
-  };
-
-  const handleCancelPayment = () => {
-    setTempPayId(null);
-    setOrderPayments({});
-    setCheckPay(new Set());
-    setAllocationCount(0);
-    setPaymentInfo({
-      amount: "",
-      payType: "CASH",
-      payReference: "",
-      payDate: new Date().toISOString().split("T")[0],
-      ornum: "",
-      transactedBy: localStorage.getItem("userName") || "",
-      payId: null,
-      clientName: "",
-    });
-    setRemainingAmount(0);
-  };
-
-  const handleClientHover = (clientId) => {
-    hoverTimerRef.current = setTimeout(() => {
-      setSelectedClientId(clientId);
-      setShowClientInfo(true);
-    }); // 5 seconds
-  };
-
-  // Add cleanup for the timer
-  useEffect(() => {
-    return () => {
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current);
-      }
-    };
-  }, []);
-
-  const handleClientClick = (clientId, e) => {
-    if (clickTimer === null) {
-      // First click, wait to see if it's a double click
-      setClickTimer(
-        setTimeout(() => {
-          // Single click action
-          if (clientFilterRef.current) {
-            clientFilterRef.current.toggleFilterMenu(e);
-          }
-          setClickTimer(null);
-        }, 250) // 250ms delay to detect double click
-      );
-    } else {
-      // Second click within 250ms, it's a double click
-      clearTimeout(clickTimer);
-      setClickTimer(null);
-      handleClientHover(clientId);
-    }
-  };
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (clickTimer) {
-        clearTimeout(clickTimer);
-      }
-    };
-  }, [clickTimer]);
+  }, [show, id]);
 
   return (
-    <div className="payment-theme">
-      <div className="payment-page-background px-5">
-        <div className="payment-header d-flex justify-content-center">
-          <h3>Payment Processing</h3>
-        </div>
-
-        {/* Action Buttons and Search */}
-        <div className="d-flex justify-content-between mb-3">
-          <div className="d-flex gap-2">
-            <Button variant="save" onClick={() => setShowRemitModal(true)}>
-              Payment Summary
-            </Button>
-            {allocationCount > 0 && (
-              <Button
-                variant="view"
-                onClick={() => setShowAllocationModal(true)}
-              >
-                Review Allocations ({allocationCount})
+    <div
+      className="prod-page-background"
+      style={{ backgroundColor: backgroundColor }}
+    >
+      <div className="px-4 mt-3">
+        <div className="p-3 rounded border">
+          <div className="mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-3">
+              <h3 className="m-0">
+                Order # {data.orderId}{" "}
+                {data.revision > 0 && (
+                  <span className="text-muted ms-2">Rev.{data.revision}</span>
+                )}
+              </h3>
+            </div>
+            <div className="m-0">
+              <h3>DR # {data.drNum}</h3>
+            </div>
+            <div className="m-0">
+              <h3>INV # {data.invoiceNum}</h3>
+            </div>
+            <div className="d-flex gap-2">
+              <Button variant="cancel" onClick={() => navigate(-1)}>
+                Back
               </Button>
-            )}
-          </div>
-          <div className="search-container">
-            <label htmlFor="paymentSearch" className="visually-hidden">
-              Search payments
-            </label>
-            <div className="position-relative">
-              <input
-                id="paymentSearch"
-                name="paymentSearch"
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
-                onChange={handleSearch}
-                value={displaySearchTerm}
-                style={{
-                  width: "400px",
-                  paddingRight: displaySearchTerm ? "30px" : "12px",
-                }}
-                aria-label="Search payments"
-              />
-              {displaySearchTerm && (
-                <button
-                  type="button"
-                  className="btn btn-sm position-absolute"
-                  style={{
-                    right: "5px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    color: "#6c757d",
-                    fontSize: "14px",
-                    padding: "0",
-                    width: "20px",
-                    height: "20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  onClick={() => {
-                    setDisplaySearchTerm("");
-                    setSearchTerm("");
-                    localStorage.setItem("paymentSearchTerm", "");
-                  }}
-                  aria-label="Clear search"
-                >
-                  ×
-                </button>
-              )}
             </div>
           </div>
-        </div>
 
-        {/* Payment Info Header */}
-        <div className="payment-info-header mb-4">
-          <div className="row">
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="payment-date">Payment Date</label>
-                <input
-                  id="payment-date"
-                  type="date"
-                  className="form-input"
-                  value={paymentInfo.payDate}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("payDate", e.target.value)
-                  }
-                />
-              </div>
-            </div>
-            <div className="col-md-1">
-              <div className="form-group">
-                <label htmlFor="type">Type</label>
-                <select
-                  id="type"
-                  className="form-input"
-                  value={paymentInfo.payType}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("payType", e.target.value)
-                  }
-                >
-                  {paymentTypes.map((type) => (
-                    <option key={type.payType} value={type.payType}>
-                      {type.payType}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="form-group">
-                <label htmlFor="client">Client</label>
-                <input
-                  id="client"
-                  type="text"
-                  name="clientName"
-                  className="form-input"
-                  value={searchClientName}
-                  onChange={(e) => setSearchClientName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleClientSearch(e);
-                  }}
-                  onBlur={(e) => {
-                    const value = e.target.value.trim();
-                    if (value !== paymentInfo.clientName) handleClientSearch(e);
-                  }}
-                  placeholder="Enter client name"
-                  list="clientList"
-                  autoComplete="off"
-                />
-                <datalist id="clientList">
-                  {clientList.map((client) => (
-                    <option key={client.id} value={client.clientName}>
-                      {client.customerName}
-                    </option>
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="ornum">OR#</label>
-                <input
-                  id="ornum"
-                  type="text"
-                  className="form-input"
-                  value={paymentInfo.ornum}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("ornum", e.target.value)
-                  }
-                  onBlur={(e) => checkORNumber(e.target.value)}
-                  placeholder="Enter OR#"
-                />
-              </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="amount">Amount</label>
-                <input
-                  id="amount"
-                  type="number"
-                  className="form-input"
-                  value={paymentInfo.amount}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("amount", e.target.value)
-                  }
-                  placeholder="Enter amount"
-                />
-              </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="reference">Reference</label>
-                <input
-                  id="reference"
-                  type="text"
-                  className="form-input"
-                  value={paymentInfo.payReference}
-                  onChange={(e) =>
-                    handlePaymentInfoChange("payReference", e.target.value)
-                  }
-                  placeholder="Enter reference"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Add View Allocations and Remit buttons after the payment info header */}
-        <div className="d-flex justify-content-end mb-3">
-          <select
-            id="vat-select"
-            className="form-input"
-            style={{ width: "250px" }}
-            value={selectedWtax?.WTax}
-            onChange={(e) => {
-              const selected = wtaxTypes.find((w) => w.WTax === e.target.value);
-              setSelectedWtax(selected);
-              // Recalculate WTax for all checked orders when WTax type changes
-              if (selected) {
-                const newOrderPayments = { ...orderPayments };
-                checkPay.forEach((orderId) => {
-                  const payment = newOrderPayments[orderId]?.payment || 0;
-                  const baseAmount =
-                    selected.withVAT === 1
-                      ? payment / (1 + vatRate / 100)
-                      : payment;
-                  const wtaxAmount =
-                    Math.round(baseAmount * (selected.taxRate / 100) * 100) /
-                    100;
-
-                  newOrderPayments[orderId] = {
-                    ...newOrderPayments[orderId],
-                    wtax: wtaxAmount,
-                  };
-                });
-                setOrderPayments(newOrderPayments);
-              }
-            }}
-          >
-            <option value="">Select WTax Type</option>
-            {wtaxTypes.map((wt) => (
-              <option key={wt.WTax} value={wt.WTax}>
-                {`${wt.WTax} - ${wt.Description}`}
-              </option>
-            ))}
-          </select>
-        </div>
-        {/* Loading indicator */}
-        {loading && (
-          <div className="text-center my-3">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-          </div>
-        )}
-        <div className="table-responsive">
-          <SalesFilter
-            ref={salesFilterRef}
-            salesEmployees={salesEmployees}
-            selectedSales={selectedSales}
-            setSelectedSales={setSelectedSales}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasSalesFilter(isFilterActive)
-            }
-          />
-          <ClientFilter
-            ref={clientFilterRef}
-            clientList={clientList}
-            selectedClients={selectedClients}
-            setSelectedClients={setSelectedClients}
-            onFilterUpdate={({ isFilterActive }) =>
-              setHasClientFilter(isFilterActive)
-            }
-          />
-          <table className="table table-hover table-striped">
-            <thead className="table table-head">
-              <tr>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("id")}
-                  style={{ cursor: "pointer" }}
-                >
-                  JO # {getSortIndicator("id")}
-                </th>
-                <th className="text-center">Prod Date</th>
-                <th
-                  className={`text-center ${
-                    hasClientFilter ? "active-filter" : ""
-                  }`}
-                  onClick={() => handleSort("clientName")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Client {getSortIndicator("clientName")}
-                  {hasClientFilter && (
-                    <span className="filter-indicator filter-icon"></span>
-                  )}
-                </th>
-                <th className="text-center">Project Name</th>
-                <th className="text-center">Ordered By</th>
-                <th className="text-center">Order Ref</th>
-                <th
-                  className={`text-center ${
-                    hasSalesFilter ? "active-filter" : ""
-                  }`}
-                  onClick={() => handleSort("salesName")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Sales {getSortIndicator("salesName")}
-                  {hasSalesFilter && (
-                    <span className="filter-indicator filter-icon"></span>
-                  )}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("status")}
-                  style={{ cursor: "pointer" }}
-                >
-                  Status {getSortIndicator("status")}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("drnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  DR# {getSortIndicator("drnum")}
-                </th>
-                <th
-                  className="text-center"
-                  onClick={() => handleSort("invnum")}
-                  style={{ cursor: "pointer" }}
-                >
-                  INV# {getSortIndicator("invnum")}
-                </th>
-                <th className="text-center">Grand Total</th>
-                <th className="text-center">Amount Paid</th>
-                <th className="text-center">OR#</th>
-                <th className="text-center">Pay</th>
-                <th className="text-right">Payment</th>
-                <th className="text-right">WTax</th>
-                <th className="text-right">Balance</th>
-                <th className="text-center">Date Paid</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => {
-                const currentDate = new Date();
-                currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate date comparison
-
-                // Safely handle hold and overdue dates
-                const holdDate = new Date(order.holdDate);
-                const warningDate = new Date(order.warningDate);
-
-                const rowClass =
-                  currentDate > holdDate && order.holdDate
-                    ? "table-danger"
-                    : currentDate > warningDate && order.warningDate
-                    ? "table-warning"
-                    : "";
-
-                return (
-                  <tr
-                    key={order.id}
-                    className={rowClass}
-                    style={{
-                      fontWeight:
-                        new Date() > new Date(order.warningDate) &&
-                        order.grandTotal > order.amountPaid &&
-                        !(
-                          order.status === "Closed" || order.status === "Cancel"
-                        )
-                          ? "bold"
-                          : "normal",
-                    }}
-                  >
-                    <td
-                      style={{ cursor: "pointer" }}
-                      onClick={() =>
-                        navigate(`/dashboard/payment/view/${order.id}`)
-                      }
+          <div className="order-header-container d-flex flex-column flex-lg-row align-items-stretch gap-3">
+            <div className="order-content flex-grow-1">
+              <div className="row g-0">
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Order Date</label>
+                    <div className="form-input">{data.orderDate || ""}</div>
+                  </div>
+                </div>
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Prepared By</label>
+                    <div className="form-input">
+                      {data.preparedByName || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Terms</label>
+                    <div className="form-input">{data.terms || ""}</div>
+                  </div>
+                </div>
+                <div className="col-3 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">DR Date</label>
+                    <div className="form-input">{formatDate(data.drDate)}</div>
+                  </div>
+                </div>
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label
+                      htmlFor="client"
+                      className="form-label"
+                      style={getClientBackgroundStyle(data)}
                     >
-                      {order.id}
-                    </td>
-                    <td>{formatDate(order.productionDate)}</td>
-                    <td
-                      className="client-cell"
-                      onClick={(e) => handleClientClick(order.clientId, e)}
-                      style={{ cursor: "pointer" }}
+                      Client
+                    </label>
+                    <div className="form-input">{data.clientName || ""}</div>
+                  </div>
+                </div>
+                <div className="col-8 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label
+                      htmlFor="client"
+                      className="form-label"
+                      style={getClientBackgroundStyle(data)}
                     >
-                      <div>{order.clientName}</div>
-                      {order.customerName && (
-                        <div className="small text-muted">
-                          {order.customerName}
-                        </div>
-                      )}
-                    </td>
-                    <td>{order.projectName}</td>
-                    <td>{order.orderedBy}</td>
-                    <td>{order.orderReference}</td>
-                    <td
-                      className="client-cell"
-                      onClick={(e) => {
-                        if (salesFilterRef.current) {
-                          salesFilterRef.current.toggleFilterMenu(e);
-                        }
-                      }}
-                      style={{ cursor: "pointer" }}
-                    >
-                      {order.salesName}
-                    </td>
-                    <td className="text-center">
-                      <span className={`status-badge ${order.status}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td>{order.drnum || ""}</td>
-                    <td
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (order.invnum) {
-                          setSelectedOrderId(order.id);
-                          setShowInvoiceDetails(true);
-                        }
-                      }}
-                      style={{ cursor: order.invnum ? "pointer" : "default" }}
-                    >
-                      {order.invnum || ""}
-                    </td>
-                    <td className="number_right">
-                      {formatPeso(order.grandTotal)}
-                    </td>
-                    <td
-                      className="number_right"
-                      style={{ cursor: "pointer" }}
-                      onDoubleClick={async () => {
-                        try {
-                          const response = await axios.post(
-                            `${ServerIP}/auth/recalculate-paid-amount`,
-                            { orderId: order.id }
-                          );
-
-                          if (response.data.Status) {
-                            // Update the order in state
-                            setOrders(
-                              orders.map((o) =>
-                                o.id === order.id
-                                  ? {
-                                      ...o,
-                                      amountPaid:
-                                        response.data.Result.amountPaid,
-                                    }
-                                  : o
-                              )
-                            );
-
-                            setAlert({
-                              show: true,
-                              title: "Success",
-                              message: "Amount recalculated successfully",
-                              type: "alert",
-                              showOkButton: true,
-                            });
-                          }
-                        } catch (error) {
-                          console.error("Error recalculating amount:", error);
-                          setAlert({
-                            show: true,
-                            title: "Error",
-                            message: "Failed to recalculate amount",
-                            type: "error",
-                            showOkButton: true,
-                          });
-                        }
-                      }}
-                    >
-                      {formatPesoZ(order.amountPaid)}
-                    </td>
-                    <td>{order.orNums || ""}</td>
-                    <td className="text-center">
-                      <div className="checkbox-container">
-                        <label
-                          htmlFor={`pay-check-${order.id}`}
-                          className="visually-hidden"
-                        >
-                          Select order {order.id} for payment
-                        </label>
-                        <input
-                          id={`pay-check-${order.id}`}
-                          type="checkbox"
-                          checked={checkPay.has(order.id)}
-                          onChange={() =>
-                            handlePayCheck(
-                              order.id,
-                              (
-                                order.grandTotal - (order.amountPaid || 0)
-                              ).toFixed(2),
-                              order.grandTotal
-                            )
-                          }
-                          disabled={
-                            !canEditPayments() ||
-                            (remainingAmount <= 0 && !checkPay.has(order.id)) ||
-                            order.grandTotal - order.amountPaid <= 0
-                          }
-                        />
-                      </div>
-                    </td>
-                    <td className="text-right">
-                      {canEditPayments() && checkPay.has(order.id) ? (
-                        <input
-                          type="number"
-                          className="form-input detail text-end"
-                          value={orderPayments[order.id]?.payment || 0}
-                          onChange={(e) =>
-                            handlePaymentChange(
-                              order.id,
-                              "payment",
-                              e.target.value
-                            )
-                          }
-                          min="0"
-                          max={order.grandTotal - (order.amountPaid || 0)}
-                        />
-                      ) : (
-                        formatPesoZ(orderPayments[order.id]?.payment)
-                      )}
-                    </td>
-                    <td className="text-right">
-                      {canEditPayments() && checkPay.has(order.id) ? (
-                        <input
-                          type="number"
-                          className="form-input detail text-end"
-                          value={orderPayments[order.id]?.wtax || 0}
-                          onChange={(e) =>
-                            handlePaymentChange(
-                              order.id,
-                              "wtax",
-                              e.target.value
-                            )
-                          }
-                          min="0"
-                        />
-                      ) : (
-                        formatPesoZ(orderPayments[order.id]?.wtax)
-                      )}
-                    </td>
-                    <td className="text-right">
-                      {(() => {
-                        const balance =
-                          order.grandTotal -
-                          (order.amountPaid || 0) -
-                          (orderPayments[order.id]?.payment || 0);
-                        const grandTotalNetOfVat =
-                          order.grandTotal / (1 + vatRate / 100);
-                        const balancePercentage =
-                          (balance / grandTotalNetOfVat) * 100;
-                        return balance > 0 ? (
-                          <div>
-                            <div>{formatPeso(balance)}</div>
-                            <div className="text-muted small">
-                              {balancePercentage.toFixed(2)}%
+                      Customer Name
+                    </label>
+                    <div className="form-input">{data.customerName || ""}</div>
+                  </div>
+                </div>
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Project Name</label>
+                    <div className="form-input">{data.projectName || ""}</div>
+                  </div>
+                </div>{" "}
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Ordered By</label>
+                    <div className="form-input">{data.orderedBy || ""}</div>
+                  </div>
+                </div>
+                <div className="col-4 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Order Reference</label>
+                    <div className="form-input">
+                      {data.orderReference || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Cell Number</label>
+                    <div className="form-input">{data.cellNumber || ""}</div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Due Date</label>
+                    <div className="form-input">{data.dueDate || ""}</div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Graphics By</label>
+                    <div className="form-input">
+                      {data.graphicsByName || ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Grand Total</label>
+                    <div className="form-input">
+                      <strong>{formatPeso(data.grandTotal)}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Amount Paid</label>
+                    <div className="form-input">
+                      <strong>{formatPeso(data.amountPaid)}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-2 order-info-row">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Balance</label>
+                    <div className="form-input">
+                      <strong>
+                        {/* {formatPeso(data.grandTotal - data.amountPaid)}{" "} */}
+                        {(() => {
+                          const balance =
+                            data.grandTotal - (data.amountPaid || 0);
+                          const grandTotalNetOfVat =
+                            data.grandTotal / (1 + vatRate / 100);
+                          const balancePercentage =
+                            (balance / grandTotalNetOfVat) * 100;
+                          return balance > 0 ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "baseline",
+                                gap: "0.5rem",
+                              }}
+                            >
+                              <div>{formatPeso(balance)}</div>
+                              <div className="text-muted small">
+                                {balancePercentage.toFixed(2)}%
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            ""
+                          );
+                        })()}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Special Instructions</label>
+                    <textarea
+                      className="form-input multiline"
+                      value={data.specialInst || ""}
+                      readOnly
+                    />
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex flex-column">
+                    <label className="form-label">Delivery Instructions</label>
+                    <textarea
+                      className="form-input multiline"
+                      value={data.deliveryInst || ""}
+                      readOnly
+                    />
+                  </div>
+                </div>
+                <div className="col-12 mt-2 d-flex">
+                  <div className="me-3">
+                    <span>
+                      <label className="form-label me-2">
+                        Sample:
+                        {data.sample ? (
+                          <i className="bi bi-check-circle text-success ms-1"></i>
                         ) : (
                           ""
-                        );
-                      })()}
-                    </td>
-                    <td>
-                      {order.datePaid
-                        ? new Date(order.datePaid).toLocaleDateString()
-                        : ""}
-                    </td>
-                  </tr>
-                );
-              })}
-              {/* Totals row */}
-              <tr className="table-info">
-                <td colSpan="10"></td>
-                <td className="text-right">
-                  <div
-                    className="position-relative"
-                    onMouseOver={(e) => {
-                      if (!canPost()) {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const message = getTooltipMessage();
-                        const messageWidth = message.length * 10;
-                        const xOffset = messageWidth / 2;
-
-                        setTooltipPosition({
-                          x: rect.left - xOffset,
-                          y: rect.top + window.scrollY + 5,
-                        });
-                        setShowTooltip(true);
-                      }
-                    }}
-                    onMouseLeave={() => setShowTooltip(false)}
-                  >
-                    <Button
-                      variant="save"
-                      size="sm"
-                      onClick={() => handlePostPayment(null)}
-                      disabled={!canPost()}
-                    >
-                      Post Payment
-                    </Button>
+                        )}
+                      </label>
+                    </span>
                   </div>
-                </td>
-                <td className="text-right">
-                  <strong>Totals:</strong>
-                </td>
-                <td className="text-right">
-                  Unallocated:
-                  <strong>{formatPeso(remainingAmount)}</strong>
-                </td>
-                <td></td>
-                <td className="text-right">
-                  Allocated:
-                  <strong>{formatPeso(allocatedAmount)}</strong>
-                </td>
-                <td colSpan="3"></td>
-              </tr>
-            </tbody>
-          </table>
+                  <div>
+                    <span>
+                      <label className="form-label me-2">
+                        Reprint:
+                        {data.reprint ? (
+                          <i className="bi bi-check-circle text-success ms-1"></i>
+                        ) : (
+                          ""
+                        )}
+                      </label>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="right-panel flex-lg-shrink-0">
+              {/* Tab Navigation */}
+              <div className="tab-navigation">
+                <button
+                  className={`tab-button ${
+                    activeTab === "info" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("info")}
+                >
+                  Info
+                </button>
+                <button
+                  className={`tab-button ${
+                    activeTab === "log" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("log")}
+                >
+                  Log
+                </button>
+                <button
+                  className={`tab-button ${
+                    activeTab === "note" ? "active" : ""
+                  }`}
+                  onClick={() => setActiveTab("note")}
+                >
+                  Note
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="right-panel-content">
+                {activeTab === "info" && (
+                  <>
+                    <div className="info-group">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="info-label mb-0">Status:</div>
+                        <span
+                          className={`status-badge ${data.status || "default"}`}
+                        >
+                          {data.status || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Edited By</div>
+                      <div className="info-value">
+                        {localStorage.getItem("userName") || ""}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Last Edited</div>
+                      <div className="info-value">
+                        {formatDateTime(data.lastEdited)}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-group-row">
+                        <div className="info-label">Total Hours:</div>
+                        <div className="info-value">
+                          {formatNumber(data.totalHrs)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Production Date</div>
+                      <div className="info-value">
+                        {formattedDates.productionDate}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Ready Date</div>
+                      <div className="info-value">
+                        {formattedDates.readyDate}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Delivery Date</div>
+                      <div className="info-value">
+                        {formattedDates.deliveryDate}
+                      </div>
+                    </div>
+
+                    <div className="info-group">
+                      <div className="info-label">Bill Date</div>
+                      <div className="info-value">
+                        {formattedDates.billDate}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "log" && (
+                  <div className="log-content">
+                    <div className="log-entries">
+                      {data.log ? (
+                        <pre className="log-text">{data.log}</pre>
+                      ) : (
+                        <div className="info-value">No log entries</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "note" && (
+                  <div className="note-content">
+                    {!isEditingNote ? (
+                      <>
+                        <div className="note-display">
+                          {data.note ? (
+                            <pre className="note-text">{data.note}</pre>
+                          ) : (
+                            <span className="text-muted">No note saved.</span>
+                          )}
+                        </div>
+                        <Button variant="edit" onClick={handleEditNote}>
+                          {data.note ? "Edit Note" : "Add Note"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <textarea
+                          id="payment-note"
+                          className="form-control"
+                          rows={6}
+                          value={noteDraft}
+                          onChange={(e) => setNoteDraft(e.target.value)}
+                          disabled={isSavingNote}
+                        />
+                        <div className="d-flex justify-content-end gap-2 mt-3">
+                          <Button
+                            variant="cancel"
+                            onClick={handleCancelNoteEdit}
+                            disabled={isSavingNote}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="save"
+                            onClick={handleSaveNote}
+                            disabled={isSavingNote}
+                          >
+                            {isSavingNote ? "Saving..." : "Save"}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <ul className="nav nav-tabs" id="orderTabs" role="tablist">
+              <li className="nav-item" role="presentation">
+                <button
+                  className="nav-link active"
+                  id="payment-history-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#payment-history"
+                  type="button"
+                  role="tab"
+                  aria-controls="payment-history"
+                  aria-selected="true"
+                >
+                  Payment History
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className="nav-link"
+                  id="other-info-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#other-info"
+                  type="button"
+                  role="tab"
+                  aria-controls="other-info"
+                  aria-selected="false"
+                >
+                  Payment Info
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className="nav-link"
+                  id="invoice-info-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#invoice-info"
+                  type="button"
+                  role="tab"
+                  aria-controls="invoice-info"
+                  aria-selected="false"
+                >
+                  Invoice Info
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button
+                  className="nav-link"
+                  id="order-details-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#order-details"
+                  type="button"
+                  role="tab"
+                  aria-controls="order-details"
+                  aria-selected="false"
+                >
+                  Order Details
+                </button>
+              </li>
+            </ul>
+
+            <div className="tab-content" id="orderTabsContent">
+              <div
+                className="tab-pane fade show active"
+                id="payment-history"
+                role="tabpanel"
+                aria-labelledby="payment-history-tab"
+              >
+                <PaymentHistory
+                  orderId={id}
+                  onPaymentSelect={handlePaymentSelect}
+                />
+              </div>
+
+              <div
+                className="tab-pane fade"
+                id="other-info"
+                role="tabpanel"
+                aria-labelledby="other-info-tab"
+              >
+                <PaymentAllocation payId={selectedPayId} />
+              </div>
+
+              <div
+                className="tab-pane fade"
+                id="invoice-info"
+                role="tabpanel"
+                aria-labelledby="invoice-info-tab"
+              >
+                {loadingInvoices ? (
+                  <div className="text-center my-3">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                ) : invoices.length > 0 ? (
+                  <div className="table-responsive">
+                    <table className="table table-bordered table-striped">
+                      <thead>
+                        <tr>
+                          <th className="text-center">Invoice Number</th>
+                          <th className="text-center">Amount</th>
+                          <th className="text-center">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invoices.map((invoice) => (
+                          <tr key={invoice.id}>
+                            <td className="text-center">
+                              {invoice.invoicePrefix + invoice.invoiceNumber}
+                            </td>
+                            <td className="text-end">
+                              {formatPeso(invoice.invoiceAmount)}
+                            </td>
+                            <td className="text-center">
+                              {invoice.invoiceRemarks || ""}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr style={{ borderTop: "2px solid lightgrey" }}>
+                          <td colSpan="2" className="text-end pe-2">
+                            <strong>
+                              Total:{" "}
+                              {formatPeso(
+                                invoices.reduce(
+                                  (sum, invoice) =>
+                                    sum + parseFloat(invoice.invoiceAmount),
+                                  0
+                                )
+                              )}
+                            </strong>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="alert alert-info" role="alert">
+                    No invoices found for this order
+                  </div>
+                )}
+              </div>
+
+              <div
+                className="tab-pane fade"
+                id="order-details"
+                role="tabpanel"
+                aria-labelledby="order-details-tab"
+              >
+                <table className="table detail table-striped">
+                  <thead>
+                    <tr>
+                      <th className="text-center">Qty</th>
+                      <th className="text-center">Width</th>
+                      <th className="text-center">Height</th>
+                      <th className="text-center">Unit</th>
+                      <th className="text-center">Material</th>
+                      <th className="text-center">Per Sq Ft</th>
+                      <th className="text-center">Price</th>
+                      <th className="text-center">Disc%</th>
+                      <th className="text-center">Amount</th>
+                      <th className="text-center">Description</th>
+                      <th className="text-center">JO Remarks</th>
+                      <th className="text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderDetails.map((detail) => (
+                      <tr
+                        key={`${detail.orderId}_${detail.displayOrder}`}
+                        className={`${rowClass} ${
+                          detail.noPrint === 1 ? "no-print" : ""
+                        }`}
+                      >
+                        <td className="centered-cell">
+                          {Number(detail.quantity).toLocaleString()}
+                        </td>
+                        <td className="centered-cell">{detail.width}</td>
+                        <td className="centered-cell">{detail.height}</td>
+                        <td className="centered-cell">{detail.unit}</td>
+                        <td className="centered-cell">{detail.material}</td>
+                        <td className="centered-cell">{detail.perSqFt}</td>
+                        <td className="numeric-cell">
+                          {formatPeso(detail.unitPrice)}
+                        </td>
+                        <td className="numeric-cell">
+                          {formatNumber(detail.discount)}
+                        </td>
+                        <td className="numeric-cell">
+                          {formatPeso(detail.amount)}
+                        </td>
+                        <td>{detail.itemDescription}</td>
+                        <td>{detail.remarks}</td>
+                        <td className="text-center">
+                          <Button
+                            variant="view"
+                            iconOnly
+                            size="sm"
+                            icon={<BiRectangle size={14} />}
+                            onMouseOver={(e) => {
+                              const rect =
+                                e.currentTarget.getBoundingClientRect();
+                              setTooltipPosition({
+                                x: rect.left + 25,
+                                y: rect.top + window.scrollY - 82,
+                              });
+                              setTooltipDetail(detail);
+                              setShowAllowanceTooltip(true);
+                            }}
+                            onMouseLeave={() => {
+                              setShowAllowanceTooltip(false);
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: "2px solid lightgrey" }}>
+                      <td colSpan="8" className="text-end pe-2">
+                        Subtotal:
+                      </td>
+                      <td className="numeric-cell">
+                        {formatPeso(data.totalAmount)}
+                      </td>
+                      <td colSpan="3">
+                        <div className="ms-3 d-flex align-items-center">
+                          <div style={{ width: "100px", textAlign: "right" }}>
+                            <small style={{ fontSize: "1rem" }}>
+                              Date Paid:
+                            </small>
+                          </div>
+                          <div
+                            style={{ paddingLeft: "33px", textAlign: "right" }}
+                          >
+                            {formatDate(data.datePaid)}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="8" className="text-end pe-2">
+                        Disc. Amount:
+                      </td>
+                      <td className="numeric-cell">
+                        {formatNumber(data.amountDisc)}
+                      </td>
+                      <td colSpan="3">
+                        <div className="ms-3 d-flex align-items-center">
+                          <div style={{ width: "100px", textAlign: "right" }}>
+                            <small style={{ fontSize: "1rem" }}>
+                              OR Number:
+                            </small>
+                          </div>
+                          <div>{data.orNum || ""}</div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="8" className="text-end pe-2">
+                        Percent Disc.:
+                      </td>
+                      <td className="numeric-cell">
+                        {formatNumber(data.percentDisc)}%
+                      </td>
+                      <td colSpan="3">
+                        <div className="ms-3 d-flex align-items-center">
+                          <div style={{ width: "100px", textAlign: "right" }}>
+                            <small style={{ fontSize: "1rem" }}>
+                              Amount Paid:
+                            </small>
+                          </div>
+                          <div style={{ width: "80px", textAlign: "right" }}>
+                            {formatPeso(data.amountPaid || 0)}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="8" className="text-end pe-2">
+                        Grand Total:
+                      </td>
+                      <td className="numeric-cell">
+                        {formatPeso(data.grandTotal)}
+                      </td>
+                      <td colSpan="3">
+                        <div className="ms-3 d-flex align-items-center">
+                          <div style={{ width: "100px", textAlign: "right" }}>
+                            <small style={{ fontSize: "1rem" }}>Balance:</small>
+                          </div>
+                          <div style={{ width: "80px", textAlign: "right" }}>
+                            {formatPeso(
+                              data.grandTotal - (data.amountPaid || 0)
+                            )}
+                          </div>
+                          <div className="ms-2">
+                            <small style={{ fontSize: "1rem" }}>
+                              (
+                              {data.grandTotal > 0
+                                ? (
+                                    ((data.grandTotal -
+                                      (data.amountPaid || 0)) /
+                                      data.grandTotal) *
+                                    100
+                                  ).toFixed(2) + "%"
+                                : "0%"}
+                              )
+                            </small>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Pagination and Filters Section */}
-        <div className="d-flex justify-content-between align-items-start mt-3">
-          <DisplayPage
-            recordsPerPage={recordsPerPage}
-            setRecordsPerPage={setRecordsPerPage}
-            currentPage={currentPage}
-            totalCount={totalCount}
-            setCurrentPage={setCurrentPage}
-          />
+        {/* Allowance Tooltip */}
+        <Modal
+          variant="tooltip"
+          show={showAllowanceTooltip && tooltipDetail}
+          position={tooltipPosition}
+        >
+          <div className="text-center mb-1">
+            Print Hrs: {tooltipDetail?.printHrs || 0}
+          </div>
+          <div className="text-center">T: {tooltipDetail?.top || 0}</div>
+          <div className="d-flex justify-content-between">
+            <span>L: {tooltipDetail?.allowanceLeft || 0}</span>
+            <span className="ms-3">
+              R: {tooltipDetail?.allowanceRight || 0}
+            </span>
+          </div>
+          <div className="text-center">B: {tooltipDetail?.bottom || 0}</div>
+          <div className="text-center">
+            Usage: {tooltipDetail?.materialUsage || 0}
+          </div>
+        </Modal>
 
-          <StatusBadges
-            statusOptions={statusOptions}
-            selectedStatuses={selectedStatuses}
-            onStatusChange={(newStatuses) => {
-              setSelectedStatuses(newStatuses);
-              localStorage.setItem(
-                "orderStatusFilter",
-                JSON.stringify(newStatuses)
-              );
-              // fetchOrderData();
-            }}
-          />
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
-        </div>
+        <ModalAlert
+          show={alert.show}
+          title={alert.title}
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
+        />
       </div>
-      <ModalAlert
-        show={alert.show}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
-        onConfirm={() => {
-          if (alert.onConfirm) {
-            alert.onConfirm();
-          }
-          setAlert((prev) => ({ ...prev, show: false }));
-        }}
-      />
-      <ModalAlert
-        show={showSuccessModal}
-        title="Success"
-        message={successMessage}
-        type="alert"
-        showCancelButton={true}
-        onClose={() => setShowSuccessModal(false)}
-        onConfirm={() => {
-          setShowSuccessModal(false);
-          navigate("/dashboard/payment");
-        }}
-        confirmText="Ok"
-      />
-      <Modal
-        variant="tooltip"
-        show={showTooltip && !canPost()}
-        position={tooltipPosition}
-      >
-        <div className="text-center">{getTooltipMessage()}</div>
-      </Modal>
-      <ModalAlert
-        show={showModal}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        type={modalConfig.type}
-        showCancelButton={modalConfig.showCancelButton}
-        onClose={() => setShowModal(false)}
-        onConfirm={modalConfig.onConfirm}
-      />
-      <PaymentAllocationModal
-        show={showAllocationModal}
-        onClose={() => setShowAllocationModal(false)}
-        paymentInfo={paymentInfo}
-        orderPayments={orderPayments}
-        orders={orders}
-        onPostPayment={handlePostPayment}
-        onCancelPayment={handleCancelPayment}
-        setOrderPayments={setOrderPayments}
-        setCheckPay={setCheckPay}
-        setAllocationCount={setAllocationCount}
-        setAllocatedAmount={setAllocatedAmount}
-        setRemainingAmount={setRemainingAmount}
-        fetchOrderData={fetchOrderData}
-      />
-      <RemitModal
-        show={showRemitModal}
-        onClose={() => setShowRemitModal(false)}
-      />
-      <ViewCustomerInfo
-        clientId={selectedClientId}
-        show={showClientInfo}
-        onClose={() => setShowClientInfo(false)}
-      />
-      <InvoiceDetailsModal
-        show={showInvoiceDetails}
-        onClose={() => setShowInvoiceDetails(false)}
-        orderId={selectedOrderId}
-      />
     </div>
   );
 }
 
-export default Prod;
+export default PaymentView;
