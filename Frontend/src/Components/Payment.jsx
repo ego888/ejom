@@ -18,7 +18,7 @@ import RemitModal from "./RemitModal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
 
-function Prod() {
+function Payment() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
