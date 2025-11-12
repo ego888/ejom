@@ -9,10 +9,12 @@ import ModalAlert from "./UI/ModalAlert";
 const AddEmployee = () => {
   const [employee, setEmployee] = useState({
     name: "",
+    fullName: "",
     email: "",
     password: "",
     salary: "",
     address: "",
+    cellNumber: "",
     category_id: 1,
     image: "",
     active: true,
@@ -63,6 +65,15 @@ const AddEmployee = () => {
       });
       return;
     }
+    if (!employee.fullName.trim()) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Fullname is required",
+        type: "alert",
+      });
+      return;
+    }
     if (!employee.email.trim()) {
       setAlert({
         show: true,
@@ -84,10 +95,12 @@ const AddEmployee = () => {
 
     const formData = new FormData();
     formData.append("name", employee.name);
+    formData.append("fullName", employee.fullName);
     formData.append("email", employee.email);
     formData.append("password", employee.password);
     formData.append("salary", employee.salary);
     formData.append("address", employee.address);
+    formData.append("cellNumber", employee.cellNumber);
     formData.append("category_id", employee.category_id);
     formData.append("image", employee.image); // Image handling using FormData
     formData.append("active", employee.active);
@@ -115,7 +128,11 @@ const AddEmployee = () => {
         setAlert({
           show: true,
           title: "Error",
-          message: "Failed to add employee",
+          message:
+            err.response?.data?.Error ||
+            err.response?.data?.message ||
+            err.message ||
+            "Failed to add employee",
           type: "alert",
         });
       });
@@ -142,6 +159,38 @@ const AddEmployee = () => {
               autoComplete="off"
               onChange={(e) =>
                 setEmployee({ ...employee, name: e.target.value })
+              }
+            />
+          </div>
+          <div className="col-12">
+            <label htmlFor="employee-fullname" className="form-label">
+              Fullname
+            </label>
+            <input
+              id="employee-fullname"
+              type="text"
+              name="fullName"
+              className="form-control rounded-0"
+              placeholder="Enter Fullname"
+              autoComplete="off"
+              onChange={(e) =>
+                setEmployee({ ...employee, fullName: e.target.value })
+              }
+            />
+          </div>
+          <div className="col-12">
+            <label htmlFor="employee-cell" className="form-label">
+              Cellphone
+            </label>
+            <input
+              id="employee-cell"
+              type="tel"
+              name="cellNumber"
+              className="form-control rounded-0"
+              placeholder="Enter Cell Number"
+              autoComplete="tel"
+              onChange={(e) =>
+                setEmployee({ ...employee, cellNumber: e.target.value })
               }
             />
           </div>

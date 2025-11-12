@@ -10,9 +10,12 @@ const EditEmployee = () => {
   const { id } = useParams();
   const [data, setData] = useState({
     name: "",
+    fullName: "",
     email: "",
     password: "",
     salary: "",
+    address: "",
+    cellNumber: "",
     category_id: "",
     active: false,
     sales: false,
@@ -57,10 +60,13 @@ const EditEmployee = () => {
           const employeeData = result.data.Result[0];
           console.log("Fetched employee data:", employeeData); // Debug log
           setData({
-            name: employeeData.name,
-            email: employeeData.email,
+            name: employeeData.name || "",
+            fullName: employeeData.fullName || "",
+            email: employeeData.email || "",
             password: "",
-            salary: employeeData.salary,
+            salary: employeeData.salary || "",
+            address: employeeData.address || "",
+            cellNumber: employeeData.cellNumber || "",
             category_id: employeeData.category_id,
             active: Boolean(employeeData.active),
             sales: Boolean(employeeData.sales),
@@ -85,6 +91,15 @@ const EditEmployee = () => {
         show: true,
         title: "Validation Error",
         message: "Name is required",
+        type: "alert",
+      });
+      return;
+    }
+    if (!data.fullName?.trim()) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Fullname is required",
         type: "alert",
       });
       return;
@@ -152,6 +167,33 @@ const EditEmployee = () => {
               placeholder="Enter Name"
               value={data.name}
               onChange={(e) => setData({ ...data, name: e.target.value })}
+            />
+          </div>
+          <div className="col-12">
+            <label htmlFor="inputFullName" className="form-label">
+              Fullname
+            </label>
+            <input
+              type="text"
+              className="form-control rounded-0"
+              id="inputFullName"
+              placeholder="Enter Fullname"
+              value={data.fullName}
+              onChange={(e) => setData({ ...data, fullName: e.target.value })}
+            />
+          </div>
+          <div className="col-12">
+            <label htmlFor="inputCellNumber" className="form-label">
+              Cellphone
+            </label>
+            <input
+              type="tel"
+              className="form-control rounded-0"
+              id="inputCellNumber"
+              placeholder="Enter Cell Number"
+              autoComplete="tel"
+              value={data.cellNumber}
+              onChange={(e) => setData({ ...data, cellNumber: e.target.value })}
             />
           </div>
           <div className="col-12">

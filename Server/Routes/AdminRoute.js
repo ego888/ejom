@@ -153,7 +153,8 @@ const upload = multer({
 
 router.post("/employee/add", upload.single("image"), async (req, res) => {
   try {
-    const { name, email, password, address, category_id } = req.body;
+    const { name, fullName, email, password, address, cellNumber, category_id } =
+      req.body;
     const salary = req.body.salary || 0; // Use 0 if salary is empty
     const sales = req.body.sales === "true" ? 1 : 0;
     const accounting = req.body.accounting === "true" ? 1 : 0;
@@ -166,14 +167,16 @@ router.post("/employee/add", upload.single("image"), async (req, res) => {
 
     const sql = `
     INSERT INTO employee 
-    (name, email, password, address, salary, category_id, active, sales, accounting, artist, production, operator, image) 
-    VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`;
+    (name, fullName, email, password, address, cellNumber, salary, category_id, active, sales, accounting, artist, production, operator, image) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`;
 
     const values = [
       name,
+      fullName || "",
       email,
       hash,
       address || "",
+      cellNumber || "",
       salary, // Now using the default 0 if empty
       category_id,
       sales,
@@ -188,7 +191,10 @@ router.post("/employee/add", upload.single("image"), async (req, res) => {
     return res.json({ Status: true, Result: result });
   } catch (err) {
     console.log("Insert Error:", err);
-    return res.json({ Status: false, Error: "Failed to add employee" });
+    return res.status(500).json({
+      Status: false,
+      Error: err.sqlMessage || err.message || "Failed to add employee",
+    });
   }
 });
 

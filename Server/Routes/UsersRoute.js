@@ -40,49 +40,73 @@ router.put("/employee/update/:id", async (req, res) => {
     let sql, values;
 
     // Check if password is provided and not empty
-    if (req.body.password && req.body.password.trim() !== "") {
-      const hash = await bcrypt.hash(req.body.password, 10);
+    const {
+      name,
+      fullName,
+      email,
+      password,
+      salary,
+      address,
+      cellNumber,
+      category_id,
+      active,
+      sales,
+      accounting,
+      artist,
+      production,
+      operator,
+      admin,
+    } = req.body;
+
+    if (password && password.trim() !== "") {
+      const hash = await bcrypt.hash(password, 10);
 
       sql = `UPDATE employee 
-             SET name = ?, email = ?, password = ?, salary = ?, 
+             SET name = ?, fullName = ?, email = ?, password = ?, address = ?, cellNumber = ?, salary = ?, 
                  category_id = ?, active = ?, sales = ?, accounting = ?, 
                  artist = ?, production = ?, operator = ?, admin = ?
              WHERE id = ?`;
 
       values = [
-        req.body.name,
-        req.body.email,
+        name,
+        fullName || "",
+        email,
         hash,
-        req.body.salary,
-        req.body.category_id,
-        req.body.active,
-        req.body.sales,
-        req.body.accounting,
-        req.body.artist,
-        req.body.production,
-        req.body.operator,
-        req.body.admin,
+        address || "",
+        cellNumber || "",
+        salary,
+        category_id,
+        active,
+        sales,
+        accounting,
+        artist,
+        production,
+        operator,
+        admin,
         id,
       ];
     } else {
       sql = `UPDATE employee 
-             SET name = ?, email = ?, salary = ?, 
+             SET name = ?, fullName = ?, email = ?, address = ?, cellNumber = ?, salary = ?, 
                  category_id = ?, active = ?, sales = ?, accounting = ?, 
                  artist = ?, production = ?, operator = ?, admin = ?
              WHERE id = ?`;
 
       values = [
-        req.body.name,
-        req.body.email,
-        req.body.salary,
-        req.body.category_id,
-        req.body.active,
-        req.body.sales,
-        req.body.accounting,
-        req.body.artist,
-        req.body.production,
-        req.body.operator,
-        req.body.admin,
+        name,
+        fullName || "",
+        email,
+        address || "",
+        cellNumber || "",
+        salary,
+        category_id,
+        active,
+        sales,
+        accounting,
+        artist,
+        production,
+        operator,
+        admin,
         id,
       ];
     }
