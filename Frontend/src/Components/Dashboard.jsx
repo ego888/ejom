@@ -347,7 +347,8 @@ const Dashboard = () => {
         PAYMENT_INQUIRY,
         INVOICE_INQUIRY,
         SOA,
-        MATERIAL_USAGE_REPORT
+        MATERIAL_USAGE_REPORT,
+        DTR_ABSENCES
       );
     } else if (permissions.isOperator) {
       items.push(PRINTLOG, WIPLOG, DELIVERY_QR);
