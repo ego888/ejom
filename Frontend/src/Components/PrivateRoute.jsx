@@ -46,6 +46,14 @@ const checkRouteAccess = (route, permissions) => {
   if (permissions.categoryId === 1) return true;
   if (!permissions.isActive) return false;
 
+  if (permissions.isOperator) {
+    return ["printlog", "wiplog", "delivery-qr"].includes(route);
+  }
+
+  if (permissions.isProduction) {
+    return ["wiplog", "delivery-qr"].includes(route);
+  }
+
   switch (route) {
     case "dashsales":
     case "quotes":
@@ -82,6 +90,8 @@ const checkRouteAccess = (route, permissions) => {
       return permissions.isArtist;
     case "printlog":
       return permissions.isOperator;
+    case "delivery-qr":
+      return permissions.isSales || permissions.isAccounting;
     case "dtr-absences":
       return (
         permissions.isSales ||
@@ -93,10 +103,16 @@ const checkRouteAccess = (route, permissions) => {
     case "material":
     case "employee":
     case "category":
-    case "profile":
     case "check-order-total":
     case "material-usage-report":
       return permissions.categoryId === 1 || permissions.isProduction;
+    case "profile":
+      return (
+        permissions.categoryId === 1 ||
+        permissions.isSales ||
+        permissions.isAccounting ||
+        permissions.isArtist
+      );
     default:
       return false;
   }
@@ -107,9 +123,9 @@ const getDefaultRoute = (permissions) => {
   if (permissions.categoryId === 1) return "/dashboard";
   if (permissions.isSales) return "/dashboard/dashsales";
   if (permissions.isAccounting) return "/dashboard/payment";
-  if (permissions.isProduction) return "/dashboard/prod";
-  if (permissions.isArtist) return "/dashboard/artistlog";
   if (permissions.isOperator) return "/dashboard/printlog";
+  if (permissions.isProduction) return "/dashboard/wiplog";
+  if (permissions.isArtist) return "/dashboard/artistlog";
   return "/"; // fallback to login
 };
 

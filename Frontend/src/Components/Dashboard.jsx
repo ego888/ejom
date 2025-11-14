@@ -329,25 +329,17 @@ const Dashboard = () => {
         SOA,
         DTR_ABSENCES
       );
+    } else if (permissions.isOperator) {
+      items.push(PRINTLOG, WIPLOG, DELIVERY_QR);
     } else if (permissions.isProduction) {
-      items.push(
-        DASHPROD,
-        PROD,
-        INVOICE_INQUIRY,
-        DELIVERY_QR,
-        WIPLOG,
-        ARTISTLOG,
-        PRINTLOG,
-        REPORTS_PRODUCTION,
-        SOA
-      );
+      items.push(WIPLOG, DELIVERY_QR);
     } else if (permissions.isArtist) {
       items.push(ARTISTLOG, DTR_ABSENCES);
-    } else if (permissions.isOperator) {
-      items.push(PRINTLOG, DTR_ABSENCES);
     }
 
-    items.push(PROFILE);
+    if (!permissions.isProduction && !permissions.isOperator) {
+      items.push(PROFILE);
+    }
     return items;
   };
 
@@ -356,8 +348,9 @@ const Dashboard = () => {
     if (permissions.categoryId === 1) return "/dashboard";
     if (permissions.isSales) return "/dashboard/quotes";
     if (permissions.isAccounting) return "/dashboard/prod";
-    if (permissions.isArtist) return "/dashboard/artistlog";
     if (permissions.isOperator) return "/dashboard/printlog";
+    if (permissions.isProduction) return "/dashboard/wiplog";
+    if (permissions.isArtist) return "/dashboard/artistlog";
     return "/dashboard/orders"; // fallback
   };
 
