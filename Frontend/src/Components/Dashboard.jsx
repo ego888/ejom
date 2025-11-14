@@ -338,16 +338,16 @@ const Dashboard = () => {
       items.push(DASHSALES, QUOTES, ORDERS, DELIVERY_QR, CLIENT, REPORTS_SALES);
     } else if (permissions.isAccounting) {
       items.push(
-        ORDERS,
-        DELIVERY_QR,
+        DASHPROD,
         CLIENT,
+        PROD,
+        BILLING,
+        WIPLOG,
         PAYMENT,
-        RECEIVE_PAYMENT,
         PAYMENT_INQUIRY,
         INVOICE_INQUIRY,
-        BILLING,
         SOA,
-        DTR_ABSENCES
+        MATERIAL_USAGE_REPORT
       );
     } else if (permissions.isOperator) {
       items.push(PRINTLOG, WIPLOG, DELIVERY_QR);
@@ -370,7 +370,7 @@ const Dashboard = () => {
   const getInitialRoute = (permissions) => {
     if (permissions.categoryId === 1) return "/dashboard";
     if (permissions.isSales) return "/dashboard/quotes";
-    if (permissions.isAccounting) return "/dashboard/prod";
+    if (permissions.isAccounting) return "/dashboard/dashprod";
     if (permissions.isOperator) return "/dashboard/printlog";
     if (permissions.isProduction) return "/dashboard/wiplog";
     if (permissions.isArtist) return "/dashboard/artistlog";

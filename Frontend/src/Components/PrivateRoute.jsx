@@ -76,14 +76,17 @@ const checkRouteAccess = (route, permissions) => {
     case "prod_print_dr":
     case "prod_print_one_dr":
     case "dashprod":
-      return permissions.isProduction;
+      return permissions.isProduction || permissions.isAccounting;
     case "wiplog":
-      return permissions.isProduction || permissions.isOperator;
+      return (
+        permissions.isProduction ||
+        permissions.isOperator ||
+        permissions.isAccounting
+      );
     case "billing":
     case "invoice-inquiry":
       return permissions.isProduction || permissions.isAccounting;
     case "payment":
-    case "receive-payment":
     case "payment-inquiry":
       return permissions.isAccounting;
     case "artistlog":
@@ -91,7 +94,7 @@ const checkRouteAccess = (route, permissions) => {
     case "printlog":
       return permissions.isOperator;
     case "delivery-qr":
-      return permissions.isSales || permissions.isAccounting;
+      return permissions.isSales;
     case "dtr-absences":
       return (
         permissions.isSales ||
@@ -102,11 +105,16 @@ const checkRouteAccess = (route, permissions) => {
       );
     case "profile":
       return true;
+    case "material-usage-report":
+      return (
+        permissions.categoryId === 1 ||
+        permissions.isProduction ||
+        permissions.isAccounting
+      );
     case "material":
     case "employee":
     case "category":
     case "check-order-total":
-    case "material-usage-report":
       return permissions.categoryId === 1 || permissions.isProduction;
     default:
       return false;
@@ -117,7 +125,7 @@ const checkRouteAccess = (route, permissions) => {
 const getDefaultRoute = (permissions) => {
   if (permissions.categoryId === 1) return "/dashboard";
   if (permissions.isSales) return "/dashboard/dashsales";
-  if (permissions.isAccounting) return "/dashboard/payment";
+  if (permissions.isAccounting) return "/dashboard/dashprod";
   if (permissions.isOperator) return "/dashboard/printlog";
   if (permissions.isProduction) return "/dashboard/wiplog";
   if (permissions.isArtist) return "/dashboard/artistlog";
