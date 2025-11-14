@@ -658,7 +658,7 @@ router.get("/orders-details-forprod", async (req, res) => {
 
 // Update orders status with corresponding dates and logging
 router.put("/update_order_status", verifyUser, async (req, res) => {
-  const { orderId, newStatus, isAdmin } = req.body;
+  const { orderId, newStatus, isAdmin, deliveryScan } = req.body;
   const employeeName = req.user.name;
 
   try {
@@ -723,6 +723,10 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
       logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
     }
 
+    if (deliveryScan && newStatus === "Delivered") {
+      logMessage += `\n${employeeName}\nScanned delivered by ${employeeName}\n${now}`;
+    }
+
     // Prepare update query
     const values = [];
     const updateFields = [];
@@ -763,7 +767,9 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     return res.json({
       Status: true,
       Result: { status: newStatus },
-      Message: "Status updated successfully",
+      Message: deliveryScan
+        ? "Order scanned and marked as delivered successfully"
+        : "Status updated successfully",
     });
   } catch (err) {
     console.error("Error updating order status:", err);

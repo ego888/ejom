@@ -12,24 +12,16 @@ function DeliveryQR() {
   const navigate = useNavigate();
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [scannedData, setScannedData] = useState(null);
-  const [orderInfo, setOrderInfo] = useState(null);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
     message: "",
     type: "alert",
     onConfirm: null,
+    customContent: null,
   });
-
-  const statusOptions = [
-    "Printed",
-    "Prod",
-    "Finished",
-    "Delivered",
-    "Billed",
-    "Closed",
-  ];
 
   useEffect(() => {
     // Initialize scanner when component mounts
@@ -64,8 +56,10 @@ function DeliveryQR() {
     setIsScanning(true);
   };
 
-  const onScanSuccess = async (decodedText, decodedResult) => {
-    console.log("QR Code scanned:", decodedText);
+  const onScanSuccess = async (decodedText) => {
+    if (isProcessing) {
+      return;
+    }
 
     try {
       // Parse the QR code data (assuming it contains order ID)
@@ -79,16 +73,16 @@ function DeliveryQR() {
         throw new Error("Invalid QR code format");
       }
 
-      setScannedData(decodedText);
+      setScannedData(orderId);
+      setIsProcessing(true);
 
-      // Fetch order information
-      await fetchOrderInfo(orderId);
-
-      // Stop scanning after successful scan
+      // Stop scanning while we update the order
       if (scannerRef.current) {
         await scannerRef.current.clear();
         setIsScanning(false);
       }
+
+      await markOrderAsDelivered(orderId);
     } catch (error) {
       console.error("Error processing QR code:", error);
       setAlert({
@@ -97,7 +91,11 @@ function DeliveryQR() {
         message:
           "The scanned QR code is not a valid Job Order code. Please try again.",
         type: "alert",
+        onConfirm: null,
+        customContent: null,
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -106,79 +104,15 @@ function DeliveryQR() {
     console.debug("QR scan failed:", error);
   };
 
-  const fetchOrderInfo = async (orderId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${ServerIP}/auth/order/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.data.Status && response.data.Result?.length > 0) {
-        const order = response.data.Result[0];
-        setOrderInfo(order);
-
-        setAlert({
-          show: true,
-          title: "Order Found",
-          message: `Order #${order.orderId} found!\n\nClient: ${
-            order.customerName || order.clientName
-          }\nProject: ${order.projectName}\nCurrent Status: ${
-            order.status
-          }\n\nSelect new status:`,
-          type: "custom",
-          customContent: renderStatusSelection(order),
-        });
-      } else {
-        throw new Error("Order not found");
-      }
-    } catch (error) {
-      console.error("Error fetching order:", error);
-      setAlert({
-        show: true,
-        title: "Order Not Found",
-        message: `Order ID ${orderId} was not found in the system. Please verify the QR code and try again.`,
-        type: "alert",
-      });
-      restartScanning();
-    }
-  };
-
-  const renderStatusSelection = (order) => {
-    return (
-      <div className="mt-3">
-        <div className="mb-3">
-          <strong>Select new status for Order #{order.orderId}:</strong>
-        </div>
-        <div className="d-flex flex-wrap gap-2">
-          {statusOptions.map((status) => (
-            <Button
-              key={status}
-              variant={status === order.status ? "view" : "save"}
-              size="sm"
-              onClick={() => handleStatusUpdate(order.orderId, status)}
-              disabled={status === order.status}
-            >
-              {status}
-            </Button>
-          ))}
-        </div>
-        <div className="mt-3 d-flex gap-2 justify-content-end">
-          <Button variant="cancel" onClick={restartScanning}>
-            Cancel / Scan Another
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  const handleStatusUpdate = async (orderId, newStatus) => {
+  const markOrderAsDelivered = async (orderId) => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
         `${ServerIP}/auth/update_order_status`,
         {
-          orderId: orderId,
-          newStatus: newStatus,
+          orderId,
+          newStatus: "Delivered",
+          deliveryScan: true,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -188,37 +122,72 @@ function DeliveryQR() {
       if (response.data.Status) {
         setAlert({
           show: true,
-          title: "Success",
-          message: `Order #${orderId} status has been updated to "${newStatus}" successfully!`,
+          title: "Delivery Recorded",
+          message:
+            response.data.Message ||
+            `Order #${orderId} has been marked as delivered.`,
           type: "confirm",
           onConfirm: () => {
-            setAlert({ ...alert, show: false });
+            setAlert((prev) => ({
+              ...prev,
+              show: false,
+              onConfirm: null,
+              customContent: null,
+            }));
             restartScanning();
           },
+          customContent: null,
         });
       } else {
         throw new Error(response.data.Error || "Failed to update status");
       }
     } catch (error) {
       console.error("Error updating order status:", error);
-      setAlert({
-        show: true,
-        title: "Update Failed",
-        message: "Failed to update order status. Please try again.",
-        type: "alert",
-      });
+      if (error.response?.status === 401) {
+        handleApiError(error, navigate, setAlert);
+      } else {
+        setAlert({
+          show: true,
+          title: "Update Failed",
+          message:
+            error.response?.data?.Error ||
+            "Failed to mark the order as delivered. Please try again.",
+          type: "alert",
+          onConfirm: () => {
+            setAlert((prev) => ({
+              ...prev,
+              show: false,
+              onConfirm: null,
+              customContent: null,
+            }));
+            restartScanning();
+          },
+          customContent: null,
+        });
+      }
     }
   };
 
   const restartScanning = () => {
     setScannedData(null);
-    setOrderInfo(null);
-    setAlert({ ...alert, show: false });
+    setAlert((prev) => ({
+      ...prev,
+      show: false,
+      onConfirm: null,
+      customContent: null,
+    }));
+
+    if (scannerRef.current) {
+      scannerRef.current.clear().catch(console.error);
+      scannerRef.current = null;
+    }
+
+    setIsScanning(false);
 
     // Restart scanner
     setTimeout(() => {
       initializeScanner();
-    }, 100);
+    }, 150);
   };
 
   const handleBack = () => {
@@ -271,35 +240,17 @@ function DeliveryQR() {
                 <ol className="small">
                   <li>Point your camera at the QR code on the Job Order</li>
                   <li>Wait for the QR code to be recognized</li>
-                  <li>Select the new status for the order</li>
-                  <li>Confirm the status update</li>
+                  <li>
+                    The order is automatically marked as Delivered once the scan
+                    succeeds
+                  </li>
+                  <li>Tap Start Scanning to process the next order</li>
                 </ol>
 
-                <h6 className="mt-3">Available Status Options:</h6>
-                <ul className="small">
-                  {statusOptions.map((status) => (
-                    <li key={status}>{status}</li>
-                  ))}
-                </ul>
-
-                {orderInfo && (
-                  <div className="mt-3">
-                    <h6>Current Order:</h6>
-                    <div className="small">
-                      <strong>Order #:</strong> {orderInfo.orderId}
-                      <br />
-                      <strong>Client:</strong>{" "}
-                      {orderInfo.customerName || orderInfo.clientName}
-                      <br />
-                      <strong>Project:</strong> {orderInfo.projectName}
-                      <br />
-                      <strong>Status:</strong>{" "}
-                      <span className={`status-badge ${orderInfo.status}`}>
-                        {orderInfo.status}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <div className="alert alert-info small mt-3 mb-0">
+                  Only valid Job Order QR codes containing the JO number will be
+                  accepted.
+                </div>
               </div>
             </div>
           </div>
