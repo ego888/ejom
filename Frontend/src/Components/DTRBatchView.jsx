@@ -49,6 +49,21 @@ const formatTime = (timeString) => {
   return timeString.substring(0, 5); // Takes only HH:MM from HH:MM:SS
 };
 
+const getNextDateString = (dateString) => {
+  if (!dateString) return "";
+  const parsedDate = new Date(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateString;
+  }
+
+  parsedDate.setDate(parsedDate.getDate() + 1);
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+  const day = String(parsedDate.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 const DTRBatchView = ({ batch, onBack }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -305,7 +320,15 @@ const DTRBatchView = ({ batch, onBack }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB");
+    if (Number.isNaN(date.getTime())) {
+      return "N/A";
+    }
+
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const year = String(date.getFullYear()).slice(-2);
+
+    return `${month}-${day}-${year}`;
   };
 
   const handleAnalyze = async () => {
@@ -1018,7 +1041,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       if (action === "add") {
         setEmpId(contextMenuEntry.empId);
         setEmpName(contextMenuEntry.empName);
-        setDate(contextMenuEntry.date);
+        setDate(getNextDateString(contextMenuEntry.date));
         setTimeIn("08:00");
         setTimeOut("17:00");
         setShowAddDateModal(true);
