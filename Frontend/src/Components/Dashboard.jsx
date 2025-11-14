@@ -73,7 +73,12 @@ const RECEIVE_PAYMENT = {
   icon: "bi-safe",
   text: "Receive Payment",
 };
-const PROFILE = { path: "profile", icon: "bi-person", text: "Profile" };
+const PROFILE = {
+  path: "profile",
+  icon: "bi-person",
+  text: "Profile",
+  isProfileModal: true,
+};
 
 // Submenu items constants
 const SALES_REPORT = {
@@ -282,7 +287,9 @@ const Dashboard = () => {
   };
 
   const handleProfileClick = (e) => {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
     setShowProfileModal(true);
   };
 
@@ -410,6 +417,26 @@ const Dashboard = () => {
                 id="menu"
               >
                 {visibleNavItems.map((item) => {
+                  if (item.isProfileModal) {
+                    return (
+                      <li key="profile-modal">
+                        <a
+                          href="#"
+                          className="sidebar-nav-link"
+                          onClick={(e) => {
+                            handleProfileClick(e);
+                            handleNavClick();
+                          }}
+                        >
+                          <i className={`bi ${item.icon}`}></i>
+                          <span className="d-none d-sm-inline">
+                            {item.text}
+                          </span>
+                        </a>
+                      </li>
+                    );
+                  }
+
                   if (item.subItems) {
                     return (
                       <li key={item.path} className="w-100">
