@@ -100,19 +100,14 @@ const checkRouteAccess = (route, permissions) => {
         permissions.isArtist ||
         permissions.isOperator
       );
+    case "profile":
+      return true;
     case "material":
     case "employee":
     case "category":
     case "check-order-total":
     case "material-usage-report":
       return permissions.categoryId === 1 || permissions.isProduction;
-    case "profile":
-      return (
-        permissions.categoryId === 1 ||
-        permissions.isSales ||
-        permissions.isAccounting ||
-        permissions.isArtist
-      );
     default:
       return false;
   }
