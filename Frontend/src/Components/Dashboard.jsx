@@ -189,6 +189,9 @@ const Dashboard = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCompactView, setIsCompactView] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= 576 : false
+  );
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -288,6 +291,16 @@ const Dashboard = () => {
     localStorage.setItem("userName", updatedName);
   };
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsCompactView(window.innerWidth <= 576);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Get visible menu items based on user permissions
   const getVisibleMenuItems = () => {
     const items = [];
@@ -337,7 +350,10 @@ const Dashboard = () => {
       items.push(ARTISTLOG, DTR_ABSENCES);
     }
 
-    if (!permissions.isProduction && !permissions.isOperator) {
+    if (
+      isCompactView ||
+      (!permissions.isProduction && !permissions.isOperator)
+    ) {
       items.push(PROFILE);
     }
     return items;
