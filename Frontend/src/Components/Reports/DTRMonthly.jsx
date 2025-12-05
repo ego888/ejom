@@ -61,6 +61,13 @@ const MonthBarChart = ({ monthNumber, days }) => {
   const absenceDays = days.filter(
     (day) => !day.isSunday && !day.isHoliday && (day.totalHours || 0) === 0
   ).length;
+  const undertimeDays = days.filter(
+    (day) =>
+      !day.isSunday &&
+      !day.isHoliday &&
+      day.totalHours > 0 &&
+      day.totalHours < BASELINE_HOURS
+  ).length;
 
   return (
     <div className="mb-4">
@@ -68,7 +75,10 @@ const MonthBarChart = ({ monthNumber, days }) => {
         <h5 className="mb-0">{MONTH_LABELS[monthNumber - 1]}</h5>
         <div className="d-flex align-items-center gap-3 text-muted small">
           <span>Peak day: {maxHours.toFixed(2)} hrs</span>
-          <span>Total absences: {absenceDays} day(s)</span>
+          <span>
+            Total absences: {absenceDays} day(s) | Undertime: {undertimeDays}{" "}
+            day(s)
+          </span>
         </div>
       </div>
       <div className="border rounded-3 p-3 bg-white shadow-sm">
