@@ -9,6 +9,9 @@ const REGULAR_HOLIDAY_COLOR = "#f28b82";
 const SPECIAL_HOLIDAY_COLOR = "#ffe2b3";
 const BASELINE_HOURS = 8;
 const MAX_BAR_HEIGHT = 60; // ~30% shorter than original
+const BAR_PADDING_TOP = 8;
+const BAR_PADDING_BOTTOM = 6;
+const BAR_AREA_HEIGHT = MAX_BAR_HEIGHT + BAR_PADDING_TOP + BAR_PADDING_BOTTOM;
 
 const MONTH_LABELS = [
   "January",
@@ -44,10 +47,8 @@ const getDayBackground = (day) => {
 
 const MonthBarChart = ({ monthNumber, days }) => {
   const maxHours = Math.max(...days.map((day) => day.totalHours || 0), 8) || 8;
-  const baselinePosition = Math.min(
-    MAX_BAR_HEIGHT,
-    (BASELINE_HOURS / maxHours) * MAX_BAR_HEIGHT
-  );
+  const baselinePosition =
+    (BASELINE_HOURS / Math.max(maxHours, BASELINE_HOURS)) * MAX_BAR_HEIGHT;
   const absenceDays = days.filter(
     (day) => !day.isSunday && !day.isHoliday && (day.totalHours || 0) === 0
   ).length;
@@ -62,15 +63,15 @@ const MonthBarChart = ({ monthNumber, days }) => {
         </div>
       </div>
       <div className="border rounded-3 p-3 bg-white shadow-sm">
-        <div className="d-flex align-items-end" style={{ gap: "8px" }}>
+        <div className="d-flex flex-column" style={{ gap: "4px" }}>
           <div
             className="position-relative w-100"
-            style={{ minHeight: `${MAX_BAR_HEIGHT + 22}px` }}
+            style={{ height: `${BAR_AREA_HEIGHT}px` }}
           >
             <div
               className="position-absolute start-0 end-0"
               style={{
-                bottom: `${baselinePosition + 6}px`,
+                bottom: `${BAR_PADDING_BOTTOM + baselinePosition}px`,
                 borderTop: "1px dashed #6c757d",
                 pointerEvents: "none",
               }}
@@ -81,7 +82,7 @@ const MonthBarChart = ({ monthNumber, days }) => {
               style={{
                 gap: "6px",
                 overflowX: "auto",
-                paddingBottom: "6px",
+                height: "100%",
               }}
             >
               {days.map((day) => {
@@ -111,8 +112,8 @@ const MonthBarChart = ({ monthNumber, days }) => {
                       className="rounded-2 d-flex align-items-end justify-content-center"
                       style={{
                         backgroundColor,
-                        height: `${MAX_BAR_HEIGHT + 16}px`,
-                        padding: "8px 4px 6px",
+                        height: `${BAR_AREA_HEIGHT}px`,
+                        padding: `${BAR_PADDING_TOP}px 4px ${BAR_PADDING_BOTTOM}px`,
                       }}
                       title={`Day ${day.day}: ${day.totalHours.toFixed(
                         2
@@ -128,11 +129,24 @@ const MonthBarChart = ({ monthNumber, days }) => {
                         }}
                       />
                     </div>
-                    <small className="text-muted">{day.day}</small>
                   </div>
                 );
               })}
             </div>
+          </div>
+          <div
+            className="d-flex"
+            style={{ gap: "6px", overflowX: "auto", paddingTop: "2px" }}
+          >
+            {days.map((day) => (
+              <div
+                key={`label-${monthNumber}-${day.day}`}
+                className="text-center"
+                style={{ minWidth: "28px" }}
+              >
+                <small className="text-muted">{day.day}</small>
+              </div>
+            ))}
           </div>
         </div>
       </div>
