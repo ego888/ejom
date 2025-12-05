@@ -8,6 +8,7 @@ const SUNDAY_COLOR = "#fdecec";
 const REGULAR_HOLIDAY_COLOR = "#f28b82";
 const SPECIAL_HOLIDAY_COLOR = "#ffe2b3";
 const BASELINE_HOURS = 8;
+const MAX_BAR_HEIGHT = 60; // ~30% shorter than original
 
 const MONTH_LABELS = [
   "January",
@@ -42,27 +43,29 @@ const getDayBackground = (day) => {
 };
 
 const MonthBarChart = ({ monthNumber, days }) => {
-  const maxBarHeight = 170;
-  const maxHours =
-    Math.max(...days.map((day) => day.totalHours || 0), 8) || 8;
+  const maxHours = Math.max(...days.map((day) => day.totalHours || 0), 8) || 8;
   const baselinePosition = Math.min(
-    maxBarHeight,
-    (BASELINE_HOURS / maxHours) * maxBarHeight
+    MAX_BAR_HEIGHT,
+    (BASELINE_HOURS / maxHours) * MAX_BAR_HEIGHT
   );
+  const absenceDays = days.filter(
+    (day) => !day.isSunday && !day.isHoliday && (day.totalHours || 0) === 0
+  ).length;
 
   return (
     <div className="mb-4">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h5 className="mb-0">{MONTH_LABELS[monthNumber - 1]}</h5>
-        <span className="text-muted small">
-          Peak day: {maxHours.toFixed(2)} hrs
-        </span>
+        <div className="d-flex align-items-center gap-3 text-muted small">
+          <span>Peak day: {maxHours.toFixed(2)} hrs</span>
+          <span>Total absences: {absenceDays} day(s)</span>
+        </div>
       </div>
       <div className="border rounded-3 p-3 bg-white shadow-sm">
         <div className="d-flex align-items-end" style={{ gap: "8px" }}>
           <div
             className="position-relative w-100"
-            style={{ minHeight: `${maxBarHeight + 22}px` }}
+            style={{ minHeight: `${MAX_BAR_HEIGHT + 22}px` }}
           >
             <div
               className="position-absolute start-0 end-0"
@@ -86,7 +89,7 @@ const MonthBarChart = ({ monthNumber, days }) => {
                   day.totalHours > 0
                     ? Math.max(
                         6,
-                        Math.round((day.totalHours / maxHours) * maxBarHeight)
+                        Math.round((day.totalHours / maxHours) * MAX_BAR_HEIGHT)
                       )
                     : 0;
                 const backgroundColor = getDayBackground(day);
@@ -108,7 +111,7 @@ const MonthBarChart = ({ monthNumber, days }) => {
                       className="rounded-2 d-flex align-items-end justify-content-center"
                       style={{
                         backgroundColor,
-                        height: `${maxBarHeight + 16}px`,
+                        height: `${MAX_BAR_HEIGHT + 16}px`,
                         padding: "8px 4px 6px",
                       }}
                       title={`Day ${day.day}: ${day.totalHours.toFixed(
@@ -253,7 +256,7 @@ const DTRMonthly = () => {
           <select
             id="dtr-monthly-employee"
             className="form-select"
-            style={{ minWidth: "220px" }}
+            style={{ width: "1.5in" }}
             value={employeeId}
             onChange={(event) => setEmployeeId(event.target.value)}
             disabled={loading || employees.length === 0}
@@ -271,7 +274,7 @@ const DTRMonthly = () => {
           <select
             id="dtr-monthly-from"
             className="form-select"
-            style={{ minWidth: "140px" }}
+            style={{ width: "1.5in" }}
             value={monthFrom}
             onChange={(event) =>
               setMonthFrom(Number.parseInt(event.target.value, 10))
@@ -291,7 +294,7 @@ const DTRMonthly = () => {
           <select
             id="dtr-monthly-to"
             className="form-select"
-            style={{ minWidth: "140px" }}
+            style={{ width: "1.5in" }}
             value={monthTo}
             onChange={(event) =>
               setMonthTo(Number.parseInt(event.target.value, 10))
@@ -311,7 +314,7 @@ const DTRMonthly = () => {
           <select
             id="dtr-monthly-year"
             className="form-select"
-            style={{ maxWidth: "120px" }}
+            style={{ width: "1.5in" }}
             value={year}
             onChange={(event) =>
               setYear(Number.parseInt(event.target.value, 10))
@@ -325,7 +328,11 @@ const DTRMonthly = () => {
             ))}
           </select>
 
-          <Button variant="view" onClick={fetchMonthlyReport} disabled={loading}>
+          <Button
+            variant="view"
+            onClick={fetchMonthlyReport}
+            disabled={loading}
+          >
             {loading ? "Loading..." : "Refresh"}
           </Button>
         </div>
