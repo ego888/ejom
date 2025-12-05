@@ -12,6 +12,9 @@ const MAX_BAR_HEIGHT = 60; // ~30% shorter than original
 const BAR_PADDING_TOP = 8;
 const BAR_PADDING_BOTTOM = 6;
 const BAR_AREA_HEIGHT = MAX_BAR_HEIGHT + BAR_PADDING_TOP + BAR_PADDING_BOTTOM;
+const BAR_COLOR_OK = "#0d6efd";
+const BAR_COLOR_LOW = "#81b3fe";
+const BAR_COLOR_ABSENT = "#dc3545";
 
 const MONTH_LABELS = [
   "January",
@@ -43,6 +46,12 @@ const getDayBackground = (day) => {
   }
   if (day.isSunday) return SUNDAY_COLOR;
   return "#f8f9fa";
+};
+
+const getBarColor = (totalHours) => {
+  if (!totalHours || totalHours <= 0) return BAR_COLOR_ABSENT;
+  if (totalHours < BASELINE_HOURS) return BAR_COLOR_LOW;
+  return BAR_COLOR_OK;
 };
 
 const MonthBarChart = ({ monthNumber, days }) => {
@@ -94,6 +103,10 @@ const MonthBarChart = ({ monthNumber, days }) => {
                       )
                     : 0;
                 const backgroundColor = getDayBackground(day);
+                const isAbsentHighlight =
+                  (!day.totalHours || day.totalHours <= 0) &&
+                  !day.isHoliday &&
+                  !day.isSunday;
                 const holidayLabel = day.isHoliday
                   ? day.holidayType
                     ? ` (${day.holidayType} Holiday)`
@@ -114,6 +127,9 @@ const MonthBarChart = ({ monthNumber, days }) => {
                         backgroundColor,
                         height: `${BAR_AREA_HEIGHT}px`,
                         padding: `${BAR_PADDING_TOP}px 4px ${BAR_PADDING_BOTTOM}px`,
+                        border: isAbsentHighlight
+                          ? `1px dashed ${BAR_COLOR_ABSENT}`
+                          : "1px solid transparent",
                       }}
                       title={`Day ${day.day}: ${day.totalHours.toFixed(
                         2
@@ -123,7 +139,7 @@ const MonthBarChart = ({ monthNumber, days }) => {
                         style={{
                           width: "70%",
                           height: `${barHeight}px`,
-                          backgroundColor: "#0d6efd",
+                          backgroundColor: getBarColor(day.totalHours),
                           borderRadius: "4px",
                           transition: "height 0.2s ease",
                         }}
