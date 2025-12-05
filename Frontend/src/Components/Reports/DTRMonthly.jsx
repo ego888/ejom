@@ -48,9 +48,17 @@ const getDayBackground = (day) => {
   return "#f8f9fa";
 };
 
-const getBarColor = (totalHours) => {
-  if (!totalHours || totalHours <= 0) return BAR_COLOR_ABSENT;
-  if (totalHours < BASELINE_HOURS) return BAR_COLOR_LOW;
+const getBarColorForDay = (day) => {
+  const hours = day.totalHours || 0;
+  if (hours <= 0) return BAR_COLOR_ABSENT;
+
+  const isSaturday =
+    day.date && new Date(day.date).getDay
+      ? new Date(day.date).getDay() === 6
+      : false;
+
+  if (isSaturday && hours >= 3) return BAR_COLOR_OK;
+  if (hours < BASELINE_HOURS) return BAR_COLOR_LOW;
   return BAR_COLOR_OK;
 };
 
@@ -61,13 +69,17 @@ const MonthBarChart = ({ monthNumber, days }) => {
   const absenceDays = days.filter(
     (day) => !day.isSunday && !day.isHoliday && (day.totalHours || 0) === 0
   ).length;
-  const undertimeDays = days.filter(
-    (day) =>
-      !day.isSunday &&
-      !day.isHoliday &&
-      day.totalHours > 0 &&
-      day.totalHours < BASELINE_HOURS
-  ).length;
+  const undertimeDays = days.filter((day) => {
+    const hours = day.totalHours || 0;
+    if (hours <= 0) return false; // absent not counted as undertime
+    if (day.isSunday || day.isHoliday) return false;
+    const isSaturday =
+      day.date && new Date(day.date).getDay
+        ? new Date(day.date).getDay() === 6
+        : false;
+    if (isSaturday) return hours < 3;
+    return hours < BASELINE_HOURS;
+  }).length;
 
   return (
     <div className="mb-4">
@@ -149,7 +161,7 @@ const MonthBarChart = ({ monthNumber, days }) => {
                         style={{
                           width: "70%",
                           height: `${barHeight}px`,
-                          backgroundColor: getBarColor(day.totalHours),
+                          backgroundColor: getBarColorForDay(day),
                           borderRadius: "4px",
                           transition: "height 0.2s ease",
                         }}
