@@ -1974,6 +1974,149 @@ router.get("/absences", verifyUser, async (req, res) => {
   }
 });
 
+// DTR monthly daily hours report
+router.get("/monthly", verifyUser, async (req, res) => {
+  let connection;
+
+  const toDateKey = (year, month, day) => {
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
+      2,
+      "0"
+    )}`;
+  };
+
+  try {
+    const currentYear = new Date().getFullYear();
+    const year = Number.parseInt(req.query.year, 10) || currentYear;
+    const rawMonthFrom = Number.parseInt(req.query.monthFrom, 10) || 1;
+    const rawMonthTo =
+      Number.parseInt(req.query.monthTo, 10) || rawMonthFrom || 1;
+    const monthFrom = Math.min(Math.max(rawMonthFrom, 1), 12);
+    const monthTo = Math.min(Math.max(rawMonthTo, monthFrom), 12);
+    const requestedEmployeeId = req.query.employeeId;
+
+    connection = await pool.getConnection();
+
+    const [employeeRows] = await connection.query(
+      `SELECT DISTINCT empId, empName
+       FROM DTREntries
+       WHERE YEAR(date) = ? AND deleteRecord = 0
+       ORDER BY empName, empId`,
+      [year]
+    );
+
+    if (!employeeRows || employeeRows.length === 0) {
+      return res.json({
+        Status: true,
+        Result: {
+          year,
+          monthFrom,
+          monthTo,
+          employeeId: null,
+          employees: [],
+          months: [],
+        },
+      });
+    }
+
+    const employeeId =
+      requestedEmployeeId && requestedEmployeeId !== "all"
+        ? requestedEmployeeId
+        : employeeRows[0].empId;
+
+    const [holidayRows] = await connection.query(
+      `SELECT holidayDate, holidayType
+       FROM DTRHolidays
+       WHERE YEAR(holidayDate) = ?`,
+      [year]
+    );
+
+    const holidayMap = new Map();
+    holidayRows.forEach((holiday) => {
+      if (holiday.holidayDate) {
+        const dateObj = new Date(holiday.holidayDate);
+        const dateKey = toDateKey(
+          dateObj.getFullYear(),
+          dateObj.getMonth() + 1,
+          dateObj.getDate()
+        );
+        holidayMap.set(dateKey, holiday.holidayType || true);
+      }
+    });
+
+    const params = [year, monthFrom, monthTo, employeeId];
+    const [entries] = await connection.query(
+      `SELECT DATE_FORMAT(date, '%Y-%m-%d') as date,
+              COALESCE(hours, 0) + COALESCE(overtime, 0) + COALESCE(specialHours, 0) +
+              COALESCE(sundayHours, 0) + COALESCE(sundayOT, 0) +
+              COALESCE(holidayHours, 0) + COALESCE(holidayOT, 0) AS totalHours
+       FROM DTREntries
+       WHERE YEAR(date) = ?
+         AND MONTH(date) BETWEEN ? AND ?
+         AND deleteRecord = 0
+         AND empId = ?
+       ORDER BY date`,
+      params
+    );
+
+    const totalsByDate = new Map();
+    entries.forEach((entry) => {
+      if (!entry.date) return;
+      const currentTotal = totalsByDate.get(entry.date) || 0;
+      totalsByDate.set(
+        entry.date,
+        parseFloat(
+          (currentTotal + (Number(entry.totalHours) || 0)).toFixed(2)
+        )
+      );
+    });
+
+    const months = [];
+    for (let month = monthFrom; month <= monthTo; month++) {
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const days = [];
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = toDateKey(year, month, day);
+        const dateObj = new Date(year, month - 1, day);
+        const isSunday = dateObj.getDay() === 0;
+        const holidayType = holidayMap.get(dateKey);
+
+        days.push({
+          day,
+          date: dateKey,
+          totalHours: totalsByDate.get(dateKey) || 0,
+          isSunday,
+          isHoliday: !!holidayType,
+          holidayType: holidayType || null,
+        });
+      }
+
+      months.push({ month, days });
+    }
+
+    res.json({
+      Status: true,
+      Result: {
+        year,
+        monthFrom,
+        monthTo,
+        employeeId,
+        employees: employeeRows,
+        months,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating DTR monthly report:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to generate DTR monthly report: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 // Add holiday API endpoint
 router.post("/add-holiday", async (req, res) => {
   let connection;

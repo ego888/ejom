@@ -121,6 +121,11 @@ const DTR_ABSENCES = {
   icon: "bi-person-dash",
   text: "DTR Absences",
 };
+const DTR_MONTHLY = {
+  path: "dtr-monthly",
+  icon: "bi-bar-chart-line",
+  text: "DTR Monthly",
+};
 
 // Submenu for Reports
 const REPORTS = {
@@ -134,6 +139,7 @@ const REPORTS = {
     SALES_INCENTIVES,
     MATERIAL_USAGE_REPORT,
     DTR_ABSENCES,
+    DTR_MONTHLY,
     NOT_CLOSE,
     CHECK_ORDER_TOTAL,
   ],
@@ -166,12 +172,12 @@ const MASTERFILES = {
 // Reports submenus for different roles
 const REPORTS_SALES = {
   ...REPORTS,
-  subItems: [SALES_REPORT, SOA, DTR_ABSENCES],
+  subItems: [SALES_REPORT, SOA, DTR_ABSENCES, DTR_MONTHLY],
 };
 
 const REPORTS_PRODUCTION = {
   ...REPORTS,
-  subItems: [MATERIAL_USAGE_REPORT, DTR_ABSENCES],
+  subItems: [MATERIAL_USAGE_REPORT, DTR_ABSENCES, DTR_MONTHLY],
 };
 
 const DTR = { path: "dtr", icon: "bi-clock-history", text: "DTR" };
@@ -348,14 +354,15 @@ const Dashboard = () => {
         INVOICE_INQUIRY,
         SOA,
         MATERIAL_USAGE_REPORT,
-        DTR_ABSENCES
+        DTR_ABSENCES,
+        DTR_MONTHLY
       );
     } else if (permissions.isOperator) {
       items.push(PRINTLOG, WIPLOG, DELIVERY_QR);
     } else if (permissions.isProduction) {
       items.push(WIPLOG, DELIVERY_QR);
     } else if (permissions.isArtist) {
-      items.push(ARTISTLOG, DTR_ABSENCES);
+      items.push(ARTISTLOG, DTR_ABSENCES, DTR_MONTHLY);
     }
 
     if (

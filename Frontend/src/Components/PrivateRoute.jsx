@@ -96,6 +96,7 @@ const checkRouteAccess = (route, permissions) => {
     case "delivery-qr":
       return permissions.isSales;
     case "dtr-absences":
+    case "dtr-monthly":
       return (
         permissions.isSales ||
         permissions.isAccounting ||
