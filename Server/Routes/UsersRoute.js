@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../utils/db.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import path from "path";
