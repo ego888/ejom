@@ -5,7 +5,7 @@ import { formatPeso } from "../utils/orderUtils";
 import Button from "./UI/Button";
 import DateFromTo from "./UI/DateFromTo";
 import "./style.css";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs/dist/exceljs.min.js";
 
 function InvoiceInquiry() {
   const [dateFrom, setDateFrom] = useState("");
@@ -49,7 +49,7 @@ function InvoiceInquiry() {
     });
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     const data = activeTab === "charge" ? invoices : cashInvoices;
     const subtotals = calculateSubtotals(data);
     const processedPayIds = new Set();
@@ -117,40 +117,39 @@ function InvoiceInquiry() {
     //   }
     // });
 
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Invoices");
 
-    // Set number format for amount columns
-    const range = XLSX.utils.decode_range(ws["!ref"]);
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const header = XLSX.utils.encode_col(C) + "1";
-      const cell = ws[header];
-      if (
-        cell &&
-        (cell.v === "Invoice Amount" ||
-          cell.v === "Order Total" ||
-          cell.v === "Paid Amount" ||
-          cell.v === "Amount Applied")
-      ) {
-        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-          if (ws[cellRef] && typeof ws[cellRef].v === "number") {
-            ws[cellRef].z = "#,##0.00";
-          }
-        }
-      }
-    }
+    if (exportData.length === 0) return;
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Charge-Invoice");
+    const headers = Object.keys(exportData[0]);
+    ws.columns = headers.map((key) => ({ header: key, key }));
+    exportData.forEach((row) => ws.addRow(row));
 
-    // Generate file name with date range
-    const fileName = `${
+    const moneyHeaders = [
+      "Invoice Amount",
+      "Order Total",
+      "Paid Amount",
+      "Amount Applied",
+    ];
+    moneyHeaders.forEach((key) => {
+      const col = ws.getColumn(key);
+      if (col) col.numFmt = "#,##0.00";
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${
       activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
     }_${dateFrom}-${dateTo}.xlsx`;
-
-    // Save file
-    XLSX.writeFile(wb, fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDateChange = (from, to) => {

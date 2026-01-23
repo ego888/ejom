@@ -264,10 +264,25 @@ const DTR = () => {
   };
 
   const handleFileChange = (e) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      setSelectedFiles(Array.from(files));
-    }
+    const files = Array.from(e.target.files || []);
+    const valid = [];
+    const errors = [];
+    files.forEach((file) => {
+      const ext = file.name.toLowerCase().split(".").pop();
+      if (!["xlsx", "csv"].includes(ext)) {
+        errors.push(`${file.name} is not .xlsx or .csv`);
+        return;
+      }
+      const maxBytes = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxBytes) {
+        errors.push(`${file.name} exceeds 10MB limit`);
+        return;
+      }
+      valid.push(file);
+    });
+
+    setError(errors.length ? errors.join("; ") : null);
+    setSelectedFiles(valid);
   };
 
   const handleStartDateChange = (date) => {
@@ -578,7 +593,7 @@ const DTR = () => {
                       className="form-control"
                       multiple
                       onChange={handleFileChange}
-                      accept=".csv,.xlsx,.xls"
+                      accept=".xlsx,.csv"
                       key={fileInputKey}
                       required
                     />
@@ -588,7 +603,7 @@ const DTR = () => {
                       </p>
                       <ol className="ps-3 mb-0">
                         <li className="mb-1">
-                          <strong>Format 1:</strong> Excel/CSV with headers
+                          <strong>Format 1:</strong> Excel/CSV (.xlsx, .csv) with headers
                           containing
                           <code className="ms-1">
                             AC-No., Name, DateTime, State
@@ -597,7 +612,7 @@ const DTR = () => {
                           "C/In" and "C/Out".
                         </li>
                         <li>
-                          <strong>Format 2:</strong> CSV without headers, where
+                          <strong>Format 2:</strong> Excel/CSV (.xlsx, .csv) without headers, where
                           the first column is employee ID and second column is
                           datetime. In/Out status is determined by sequence of
                           entries.

@@ -6,7 +6,7 @@ import Button from "../UI/Button";
 import ReportArtistIncentiveDetails from "./ReportArtistIncentiveDetails";
 import ReportArtistIncentiveSummary from "./ReportArtistIncentiveSummary";
 import { calculateArtistIncentive } from "../../utils/artistIncentiveCalculator";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs/dist/exceljs.min.js";
 import "./Reports.css";
 
 const ReportArtistIncentives = () => {
@@ -90,7 +90,7 @@ const ReportArtistIncentives = () => {
     }
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (!reportData) return;
 
     const data = reportData.orders.map((item) => ({
@@ -113,13 +113,29 @@ const ReportArtistIncentives = () => {
       Remarks: item.remarks || "",
     }));
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Artist Incentives");
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Artist Incentives");
 
-    // Generate filename with date range
-    const filename = `Artist_Incentives_${dateFrom}_to_${dateTo}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    ws.columns = Object.keys(data[0]).map((key) => ({ header: key, key }));
+    data.forEach((row) => ws.addRow(row));
+
+    ["Grand Total", "Quantity", "Per SqFt", "Major Original", "Major Adjusted", "Major Amount", "Minor Original", "Minor Adjusted", "Minor Amount", "Total Incentive", "Max Order Incentive"].forEach((key) => {
+      if (ws.getColumn(key)) ws.getColumn(key).numFmt = "#,##0.00";
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Artist_Incentives_${dateFrom}_to_${dateTo}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (

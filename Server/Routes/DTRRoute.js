@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import xlsx from "xlsx";
+import ExcelJS from "exceljs";
 import csv from "csv-parser";
 import { verifyUser } from "../middleware.js";
 import pool from "../utils/db.js";
@@ -42,13 +42,13 @@ const storage = multer.diskStorage({
   },
 });
 
-// Define accepted file types
+// Define accepted file types (.xlsx or .csv)
 const fileFilter = (req, file, cb) => {
   const extname = path.extname(file.originalname).toLowerCase();
-  if (extname === ".csv" || extname === ".xlsx" || extname === ".xls") {
+  if (extname === ".xlsx" || extname === ".csv") {
     cb(null, true);
   } else {
-    cb(new Error("Only CSV, XLSX, and XLS files are allowed"));
+    cb(new Error("Only .xlsx or .csv files are allowed"));
   }
 };
 
@@ -192,6 +192,24 @@ const calculateHours = (timeIn, timeOut) => {
   return Math.round(diff * 100) / 100; // round to 2 decimal places
 };
 
+// Normalize cell value from exceljs to trimmed string
+const normalizeCell = (cell) => {
+  if (!cell) return "";
+
+  if (cell.type === ExcelJS.ValueType.Date && cell.value) {
+    return moment(cell.value).format("M/D/YYYY h:mm A");
+  }
+
+  const raw =
+    typeof cell.text === "string"
+      ? cell.text
+      : cell.value !== undefined && cell.value !== null
+      ? cell.value
+      : "";
+
+  return raw === undefined || raw === null ? "" : String(raw).trim();
+};
+
 // Helper function to parse CSV/Excel files
 async function parseFile(filePath, fileType) {
   try {
@@ -266,24 +284,33 @@ async function parseFile(filePath, fileType) {
         });
       });
     } else {
-      // Handle Excel files
-      const workbook = xlsx.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const rawData = xlsx.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: "",
+      // Handle Excel files with exceljs
+      const workbook = new ExcelJS.Workbook();
+      const buffer = await fs.promises.readFile(filePath);
+      await workbook.xlsx.load(buffer);
+
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) return [];
+
+      const rows = [];
+      const columnCount = worksheet.columnCount || 0;
+
+      worksheet.eachRow({ includeEmpty: true }, (row) => {
+        const normalizedRow = [];
+        for (let i = 1; i <= columnCount; i++) {
+          normalizedRow.push(normalizeCell(row.getCell(i)));
+        }
+        rows.push(normalizedRow);
       });
 
-      // Process similar to CSV - check if first row has headers
-      if (rawData.length > 0 && rawData[0].length > 0) {
-        const headers = rawData[0];
+      if (rows.length > 0 && rows[0].length > 0) {
+        const headers = rows[0];
 
         if (headers[0] === "AC-No." && headers.includes("State")) {
-          // Convert arrays to objects with headers as keys
+          // Convert arrays to objects with headers as keys (skip header row)
           const objectRows = [];
-          for (let i = 1; i < rawData.length; i++) {
-            const row = rawData[i];
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
             const obj = {};
             headers.forEach((header, index) => {
               if (header) obj[header] = row[index] || "";
@@ -291,12 +318,10 @@ async function parseFile(filePath, fileType) {
             objectRows.push(obj);
           }
           return objectRows;
-        } else {
-          return rawData;
         }
       }
 
-      return rawData;
+      return rows;
     }
   } catch (error) {
     console.error(`Error parsing file ${filePath}:`, error);
