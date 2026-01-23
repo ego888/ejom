@@ -148,6 +148,33 @@ function AddOrder() {
 
   const [showDescription, setShowDescription] = useState(false);
 
+  // Resolve the current discount values based on the latest inputs
+  const resolveDiscountValues = (details = orderDetails) => {
+    const subtotal = details.reduce(
+      (sum, detail) => sum + parseFloat(detail.amount || 0),
+      0
+    );
+
+    const amountFromAmount =
+      parseFloat(tempDiscAmount ?? data.amountDisc) || 0;
+    const percentDiscValue = parseFloat(data.percentDisc) || 0;
+
+    let amountDisc = amountFromAmount;
+    if ((!amountDisc || Number.isNaN(amountDisc)) && percentDiscValue) {
+      amountDisc = (subtotal * percentDiscValue) / 100;
+    }
+    amountDisc = Math.min(amountDisc || 0, subtotal);
+
+    const percentDisc =
+      subtotal > 0
+        ? parseFloat(((amountDisc / subtotal) * 100).toFixed(2))
+        : 0;
+
+    const grandTotal = subtotal - amountDisc;
+
+    return { subtotal, amountDisc, percentDisc, grandTotal };
+  };
+
   // Modify the handleDiscountChange function
   const handleDiscountChange = (type, value) => {
     const subtotal = orderDetails.reduce(
@@ -500,6 +527,27 @@ function AddOrder() {
 
     const token = localStorage.getItem("token");
 
+    // Make sure any pending discount debounce is applied before saving
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      setDebounceTimer(null);
+    }
+    const {
+      subtotal,
+      amountDisc: resolvedAmountDisc,
+      percentDisc: resolvedPercentDisc,
+      grandTotal: resolvedGrandTotal,
+    } = resolveDiscountValues();
+
+    // Keep UI state in sync with the resolved discount values
+    setData((prev) => ({
+      ...prev,
+      totalAmount: subtotal,
+      amountDisc: resolvedAmountDisc,
+      percentDisc: resolvedPercentDisc,
+      grandTotal: resolvedGrandTotal,
+    }));
+
     // Get current user from token
     let userId, userName;
     try {
@@ -519,10 +567,10 @@ function AddOrder() {
       ...data,
       preparedBy: data.preparedBy, // Always use the logged-in user
       editedBy: userName, // Always use the logged-in user's name
-      totalAmount: data.totalAmount, // Set totalAmount from subtotal
-      amountDisc: data.amountDisc,
-      percentDisc: data.percentDisc,
-      grandTotal: data.grandTotal,
+      totalAmount: subtotal, // Use freshly calculated subtotal
+      amountDisc: resolvedAmountDisc,
+      percentDisc: resolvedPercentDisc,
+      grandTotal: resolvedGrandTotal,
       note: data.note,
     };
 
@@ -694,17 +742,28 @@ function AddOrder() {
         );
 
         // Calculate new totals
-        const totals = calculateTotals(updatedDetails);
+        const {
+          subtotal,
+          amountDisc,
+          percentDisc,
+          grandTotal,
+        } = resolveDiscountValues(updatedDetails);
+
+        const totals = calculateTotals(
+          updatedDetails,
+          amountDisc,
+          percentDisc
+        );
 
         // Update order's last edited info and totalHrs
         const orderUpdateData = {
           lastEdited: currentDateTime,
           editedBy: localStorage.getItem("userName"),
           totalHrs: totals.totalHrs,
-          totalAmount: totals.subtotal || 0,
-          amountDisc: data.amountDisc || 0,
-          percentDisc: data.percentDisc || 0,
-          grandTotal: totals.grandTotal || 0,
+          totalAmount: subtotal || 0,
+          amountDisc: amountDisc || 0,
+          percentDisc: percentDisc || 0,
+          grandTotal: grandTotal || 0,
         };
 
         // Update order first, then delete detail
@@ -1062,17 +1121,28 @@ function AddOrder() {
 
     console.log("Updated details:", updatedDetails);
     // Calculate new totals
-    const totals = calculateTotals(updatedDetails);
+    const {
+      subtotal,
+      amountDisc,
+      percentDisc,
+      grandTotal,
+    } = resolveDiscountValues(updatedDetails);
+
+    const totals = calculateTotals(
+      updatedDetails,
+      amountDisc,
+      percentDisc
+    );
 
     // Update order's last edited info and totalHrs only
     const orderUpdateData = {
       lastEdited: currentDateTime,
       editedBy: localStorage.getItem("userName"),
       totalHrs: totals.totalHrs,
-      totalAmount: totals.subtotal || 0,
-      amountDisc: totals.amountDisc || 0,
-      percentDisc: totals.percentDisc || 0,
-      grandTotal: totals.grandTotal || 0,
+      totalAmount: subtotal || 0,
+      amountDisc: amountDisc || 0,
+      percentDisc: percentDisc || 0,
+      grandTotal: grandTotal || 0,
     };
 
     console.log("Order update data:", orderUpdateData);
@@ -3433,7 +3503,18 @@ const handleNoPrintToggle = async (orderId, currentNoPrint) => {
                     setOrderDetails(updatedDetails);
 
                     // Recalculate totals
-                    const totals = calculateTotals(updatedDetails);
+                    const {
+                      subtotal,
+                      amountDisc,
+                      percentDisc,
+                      grandTotal,
+                    } = resolveDiscountValues(updatedDetails);
+
+                    const totals = calculateTotals(
+                      updatedDetails,
+                      amountDisc,
+                      percentDisc
+                    );
                     setData((prev) => ({
                       ...prev,
                       totalHrs: totals.totalHrs,
@@ -3442,10 +3523,10 @@ const handleNoPrintToggle = async (orderId, currentNoPrint) => {
                     // Update the main data state
                     setData((prev) => ({
                       ...prev,
-                      totalAmount: totals.subtotal,
-                      discAmount: totals.amountDisc,
-                      percentDisc: totals.percentDisc,
-                      grandTotal: totals.grandTotal,
+                      totalAmount: subtotal,
+                      amountDisc: amountDisc,
+                      percentDisc: percentDisc,
+                      grandTotal: grandTotal,
                     }));
 
                     // Refresh the order details

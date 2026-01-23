@@ -168,9 +168,14 @@ export const calculateTotals = (
     totalHrs += parseFloat(detail.printHrs || 0);
   });
   console.log("Total Hrs:", totalHrs);
+
+  // Normalize discount inputs
+  const amountDiscNum = parseFloat(discAmount) || 0;
+  const percentDiscNum = parseFloat(percentDisc) || 0;
+
   // Calculate discount and grand total
   const totalDiscount =
-    parseFloat(discAmount) + subtotal * (parseFloat(percentDisc) / 100);
+    amountDiscNum + subtotal * (percentDiscNum / 100);
   const grandTotal = subtotal - totalDiscount;
 
   return {
@@ -178,6 +183,8 @@ export const calculateTotals = (
     totalDiscount,
     grandTotal,
     totalHrs,
+    amountDisc: amountDiscNum,
+    percentDisc: percentDiscNum,
   };
 };
 
