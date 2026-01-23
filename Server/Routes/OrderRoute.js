@@ -1946,7 +1946,7 @@ router.post("/order-reorder", verifyUser, async (req, res) => {
       const values = [
         originalOrder.clientId,
         projectName,
-        originalOrder.preparedBy,
+        userId, // preparedBy should be the current user creating the reorder
         currentDate, // New current date
         originalOrder.orderedBy,
         originalOrder.orderReference,
