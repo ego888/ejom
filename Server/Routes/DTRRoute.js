@@ -901,6 +901,192 @@ router.get("/export/:batchId", async (req, res) => {
   }
 });
 
+// Export batch data to Excel (server-generated)
+router.get("/export-xlsx/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    connection = await pool.getConnection();
+
+    const [batchDetails] = await connection.query(
+      "SELECT * FROM DTRBatches WHERE id = ?",
+      [batchId]
+    );
+    if (batchDetails.length === 0) {
+      return res.status(404).json({ Status: false, Error: "Batch not found" });
+    }
+    const batch = batchDetails[0];
+
+    const [entries] = await connection.query(
+      `SELECT id, empId, empName,
+        DATE_FORMAT(date, '%Y-%m-%d') as date,
+        DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut,
+        day, time, rawState, timeIn, timeOut, state,
+        hours, overtime, sundayHours, sundayOT, holidayHours, holidayOT, holidayType, nightDifferential,
+        remarks, deleteRecord
+       FROM DTREntries
+       WHERE batchId = ?
+       ORDER BY empId, date, time`,
+      [batchId]
+    );
+
+    const workbook = new ExcelJS.Workbook();
+    const detailSheet = workbook.addWorksheet("DTR Details");
+    const summarySheet = workbook.addWorksheet("DTR Summary");
+
+    const detailColumns = [
+      { header: "ID", key: "empId", width: 12 },
+      { header: "Name", key: "empName", width: 22 },
+      { header: "Date", key: "date", width: 12 },
+      { header: "Day", key: "day", width: 8 },
+      { header: "Time In", key: "timeIn", width: 12 },
+      { header: "Time Out", key: "timeOut", width: 12 },
+      { header: "Hours", key: "hours", numFmt: "0.00" },
+      { header: "OT", key: "overtime", numFmt: "0.00" },
+      { header: "Sun Hours", key: "sundayHours", numFmt: "0.00" },
+      { header: "Sun OT", key: "sundayOT", numFmt: "0.00" },
+      { header: "Holiday Hours", key: "holidayHours", numFmt: "0.00" },
+      { header: "Holiday OT", key: "holidayOT", numFmt: "0.00" },
+      { header: "Holiday Type", key: "holidayType", width: 14 },
+      { header: "Night Diff", key: "nightDifferential", numFmt: "0.00" },
+      { header: "Remarks", key: "remarks", width: 24 },
+    ];
+    detailSheet.columns = detailColumns;
+
+    const employeeTotals = new Map();
+    for (const entry of entries) {
+      detailSheet.addRow({
+        empId: entry.empId,
+        empName: entry.empName,
+        date: entry.date,
+        day: entry.day,
+        timeIn: entry.timeIn,
+        timeOut: entry.timeOut,
+        hours: entry.hours,
+        overtime: entry.overtime,
+        sundayHours: entry.sundayHours,
+        sundayOT: entry.sundayOT,
+        holidayHours: entry.holidayHours,
+        holidayOT: entry.holidayOT,
+        holidayType: entry.holidayType,
+        nightDifferential: entry.nightDifferential,
+        remarks: entry.remarks,
+      });
+
+      if (!employeeTotals.has(entry.empId)) {
+        employeeTotals.set(entry.empId, {
+          empId: entry.empId,
+          empName: entry.empName,
+          hours: 0,
+          overtime: 0,
+          sundayHours: 0,
+          sundayOT: 0,
+          holidayHours: 0,
+          holidayOT: 0,
+          nightDifferential: 0,
+        });
+      }
+      const agg = employeeTotals.get(entry.empId);
+      agg.hours += Number(entry.hours || 0);
+      agg.overtime += Number(entry.overtime || 0);
+      agg.sundayHours += Number(entry.sundayHours || 0);
+      agg.sundayOT += Number(entry.sundayOT || 0);
+      agg.holidayHours += Number(entry.holidayHours || 0);
+      agg.holidayOT += Number(entry.holidayOT || 0);
+      agg.nightDifferential += Number(entry.nightDifferential || 0);
+    }
+
+    const workDaysBetween = (start, end) => {
+      const s = new Date(start);
+      const e = new Date(end);
+      let count = 0;
+      for (
+        let d = new Date(s);
+        d <= e;
+        d.setDate(d.getDate() + 1)
+      ) {
+        if (d.getDay() !== 0) count += 1; // exclude Sundays
+      }
+      return count;
+    };
+    const periodHours =
+      workDaysBetween(batch.periodStart, batch.periodEnd) * 8;
+
+    const summaryColumns = [
+      { header: "ID", key: "empId", width: 12 },
+      { header: "Name", key: "empName", width: 22 },
+      { header: "Hours", key: "hours", numFmt: "0.00" },
+      { header: "OT", key: "overtime", numFmt: "0.00" },
+      { header: "Sun Hours", key: "sundayHours", numFmt: "0.00" },
+      { header: "Sun OT", key: "sundayOT", numFmt: "0.00" },
+      { header: "Holiday Hours", key: "holidayHours", numFmt: "0.00" },
+      { header: "Holiday OT", key: "holidayOT", numFmt: "0.00" },
+      { header: "Night Diff", key: "nightDifferential", numFmt: "0.00" },
+      { header: "Period Hours", key: "periodHours", numFmt: "0.00" },
+      { header: "Effective Hours", key: "effectiveHours", numFmt: "0.00" },
+      { header: "Effective OT", key: "effectiveOT", numFmt: "0.00" },
+    ];
+    summarySheet.columns = summaryColumns;
+
+    let grand = {
+      hours: 0,
+      overtime: 0,
+      sundayHours: 0,
+      sundayOT: 0,
+      holidayHours: 0,
+      holidayOT: 0,
+      nightDifferential: 0,
+      effectiveHours: 0,
+      effectiveOT: 0,
+    };
+
+    for (const agg of employeeTotals.values()) {
+      const totalWorked = agg.hours + agg.overtime;
+      const effectiveHours = Math.min(totalWorked, periodHours);
+      const effectiveOT = Math.max(0, totalWorked - periodHours);
+      summarySheet.addRow({
+        ...agg,
+        periodHours,
+        effectiveHours,
+        effectiveOT,
+      });
+
+      grand.hours += agg.hours;
+      grand.overtime += agg.overtime;
+      grand.sundayHours += agg.sundayHours;
+      grand.sundayOT += agg.sundayOT;
+      grand.holidayHours += agg.holidayHours;
+      grand.holidayOT += agg.holidayOT;
+      grand.nightDifferential += agg.nightDifferential;
+      grand.effectiveHours += effectiveHours;
+      grand.effectiveOT += effectiveOT;
+    }
+
+    summarySheet.addRow({
+      empName: "GRAND TOTAL",
+      periodHours,
+      ...grand,
+    });
+
+    const filename = `DTR_Batch_${batchId}_${batch.batchName}.xlsx`;
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=\"${filename}\"`
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Error exporting DTR Excel:", error);
+    res.status(500).json({ Status: false, Error: "Failed to export Excel" });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 // Delete batch
 router.delete("/DTRdelete/:batchId", async (req, res) => {
   let connection;

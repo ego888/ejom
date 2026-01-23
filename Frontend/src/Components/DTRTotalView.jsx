@@ -6,7 +6,7 @@ import {
   formatDate,
   formatTime,
 } from "../utils/orderUtils";
-import ExcelJS from "exceljs/dist/exceljs.min.js";
+import { ServerIP } from "../config";
 
 const DTRTotalView = ({ entries, batch, holidays }) => {
   const [showAllRows, setShowAllRows] = useState(false);
@@ -175,160 +175,32 @@ const DTRTotalView = ({ entries, batch, holidays }) => {
   };
 
   const saveToXLS = async () => {
-    const wb = new ExcelJS.Workbook();
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${ServerIP}/auth/dtr/export-xlsx/${batch.id}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
 
-    const addSheet = (name, columns, rows) => {
-      const ws = wb.addWorksheet(name);
-      ws.columns = columns.map((c) => ({ header: c.header, key: c.key, width: c.width || 15 }));
-      rows.forEach((row) => ws.addRow(row));
-      columns
-        .filter((c) => c.numFmt)
-        .forEach((c) => {
-          ws.getColumn(c.key).numFmt = c.numFmt;
-        });
-      ws.eachRow((row) => {
-        row.eachCell((cell) => {
-          if (typeof cell.value === "string") cell.value = cell.value.trim();
-        });
-      });
-      return ws;
-    };
+      if (!response.ok) {
+        throw new Error("Failed to download Excel");
+      }
 
-    const detailColumns = [
-      { header: "ID", key: "empId", width: 12 },
-      { header: "Name", key: "empName", width: 22 },
-      { header: "Effective Hours", key: "effectiveHours", numFmt: "0.00" },
-      { header: "Effective OT", key: "effectiveOT", numFmt: "0.00" },
-      { header: "Date", key: "date", width: 12 },
-      { header: "Day", key: "day", width: 8 },
-      { header: "Time In", key: "timeIn", width: 12 },
-      { header: "Time Out", key: "timeOut", width: 12 },
-      { header: "Hours", key: "hours", numFmt: "0.00" },
-      { header: "OT", key: "overtime", numFmt: "0.00" },
-      { header: "Sun Hours", key: "sundayHours", numFmt: "0.00" },
-      { header: "Sun OT", key: "sundayOT", numFmt: "0.00" },
-      { header: "Holiday Hours", key: "holidayHours", numFmt: "0.00" },
-      { header: "Holiday OT", key: "holidayOT", numFmt: "0.00" },
-      { header: "Holiday Type", key: "holidayType", width: 16 },
-      { header: "Night Diff", key: "nightDifferential", numFmt: "0.00" },
-      { header: "Remarks", key: "remarks", width: 24 },
-    ];
-
-    const detailRows = totals.flatMap((employee) => {
-      const rows = employee.entries.map((entry) => ({
-        empId: entry.empId,
-        empName: entry.empName,
-        effectiveHours: entry.effectiveHours,
-        effectiveOT: entry.effectiveOT,
-        date: formatDate(entry.date),
-        day: entry.day,
-        timeIn: formatTime(entry.timeIn),
-        timeOut: formatTime(entry.timeOut),
-        hours: entry.hours,
-        overtime: entry.overtime,
-        sundayHours: entry.sundayHours,
-        sundayOT: entry.sundayOT,
-        holidayHours: entry.holidayHours,
-        holidayOT: entry.holidayOT,
-        holidayType: entry.holidayType,
-        nightDifferential: entry.nightDifferential,
-        remarks: entry.remarks,
-      }));
-
-      rows.push({
-        empId: employee.empId,
-        empName: employee.empName,
-        effectiveHours: employee.totals.effectiveHours,
-        effectiveOT: employee.totals.effectiveOT,
-        date: "TOTAL",
-        hours: employee.totals.hours,
-        overtime: employee.totals.overtime,
-        sundayHours: employee.totals.sundayHours,
-        sundayOT: employee.totals.sundayOT,
-        holidayHours: employee.totals.holidayHours,
-        holidayOT: employee.totals.holidayOT,
-        nightDifferential: employee.totals.nightDifferential,
-        remarks: `Period Hours: ${employee.totals.periodHours}`,
-      });
-
-      return rows;
-    });
-
-    detailRows.push({
-      empName: "GRAND TOTAL",
-      effectiveHours: grandTotal.effectiveHours,
-      effectiveOT: grandTotal.effectiveOT,
-      hours: grandTotal.hours,
-      overtime: grandTotal.overtime,
-      sundayHours: grandTotal.sundayHours,
-      sundayOT: grandTotal.sundayOT,
-      holidayHours: grandTotal.holidayHours,
-      holidayOT: grandTotal.holidayOT,
-      nightDifferential: grandTotal.nightDifferential,
-      remarks: `Period Hours: ${grandTotal.periodHours}`,
-    });
-
-    addSheet("DTR Details", detailColumns, detailRows);
-
-    const summaryColumns = [
-      { header: "ID", key: "empId", width: 12 },
-      { header: "Name", key: "empName", width: 22 },
-      { header: "Effective Hours", key: "effectiveHours", numFmt: "0.00" },
-      { header: "Effective OT", key: "effectiveOT", numFmt: "0.00" },
-      { header: "Hours", key: "hours", numFmt: "0.00" },
-      { header: "OT", key: "overtime", numFmt: "0.00" },
-      { header: "Sun Hours", key: "sundayHours", numFmt: "0.00" },
-      { header: "Sun OT", key: "sundayOT", numFmt: "0.00" },
-      { header: "Holiday Hours", key: "holidayHours", numFmt: "0.00" },
-      { header: "Holiday OT", key: "holidayOT", numFmt: "0.00" },
-      { header: "Night Diff", key: "nightDifferential", numFmt: "0.00" },
-      { header: "Period Hours", key: "periodHours", numFmt: "0.00" },
-    ];
-
-    const summaryRows = totals.map((employee) => ({
-      empId: employee.empId,
-      empName: employee.empName,
-      effectiveHours: employee.totals.effectiveHours,
-      effectiveOT: employee.totals.effectiveOT,
-      hours: employee.totals.hours,
-      overtime: employee.totals.overtime,
-      sundayHours: employee.totals.sundayHours,
-      sundayOT: employee.totals.sundayOT,
-      holidayHours: employee.totals.holidayHours,
-      holidayOT: employee.totals.holidayOT,
-      nightDifferential: employee.totals.nightDifferential,
-      periodHours: employee.totals.periodHours,
-    }));
-
-    summaryRows.push({
-      empName: "GRAND TOTAL",
-      effectiveHours: grandTotal.effectiveHours,
-      effectiveOT: grandTotal.effectiveOT,
-      hours: grandTotal.hours,
-      overtime: grandTotal.overtime,
-      sundayHours: grandTotal.sundayHours,
-      sundayOT: grandTotal.sundayOT,
-      holidayHours: grandTotal.holidayHours,
-      holidayOT: grandTotal.holidayOT,
-      nightDifferential: grandTotal.nightDifferential,
-      periodHours: grandTotal.periodHours,
-    });
-
-    addSheet("DTR Summary", summaryColumns, summaryRows);
-
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${batch.batchName}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${batch.batchName}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert(err.message || "Failed to export DTR Excel");
+    }
   };
 
   return (

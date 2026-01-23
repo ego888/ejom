@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../utils/db.js";
 import { verifyUser } from "../middleware.js";
+import ExcelJS from "exceljs";
 
 const router = express.Router();
 
@@ -49,6 +50,144 @@ router.get("/sales-summary", verifyUser, async (req, res) => {
   } catch (error) {
     console.error("Error in sales-summary:", error);
     return res.json({ Status: false, Error: error.message });
+  }
+});
+
+// Export Artist Incentives to Excel (orders payload from client)
+router.post("/artist-incentive/export", verifyUser, async (req, res) => {
+  try {
+    const { orders = [], dateFrom, dateTo } = req.body || {};
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return res
+        .status(400)
+        .json({ Status: false, Error: "No orders provided for export" });
+    }
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Artist Incentives");
+
+    const headers = [
+      "Order ID",
+      "Date",
+      "Client",
+      "Material",
+      "Artist",
+      "Grand Total",
+      "Quantity",
+      "Per SqFt",
+      "Major Original",
+      "Major Adjusted",
+      "Major Amount",
+      "Minor Original",
+      "Minor Adjusted",
+      "Minor Amount",
+      "Total Incentive",
+      "Max Order Incentive",
+      "Remarks",
+    ];
+
+    ws.columns = headers.map((h) => ({ header: h, key: h, width: 18 }));
+
+    orders.forEach((item) => {
+      ws.addRow({
+        "Order ID": item.orderId,
+        Date: item.productionDate
+          ? new Date(item.productionDate).toLocaleDateString()
+          : "",
+        Client: item.clientName,
+        Material: item.materialName,
+        Artist: item.artistIncentive || "Unknown",
+        "Grand Total": item.grandTotal,
+        Quantity: item.quantity,
+        "Per SqFt": item.perSqFt,
+        "Major Original": item.originalMajor,
+        "Major Adjusted": item.adjustedMajor,
+        "Major Amount": item.majorAmount,
+        "Minor Original": item.originalMinor,
+        "Minor Adjusted": item.adjustedMinor,
+        "Minor Amount": item.minorAmount,
+        "Total Incentive": item.totalIncentive,
+        "Max Order Incentive": item.maxOrderIncentive,
+        Remarks: item.remarks || "",
+      });
+    });
+
+    [
+      "Grand Total",
+      "Quantity",
+      "Per SqFt",
+      "Major Original",
+      "Major Adjusted",
+      "Major Amount",
+      "Minor Original",
+      "Minor Adjusted",
+      "Minor Amount",
+      "Total Incentive",
+      "Max Order Incentive",
+    ].forEach((key) => {
+      const col = ws.getColumn(key);
+      if (col) col.numFmt = "#,##0.00";
+    });
+
+    const filename = `Artist_Incentives_${dateFrom || ""}_to_${dateTo || ""}.xlsx`;
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=\"${filename}\"`
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Error exporting artist incentives:", error);
+    res.status(500).json({ Status: false, Error: "Export failed" });
+  }
+});
+
+// Export Invoices/Cash invoices to Excel (payload from client)
+router.post("/invoice-export", verifyUser, async (req, res) => {
+  try {
+    const { rows = [], activeTab, dateFrom, dateTo } = req.body || {};
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res
+        .status(400)
+        .json({ Status: false, Error: "No rows provided for export" });
+    }
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(
+      activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
+    );
+
+    const headers = Object.keys(rows[0]);
+    ws.columns = headers.map((h) => ({ header: h, key: h, width: 18 }));
+    rows.forEach((row) => ws.addRow(row));
+
+    ["Invoice Amount", "Order Total", "Paid Amount", "Amount Applied"].forEach(
+      (key) => {
+        const col = ws.getColumn(key);
+        if (col) col.numFmt = "#,##0.00";
+      }
+    );
+
+    const filename = `${
+      activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
+    }_${dateFrom || ""}-${dateTo || ""}.xlsx`;
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=\"${filename}\"`
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Error exporting invoices:", error);
+    res.status(500).json({ Status: false, Error: "Export failed" });
   }
 });
 

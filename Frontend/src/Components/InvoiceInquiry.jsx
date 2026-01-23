@@ -5,7 +5,6 @@ import { formatPeso } from "../utils/orderUtils";
 import Button from "./UI/Button";
 import DateFromTo from "./UI/DateFromTo";
 import "./style.css";
-import ExcelJS from "exceljs/dist/exceljs.min.js";
 
 function InvoiceInquiry() {
   const [dateFrom, setDateFrom] = useState("");
@@ -51,11 +50,12 @@ function InvoiceInquiry() {
 
   const handleExportToExcel = async () => {
     const data = activeTab === "charge" ? invoices : cashInvoices;
-    const subtotals = calculateSubtotals(data);
+    if (!data.length) return;
+
+    // Prepare data for export (same structure as before)
     const processedPayIds = new Set();
     const amountAppliedTotals = {};
 
-    // Prepare data for export
     const exportData = data.map((item) => {
       if (activeTab === "charge") {
         return {
@@ -63,93 +63,66 @@ function InvoiceInquiry() {
           "Bill Date": new Date(item.billDate).toLocaleDateString(),
           Customer: item.customerName,
           TIN: item.tinNumber,
-          "Invoice Amount": formatAmount(item.invoiceAmount, true),
+          "Invoice Amount": parseFloat(item.invoiceAmount),
           "Order ID": item.orderId,
-          "Order Total": formatAmount(item.grandTotal, true),
-          Client: item.clientName,
-        };
-      } else {
-        // For cash invoices, only show amount on first occurrence of payId
-        const isFirstOccurrence = !processedPayIds.has(item.payId);
-        if (isFirstOccurrence) {
-          processedPayIds.add(item.payId);
-        }
-
-        // Track amount applied totals by prefix
-        const prefix = item.ornum ? item.ornum.substring(0, 2) : "";
-        if (!amountAppliedTotals[prefix]) {
-          amountAppliedTotals[prefix] = 0;
-        }
-        amountAppliedTotals[prefix] += parseFloat(item.amountApplied);
-
-        return {
-          "OR #": item.ornum,
-          "Payment Date": new Date(item.payDate).toLocaleDateString(),
-          Customer: item.customerName,
-          TIN: item.tinNumber,
-          "Paid Amount": isFirstOccurrence
-            ? formatAmount(item.amount, true)
-            : "",
-          "Order ID": item.orderId,
-          "Amount Applied": formatAmount(item.amountApplied, true),
-          "Order Total": formatAmount(item.grandTotal, true),
+          "Order Total": parseFloat(item.grandTotal),
           Client: item.clientName,
         };
       }
+
+      const isFirstOccurrence = !processedPayIds.has(item.payId);
+      if (isFirstOccurrence) processedPayIds.add(item.payId);
+
+      const prefix = item.ornum ? item.ornum.substring(0, 2) : "";
+      if (!amountAppliedTotals[prefix]) amountAppliedTotals[prefix] = 0;
+      amountAppliedTotals[prefix] += parseFloat(item.amountApplied);
+
+      return {
+        "OR #": item.ornum,
+        "Payment Date": new Date(item.payDate).toLocaleDateString(),
+        Customer: item.customerName,
+        TIN: item.tinNumber,
+        "Paid Amount": isFirstOccurrence ? parseFloat(item.amount) : "",
+        "Order ID": item.orderId,
+        "Amount Applied": parseFloat(item.amountApplied),
+        "Order Total": parseFloat(item.grandTotal),
+        Client: item.clientName,
+      };
     });
 
-    // Add subtotals
-    // Object.entries(subtotals).forEach(([prefix, total]) => {
-    //   if (activeTab === "charge") {
-    //     exportData.push({
-    //       "Invoice #": `${prefix} Subtotal`,
-    //       "Invoice Amount": formatAmount(total, true),
-    //     });
-    //   } else {
-    //     exportData.push({
-    //       "OR #": `${prefix} Subtotal`,
-    //       "Paid Amount": formatAmount(total, true),
-    //       "Amount Applied": formatAmount(
-    //         amountAppliedTotals[prefix] || 0,
-    //         true
-    //       ),
-    //     });
-    //   }
-    // });
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${ServerIP}/auth/report/invoice-export`,
+        {
+          rows: exportData,
+          activeTab,
+          dateFrom,
+          dateTo,
+        },
+        {
+          responseType: "blob",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
 
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Invoices");
-
-    if (exportData.length === 0) return;
-
-    const headers = Object.keys(exportData[0]);
-    ws.columns = headers.map((key) => ({ header: key, key }));
-    exportData.forEach((row) => ws.addRow(row));
-
-    const moneyHeaders = [
-      "Invoice Amount",
-      "Order Total",
-      "Paid Amount",
-      "Amount Applied",
-    ];
-    moneyHeaders.forEach((key) => {
-      const col = ws.getColumn(key);
-      if (col) col.numFmt = "#,##0.00";
-    });
-
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${
-      activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
-    }_${dateFrom}-${dateTo}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const blob = new Blob([response.data], {
+        type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${
+        activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
+      }_${dateFrom}-${dateTo}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Export invoices failed:", error);
+      alert("Failed to export invoices.");
+    }
   };
 
   const handleDateChange = (from, to) => {

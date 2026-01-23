@@ -6,7 +6,6 @@ import Button from "../UI/Button";
 import ReportArtistIncentiveDetails from "./ReportArtistIncentiveDetails";
 import ReportArtistIncentiveSummary from "./ReportArtistIncentiveSummary";
 import { calculateArtistIncentive } from "../../utils/artistIncentiveCalculator";
-import ExcelJS from "exceljs/dist/exceljs.min.js";
 import "./Reports.css";
 
 const ReportArtistIncentives = () => {
@@ -92,50 +91,36 @@ const ReportArtistIncentives = () => {
 
   const handleExportToExcel = async () => {
     if (!reportData) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${ServerIP}/auth/report/artist-incentive/export`,
+        {
+          orders: reportData.orders,
+          dateFrom,
+          dateTo,
+        },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          responseType: "blob",
+        }
+      );
 
-    const data = reportData.orders.map((item) => ({
-      "Order ID": item.orderId,
-      Date: new Date(item.productionDate).toLocaleDateString(),
-      Client: item.clientName,
-      Material: item.materialName,
-      Artist: item.artistIncentive || "Unknown",
-      "Grand Total": item.grandTotal,
-      Quantity: item.quantity,
-      "Per SqFt": item.perSqFt,
-      "Major Original": item.originalMajor,
-      "Major Adjusted": item.adjustedMajor,
-      "Major Amount": item.majorAmount,
-      "Minor Original": item.originalMinor,
-      "Minor Adjusted": item.adjustedMinor,
-      "Minor Amount": item.minorAmount,
-      "Total Incentive": item.totalIncentive,
-      "Max Order Incentive": item.maxOrderIncentive,
-      Remarks: item.remarks || "",
-    }));
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Artist Incentives");
-
-    ws.columns = Object.keys(data[0]).map((key) => ({ header: key, key }));
-    data.forEach((row) => ws.addRow(row));
-
-    ["Grand Total", "Quantity", "Per SqFt", "Major Original", "Major Adjusted", "Major Amount", "Minor Original", "Minor Adjusted", "Minor Amount", "Total Incentive", "Max Order Incentive"].forEach((key) => {
-      if (ws.getColumn(key)) ws.getColumn(key).numFmt = "#,##0.00";
-    });
-
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Artist_Incentives_${dateFrom}_to_${dateTo}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Artist_Incentives_${dateFrom}_to_${dateTo}.xlsx`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting artist incentives:", error);
+      alert("Failed to export artist incentives.");
+    }
   };
 
   return (
