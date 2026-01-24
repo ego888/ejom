@@ -788,6 +788,87 @@ function AddQuote() {
     });
   };
 
+  const handleCopyDetail = async (detail) => {
+    if (!canEdit()) {
+      setAlert({
+        show: true,
+        title: "Permission Denied",
+        message: "You don't have permission to copy details",
+        type: "alert",
+      });
+      return;
+    }
+
+    const quoteId = orderId || id;
+    if (!quoteId) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Quote ID is missing. Save the quote header first.",
+        type: "alert",
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${ServerIP}/auth/next_display_quote/${quoteId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.data.Status) {
+        throw new Error(
+          response.data.Error || "Failed to get next display order"
+        );
+      }
+
+      const nextDisplayOrder = response.data.Result;
+
+      const dataToSend = {
+        quoteId,
+        displayOrder: nextDisplayOrder,
+        quantity: detail.quantity || 0,
+        width: detail.width || 0,
+        height: detail.height || 0,
+        unit: detail.unit || "",
+        material: detail.material || "",
+        itemDescription: detail.itemDescription || "",
+        unitPrice: detail.unitPrice || 0,
+        discount: detail.discount || 0,
+        amount: detail.amount || 0,
+        squareFeet: detail.squareFeet || 0,
+        materialUsage: detail.materialUsage || 0,
+        perSqFt: detail.perSqFt ?? detail.persqft ?? 0,
+        printHours: detail.printHours || 0,
+      };
+
+      const addResponse = await axios.post(
+        `${ServerIP}/auth/add-quote-detail`,
+        dataToSend,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (addResponse.data.Status) {
+        fetchQuoteDetails();
+      } else {
+        throw new Error(addResponse.data.Error || "Failed to copy detail");
+      }
+    } catch (error) {
+      console.error("Error copying detail:", error);
+      setAlert({
+        show: true,
+        title: "Error",
+        message: "Failed to copy detail",
+        type: "alert",
+      });
+    }
+  };
+
   const handleEditClick = (uniqueId, detail) => {
     if (!canEdit()) {
       setAlert({
@@ -2266,25 +2347,32 @@ function AddQuote() {
                                       handleEditClick(
                                         `${detail.quoteId}_${detail.displayOrder}`,
                                         detail
-                                      )
-                                    }
-                                  />
-                                  <Button
-                                    variant="delete"
+                                  )
+                                }
+                              />
+                              <Button
+                                variant="delete"
                                     iconOnly
                                     size="sm"
                                     onClick={() => {
                                       console.log(
                                         "Detail click ID:",
-                                        detail.Id
-                                      );
-                                      handleDeleteDetail(detail.Id);
-                                    }}
-                                  />
-                                </>
-                              )}
-                            </div>
-                          </td>
+                                    detail.Id
+                                  );
+                                  handleDeleteDetail(detail.Id);
+                                }}
+                              />
+                              <Button
+                                variant="copy"
+                                iconOnly
+                                size="sm"
+                                onClick={() => handleCopyDetail(detail)}
+                                title="Copy record"
+                              />
+                            </>
+                          )}
+                        </div>
+                      </td>
                         </>
                       )}
                     </tr>
