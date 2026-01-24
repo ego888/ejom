@@ -103,9 +103,23 @@ function Quotes() {
         // Wait for all client data fetches to complete
         const quotesWithDates = await Promise.all(processedQuotes);
 
+        const total = response.data.Result.total || 0;
+        const pages = response.data.Result.totalPages || 0;
+
         setQuotes(quotesWithDates);
-        setTotalCount(response.data.Result.total || 0);
-        setTotalPages(response.data.Result.totalPages || 0);
+        setTotalCount(total);
+        setTotalPages(pages);
+
+        // If the current page is now out of range (e.g., after narrowing filters)
+        // and we got an empty page while there are still results, jump back to page 1.
+        if (
+          pages > 0 &&
+          quotesWithDates.length === 0 &&
+          currentPage > 1
+        ) {
+          setCurrentPage(1);
+          localStorage.setItem("quotesListPage", "1");
+        }
       } else {
         console.warn("Failed to fetch quotes:", response.data.Error);
         setQuotes([]);
@@ -281,6 +295,7 @@ function Quotes() {
       } else {
         newStatuses = [...prev, statusId];
       }
+      setIsAllChecked(newStatuses.length === statusOptions.length);
       // Save to localStorage
       localStorage.setItem("quoteStatusFilters", JSON.stringify(newStatuses));
       return newStatuses;
