@@ -124,8 +124,19 @@ function Orders() {
       });
 
       if (response.data.Status) {
-        setOrders(response.data.Result.orders);
-        setTotalCount(response.data.Result.total);
+        const ordersData = response.data.Result.orders;
+        const total = response.data.Result.total;
+        const pages = response.data.Result.totalPages || 0;
+
+        setOrders(ordersData);
+        setTotalCount(total);
+        setTotalPages(pages);
+
+        // If filters/search leave the current page empty but results still exist, jump back to page 1.
+        if (pages > 0 && ordersData.length === 0 && currentPage > 1) {
+          setCurrentPage(1);
+          localStorage.setItem("ordersListPage", "1");
+        }
       } else {
         console.error("Error in orders response:", response.data.Error);
         setAlert({
