@@ -79,9 +79,10 @@ const Client = () => {
   const debouncedSearch = useMemo(
     () =>
       debounce((value) => {
-        setSearchTerm(value);
+        const trimmedValue = value.trim();
+        setSearchTerm(trimmedValue);
         setCurrentPage(1);
-        localStorage.setItem(CLIENT_SEARCH_KEY, value);
+        localStorage.setItem(CLIENT_SEARCH_KEY, trimmedValue);
       }, 300),
     []
   );
