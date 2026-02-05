@@ -155,6 +155,24 @@ const Client = () => {
     setHoldNoteModal({ open: true, client, note: "" });
   };
 
+  const handleHoldNoteKeyDown = (e) => {
+    if (e.key === "Enter" && e.ctrlKey) {
+      e.preventDefault();
+      const { selectionStart, selectionEnd, value } = e.target;
+      const newValue =
+        value.slice(0, selectionStart) + "\n" + value.slice(selectionEnd);
+
+      setHoldNoteModal((prev) => ({ ...prev, note: newValue }));
+
+      // Restore caret position after the state update so typing can continue smoothly.
+      requestAnimationFrame(() => {
+        const newPos = selectionStart + 1;
+        e.target.selectionStart = newPos;
+        e.target.selectionEnd = newPos;
+      });
+    }
+  };
+
   const closeHoldNoteModal = () => {
     setHoldNoteModal({ open: false, client: null, note: "" });
   };
@@ -517,6 +535,7 @@ const Client = () => {
             className="form-control"
             rows={3}
             value={holdNoteModal.note}
+            onKeyDown={handleHoldNoteKeyDown}
             onChange={(e) =>
               setHoldNoteModal((prev) => ({
                 ...prev,
