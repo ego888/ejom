@@ -382,7 +382,7 @@ const EditClient = () => {
             <div className="col-md-6 mb-3">
               <label htmlFor="terms">Terms:</label>
               <Dropdown
-                className={"form-input"}
+                className="form-control"
                 variant="form"
                 id="terms"
                 name="terms"
@@ -402,7 +402,7 @@ const EditClient = () => {
             <div className="col-md-6 mb-3">
               <label htmlFor="salesId">Sales Person:</label>
               <Dropdown
-                className={"form-input"}
+                className="form-control"
                 variant="form"
                 id="salesId"
                 name="salesId"

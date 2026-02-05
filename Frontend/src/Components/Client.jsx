@@ -156,9 +156,13 @@ const Client = () => {
   };
 
   const handleHoldNoteKeyDown = (e) => {
-    if (e.key === "Enter" && e.ctrlKey) {
+    // Force Enter (any modifier) to add a newline instead of triggering modal-level handlers.
+    if (e.key === "Enter") {
       e.preventDefault();
-      const { selectionStart, selectionEnd, value } = e.target;
+      e.stopPropagation();
+
+      const target = e.currentTarget;
+      const { selectionStart, selectionEnd, value } = target;
       const newValue =
         value.slice(0, selectionStart) + "\n" + value.slice(selectionEnd);
 
@@ -167,8 +171,13 @@ const Client = () => {
       // Restore caret position after the state update so typing can continue smoothly.
       requestAnimationFrame(() => {
         const newPos = selectionStart + 1;
-        e.target.selectionStart = newPos;
-        e.target.selectionEnd = newPos;
+        if (target?.setSelectionRange) {
+          target.setSelectionRange(newPos, newPos);
+        } else {
+          target.selectionStart = newPos;
+          target.selectionEnd = newPos;
+        }
+        target.focus();
       });
     }
   };

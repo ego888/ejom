@@ -258,6 +258,7 @@ const EditEmployee = () => {
             </label>
             <Dropdown
               variant="form"
+              className="form-control rounded-0"
               id="category"
               name="category"
               value={data.category_id || ""}

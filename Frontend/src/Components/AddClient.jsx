@@ -244,6 +244,7 @@ const AddClient = () => {
               <label htmlFor="payment-terms">Terms:</label>
               <Dropdown
                 variant="form"
+                className="form-control rounded-0"
                 id="payment-terms"
                 name="terms"
                 value={client.terms}
@@ -302,6 +303,7 @@ const AddClient = () => {
               <label htmlFor="salesId">Sales Person:</label>
               <Dropdown
                 variant="form"
+                className="form-control rounded-0"
                 id="salesId"
                 name="salesId"
                 value={client.salesId}

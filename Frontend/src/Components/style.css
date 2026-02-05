@@ -186,6 +186,18 @@ a:hover {
   width: 100%;
 }
 
+/* Show a dropdown arrow for selects to make them distinct from text inputs */
+select.form-input,
+select.form-select,
+select.form-control {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23666' d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 2rem 2rem;
+  padding-right: 0.9rem;
+}
+
 /* Style for multiline fields */
 .form-input.multiline {
   min-height: 22px;

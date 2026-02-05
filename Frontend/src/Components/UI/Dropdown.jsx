@@ -17,11 +17,18 @@ const Dropdown = ({
   ...props
 }) => {
   const getDropdownClass = () => {
-    const baseClass = variant === "form" ? "form-input" : "form-input detail";
-
+    const normalizedClassName = typeof className === "string" ? className : "";
+    const usesFormControl = /\bform-control\b/.test(normalizedClassName);
+    const baseClass = usesFormControl
+      ? ""
+      : variant === "form"
+      ? "form-input"
+      : "form-input detail";
     const sizeClass = size === "small" ? "dropdown-sm" : "";
 
-    return `${error ? "is-invalid" : ""} ${className}`.trim();
+    return `${baseClass} ${sizeClass} ${
+      error ? "is-invalid" : ""
+    } ${className}`.trim();
   };
 
   return (
