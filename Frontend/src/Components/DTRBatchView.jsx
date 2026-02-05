@@ -336,200 +336,25 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
-      for (let i = 0; i < entries.length - 1; i++) {
-        // Get current record
-        let current = entries[i];
-
-        // Skip if deleted or already processed
-        if (current.deleteRecord || current.processed) {
-          continue;
-        }
-
-        // Find next valid record
-        let nextIndex = i + 1;
-        let next = entries[nextIndex];
-        while (nextIndex < entries.length && next.deleteRecord) {
-          nextIndex++;
-          next = entries[nextIndex];
-        }
-
-        // If no valid next record found or next record is for different employee
-        if (!next || next.empId !== current.empId) {
-          // Process current record based on time of day
-          const [hours] = current.time.split(":").map(Number);
-
-          await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
-            entries: [
-              {
-                ...current,
-                dateOut: current.date,
-                timeIn: hours < 12 ? current.time : null,
-                timeOut: hours >= 12 ? current.time : null,
-                editedIn: hours < 12 ? 0 : 1,
-                editedOut: hours < 12 ? 1 : 0,
-                processed: 0,
-                remarks: "LACK1, " + (current.remarks || ""),
-                deleteRecord: 0,
-              },
-            ],
-          });
-
-          if (!next) break;
-          continue;
-        }
-
-        // Rest of the existing logic for same employee
-        const currentDate = new Date(current.date);
-        const nextDate = new Date(next.date);
-        const isNextDay =
-          nextDate.getTime() - currentDate.getTime() === 24 * 60 * 60 * 1000;
-
-        if (isNextDay) {
-          // Next day logic
-          const [hours] = next.time.split(":").map(Number);
-
-          if (hours < 5) {
-            // Before 5 AM - Auto process as timeout
-            await axios.post(
-              `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
-              {
-                entries: [
-                  {
-                    ...current,
-                    dateOut: next.date,
-                    timeIn: current.time,
-                    timeOut: next.time,
-                    processed: 1,
-                    remarks: "PROC1, " + (current.remarks || ""),
-                    deleteRecord: 0,
-                  },
-                  {
-                    ...next,
-                    processed: 1,
-                    deleteRecord: 1,
-                  },
-                ],
-              }
-            );
-            i = nextIndex; // Skip next record
-          } else if (hours >= 5 && hours < 7) {
-            // Between 5-7 AM - Ask for confirmation
-            setCurrentIndex(i);
-            setCurrentEntry({ current, next });
-            setShowConfirmModal(true);
-            return; // Exit and wait for user input
-          } else {
-            const [hours] = current.time.split(":").map(Number);
-            // After 7 AM - Process as new time-in
-            await axios.post(
-              `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
-              {
-                entries: [
-                  {
-                    ...current,
-                    dateOut: current.date,
-                    timeIn: hours > 12 ? null : current.time,
-                    timeOut: hours > 12 ? current.time : null,
-                    editedIn: hours > 12 ? 1 : 0,
-                    editedOut: hours > 12 ? 0 : 1,
-                    processed: 0,
-                    remarks: "LACK2, " + (current.remarks || ""),
-                    deleteRecord: 0,
-                  },
-                ],
-              }
-            );
-          }
-        } else if (current.date === next.date) {
-          // Same day - Process as time-in/time-out pair
-          await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
-            entries: [
-              {
-                ...current,
-                dateOut: next.date,
-                timeIn: current.time,
-                timeOut: next.time,
-                processed: 1,
-                remarks: "PROC2, " + (current.remarks || ""),
-                deleteRecord: 0,
-              },
-              {
-                ...next,
-                processed: 1,
-                deleteRecord: 1,
-              },
-            ],
-          });
-          i = nextIndex; // Skip next record
-        }
-      }
-
-      // Handle the very last record if it exists and isn't processed
-      if (entries.length > 0) {
-        const lastRecord = entries[entries.length - 1];
-        if (!lastRecord.deleteRecord && !lastRecord.processed) {
-          const [hours] = lastRecord.time.split(":").map(Number);
-
-          await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
-            entries: [
-              {
-                ...lastRecord,
-                dateOut: lastRecord.date,
-                timeIn: hours < 12 ? lastRecord.time : null,
-                timeOut: hours >= 12 ? lastRecord.time : null,
-                editedIn: hours < 12 ? 0 : 1,
-                editedOut: hours < 12 ? 1 : 0,
-                processed: 0,
-                remarks: "LACK3, " + (lastRecord.remarks || ""),
-                deleteRecord: 0,
-              },
-            ],
-          });
-        }
-      }
-
-      // Final pass: Check all unprocessed records
-      const response = await axios.get(
-        `${ServerIP}/auth/dtr/export/${batch.id}`
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/analyze-time/${batch.id}`
       );
-      if (response.data.Status) {
-        const currentEntries = response.data.Entries;
-        const unprocessedEntries = currentEntries.filter(
-          (entry) =>
-            entry.processed === 0 &&
-            !entry.deleteRecord &&
-            !entry.timeIn &&
-            !entry.timeOut
-        );
 
-        if (unprocessedEntries.length > 0) {
-          for (const entry of unprocessedEntries) {
-            const [hours] = entry.time.split(":").map(Number);
-
-            await axios.post(
-              `${ServerIP}/auth/dtr/update-entries/${batch.id}`,
-              {
-                entries: [
-                  {
-                    id: entry.id,
-                    ...entry,
-                    dateOut: entry.date,
-                    timeIn: hours < 12 ? entry.time : null,
-                    timeOut: hours >= 12 ? entry.time : null,
-                    editedIn: hours < 12 ? 0 : 1,
-                    editedOut: hours < 12 ? 1 : 0,
-                    processed: 0,
-                    remarks: "LACK4, " + (entry.remarks || ""),
-                    deleteRecord: 0,
-                  },
-                ],
-              }
-            );
-          }
-        }
+      if (!response.data.Status) {
+        setError(response.data.Error || "Failed to complete analysis.");
+        return;
       }
 
-      // Final refresh after all processing is complete
+      if (response.data.Status && response.data.NeedsConfirmation) {
+        setCurrentEntry({
+          current: response.data.Current,
+          next: response.data.Next,
+        });
+        setShowConfirmModal(true);
+        await fetchEntries();
+        return;
+      }
+
       await fetchEntries();
       setCurrentIndex(0);
     } catch (error) {
@@ -614,113 +439,11 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
-      const batchStartDate = new Date(batch.periodStart);
-      batchStartDate.setHours(0, 0, 0, 0);
-      const batchEndDate = new Date(batch.periodEnd);
-      batchEndDate.setHours(0, 0, 0, 0);
-
-      const updates = [];
-      let lastKeptEntry = null;
-
-      const toMinutes = (timeString) => {
-        if (!timeString) return null;
-        const [hours, minutes] = timeString.split(":").map(Number);
-        if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-          return null;
-        }
-        return hours * 60 + minutes;
-      };
-
-      const buildRemark = (prefix, existing) => {
-        const trimmed = existing?.trim();
-        return trimmed ? `${prefix} ${trimmed}` : prefix;
-      };
-
-      const sanitizeEntryForUpdate = (entry, overrides = {}) => {
-        const normalizeTime = (value) => (value ? value : null);
-        const normalizeNumber = (value) =>
-          value === undefined || value === null ? 0 : Number(value);
-
-        return {
-          id: entry.id,
-          batchId: entry.batchId,
-          date: entry.date ?? null,
-          dateOut: entry.dateOut ?? null,
-          timeIn: normalizeTime(entry.timeIn),
-          timeOut: normalizeTime(entry.timeOut),
-          editedIn: normalizeNumber(entry.editedIn),
-          editedOut: normalizeNumber(entry.editedOut),
-          processed: normalizeNumber(
-            overrides.processed !== undefined
-              ? overrides.processed
-              : entry.processed
-          ),
-          deleteRecord: normalizeNumber(
-            overrides.deleteRecord !== undefined
-              ? overrides.deleteRecord
-              : entry.deleteRecord
-          ),
-          remarks:
-            overrides.remarks !== undefined
-              ? overrides.remarks
-              : entry.remarks ?? null,
-        };
-      };
-
-      for (const entry of entries) {
-        if (!entry || entry.deleteRecord) {
-          continue;
-        }
-
-        const entryDate = new Date(entry.date);
-        entryDate.setHours(0, 0, 0, 0);
-
-        const isOutsidePeriod =
-          entryDate < batchStartDate || entryDate > batchEndDate;
-
-        if (isOutsidePeriod) {
-          updates.push(
-            sanitizeEntryForUpdate(entry, {
-              processed: 0,
-              deleteRecord: 1,
-              remarks: buildRemark("OUTSIDE PERIOD", entry.remarks),
-            })
-          );
-          continue;
-        }
-
-        const currentMinutes = toMinutes(entry.time);
-
-        const isDuplicate =
-          lastKeptEntry &&
-          lastKeptEntry.empId === entry.empId &&
-          lastKeptEntry.date === entry.date &&
-          currentMinutes !== null &&
-          lastKeptEntry.minutes !== null &&
-          Math.abs(currentMinutes - lastKeptEntry.minutes) <= 3;
-
-        if (isDuplicate) {
-          updates.push(
-            sanitizeEntryForUpdate(entry, {
-              processed: 0,
-              deleteRecord: 1,
-              remarks: buildRemark("REPEAT", entry.remarks),
-            })
-          );
-          continue;
-        }
-
-        lastKeptEntry = {
-          empId: entry.empId,
-          date: entry.date,
-          minutes: currentMinutes,
-        };
-      }
-
-      if (updates.length > 0) {
-        await axios.post(`${ServerIP}/auth/dtr/update-entries/${batch.id}`, {
-          entries: updates,
-        });
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/delete-repeat/${batch.id}`
+      );
+      if (!response.data.Status) {
+        throw new Error(response.data.Error || "Failed to delete repeats.");
       }
 
       // Refresh data after all processing is complete
@@ -744,83 +467,13 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
-      // Filter entries that need hours calculation
-      const entriesToUpdate = entries.filter(
-        (entry) =>
-          entry.processed === 1 &&
-          entry.deleteRecord !== 1 &&
-          entry.timeIn &&
-          entry.timeOut
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`
       );
-
-      console.log("Start calculating hours:");
-
-      // Calculate hours for each entry
-      const updatedEntries = entriesToUpdate.map((entry) => {
-        // Convert times to minutes for easier calculation
-        const timeInParts = entry.timeIn.split(":").map(Number);
-        const timeOutParts = entry.timeOut.split(":").map(Number);
-
-        let timeInMinutes = timeInParts[0] * 60 + timeInParts[1];
-        let timeOutMinutes = timeOutParts[0] * 60 + timeOutParts[1];
-
-        // If timeOut is less than timeIn, assume it's next day
-        if (timeOutMinutes < timeInMinutes) {
-          timeOutMinutes += 24 * 60; // Add 24 hours
-        }
-
-        let totalMinutes = timeOutMinutes - timeInMinutes;
-
-        // Subtract lunch break (12:00-13:00) if period covers it
-        if (timeInMinutes < 13 * 60 && timeOutMinutes > 12 * 60) {
-          totalMinutes -= 60; // Subtract 1 hour
-        }
-
-        // Subtract dinner break (19:00-20:00) if period covers it
-        if (timeInMinutes < 19 * 60 && timeOutMinutes > 20 * 60) {
-          totalMinutes -= 60; // Subtract 1 hour
-        }
-
-        // Convert minutes to hours
-        const totalHours = totalMinutes / 60;
-
-        // Calculate regular hours and overtime
-        let regularHours = totalHours;
-        let overtimeHours = 0;
-
-        if (totalHours > 8) {
-          regularHours = 8;
-          overtimeHours = totalHours - 8;
-        }
-
-        const updatedEntry = {
-          id: entry.id,
-          batchId: entry.batchId,
-          hours: regularHours.toFixed(2),
-          overtime: overtimeHours.toFixed(2),
-        };
-
-        return updatedEntry;
-      });
-
-      console.log("Updating table:");
-      // Send all updates in one request
-      if (updatedEntries.length > 0) {
-        const response = await axios.post(
-          `${ServerIP}/auth/dtr/update-hours/${batch.id}`,
-          {
-            entries: updatedEntries,
-          }
-        );
-        console.log("Done updating table:");
+      if (!response.data.Status) {
+        throw new Error(response.data.Error || "Failed to calculate hours.");
       }
-
-      // Refresh data after all calculations are complete
       await fetchEntries();
-      console.log("Entries refreshed after update");
-
-      // Now that we have fresh data, process Sunday/Holiday hours
-      //      await handleSundayHoliday();
     } catch (error) {
       setError("Failed to calculate hours. Please try again.");
     } finally {
@@ -1163,86 +816,14 @@ const DTRBatchView = ({ batch, onBack }) => {
       setLoading(true);
       setError(null);
 
-      // First process Sunday entries
-      for (const entry of entries) {
-        // Skip if entry is deleted
-        if (entry.deleteRecord) continue;
-
-        // Only process if we have both timeIn and timeOut
-        if (entry.timeIn && entry.timeOut) {
-          let sundayHours = 0;
-          let sundayOT = 0;
-          let holidayHours = 0;
-          let holidayOT = 0;
-          let holidayType = "";
-          let nightDifferential = 0;
-
-          // Check if the date is a holiday
-          const entryDate = new Date(entry.date);
-          const holiday = holidays.find(
-            (h) =>
-              new Date(h.holidayDate).toDateString() ===
-              entryDate.toDateString()
-          );
-
-          // Only process if it's Sunday or a holiday
-          if (entry.day?.toLowerCase() === "sun" || holiday) {
-            console.log(entry.empName, entry.day?.toLowerCase(), holiday);
-            console.log(entry.date, entry.hours, entry.overtime);
-            // For Sunday entries, move regular hours to sundayHours and OT to sundayOT
-            if (entry.day?.toLowerCase() === "sun") {
-              if (holiday) {
-                holidayHours = Number(entry.hours);
-                holidayOT = Number(entry.overtime);
-                holidayType = `Sunday ${holiday.holidayType}`;
-              } else {
-                sundayHours = Number(entry.hours);
-                sundayOT = Number(entry.overtime);
-              }
-              // Clear regular hours and OT for Sundays
-              entry.hours = 0;
-              entry.overtime = 0;
-            } else if (holiday) {
-              // For non-Sunday holidays
-              holidayHours = Number(entry.hours);
-              holidayOT = Number(entry.overtime);
-              holidayType = holiday.holidayType;
-              // Clear regular hours and OT for holidays
-              entry.hours = 0;
-              entry.overtime = 0;
-            }
-
-            // Update the database one entry at a time
-            const response = await axios.post(
-              `${ServerIP}/auth/dtr/update-special-hours/${batch.id}`,
-              {
-                entry: {
-                  id: entry.id,
-                  sundayHours:
-                    sundayHours > 0 ? Number(sundayHours.toFixed(2)) : 0,
-                  sundayOT: sundayOT > 0 ? Number(sundayOT.toFixed(2)) : 0,
-                  holidayHours:
-                    holidayHours > 0 ? Number(holidayHours.toFixed(2)) : 0,
-                  holidayOT: holidayOT > 0 ? Number(holidayOT.toFixed(2)) : 0,
-                  holidayType: holidayType || "",
-                  nightDifferential:
-                    nightDifferential > 0
-                      ? Number(nightDifferential.toFixed(2))
-                      : 0,
-                  hours: entry.hours,
-                  overtime: entry.overtime,
-                },
-              }
-            );
-
-            if (!response.data.Status) {
-              throw new Error(response.data.Error || "Failed to update entry");
-            }
-          }
-        }
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/check-sun-hol/${batch.id}`
+      );
+      if (!response.data.Status) {
+        throw new Error(
+          response.data.Error || "Failed to process Sunday/Holiday hours."
+        );
       }
-
-      // After all entries are processed, refresh the data
       await fetchEntries();
       setAlert({
         show: true,

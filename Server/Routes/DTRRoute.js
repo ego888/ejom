@@ -1498,6 +1498,575 @@ router.post("/update-hours/:batchId", async (req, res) => {
   }
 });
 
+// Analyze time in/out and auto-process entries (backend optimized)
+router.post("/analyze-time/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [entries] = await connection.query(
+      `SELECT id, batchId, empId, empName,
+       DATE_FORMAT(date, '%Y-%m-%d') as date,
+       DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut,
+       day, time, timeIn, timeOut, processed, deleteRecord, editedIn, editedOut, remarks
+       FROM DTREntries
+       WHERE batchId = ?
+       ORDER BY empId, date, time`,
+      [batchId]
+    );
+
+    const parseDate = (dateString) => {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return null;
+      date.setHours(0, 0, 0, 0);
+      return date;
+    };
+
+    const getHours = (timeString) => {
+      if (!timeString) return null;
+      const [hours] = timeString.split(":").map(Number);
+      return Number.isNaN(hours) ? null : hours;
+    };
+
+    const updateEntry = async (entry, updates) => {
+      const {
+        dateOut,
+        timeIn,
+        timeOut,
+        editedIn,
+        editedOut,
+        processed,
+        deleteRecord,
+        remarks,
+      } = updates;
+
+      await connection.query(
+        `
+        UPDATE DTREntries
+        SET
+          dateOut = ?,
+          timeIn = ?,
+          timeOut = ?,
+          editedIn = ?,
+          editedOut = ?,
+          processed = ?,
+          deleteRecord = ?,
+          remarks = ?
+        WHERE id = ? AND batchId = ?
+      `,
+        [
+          dateOut ?? null,
+          timeIn ?? null,
+          timeOut ?? null,
+          editedIn ?? 0,
+          editedOut ?? 0,
+          processed ?? 0,
+          deleteRecord ?? 0,
+          remarks ?? null,
+          entry.id,
+          batchId,
+        ]
+      );
+    };
+
+    for (let i = 0; i < entries.length - 1; i++) {
+      const current = entries[i];
+
+      if (!current || current.deleteRecord || current.processed) {
+        continue;
+      }
+
+      let nextIndex = i + 1;
+      let next = entries[nextIndex];
+      while (nextIndex < entries.length && next?.deleteRecord) {
+        nextIndex += 1;
+        next = entries[nextIndex];
+      }
+
+      if (!next || next.empId !== current.empId) {
+        const hours = getHours(current.time);
+        await updateEntry(current, {
+          dateOut: current.date,
+          timeIn: hours !== null && hours < 12 ? current.time : null,
+          timeOut: hours !== null && hours >= 12 ? current.time : null,
+          editedIn: hours !== null && hours < 12 ? 0 : 1,
+          editedOut: hours !== null && hours < 12 ? 1 : 0,
+          processed: 0,
+          deleteRecord: 0,
+          remarks: `LACK1, ${current.remarks || ""}`.trim(),
+        });
+
+        if (!next) break;
+        continue;
+      }
+
+      const currentDate = parseDate(current.date);
+      const nextDate = parseDate(next.date);
+      const isNextDay =
+        currentDate &&
+        nextDate &&
+        nextDate.getTime() - currentDate.getTime() === 24 * 60 * 60 * 1000;
+
+      if (isNextDay) {
+        const nextHours = getHours(next.time);
+
+        if (nextHours !== null && nextHours < 5) {
+          await updateEntry(current, {
+            dateOut: next.date,
+            timeIn: current.time,
+            timeOut: next.time,
+            processed: 1,
+            deleteRecord: 0,
+            remarks: `PROC1, ${current.remarks || ""}`.trim(),
+            editedIn: current.editedIn ?? 0,
+            editedOut: current.editedOut ?? 0,
+          });
+
+          await updateEntry(next, {
+            dateOut: next.dateOut ?? null,
+            timeIn: next.timeIn ?? null,
+            timeOut: next.timeOut ?? null,
+            processed: 1,
+            deleteRecord: 1,
+            remarks: next.remarks ?? null,
+            editedIn: next.editedIn ?? 0,
+            editedOut: next.editedOut ?? 0,
+          });
+          i = nextIndex;
+        } else if (nextHours !== null && nextHours >= 5 && nextHours < 7) {
+          await connection.commit();
+          return res.json({
+            Status: true,
+            NeedsConfirmation: true,
+            Current: current,
+            Next: next,
+          });
+        } else {
+          const hours = getHours(current.time);
+          await updateEntry(current, {
+            dateOut: current.date,
+            timeIn: hours !== null && hours > 12 ? null : current.time,
+            timeOut: hours !== null && hours > 12 ? current.time : null,
+            editedIn: hours !== null && hours > 12 ? 1 : 0,
+            editedOut: hours !== null && hours > 12 ? 0 : 1,
+            processed: 0,
+            deleteRecord: 0,
+            remarks: `LACK2, ${current.remarks || ""}`.trim(),
+          });
+        }
+      } else if (current.date === next.date) {
+        await updateEntry(current, {
+          dateOut: next.date,
+          timeIn: current.time,
+          timeOut: next.time,
+          processed: 1,
+          deleteRecord: 0,
+          remarks: `PROC2, ${current.remarks || ""}`.trim(),
+          editedIn: current.editedIn ?? 0,
+          editedOut: current.editedOut ?? 0,
+        });
+
+        await updateEntry(next, {
+          dateOut: next.dateOut ?? null,
+          timeIn: next.timeIn ?? null,
+          timeOut: next.timeOut ?? null,
+          processed: 1,
+          deleteRecord: 1,
+          remarks: next.remarks ?? null,
+          editedIn: next.editedIn ?? 0,
+          editedOut: next.editedOut ?? 0,
+        });
+
+        i = nextIndex;
+      }
+    }
+
+    if (entries.length > 0) {
+      const lastRecord = entries[entries.length - 1];
+      if (!lastRecord.deleteRecord && !lastRecord.processed) {
+        const hours = getHours(lastRecord.time);
+        await updateEntry(lastRecord, {
+          dateOut: lastRecord.date,
+          timeIn: hours !== null && hours < 12 ? lastRecord.time : null,
+          timeOut: hours !== null && hours >= 12 ? lastRecord.time : null,
+          editedIn: hours !== null && hours < 12 ? 0 : 1,
+          editedOut: hours !== null && hours < 12 ? 1 : 0,
+          processed: 0,
+          deleteRecord: 0,
+          remarks: `LACK3, ${lastRecord.remarks || ""}`.trim(),
+        });
+      }
+    }
+
+    const [unprocessedEntries] = await connection.query(
+      `SELECT id, batchId, empId, empName,
+       DATE_FORMAT(date, '%Y-%m-%d') as date,
+       DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut,
+       day, time, timeIn, timeOut, processed, deleteRecord, editedIn, editedOut, remarks
+       FROM DTREntries
+       WHERE batchId = ?
+         AND processed = 0
+         AND deleteRecord = 0
+         AND timeIn IS NULL
+         AND timeOut IS NULL`,
+      [batchId]
+    );
+
+    for (const entry of unprocessedEntries) {
+      const hours = getHours(entry.time);
+      await updateEntry(entry, {
+        dateOut: entry.date,
+        timeIn: hours !== null && hours < 12 ? entry.time : null,
+        timeOut: hours !== null && hours >= 12 ? entry.time : null,
+        editedIn: hours !== null && hours < 12 ? 0 : 1,
+        editedOut: hours !== null && hours < 12 ? 1 : 0,
+        processed: 0,
+        deleteRecord: 0,
+        remarks: `LACK4, ${entry.remarks || ""}`.trim(),
+      });
+    }
+
+    await connection.commit();
+
+    res.json({
+      Status: true,
+      NeedsConfirmation: false,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error analyzing time in/out:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to analyze time in/out: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Delete repeated records in batch (backend optimized)
+router.post("/delete-repeat/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [batchRows] = await connection.query(
+      "SELECT periodStart, periodEnd FROM DTRBatches WHERE id = ?",
+      [batchId]
+    );
+
+    if (batchRows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        Status: false,
+        Error: "Batch not found",
+      });
+    }
+
+    const periodStart = new Date(batchRows[0].periodStart);
+    const periodEnd = new Date(batchRows[0].periodEnd);
+    periodStart.setHours(0, 0, 0, 0);
+    periodEnd.setHours(0, 0, 0, 0);
+
+    const [entries] = await connection.query(
+      `SELECT id, batchId, empId,
+       DATE_FORMAT(date, '%Y-%m-%d') as date,
+       time, deleteRecord, remarks
+       FROM DTREntries
+       WHERE batchId = ?
+       ORDER BY empId, date, time`,
+      [batchId]
+    );
+
+    const toMinutes = (timeString) => {
+      if (!timeString) return null;
+      const [hours, minutes] = timeString.split(":").map(Number);
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+        return null;
+      }
+      return hours * 60 + minutes;
+    };
+
+    const buildRemark = (prefix, existing) => {
+      const trimmed = existing?.trim();
+      return trimmed ? `${prefix} ${trimmed}` : prefix;
+    };
+
+    let lastKeptEntry = null;
+    let updatedCount = 0;
+
+    for (const entry of entries) {
+      if (!entry || entry.deleteRecord) continue;
+
+      const entryDate = new Date(entry.date);
+      entryDate.setHours(0, 0, 0, 0);
+
+      const isOutsidePeriod =
+        entryDate < periodStart || entryDate > periodEnd;
+
+      if (isOutsidePeriod) {
+        await connection.query(
+          `UPDATE DTREntries
+           SET processed = 0,
+               deleteRecord = 1,
+               remarks = ?
+           WHERE id = ? AND batchId = ?`,
+          [buildRemark("OUTSIDE PERIOD", entry.remarks), entry.id, batchId]
+        );
+        updatedCount += 1;
+        continue;
+      }
+
+      const currentMinutes = toMinutes(entry.time);
+      const isDuplicate =
+        lastKeptEntry &&
+        lastKeptEntry.empId === entry.empId &&
+        lastKeptEntry.date === entry.date &&
+        currentMinutes !== null &&
+        lastKeptEntry.minutes !== null &&
+        Math.abs(currentMinutes - lastKeptEntry.minutes) <= 3;
+
+      if (isDuplicate) {
+        await connection.query(
+          `UPDATE DTREntries
+           SET processed = 0,
+               deleteRecord = 1,
+               remarks = ?
+           WHERE id = ? AND batchId = ?`,
+          [buildRemark("REPEAT", entry.remarks), entry.id, batchId]
+        );
+        updatedCount += 1;
+        continue;
+      }
+
+      lastKeptEntry = {
+        empId: entry.empId,
+        date: entry.date,
+        minutes: currentMinutes,
+      };
+    }
+
+    await connection.commit();
+    res.json({
+      Status: true,
+      Message: "Repeating records processed",
+      UpdatedCount: updatedCount,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error deleting repeat records:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to delete repeats: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Calculate hours and overtime for batch (backend optimized)
+router.post("/calculate-hours/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [entries] = await connection.query(
+      `SELECT id, timeIn, timeOut
+       FROM DTREntries
+       WHERE batchId = ?
+         AND processed = 1
+         AND deleteRecord = 0
+         AND timeIn IS NOT NULL
+         AND timeOut IS NOT NULL`,
+      [batchId]
+    );
+
+    const parseMinutes = (timeString) => {
+      if (!timeString) return null;
+      const parts = timeString.split(":").map(Number);
+      if (parts.length < 2) return null;
+      const hours = parts[0];
+      const minutes = parts[1];
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+      return hours * 60 + minutes;
+    };
+
+    for (const entry of entries) {
+      let timeInMinutes = parseMinutes(entry.timeIn);
+      let timeOutMinutes = parseMinutes(entry.timeOut);
+      if (timeInMinutes === null || timeOutMinutes === null) continue;
+
+      if (timeOutMinutes < timeInMinutes) {
+        timeOutMinutes += 24 * 60;
+      }
+
+      let totalMinutes = timeOutMinutes - timeInMinutes;
+
+      if (timeInMinutes < 13 * 60 && timeOutMinutes > 12 * 60) {
+        totalMinutes -= 60;
+      }
+
+      if (timeInMinutes < 19 * 60 && timeOutMinutes > 20 * 60) {
+        totalMinutes -= 60;
+      }
+
+      const totalHours = totalMinutes / 60;
+      const regularHours = totalHours > 8 ? 8 : totalHours;
+      const overtimeHours = totalHours > 8 ? totalHours - 8 : 0;
+
+      await connection.query(
+        `
+        UPDATE DTREntries
+        SET
+          hours = ?,
+          overtime = ?,
+          remarks = IF(
+            INSTR(remarks, 'HOURS') = 0,
+            CONCAT('HOURS, ', COALESCE(remarks, '')),
+            remarks
+          )
+        WHERE id = ? AND batchId = ?
+      `,
+        [
+          Number(regularHours.toFixed(2)),
+          Number(overtimeHours.toFixed(2)),
+          entry.id,
+          batchId,
+        ]
+      );
+    }
+
+    await connection.commit();
+    res.json({
+      Status: true,
+      Message: "Hours calculated successfully",
+      UpdatedCount: entries.length,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error calculating hours:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to calculate hours: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Process Sunday/Holiday hours (backend optimized)
+router.post("/check-sun-hol/:batchId", async (req, res) => {
+  let connection;
+  try {
+    const { batchId } = req.params;
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [holidayRows] = await connection.query(
+      "SELECT DATE_FORMAT(holidayDate, '%Y-%m-%d') as holidayDate, holidayType FROM DTRHolidays"
+    );
+    const holidayMap = new Map(
+      holidayRows.map((row) => [row.holidayDate, row.holidayType || ""])
+    );
+
+    const [entries] = await connection.query(
+      `SELECT id, day, DATE_FORMAT(date, '%Y-%m-%d') as date,
+       hours, overtime
+       FROM DTREntries
+       WHERE batchId = ?
+         AND deleteRecord = 0
+         AND timeIn IS NOT NULL
+         AND timeOut IS NOT NULL`,
+      [batchId]
+    );
+
+    let updatedCount = 0;
+
+    for (const entry of entries) {
+      const isSunday = entry.day?.toLowerCase() === "sun";
+      const holidayType = holidayMap.get(entry.date);
+      const isHoliday = !!holidayType;
+
+      if (!isSunday && !isHoliday) continue;
+
+      let sundayHours = 0;
+      let sundayOT = 0;
+      let holidayHours = 0;
+      let holidayOT = 0;
+      let finalHolidayType = "";
+
+      if (isSunday) {
+        if (isHoliday) {
+          holidayHours = Number(entry.hours || 0);
+          holidayOT = Number(entry.overtime || 0);
+          finalHolidayType = `Sunday ${holidayType}`.trim();
+        } else {
+          sundayHours = Number(entry.hours || 0);
+          sundayOT = Number(entry.overtime || 0);
+        }
+      } else if (isHoliday) {
+        holidayHours = Number(entry.hours || 0);
+        holidayOT = Number(entry.overtime || 0);
+        finalHolidayType = holidayType || "";
+      }
+
+      await connection.query(
+        `
+        UPDATE DTREntries
+        SET
+          sundayHours = ?,
+          sundayOT = ?,
+          holidayHours = ?,
+          holidayOT = ?,
+          holidayType = ?,
+          nightDifferential = ?,
+          hours = ?,
+          overtime = ?
+        WHERE id = ? AND batchId = ?
+      `,
+        [
+          Number(sundayHours.toFixed(2)),
+          Number(sundayOT.toFixed(2)),
+          Number(holidayHours.toFixed(2)),
+          Number(holidayOT.toFixed(2)),
+          finalHolidayType,
+          0,
+          0,
+          0,
+          entry.id,
+          batchId,
+        ]
+      );
+      updatedCount += 1;
+    }
+
+    await connection.commit();
+    res.json({
+      Status: true,
+      Message: "Sunday/Holiday hours processed successfully",
+      UpdatedCount: updatedCount,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error processing Sunday/Holiday hours:", error);
+    res.status(500).json({
+      Status: false,
+      Error: `Failed to process Sunday/Holiday hours: ${error.message}`,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 // Route to update timeIn
 router.post("/update-time-in/:batchId", async (req, res) => {
   let connection;
