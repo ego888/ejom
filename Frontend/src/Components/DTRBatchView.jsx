@@ -113,11 +113,13 @@ const DTRBatchView = ({ batch, onBack }) => {
   });
   const [resumeAnalysis, setResumeAnalysis] = useState(false);
   const [isBatchLocked, setIsBatchLocked] = useState(false);
+  const [unlockBatch, setUnlockBatch] = useState(false);
 
   useEffect(() => {
     fetchHolidays();
     fetchEntries();
     evaluateBatchLock(batch);
+    setUnlockBatch(false);
   }, [batch]);
 
   const evaluateBatchLock = (batchInfo) => {
@@ -145,6 +147,8 @@ const DTRBatchView = ({ batch, onBack }) => {
       variant: "warning",
     });
   };
+
+  const isEditLocked = isBatchLocked && !unlockBatch;
 
   useEffect(() => {
     // Load hide deleted preference from localStorage
@@ -482,7 +486,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   };
 
   const handleTimeClick = (entry, type, event) => {
-    if (isBatchLocked) {
+    if (isEditLocked) {
       showBatchLockedAlert();
       return;
     }
@@ -677,7 +681,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const handleDateClick = (entry, event) => {
     event.preventDefault();
 
-    if (isBatchLocked) {
+    if (isEditLocked) {
       showBatchLockedAlert();
       return;
     }
@@ -764,7 +768,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const handleTimeRightClick = async (e, entry, type) => {
     e.preventDefault();
 
-    if (isBatchLocked) {
+    if (isEditLocked) {
       showBatchLockedAlert();
       return;
     }
@@ -840,7 +844,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   };
 
   const handleUpdatePeriod = async (newStartDate, newEndDate) => {
-    if (isBatchLocked) {
+    if (isEditLocked) {
       showBatchLockedAlert();
       return;
     }
@@ -900,36 +904,47 @@ const DTRBatchView = ({ batch, onBack }) => {
       <Button
         variant="edit"
         onClick={handleDeleteRepeat}
-        disabled={loading || isBatchLocked}
+        disabled={loading || isEditLocked}
       >
         Delete Repeat
       </Button>
       <Button
         variant="cancel"
         onClick={handleAnalyze}
-        disabled={loading || isBatchLocked}
+        disabled={loading || isEditLocked}
       >
         Analyze Time In/Out
       </Button>
       <Button
         variant="view"
         onClick={handleCalculateHours}
-        disabled={loading || isBatchLocked}
+        disabled={loading || isEditLocked}
       >
         Calculate Hours
       </Button>
       <Button
         variant="add"
         onClick={handleSundayHoliday}
-        disabled={loading || isBatchLocked}
+        disabled={loading || isEditLocked}
       >
         Check Sun/Hol
       </Button>
+      <div className="form-check d-flex align-items-center ms-auto">
+        <input
+          type="checkbox"
+          className="form-check-input"
+          id="unlockBatchEdit"
+          checked={unlockBatch}
+          onChange={(e) => setUnlockBatch(e.target.checked)}
+        />
+        <label className="form-check-label ms-2" htmlFor="unlockBatchEdit">
+          Unlock edit
+        </label>
+      </div>
       <Button
         variant="danger"
         onClick={handleReset}
-        disabled={loading || isBatchLocked}
-        className="ms-auto"
+        disabled={loading || isEditLocked}
       >
         RESET
       </Button>
