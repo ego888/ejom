@@ -1799,7 +1799,7 @@ router.post("/delete-repeat/:batchId", async (req, res) => {
       return trimmed ? `${prefix} ${trimmed}` : prefix;
     };
 
-    let lastKeptEntry = null;
+    let lastSeenEntry = null;
     let updatedCount = 0;
 
     for (const entry of entries) {
@@ -1825,13 +1825,15 @@ router.post("/delete-repeat/:batchId", async (req, res) => {
       }
 
       const currentMinutes = toMinutes(entry.time);
+      const sameGroup =
+        lastSeenEntry &&
+        lastSeenEntry.empId === entry.empId &&
+        lastSeenEntry.date === entry.date;
       const isDuplicate =
-        lastKeptEntry &&
-        lastKeptEntry.empId === entry.empId &&
-        lastKeptEntry.date === entry.date &&
+        sameGroup &&
         currentMinutes !== null &&
-        lastKeptEntry.minutes !== null &&
-        Math.abs(currentMinutes - lastKeptEntry.minutes) <= 3;
+        lastSeenEntry.minutes !== null &&
+        Math.abs(currentMinutes - lastSeenEntry.minutes) <= 3;
 
       if (isDuplicate) {
         await connection.query(
@@ -1843,10 +1845,9 @@ router.post("/delete-repeat/:batchId", async (req, res) => {
           [buildRemark("REPEAT", entry.remarks), entry.id, batchId]
         );
         updatedCount += 1;
-        continue;
       }
 
-      lastKeptEntry = {
+      lastSeenEntry = {
         empId: entry.empId,
         date: entry.date,
         minutes: currentMinutes,
