@@ -90,7 +90,9 @@ function Prod() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [isAdmin, setIsAdmin] = useState(false);
-  const [doubleClickClosed, setDoubleClickClosed] = useState(false);
+  const [doubleClickClosed, setDoubleClickClosed] = useState(() => {
+    return localStorage.getItem("prodDoubleClickClosed") === "true";
+  });
 
   // Define debounced search at component level
   const debouncedSearch = useCallback(
@@ -741,6 +743,13 @@ function Prod() {
       setIsAdmin(decoded.categoryId === 1);
     }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "prodDoubleClickClosed",
+      doubleClickClosed ? "true" : "false"
+    );
+  }, [doubleClickClosed]);
 
   // Double click closed
   const handleDoubleClick = async (orderId, currentStatus) => {
