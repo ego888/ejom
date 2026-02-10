@@ -141,7 +141,8 @@ function AddOrder() {
   };
 
   // Add this at the top with other state declarations
-  const [tempDiscAmount, setTempDiscAmount] = useState(0);
+  const [tempDiscAmount, setTempDiscAmount] = useState("");
+  const [isEditingDiscAmount, setIsEditingDiscAmount] = useState(false);
   const [debounceTimer, setDebounceTimer] = useState(null);
   const [isUpdatingFromAmount, setIsUpdatingFromAmount] = useState(false);
   const [isUpdatingFromPercent, setIsUpdatingFromPercent] = useState(false);
@@ -264,6 +265,12 @@ function AddOrder() {
       }
     };
   }, [debounceTimer]);
+
+  useEffect(() => {
+    if (!isEditingDiscAmount) {
+      setTempDiscAmount(data.amountDisc ?? "");
+    }
+  }, [data.amountDisc, isEditingDiscAmount]);
 
   const fetchOrderDetails = () => {
     const token = localStorage.getItem("token");
@@ -3282,10 +3289,12 @@ const handleNoPrintToggle = async (orderId, currentNoPrint) => {
                       <input
                         type="number"
                         className="form-input detail text-end"
-                        value={tempDiscAmount || data.amountDisc}
+                        value={tempDiscAmount ?? ""}
                         onChange={(e) =>
                           handleDiscountChange("amount", e.target.value)
                         }
+                        onFocus={() => setIsEditingDiscAmount(true)}
+                        onBlur={() => setIsEditingDiscAmount(false)}
                         style={{ width: "100px", display: "inline-block" }}
                         disabled={!canEdit()}
                       />
