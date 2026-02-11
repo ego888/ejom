@@ -117,6 +117,8 @@ const checkRouteAccess = (route, permissions) => {
     case "category":
     case "check-order-total":
       return permissions.categoryId === 1 || permissions.isProduction;
+    case "edit-control":
+      return permissions.categoryId === 1;
     default:
       return false;
   }

@@ -7,6 +7,7 @@ import path from "path";
 import { verifyUser, authorize, logUserAction } from "../middleware.js";
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET_KEY || "jwt_secret_key";
 
 // Function to check if admin exists and insert a default one if not
 const checkAndInsertAdmin = async () => {
@@ -65,7 +66,7 @@ router.post("/adminlogin", async (req, res) => {
       const email = results[0].email;
       const token = jwt.sign(
         { role: "admin", email: email, id: results[0].id },
-        "jwt_secret_key",
+        JWT_SECRET,
         { expiresIn: "1d" }
       );
       res.cookie("token", token);
@@ -340,7 +341,7 @@ router.post("/login", async (req, res) => {
             artist: employee.artist,
             operator: employee.operator,
           },
-          "jwt_secret_key",
+          JWT_SECRET,
           { expiresIn: "1d" }
         );
 

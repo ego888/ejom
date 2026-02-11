@@ -1,5 +1,6 @@
 import axios from "axios";
 import { ServerIP } from "../config";
+import { touchSessionActivity } from "./sessionTimeout";
 
 // Create axios instance with base URL
 const axiosInstance = axios.create({
@@ -8,11 +9,26 @@ const axiosInstance = axios.create({
 
 // Add a response interceptor
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const refreshedToken = response.headers?.["x-refreshed-token"];
+    if (refreshedToken) {
+      localStorage.setItem("token", refreshedToken);
+      touchSessionActivity(true);
+    } else {
+      touchSessionActivity();
+    }
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401) {
       // Create a modal dialog
+      const existingModal = document.getElementById("session-expired-modal");
+      if (existingModal) {
+        return Promise.reject(error);
+      }
+
       const modalDiv = document.createElement("div");
+      modalDiv.id = "session-expired-modal";
       modalDiv.className = "modal fade show";
       modalDiv.style.display = "block";
       modalDiv.style.backgroundColor = "rgba(0,0,0,0.5)";
@@ -30,7 +46,7 @@ axiosInstance.interceptors.response.use(
               <button 
                 type="button" 
                 class="btn btn-primary" 
-                onclick="localStorage.removeItem('token'); window.location.href='/'">
+                onclick="localStorage.removeItem('token'); localStorage.removeItem('valid'); localStorage.removeItem('userName'); localStorage.removeItem('lastActivityAt'); window.location.href='/'">
                 Logout
               </button>
             </div>
@@ -61,6 +77,7 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      touchSessionActivity();
     }
     return config;
   },

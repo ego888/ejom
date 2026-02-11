@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ServerIP } from "../config";
 import { jwtDecode } from "jwt-decode";
 import ProfileUpdateModal from "./UI/ProfileUpdateModal";
+import { touchSessionActivity } from "../utils/sessionTimeout";
 
 const Login = () => {
   const [values, setValues] = useState({
@@ -73,6 +74,7 @@ const Login = () => {
 
   const completeLogin = () => {
     localStorage.setItem("valid", "true");
+    touchSessionActivity(true);
     navigate("/dashboard");
   };
 

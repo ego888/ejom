@@ -161,12 +161,17 @@ const CATEGORY = {
   icon: "bi-list",
   text: "Category",
 };
+const EDIT_CONTROL = {
+  path: "edit-control",
+  icon: "bi-sliders",
+  text: "JOM Control",
+};
 
 const MASTERFILES = {
   path: "masterfiles",
   icon: "bi-folder",
   text: "Masterfiles",
-  subItems: [CLIENT, MATERIAL, EMPLOYEE, CATEGORY],
+  subItems: [CLIENT, MATERIAL, EMPLOYEE, CATEGORY, EDIT_CONTROL],
 };
 
 // Reports submenus for different roles
@@ -194,14 +199,14 @@ const Dashboard = () => {
     categoryId: null,
   });
   const [employeeName, setEmployeeName] = useState(
-    localStorage.getItem("userName") || ""
+    localStorage.getItem("userName") || "",
   );
   const [openSubmenu, setOpenSubmenu] = useState("");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCompactView, setIsCompactView] = useState(
-    typeof window !== "undefined" ? window.innerWidth <= 576 : false
+    typeof window !== "undefined" ? window.innerWidth <= 576 : false,
   );
   const navigate = useNavigate();
 
@@ -265,7 +270,7 @@ const Dashboard = () => {
 
         // Get all focusable form elements (input, select, textarea, button)
         const focusableElements = Array.from(
-          document.querySelectorAll("input, select, textarea, button")
+          document.querySelectorAll("input, select, textarea, button"),
         );
 
         // Get the currently focused element
@@ -338,7 +343,7 @@ const Dashboard = () => {
         RECEIVE_PAYMENT,
         REPORTS,
         MASTERFILES,
-        DTR
+        DTR,
       );
     } else if (permissions.isSales) {
       items.push(DASHSALES, QUOTES, ORDERS, DELIVERY_QR, CLIENT, REPORTS_SALES);
@@ -355,7 +360,7 @@ const Dashboard = () => {
         SOA,
         MATERIAL_USAGE_REPORT,
         DTR_ABSENCES,
-        DTR_MONTHLY
+        DTR_MONTHLY,
       );
     } else if (permissions.isOperator) {
       items.push(PRINTLOG, WIPLOG, DELIVERY_QR);

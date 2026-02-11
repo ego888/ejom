@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../utils/db.js";
-import { verifyUser } from "../middleware.js";
+import { verifyUser, authorize } from "../middleware.js";
 
 const router = express.Router();
 
@@ -80,5 +80,99 @@ router.get("/jomcontrol/salesIncentive", async (req, res) => {
     return res.json({ Status: false, Error: "Query Error" });
   }
 });
+
+// Update editable control fields (admin only)
+router.put(
+  "/jomcontrol/edit",
+  verifyUser,
+  authorize("admin"),
+  async (req, res) => {
+    try {
+      const [existingRows] = await pool.query(
+        "SELECT controlId FROM jomControl LIMIT 1"
+      );
+
+      if (!existingRows.length) {
+        return res.json({
+          Status: false,
+          Error: "No jomControl record found",
+        });
+      }
+
+      const controlId = existingRows[0].controlId;
+
+      const toNullableString = (value) => {
+        if (value === undefined || value === null) return null;
+        const trimmed = String(value).trim();
+        return trimmed === "" ? null : trimmed;
+      };
+
+      const toNumber = (value, defaultValue = 0) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : defaultValue;
+      };
+
+      const quoteDelivery = String(req.body.quoteDelivery ?? "").trim();
+      const quoteApproval = String(req.body.quoteApproval ?? "").trim();
+
+      if (!quoteDelivery || !quoteApproval) {
+        return res.json({
+          Status: false,
+          Error: "Quote Delivery and Quote Approval are required",
+        });
+      }
+
+      const sql = `
+      UPDATE jomControl
+      SET
+        companyName = ?,
+        companyAddress1 = ?,
+        companyAddress2 = ?,
+        companyPhone = ?,
+        companyEmail = ?,
+        soaName = ?,
+        vatPercent = ?,
+        quoteDelivery = ?,
+        quoteApproval = ?,
+        bankInfo = ?,
+        salesIncentive = ?,
+        overrideIncentive = ?,
+        HalfIncentiveSqFt = ?,
+        ArtistMaxPercent = ?,
+        major = ?,
+        minor = ?,
+        ArtistMinAmount = ?
+      WHERE controlId = ?
+    `;
+
+      const values = [
+        toNullableString(req.body.companyName),
+        toNullableString(req.body.companyAddress1),
+        toNullableString(req.body.companyAddress2),
+        toNullableString(req.body.companyPhone),
+        toNullableString(req.body.companyEmail),
+        toNullableString(req.body.soaName),
+        toNumber(req.body.vatPercent, 0),
+        quoteDelivery,
+        quoteApproval,
+        toNullableString(req.body.bankInfo),
+        toNumber(req.body.salesIncentive, 0),
+        toNumber(req.body.overrideIncentive, 0),
+        toNumber(req.body.HalfIncentiveSqFt, 0),
+        toNumber(req.body.ArtistMaxPercent, 0),
+        Math.trunc(toNumber(req.body.major, 0)),
+        Math.trunc(toNumber(req.body.minor, 0)),
+        toNumber(req.body.ArtistMinAmount, 0),
+        controlId,
+      ];
+
+      await pool.query(sql, values);
+      return res.json({ Status: true });
+    } catch (err) {
+      console.error("Error updating company control:", err);
+      return res.json({ Status: false, Error: "Query Error" });
+    }
+  }
+);
 
 export { router as JomControlRouter };

@@ -54,6 +54,8 @@ import DTRMonthly from "./Components/Reports/DTRMonthly";
 import PaymentInquiry from "./Components/PaymentInquiry";
 import InvoiceInquiry from "./Components/InvoiceInquiry";
 import DeliveryQR from "./Components/deliveryQR";
+import EditControl from "./Components/EditControl";
+import SessionTimeoutManager from "./Components/SessionTimeoutManager";
 
 // Replace the global axios with our configured instance
 window.axios = axios;
@@ -69,6 +71,7 @@ const routerOptions = {
 function App() {
   return (
     <BrowserRouter {...routerOptions}>
+      <SessionTimeoutManager />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/employeelogin" element={<EmployeeLogin />} />
@@ -138,6 +141,14 @@ function App() {
           />
           <Route path="/dashboard/employee" element={<Employee />}></Route>
           <Route path="/dashboard/category" element={<Category />}></Route>
+          <Route
+            path="/dashboard/edit-control"
+            element={
+              <PrivateRoute>
+                <EditControl />
+              </PrivateRoute>
+            }
+          />
           <Route path="/dashboard/profile" element={<Profile />}></Route>
           <Route
             path="/dashboard/category/add"
