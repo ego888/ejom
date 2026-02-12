@@ -18,6 +18,21 @@ import RemitModal from "./RemitModal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
 
+const PAYMENT_CLIENT_FILTER_KEY = "paymentClientFilters";
+
+const getSavedPaymentClientFilters = () => {
+  const saved = localStorage.getItem(PAYMENT_CLIENT_FILTER_KEY);
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("Error parsing saved payment client filters:", error);
+    return [];
+  }
+};
+
 function Payment() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -46,7 +61,9 @@ function Payment() {
   const [selectedSales, setSelectedSales] = useState([]);
   const [isProdChecked, setIsProdChecked] = useState(false);
   const [isAllChecked, setIsAllChecked] = useState(false);
-  const [selectedClients, setSelectedClients] = useState([]);
+  const [selectedClients, setSelectedClients] = useState(() =>
+    getSavedPaymentClientFilters()
+  );
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
   const [clientList, setClientList] = useState([]);
@@ -141,7 +158,19 @@ function Payment() {
       setSearchTerm(savedSearch);
       setDisplaySearchTerm(savedSearch);
     }
+
+    const savedClientFilters = getSavedPaymentClientFilters();
+    if (JSON.stringify(savedClientFilters) !== JSON.stringify(selectedClients)) {
+      setSelectedClients(savedClientFilters);
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      PAYMENT_CLIENT_FILTER_KEY,
+      JSON.stringify(selectedClients)
+    );
+  }, [selectedClients]);
 
   // Update fetchOrderData to use new endpoint
   const fetchOrderData = async () => {
@@ -272,8 +301,17 @@ function Payment() {
         }
         if (paymentTypesResponse.data.Status)
           setPaymentTypes(paymentTypesResponse.data.Result);
-        if (clientResponse.data.Status)
-          setClientList(clientResponse.data.Result);
+        if (clientResponse.data.Status) {
+          const fetchedClients = clientResponse.data.Result;
+          setClientList(fetchedClients);
+
+          const validClientNames = new Set(
+            fetchedClients.map((client) => client.clientName)
+          );
+          setSelectedClients((prev) =>
+            prev.filter((clientName) => validClientNames.has(clientName))
+          );
+        }
         if (salesResponse.data.Status)
           setSalesEmployees(salesResponse.data.Result);
 

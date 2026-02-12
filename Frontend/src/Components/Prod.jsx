@@ -24,6 +24,21 @@ import { jwtDecode } from "jwt-decode";
 //import { handlePrintProduction } from "./ProdPrintProduction";
 //import { handlePrintAllDR } from "./ProdPrintAllDR";
 
+const PROD_CLIENT_FILTER_KEY = "prodClientFilters";
+
+const getSavedProdClientFilters = () => {
+  const saved = localStorage.getItem(PROD_CLIENT_FILTER_KEY);
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("Error parsing saved prod client filters:", error);
+    return [];
+  }
+};
+
 function Prod() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -59,7 +74,9 @@ function Prod() {
   const [selectedSales, setSelectedSales] = useState([]);
   const [isProdChecked, setIsProdChecked] = useState(false);
   const [isAllChecked, setIsAllChecked] = useState(false);
-  const [selectedClients, setSelectedClients] = useState([]);
+  const [selectedClients, setSelectedClients] = useState(() =>
+    getSavedProdClientFilters()
+  );
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
   const [clientList, setClientList] = useState([]);
@@ -122,7 +139,16 @@ function Prod() {
       setSearchTerm(savedSearch);
       setDisplaySearchTerm(savedSearch);
     }
+
+    const savedClientFilters = getSavedProdClientFilters();
+    if (JSON.stringify(savedClientFilters) !== JSON.stringify(selectedClients)) {
+      setSelectedClients(savedClientFilters);
+    }
   }, []); // Empty dependency array to run only on mount
+
+  useEffect(() => {
+    localStorage.setItem(PROD_CLIENT_FILTER_KEY, JSON.stringify(selectedClients));
+  }, [selectedClients]);
 
   // Separate useEffect for search term changes
   useEffect(() => {
@@ -244,7 +270,15 @@ function Prod() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.Status) {
-          setClientList(response.data.Result);
+          const fetchedClients = response.data.Result;
+          setClientList(fetchedClients);
+
+          const validClientNames = new Set(
+            fetchedClients.map((client) => client.clientName)
+          );
+          setSelectedClients((prev) =>
+            prev.filter((clientName) => validClientNames.has(clientName))
+          );
         }
       } catch (err) {
         console.error("Error fetching clients:", err);

@@ -15,6 +15,21 @@ import axios from "../utils/axiosConfig"; // Import configured axios
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 import InvoiceDetailsModal from "./UI/InvoiceDetailsModal";
 
+const ORDERS_CLIENT_FILTER_KEY = "ordersClientFilters";
+
+const getSavedClientFilters = () => {
+  const saved = localStorage.getItem(ORDERS_CLIENT_FILTER_KEY);
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("Error parsing saved client filters:", error);
+    return [];
+  }
+};
+
 function Orders() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,7 +62,9 @@ function Orders() {
   const [selectedSales, setSelectedSales] = useState([]);
   // const [isProdChecked, setIsProdChecked] = useState(false);
   // const [isAllChecked, setIsAllChecked] = useState(false);
-  const [selectedClients, setSelectedClients] = useState([]);
+  const [selectedClients, setSelectedClients] = useState(() =>
+    getSavedClientFilters()
+  );
   const [hasClientFilter, setHasClientFilter] = useState(false);
   const [hasSalesFilter, setHasSalesFilter] = useState(false);
   const [clientList, setClientList] = useState([]);
@@ -86,7 +103,19 @@ function Orders() {
       setSearchTerm(savedSearch);
       setDisplaySearchTerm(savedSearch);
     }
+
+    const savedClientFilters = getSavedClientFilters();
+    if (JSON.stringify(savedClientFilters) !== JSON.stringify(selectedClients)) {
+      setSelectedClients(savedClientFilters);
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      ORDERS_CLIENT_FILTER_KEY,
+      JSON.stringify(selectedClients)
+    );
+  }, [selectedClients]);
 
   // Add useEffect to check navigation state
   useEffect(() => {
@@ -202,7 +231,15 @@ function Orders() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.Status) {
-          setClientList(response.data.Result);
+          const fetchedClients = response.data.Result;
+          setClientList(fetchedClients);
+
+          const validClientNames = new Set(
+            fetchedClients.map((client) => client.clientName)
+          );
+          setSelectedClients((prev) =>
+            prev.filter((clientName) => validClientNames.has(clientName))
+          );
         }
       } catch (err) {
         console.error("Error fetching clients:", err);
