@@ -10,8 +10,8 @@ const DTRBatchList = ({
   onAddFilesToBatch,
 }) => {
   const [sortConfig, setSortConfig] = useState({
-    key: "batchName",
-    direction: "ascending",
+    key: "createdAt",
+    direction: "descending",
   });
 
   console.log("DTRBatchList received batches:", batches);
