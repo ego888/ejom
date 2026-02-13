@@ -163,7 +163,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     const monthAgo = new Date(
       today.getFullYear(),
       today.getMonth() - 1,
-      today.getDate()
+      today.getDate(),
     );
 
     setIsBatchLocked(periodEndDate < monthAgo);
@@ -238,7 +238,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${ServerIP}/auth/dtr/export/${batch.id}`
+        `${ServerIP}/auth/dtr/export/${batch.id}`,
       );
       if (response.data.Status) {
         setEntries(response.data.Entries);
@@ -319,7 +319,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const handleReset = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to reset all entries? This cannot be undone."
+        "Are you sure you want to reset all entries? This cannot be undone.",
       )
     ) {
       return;
@@ -329,7 +329,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
     try {
       const response = await axios.post(
-        `${ServerIP}/auth/dtr/reset-entries/${batch.id}`
+        `${ServerIP}/auth/dtr/reset-entries/${batch.id}`,
       );
       if (response.data.Status) {
         await fetchEntries();
@@ -357,7 +357,7 @@ const DTRBatchView = ({ batch, onBack }) => {
 
     try {
       const response = await axios.post(
-        `${ServerIP}/auth/dtr/analyze-time/${batch.id}`
+        `${ServerIP}/auth/dtr/analyze-time/${batch.id}`,
       );
 
       if (!response.data.Status) {
@@ -460,7 +460,7 @@ const DTRBatchView = ({ batch, onBack }) => {
 
     try {
       const response = await axios.post(
-        `${ServerIP}/auth/dtr/delete-repeat/${batch.id}`
+        `${ServerIP}/auth/dtr/delete-repeat/${batch.id}`,
       );
       if (!response.data.Status) {
         throw new Error(response.data.Error || "Failed to delete repeats.");
@@ -475,7 +475,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       setError(
         serverMessage
           ? `Failed to process repeating records: ${serverMessage}`
-          : "Failed to process repeating records. Please try again."
+          : "Failed to process repeating records. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -488,7 +488,7 @@ const DTRBatchView = ({ batch, onBack }) => {
 
     try {
       const response = await axios.post(
-        `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`
+        `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`,
       );
       if (!response.data.Status) {
         throw new Error(response.data.Error || "Failed to calculate hours.");
@@ -552,19 +552,19 @@ const DTRBatchView = ({ batch, onBack }) => {
 
     const popupWidth = 320;
     const popupHeight = 330;
-    const horizontalOffset = 120; // Push popup toward Hours column area
-    const verticalOffset = -30;
+    const horizontalOffset = 220; // Push popup toward Hours column area
+    const verticalOffset = -170;
     const viewportPadding = 12;
-    const maxX = window.innerWidth - popupWidth - viewportPadding;
+    const maxX = window.innerWidth - popupWidth - viewportPadding - 400;
     const maxY = window.innerHeight - popupHeight - viewportPadding;
 
     const nextX = Math.min(
       Math.max(event.clientX + horizontalOffset, viewportPadding),
-      maxX
+      maxX,
     );
     const nextY = Math.min(
       Math.max(event.clientY + verticalOffset, viewportPadding),
-      maxY
+      maxY,
     );
 
     setSelectedEntry(entry);
@@ -585,14 +585,14 @@ const DTRBatchView = ({ batch, onBack }) => {
         // compare newdate+newTime with dateOut+timeOut
         const newDateTime = new Date(`${newDate}T${newTime}`);
         const dateOut = new Date(
-          `${selectedEntry.dateOut}T${selectedEntry.timeOut}`
+          `${selectedEntry.dateOut}T${selectedEntry.timeOut}`,
         );
         needsSwap = newDateTime > dateOut;
       } else if (selectedEntry.editedOut === 1) {
         // compare newdate+newTime with date+timeIn
         const newDateTime = new Date(`${newDate}T${newTime}`);
         const dateIn = new Date(
-          `${selectedEntry.date}T${selectedEntry.timeIn}`
+          `${selectedEntry.date}T${selectedEntry.timeIn}`,
         );
         needsSwap = newDateTime < dateIn;
       }
@@ -619,7 +619,7 @@ const DTRBatchView = ({ batch, onBack }) => {
               timeType === "out"
                 ? newDate
                 : selectedEntry.dateOut || selectedEntry.date,
-          }
+          },
         );
 
         if (response.data.Status) {
@@ -642,7 +642,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                 };
               }
               return prevEntry;
-            })
+            }),
           );
         }
       } else {
@@ -658,7 +658,7 @@ const DTRBatchView = ({ batch, onBack }) => {
 
         const response = await axios.post(
           `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
-          payload
+          payload,
         );
 
         if (response.data.Status) {
@@ -677,7 +677,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                 };
               }
               return prevEntry;
-            })
+            }),
           );
         }
       }
@@ -697,7 +697,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         `${ServerIP}/auth/dtr/add-entry/${batch.id}`,
         {
           entry,
-        }
+        },
       );
 
       if (response.data.Status) {
@@ -821,7 +821,7 @@ const DTRBatchView = ({ batch, onBack }) => {
 
       const response = await axios.post(
         `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
-        payload
+        payload,
       );
 
       if (response.data.Status) {
@@ -835,7 +835,7 @@ const DTRBatchView = ({ batch, onBack }) => {
               };
             }
             return prevEntry;
-          })
+          }),
         );
       } else {
         setError(response.data.Error || `Failed to update ${type} time`);
@@ -854,11 +854,11 @@ const DTRBatchView = ({ batch, onBack }) => {
       setError(null);
 
       const response = await axios.post(
-        `${ServerIP}/auth/dtr/check-sun-hol/${batch.id}`
+        `${ServerIP}/auth/dtr/check-sun-hol/${batch.id}`,
       );
       if (!response.data.Status) {
         throw new Error(
-          response.data.Error || "Failed to process Sunday/Holiday hours."
+          response.data.Error || "Failed to process Sunday/Holiday hours.",
         );
       }
       await fetchEntries();
@@ -889,7 +889,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         {
           periodStart: newStartDate,
           periodEnd: newEndDate,
-        }
+        },
       );
 
       if (response.data.Status) {
@@ -1405,19 +1405,19 @@ const DTRBatchView = ({ batch, onBack }) => {
               })
              Date: ${formatDateTime(
                currentEntry.current.date,
-               currentEntry.current.time
+               currentEntry.current.time,
              )}
 
              Current record: ${currentEntry.next.empName} (${
-                currentEntry.next.empId
-              })
+               currentEntry.next.empId
+             })
              Date: ${formatDateTime(
                currentEntry.next.date,
-               currentEntry.next.time
+               currentEntry.next.time,
              )}
 
              Is this after-midnight time (${formatTime(
-               currentEntry.next.time
+               currentEntry.next.time,
              )}) a timeout for the previous day's record?`
             : ""
         }
@@ -1655,7 +1655,7 @@ const FloatingTimeInput = ({
     e.preventDefault();
     const formattedTime = `${hours.padStart(2, "0")}:${minutes.padStart(
       2,
-      "0"
+      "0",
     )}:00`;
     onSave(formattedTime, date);
   };
