@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import Button from "./UI/Button";
 
 const DTRBatchList = ({
@@ -9,6 +9,11 @@ const DTRBatchList = ({
   onDeleteBatch,
   onAddFilesToBatch,
 }) => {
+  const [sortConfig, setSortConfig] = useState({
+    key: "batchName",
+    direction: "ascending",
+  });
+
   console.log("DTRBatchList received batches:", batches);
 
   // Format date to MM/DD/YY
@@ -68,6 +73,43 @@ const DTRBatchList = ({
     }
   };
 
+  const getSortIndicator = (key) => {
+    if (sortConfig.key !== key) return "";
+    return sortConfig.direction === "ascending" ? " ↑" : " ↓";
+  };
+
+  const handleSort = (key) => {
+    let direction = "ascending";
+    if (sortConfig.key === key && sortConfig.direction === "ascending") {
+      direction = "descending";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedBatches = useMemo(() => {
+    if (!Array.isArray(batches)) return [];
+
+    const sortable = [...batches];
+    sortable.sort((a, b) => {
+      if (sortConfig.key === "createdAt") {
+        const aTime = new Date(a.createdAt || 0).getTime();
+        const bTime = new Date(b.createdAt || 0).getTime();
+        return sortConfig.direction === "ascending"
+          ? aTime - bTime
+          : bTime - aTime;
+      }
+
+      const aName = (a.batchName || "").toString().toLowerCase();
+      const bName = (b.batchName || "").toString().toLowerCase();
+      if (sortConfig.direction === "ascending") {
+        return aName.localeCompare(bName);
+      }
+      return bName.localeCompare(aName);
+    });
+
+    return sortable;
+  }, [batches, sortConfig]);
+
   // Handle empty batches array
   if (!batches) {
     console.warn("DTRBatchList received null or undefined batches");
@@ -102,16 +144,26 @@ const DTRBatchList = ({
             <thead className="table-light">
               <tr>
                 <th>Batch ID</th>
-                <th>Batch Name</th>
+                <th
+                  onClick={() => handleSort("batchName")}
+                  style={{ cursor: "pointer" }}
+                >
+                  Batch Name{getSortIndicator("batchName")}
+                </th>
                 <th>Period</th>
                 <th>File Count</th>
                 <th>Entry Count</th>
-                <th>Uploaded</th>
+                <th
+                  onClick={() => handleSort("createdAt")}
+                  style={{ cursor: "pointer" }}
+                >
+                  Uploaded{getSortIndicator("createdAt")}
+                </th>
                 <th className="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {batches.map((batch, index) => (
+              {sortedBatches.map((batch, index) => (
                 <tr key={batch.id || index}>
                   <td>{batch.id || index}</td>
                   <td>{batch.batchName || "Untitled Batch"}</td>
