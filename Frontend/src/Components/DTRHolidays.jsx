@@ -15,6 +15,19 @@ const DTRHolidays = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [holidayType, setHolidayType] = useState("Regular");
 
+  const getHolidayTypeClass = (type) => {
+    switch (type) {
+      case "Regular":
+        return "regular";
+      case "Special":
+        return "special";
+      case "No Work, No Pay":
+        return "no-work-no-pay";
+      default:
+        return "regular";
+    }
+  };
+
   useEffect(() => {
     fetchHolidays();
   }, []); // Only fetch once when component mounts
@@ -94,7 +107,7 @@ const DTRHolidays = () => {
     if (view === "month") {
       const holiday = isHoliday(date);
       if (holiday) {
-        return `holiday ${holiday.holidayType.toLowerCase()}`;
+        return `holiday ${getHolidayTypeClass(holiday.holidayType)}`;
       }
     }
   };
@@ -151,6 +164,15 @@ const DTRHolidays = () => {
             data-type="Special"
           >
             Special
+          </Button>
+          <div className="holiday-indicator no-work-no-pay"></div>
+          <Button
+            variant="tooltip"
+            className={holidayType === "No Work, No Pay" ? "active" : ""}
+            onClick={() => setHolidayType("No Work, No Pay")}
+            data-type="No Work, No Pay"
+          >
+            No Work, No Pay
           </Button>
         </div>
       </div>

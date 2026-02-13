@@ -94,6 +94,15 @@
   background-color: rgb(212, 128, 3);
 }
 
+.react-calendar__tile.holiday.no-work-no-pay {
+  background-color: #43a047;
+  color: white;
+  border-radius: 20%;
+}
+.react-calendar__tile.holiday.no-work-no-pay:enabled:hover {
+  background-color: #2e7d32;
+}
+
 /* Legend styling */
 .holiday-legend {
   display: flex;
@@ -122,6 +131,11 @@
 
 .holiday-indicator.special {
   background-color: #ff9800;
+  margin-left: 40px;
+}
+
+.holiday-indicator.no-work-no-pay {
+  background-color: #43a047;
   margin-left: 40px;
 }
 
@@ -162,6 +176,12 @@
   background-color: rgba(248, 150, 3, 0.1);
   border-color: #f89603;
   color: #f89603;
+}
+
+.holiday-legend button.active[data-type="No Work, No Pay"] {
+  background-color: rgba(67, 160, 71, 0.12);
+  border-color: #43a047;
+  color: #2e7d32;
 }
 
 .holiday-tooltip {

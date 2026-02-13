@@ -2911,10 +2911,12 @@ router.post("/add-holiday", async (req, res) => {
       });
     }
 
-    if (!["Regular", "Special"].includes(holidayType)) {
+    const allowedHolidayTypes = ["Regular", "Special", "No Work, No Pay"];
+    if (!allowedHolidayTypes.includes(holidayType)) {
       return res.json({
         Status: false,
-        Error: "Holiday type must be either Regular or Special",
+        Error:
+          "Holiday type must be one of: Regular, Special, or No Work, No Pay",
       });
     }
 
@@ -2939,18 +2941,28 @@ router.post("/add-holiday", async (req, res) => {
     );
 
     if (existingHoliday.length > 0) {
-      // Update existing holiday instead of returning error
+      const currentType = existingHoliday[0].holidayType;
+
+      // Toggle off if user selects the same holiday type again.
+      if (currentType === holidayType) {
+        await connection.query(
+          "DELETE FROM DTRHolidays WHERE holidayDate = ?",
+          [formattedDate]
+        );
+
+        return res.json({
+          Status: true,
+          Message: "Holiday cleared successfully",
+        });
+      }
+
+      // Replace existing holiday type if user selected a different one.
       await connection.query("DELETE FROM DTRHolidays WHERE holidayDate = ?", [
         formattedDate,
       ]);
-
-      return res.json({
-        Status: true,
-        Message: "Holiday updated successfully",
-      });
     }
 
-    // Add the new holiday
+    // Add new holiday or re-add after replacement.
     await connection.query(
       "INSERT INTO DTRHolidays (holidayDate, holidayType) VALUES (?, ?)",
       [formattedDate, holidayType]
@@ -2958,7 +2970,10 @@ router.post("/add-holiday", async (req, res) => {
 
     res.json({
       Status: true,
-      Message: "Holiday added successfully",
+      Message:
+        existingHoliday.length > 0
+          ? "Holiday updated successfully"
+          : "Holiday added successfully",
     });
   } catch (error) {
     console.error("Error adding/updating holiday:", error);
