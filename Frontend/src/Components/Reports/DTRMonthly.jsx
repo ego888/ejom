@@ -7,6 +7,7 @@ import "./Reports.css";
 const SUNDAY_COLOR = "#fdecec";
 const REGULAR_HOLIDAY_COLOR = "#f28b82";
 const SPECIAL_HOLIDAY_COLOR = "#ffe2b3";
+const NO_WORK_NO_PAY_COLOR = "#c8e6c9";
 const BASELINE_HOURS = 8;
 const MAX_BAR_HEIGHT = 60; // ~30% shorter than original
 const BAR_PADDING_TOP = 8;
@@ -39,8 +40,12 @@ const clampMonthRange = (from, to) => {
 
 const getDayBackground = (day) => {
   if (day.isHoliday) {
-    if ((day.holidayType || "").toLowerCase() === "special") {
+    const holidayType = (day.holidayType || "").toLowerCase();
+    if (holidayType === "special") {
       return SPECIAL_HOLIDAY_COLOR;
+    }
+    if (holidayType === "no work, no pay") {
+      return NO_WORK_NO_PAY_COLOR;
     }
     return REGULAR_HOLIDAY_COLOR;
   }
@@ -419,6 +424,17 @@ const DTRMonthly = () => {
             }}
           ></span>
           <small className="text-muted">Special Holiday</small>
+        </div>
+        <div className="d-flex align-items-center gap-1">
+          <span
+            className="rounded-1 d-inline-block"
+            style={{
+              width: "16px",
+              height: "10px",
+              background: NO_WORK_NO_PAY_COLOR,
+            }}
+          ></span>
+          <small className="text-muted">No Work, No Pay</small>
         </div>
         <div className="ms-auto text-muted small">
           Total hours in range: {totalHours.toFixed(2)}
