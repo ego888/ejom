@@ -550,10 +550,27 @@ const DTRBatchView = ({ batch, onBack }) => {
       }
     }
 
+    const popupWidth = 320;
+    const popupHeight = 330;
+    const horizontalOffset = 120; // Push popup toward Hours column area
+    const verticalOffset = -30;
+    const viewportPadding = 12;
+    const maxX = window.innerWidth - popupWidth - viewportPadding;
+    const maxY = window.innerHeight - popupHeight - viewportPadding;
+
+    const nextX = Math.min(
+      Math.max(event.clientX + horizontalOffset, viewportPadding),
+      maxX
+    );
+    const nextY = Math.min(
+      Math.max(event.clientY + verticalOffset, viewportPadding),
+      maxY
+    );
+
     setSelectedEntry(entry);
     setTimeType(type);
     setDefaultTime(defaultTimeValue);
-    setFloatingPosition({ x: event.clientX - 150, y: event.clientY + 20 });
+    setFloatingPosition({ x: nextX, y: nextY });
     setShowFloatingTime(true);
   };
 
@@ -1584,6 +1601,13 @@ const FloatingTimeInput = ({
       }
     }
   }, [defaultTime, entry, type]);
+
+  // Re-anchor popup whenever it is opened from a new click position.
+  useEffect(() => {
+    if (show) {
+      setLocalPosition(position);
+    }
+  }, [show, position]);
 
   // Focus on the hour input when the popup appears
   useEffect(() => {

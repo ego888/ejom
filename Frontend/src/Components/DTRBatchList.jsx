@@ -15,16 +15,29 @@ const DTRBatchList = ({
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
-      const isoDateMatch = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (isoDateMatch) {
-        const [, year, month, day] = isoDateMatch;
+      const raw = String(dateString).trim();
+      // Only short-circuit true date-only strings to avoid timezone shifts.
+      const dateOnlyMatch = raw.match(/^(\d{4})[-/](\d{2})[-/](\d{2})$/);
+      if (dateOnlyMatch) {
+        const [, year, month, day] = dateOnlyMatch;
         return `${month}/${day}/${year.slice(-2)}`;
       }
 
-      const date = new Date(dateString);
+      // Also handle date-only prefix from API values like "YYYY-MM-DD 00:00:00"
+      // without a timezone marker.
+      const datePrefixNoTzMatch = raw.match(
+        /^(\d{4})[-/](\d{2})[-/](\d{2})\s+\d{2}:\d{2}:\d{2}$/
+      );
+      if (datePrefixNoTzMatch) {
+        const [, year, month, day] = datePrefixNoTzMatch;
+        return `${month}/${day}/${year.slice(-2)}`;
+      }
+
+      const date = new Date(raw);
       if (Number.isNaN(date.getTime())) {
         return "N/A";
       }
+
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
       const year = String(date.getFullYear()).slice(-2);
