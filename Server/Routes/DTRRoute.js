@@ -2627,7 +2627,10 @@ router.get("/absences", verifyUser, async (req, res) => {
     connection = await pool.getConnection();
 
     const [holidayRows] = await connection.query(
-      "SELECT holidayDate FROM DTRHolidays WHERE YEAR(holidayDate) = ?",
+      `SELECT holidayDate
+       FROM DTRHolidays
+       WHERE YEAR(holidayDate) = ?
+         AND holidayType IN ('Regular', 'Special', 'No Work, No Pay')`,
       [year]
     );
 
