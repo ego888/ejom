@@ -11,33 +11,47 @@ const DTRBatchList = ({
 }) => {
   console.log("DTRBatchList received batches:", batches);
 
-  // Format date to DD/MM/YYYY
+  // Format date to MM/DD/YY
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
+      const isoDateMatch = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoDateMatch) {
+        const [, year, month, day] = isoDateMatch;
+        return `${month}/${day}/${year.slice(-2)}`;
+      }
+
       const date = new Date(dateString);
-      return date.toLocaleDateString("en-GB");
+      if (Number.isNaN(date.getTime())) {
+        return "N/A";
+      }
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const year = String(date.getFullYear()).slice(-2);
+      return `${month}/${day}/${year}`;
     } catch (e) {
       console.error("Error formatting date:", dateString, e);
-      return "Invalid Date";
+      return "N/A";
     }
   };
 
-  // Format datetime to DD/MM/YYYY HH:MM
+  // Format datetime to MM/DD/YY HH:MM
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
     try {
       const date = new Date(dateString);
-      return `${date.toLocaleDateString("en-GB")} ${date.toLocaleTimeString(
-        "en-GB",
-        {
-          hour: "2-digit",
-          minute: "2-digit",
-        }
-      )}`;
+      if (Number.isNaN(date.getTime())) {
+        return "N/A";
+      }
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const year = String(date.getFullYear()).slice(-2);
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      return `${month}/${day}/${year} ${hours}:${minutes}`;
     } catch (e) {
       console.error("Error formatting datetime:", dateString, e);
-      return "Invalid DateTime";
+      return "N/A";
     }
   };
 
