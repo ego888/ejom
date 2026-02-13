@@ -49,6 +49,36 @@ const formatTime = (timeString) => {
   return timeString.substring(0, 5); // Takes only HH:MM from HH:MM:SS
 };
 
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+
+  // Prefer direct YYYY-MM-DD parsing to avoid timezone shifts.
+  const isoDateMatch = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoDateMatch) {
+    const [, , month, day] = isoDateMatch;
+    const year = isoDateMatch[1].slice(-2);
+    return `${month}/${day}/${year}`;
+  }
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  return `${month}/${day}/${year}`;
+};
+
+const formatDateTime = (dateString, timeString) => {
+  const datePart = formatDate(dateString);
+  const timePart = formatTime(timeString);
+  if (datePart === "N/A") return "N/A";
+  if (!timeString || timePart === "-") return datePart;
+  return `${datePart} ${timePart}`;
+};
+
 const getNextDateString = (dateString) => {
   if (!dateString) return "";
   const parsedDate = new Date(dateString);
@@ -319,20 +349,6 @@ const DTRBatchView = ({ batch, onBack }) => {
       return sortConfig.direction === "ascending" ? " ↑" : " ↓";
     }
     return "";
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) {
-      return "N/A";
-    }
-
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const year = String(date.getFullYear()).slice(-2);
-
-    return `${month}-${day}-${year}`;
   };
 
   const handleAnalyze = async () => {
@@ -1370,18 +1386,22 @@ const DTRBatchView = ({ batch, onBack }) => {
             ? `Previous record: ${currentEntry.current.empName} (${
                 currentEntry.current.empId
               })
-             Date: ${formatDate(currentEntry.current.date)}
-             Time: ${currentEntry.current.time}
+             Date: ${formatDateTime(
+               currentEntry.current.date,
+               currentEntry.current.time
+             )}
 
              Current record: ${currentEntry.next.empName} (${
                 currentEntry.next.empId
               })
-             Date: ${formatDate(currentEntry.next.date)}
-             Time: ${currentEntry.next.time}
-
-             Is this after-midnight time (${
+             Date: ${formatDateTime(
+               currentEntry.next.date,
                currentEntry.next.time
-             }) a timeout for the previous day's record?`
+             )}
+
+             Is this after-midnight time (${formatTime(
+               currentEntry.next.time
+             )}) a timeout for the previous day's record?`
             : ""
         }
         confirmText="Yes, it's a timeout for previous day"
