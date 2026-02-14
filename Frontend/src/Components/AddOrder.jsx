@@ -532,6 +532,22 @@ function AddOrder() {
       return;
     }
 
+    const selectedClient = clients.find(
+      (client) => Number(client.id) === Number(data.clientId),
+    );
+    const isInactiveClient = selectedClient && Number(selectedClient.active) === 0;
+
+    // Block save/update when selected client is inactive.
+    if (isInactiveClient) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Client is inactive.",
+        type: "alert",
+      });
+      return;
+    }
+
     const token = localStorage.getItem("token");
 
     // Make sure any pending discount debounce is applied before saving

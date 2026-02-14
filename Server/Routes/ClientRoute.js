@@ -40,10 +40,10 @@ router.get("/client", verifyUser, async (req, res) => {
   }
 });
 
-// Get clients id, clientName, terms
+// Get clients id, clientName, terms, active
 router.get("/clients", verifyUser, async (req, res) => {
   try {
-    const sql = "SELECT id, clientName, customerName, terms FROM client";
+    const sql = "SELECT id, clientName, customerName, terms, active FROM client";
     const result = await pool.query(sql);
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {

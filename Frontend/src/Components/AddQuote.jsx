@@ -501,6 +501,22 @@ function AddQuote() {
       return;
     }
 
+    const selectedClient = clients.find(
+      (client) => Number(client.id) === Number(data.clientId)
+    );
+    const isInactiveClient = selectedClient && Number(selectedClient.active) === 0;
+
+    // Edit mode validation: block save/update for inactive clients.
+    if (id && isInactiveClient) {
+      setAlert({
+        show: true,
+        title: "Validation Error",
+        message: "Client is inactive.",
+        type: "alert",
+      });
+      return;
+    }
+
     const token = localStorage.getItem("token");
     const decoded = jwtDecode(token);
     const currentDateTime = new Date()
