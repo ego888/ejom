@@ -166,6 +166,127 @@ const SOA = () => {
     return "";
   };
 
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const handlePrintPDF = () => {
+    const rows = filteredData() || [];
+    if (rows.length === 0) return;
+
+    const totals = rows.reduce(
+      (acc, row) => ({
+        production: acc.production + (Number(row.production) || 0),
+        days_0_30: acc.days_0_30 + (Number(row.days_0_30) || 0),
+        days_31_60: acc.days_31_60 + (Number(row.days_31_60) || 0),
+        days_61_90: acc.days_61_90 + (Number(row.days_61_90) || 0),
+        days_over_90: acc.days_over_90 + (Number(row.days_over_90) || 0),
+        total_ar: acc.total_ar + (Number(row.total_ar) || 0),
+      }),
+      {
+        production: 0,
+        days_0_30: 0,
+        days_31_60: 0,
+        days_61_90: 0,
+        days_over_90: 0,
+        total_ar: 0,
+      }
+    );
+
+    const tableRows = rows
+      .map((row) => {
+        const rowClass =
+          (Number(row.days_over_90) || 0) > 0
+            ? "soa-aging-red"
+            : (Number(row.days_61_90) || 0) > 0
+            ? "soa-aging-yellow"
+            : "";
+
+        return `
+          <tr class="${rowClass}">
+            <td>
+              <div>${escapeHtml(row.clientName)}</div>
+              <div class="sub-text">${escapeHtml(row.customerName)}</div>
+            </td>
+            <td class="text-end">${row.production > 0 ? formatPeso(row.production) : ""}</td>
+            <td class="text-end">${row.days_0_30 > 0 ? formatPeso(row.days_0_30) : ""}</td>
+            <td class="text-end">${row.days_31_60 > 0 ? formatPeso(row.days_31_60) : ""}</td>
+            <td class="text-end">${row.days_61_90 > 0 ? formatPeso(row.days_61_90) : ""}</td>
+            <td class="text-end">${row.days_over_90 > 0 ? formatPeso(row.days_over_90) : ""}</td>
+            <td class="text-end fw-bold">${row.total_ar > 0 ? formatPeso(row.total_ar) : ""}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>SOA Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 16px; }
+            h2 { margin: 0 0 8px 0; }
+            .meta { margin-bottom: 12px; color: #444; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #d3d3d3; padding: 6px; vertical-align: top; }
+            th { background: #f3f4f6; text-align: center; }
+            .text-end { text-align: right; }
+            .fw-bold { font-weight: 700; }
+            .sub-text { color: #666; font-size: 11px; margin-top: 2px; }
+            .soa-aging-red td { background: #f8d7da; }
+            .soa-aging-yellow td { background: #fff3cd; }
+            tfoot td { font-weight: 700; background: #f3f4f6; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <h2>Statement of Account</h2>
+          <div class="meta">Records: ${rows.length}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Client Name</th>
+                <th>Production</th>
+                <th>0-30 Days</th>
+                <th>31-60 Days</th>
+                <th>61-90 Days</th>
+                <th>&gt;90 Days</th>
+                <th>Total AR</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="text-end">Total:</td>
+                <td class="text-end">${formatPeso(totals.production)}</td>
+                <td class="text-end">${formatPeso(totals.days_0_30)}</td>
+                <td class="text-end">${formatPeso(totals.days_31_60)}</td>
+                <td class="text-end">${formatPeso(totals.days_61_90)}</td>
+                <td class="text-end">${formatPeso(totals.days_over_90)}</td>
+                <td class="text-end">${formatPeso(totals.total_ar)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 200);
+  };
+
   return (
     <div className="reports-content">
       <div className="d-flex justify-content-center pt-4">
@@ -173,7 +294,16 @@ const SOA = () => {
       </div>
 
       {/* Search bar */}
-      <div className="d-flex justify-content-end mb-3 px-4">
+      <div className="d-flex justify-content-between align-items-center mb-3 px-4">
+        <div>
+          <Button
+            variant="print"
+            onClick={handlePrintPDF}
+            disabled={!reportData || filteredData().length === 0}
+          >
+            Print PDF
+          </Button>
+        </div>
         <div className="search-container">
           <label htmlFor="clientSearch" className="visually-hidden">
             Search clients
