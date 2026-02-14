@@ -153,7 +153,7 @@ router.get("/client-list", async (req, res) => {
        FROM client c
        LEFT JOIN employee e ON c.salesId = e.id
        WHERE c.clientName LIKE ? OR c.customerName LIKE ?`,
-      [`%${search}%`, `%${search}%`]
+      [`%${search}%`, `%${search}%`],
     );
     const totalCount = countResult[0].total;
 
@@ -234,7 +234,7 @@ router.get("/client-list", async (req, res) => {
        WHERE c.clientName LIKE ? OR c.customerName LIKE ?
        ORDER BY ${sortColumn} ${validSortDirection}
        LIMIT ? OFFSET ?`,
-      [`%${search}%`, `%${search}%`, limit, offset]
+      [`%${search}%`, `%${search}%`, limit, offset],
     );
 
     return res.json({
@@ -376,10 +376,22 @@ router.put("/addWeek/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const note = (req.body?.note || "").trim();
+    const selectedDateRaw = (req.body?.date || "").trim();
+    let selectedDate = null;
+
+    if (selectedDateRaw) {
+      const parsedDate = new Date(`${selectedDateRaw}T00:00:00`);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return res.json({ Status: false, Error: "Invalid date format." });
+      }
+      parsedDate.setHours(0, 0, 0, 0);
+      selectedDate = parsedDate;
+    }
+
     // Get current hold value, log, and aging data
     const [rows] = await pool.query(
       "SELECT hold, log, over30, over60, over90 FROM client WHERE id = ?",
-      [id]
+      [id],
     );
     if (!rows.length) {
       return res.json({ Status: false, Error: "Client not found" });
@@ -392,41 +404,52 @@ router.put("/addWeek/:id", async (req, res) => {
         Error: "Hold date is NULL. Nothing to update.",
       });
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let newHold;
-    const holdDate = new Date(hold);
-    holdDate.setHours(0, 0, 0, 0);
-    if (holdDate < today) {
-      // If hold is in the past, set to today + 1 day
-      newHold = new Date(today);
-      newHold.setDate(today.getDate() + 1);
-    } else {
-      // Else, add 1 week to hold
-      newHold = new Date(holdDate);
-      newHold.setDate(holdDate.getDate() + 7);
+    if (!selectedDate) {
+      return res.json({
+        Status: false,
+        Error: "Date is required.",
+      });
     }
+    const newHold = new Date(selectedDate);
     // Format as yyyy-mm-dd
     const yyyy = newHold.getFullYear();
     const mm = String(newHold.getMonth() + 1).padStart(2, "0");
     const dd = String(newHold.getDate()).padStart(2, "0");
     const newHoldStr = `${yyyy}-${mm}-${dd}`;
 
-    // Format old hold date for log
-    const oldHoldDate = new Date(hold);
-    const oldHoldStr = `${oldHoldDate.getFullYear()}-${String(
-      oldHoldDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(oldHoldDate.getDate()).padStart(2, "0")}`;
+    const formatCompactDate = (value) => {
+      const d = new Date(value);
+      return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(
+        2,
+        "0",
+      )}${String(d.getDate()).padStart(2, "0")}`;
+    };
 
-    // Format current date for log
-    const currentDate = new Date();
-    const currentDateStr = `${currentDate.getFullYear()}-${String(
-      currentDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
+    const formatAmount = (value) => {
+      const amount = Number(value) || 0;
+      return amount.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+
+    const oldHoldCompact = formatCompactDate(hold);
+    const newHoldCompact = formatCompactDate(newHoldStr);
+    const currentDateCompact = formatCompactDate(new Date());
 
     // Create new log entry with aging data
-    const noteSuffix = note ? ` | Note: ${note}` : "";
-    const newLogEntry = `Extend: ${oldHoldStr} to ${newHoldStr} on ${currentDateStr}. 30: ${rows[0].over30}, 60: ${rows[0].over60}, 90: ${rows[0].over90}${noteSuffix}`;
+    const logLines = [
+      `Extend ${currentDateCompact}: ${oldHoldCompact}-${newHoldCompact}`,
+      `30: ${formatAmount(rows[0].over30)}`,
+      `60: ${formatAmount(rows[0].over60)}`,
+      `90: ${formatAmount(rows[0].over90)}`,
+    ];
+
+    if (note) {
+      logLines.push(`Note: ${note}`);
+    }
+
+    const newLogEntry = logLines.join("\n");
     const updatedLog = currentLog
       ? `${newLogEntry}\n${currentLog}`
       : newLogEntry;

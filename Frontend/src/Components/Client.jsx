@@ -13,6 +13,19 @@ import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 
 const CLIENT_SEARCH_KEY = "clientListSearch";
+const getDefaultHoldNoteDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split("T")[0];
+};
+const formatHoldDateSafe = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
+  return formatDate(value);
+};
 
 const Client = () => {
   const [clients, setClients] = useState([]);
@@ -21,10 +34,10 @@ const Client = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [searchInput, setSearchInput] = useState(
-    () => localStorage.getItem(CLIENT_SEARCH_KEY) || ""
+    () => localStorage.getItem(CLIENT_SEARCH_KEY) || "",
   );
   const [searchTerm, setSearchTerm] = useState(
-    () => localStorage.getItem(CLIENT_SEARCH_KEY) || ""
+    () => localStorage.getItem(CLIENT_SEARCH_KEY) || "",
   );
   const [isAdmin, setIsAdmin] = useState(false);
   const [sortConfig, setSortConfig] = useState({
@@ -41,6 +54,7 @@ const Client = () => {
   const [holdNoteModal, setHoldNoteModal] = useState({
     open: false,
     client: null,
+    date: getDefaultHoldNoteDate(),
     note: "",
   });
   const [isSubmittingHold, setIsSubmittingHold] = useState(false);
@@ -84,7 +98,7 @@ const Client = () => {
         setCurrentPage(1);
         localStorage.setItem(CLIENT_SEARCH_KEY, trimmedValue);
       }, 300),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -148,11 +162,16 @@ const Client = () => {
         },
       });
     },
-    [fetchClients]
+    [fetchClients],
   );
 
   const openHoldNoteModal = (client) => {
-    setHoldNoteModal({ open: true, client, note: "" });
+    setHoldNoteModal({
+      open: true,
+      client,
+      date: getDefaultHoldNoteDate(),
+      note: "",
+    });
   };
 
   const handleHoldNoteKeyDown = (e) => {
@@ -183,7 +202,12 @@ const Client = () => {
   };
 
   const closeHoldNoteModal = () => {
-    setHoldNoteModal({ open: false, client: null, note: "" });
+    setHoldNoteModal({
+      open: false,
+      client: null,
+      date: getDefaultHoldNoteDate(),
+      note: "",
+    });
   };
 
   const handleHoldNoteSubmit = async () => {
@@ -191,13 +215,20 @@ const Client = () => {
 
     try {
       setIsSubmittingHold(true);
-      const payload = holdNoteModal.note.trim()
-        ? { note: holdNoteModal.note.trim() }
-        : {};
+      const trimmedNote = holdNoteModal.note.trim();
+      const payload = {};
+
+      if (holdNoteModal.date) {
+        payload.date = holdNoteModal.date;
+      }
+
+      if (trimmedNote) {
+        payload.note = trimmedNote;
+      }
 
       const response = await axios.put(
         `${ServerIP}/auth/addWeek/${holdNoteModal.client.id}`,
-        payload
+        payload,
       );
 
       if (response.data.Status) {
@@ -385,8 +416,8 @@ const Client = () => {
                 holdDate && currentDate > holdDate
                   ? "table-danger"
                   : overdueDate && currentDate > overdueDate
-                  ? "table-warning"
-                  : "";
+                    ? "table-warning"
+                    : "";
 
               return (
                 <tr
@@ -405,7 +436,7 @@ const Client = () => {
                         e.stopPropagation();
                         localStorage.setItem(
                           "ordersSearchTerm",
-                          client.clientName || ""
+                          client.clientName || "",
                         );
                         navigate(`/dashboard/orders`, {
                           state: {
@@ -535,6 +566,32 @@ const Client = () => {
           if (!isSubmittingHold) closeHoldNoteModal();
         }}
       >
+        <div className="mb-2">
+          <small className="text-muted">
+            Hold date:{" "}
+            {holdNoteModal.client?.hold
+              ? formatHoldDateSafe(holdNoteModal.client.hold)
+              : "N/A"}
+          </small>
+        </div>
+        <div className="mb-3">
+          <label htmlFor="hold-note-date" className="form-label">
+            Date
+          </label>
+          <input
+            id="hold-note-date"
+            type="date"
+            className="form-control"
+            value={holdNoteModal.date}
+            onChange={(e) =>
+              setHoldNoteModal((prev) => ({
+                ...prev,
+                date: e.target.value,
+              }))
+            }
+            disabled={isSubmittingHold}
+          />
+        </div>
         <div className="mb-3">
           <label htmlFor="hold-note" className="form-label">
             Log note
