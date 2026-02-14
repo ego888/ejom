@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ServerIP } from "../../config";
 import Button from "../UI/Button";
-import { formatNumber, formatPeso } from "../../utils/orderUtils";
+import { formatNumber } from "../../utils/orderUtils";
 import "./Reports.css";
 import Modal from "../UI/Modal";
 import SOADetails from "./SOADetails";
@@ -212,12 +212,12 @@ const SOA = () => {
               <div>${escapeHtml(row.clientName)}</div>
               <div class="sub-text">${escapeHtml(row.customerName)}</div>
             </td>
-            <td class="text-end">${row.production > 0 ? formatPeso(row.production) : ""}</td>
-            <td class="text-end">${row.days_0_30 > 0 ? formatPeso(row.days_0_30) : ""}</td>
-            <td class="text-end">${row.days_31_60 > 0 ? formatPeso(row.days_31_60) : ""}</td>
-            <td class="text-end">${row.days_61_90 > 0 ? formatPeso(row.days_61_90) : ""}</td>
-            <td class="text-end">${row.days_over_90 > 0 ? formatPeso(row.days_over_90) : ""}</td>
-            <td class="text-end fw-bold">${row.total_ar > 0 ? formatPeso(row.total_ar) : ""}</td>
+            <td class="text-end">${row.production > 0 ? formatNumber(row.production) : ""}</td>
+            <td class="text-end">${row.days_0_30 > 0 ? formatNumber(row.days_0_30) : ""}</td>
+            <td class="text-end">${row.days_31_60 > 0 ? formatNumber(row.days_31_60) : ""}</td>
+            <td class="text-end">${row.days_61_90 > 0 ? formatNumber(row.days_61_90) : ""}</td>
+            <td class="text-end">${row.days_over_90 > 0 ? formatNumber(row.days_over_90) : ""}</td>
+            <td class="text-end fw-bold">${row.total_ar > 0 ? formatNumber(row.total_ar) : ""}</td>
           </tr>
         `;
       })
@@ -267,12 +267,12 @@ const SOA = () => {
             <tfoot>
               <tr>
                 <td class="text-end">Total:</td>
-                <td class="text-end">${formatPeso(totals.production)}</td>
-                <td class="text-end">${formatPeso(totals.days_0_30)}</td>
-                <td class="text-end">${formatPeso(totals.days_31_60)}</td>
-                <td class="text-end">${formatPeso(totals.days_61_90)}</td>
-                <td class="text-end">${formatPeso(totals.days_over_90)}</td>
-                <td class="text-end">${formatPeso(totals.total_ar)}</td>
+                <td class="text-end">${formatNumber(totals.production)}</td>
+                <td class="text-end">${formatNumber(totals.days_0_30)}</td>
+                <td class="text-end">${formatNumber(totals.days_31_60)}</td>
+                <td class="text-end">${formatNumber(totals.days_61_90)}</td>
+                <td class="text-end">${formatNumber(totals.days_over_90)}</td>
+                <td class="text-end">${formatNumber(totals.total_ar)}</td>
               </tr>
             </tfoot>
           </table>
@@ -435,7 +435,7 @@ const SOA = () => {
                         cursor: row.production > 0 ? "pointer" : "default",
                       }}
                     >
-                      {row.production > 0 ? formatPeso(row.production) : ""}
+                      {row.production > 0 ? formatNumber(row.production) : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -449,7 +449,7 @@ const SOA = () => {
                         cursor: row.days_0_30 > 0 ? "pointer" : "default",
                       }}
                     >
-                      {row.days_0_30 > 0 ? formatPeso(row.days_0_30) : ""}
+                      {row.days_0_30 > 0 ? formatNumber(row.days_0_30) : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -463,7 +463,7 @@ const SOA = () => {
                         cursor: row.days_31_60 > 0 ? "pointer" : "default",
                       }}
                     >
-                      {row.days_31_60 > 0 ? formatPeso(row.days_31_60) : ""}
+                      {row.days_31_60 > 0 ? formatNumber(row.days_31_60) : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -477,7 +477,7 @@ const SOA = () => {
                         cursor: row.days_61_90 > 0 ? "pointer" : "default",
                       }}
                     >
-                      {row.days_61_90 > 0 ? formatPeso(row.days_61_90) : ""}
+                      {row.days_61_90 > 0 ? formatNumber(row.days_61_90) : ""}
                     </td>
                     <td
                       className={`text-end ${
@@ -495,7 +495,7 @@ const SOA = () => {
                         cursor: row.days_over_90 > 0 ? "pointer" : "default",
                       }}
                     >
-                      {row.days_over_90 > 0 ? formatPeso(row.days_over_90) : ""}
+                      {row.days_over_90 > 0 ? formatNumber(row.days_over_90) : ""}
                     </td>
                     <td
                       className={`text-end fw-bold ${
@@ -509,7 +509,7 @@ const SOA = () => {
                         cursor: row.total_ar > 0 ? "pointer" : "default",
                       }}
                     >
-                      {row.total_ar > 0 ? formatPeso(row.total_ar) : ""}
+                      {row.total_ar > 0 ? formatNumber(row.total_ar) : ""}
                     </td>
                   </tr>
                 ))}
@@ -518,7 +518,7 @@ const SOA = () => {
                 <tr>
                   <td className="text-end">Total:</td>
                   <td className="text-end">
-                    {formatPeso(
+                    {formatNumber(
                       filteredData().reduce(
                         (sum, row) => sum + (Number(row.production) || 0),
                         0
@@ -526,7 +526,7 @@ const SOA = () => {
                     )}
                   </td>
                   <td className="text-end">
-                    {formatPeso(
+                    {formatNumber(
                       filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_0_30) || 0),
                         0
@@ -534,7 +534,7 @@ const SOA = () => {
                     )}
                   </td>
                   <td className="text-end">
-                    {formatPeso(
+                    {formatNumber(
                       filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_31_60) || 0),
                         0
@@ -542,7 +542,7 @@ const SOA = () => {
                     )}
                   </td>
                   <td className="text-end">
-                    {formatPeso(
+                    {formatNumber(
                       filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_61_90) || 0),
                         0
@@ -550,7 +550,7 @@ const SOA = () => {
                     )}
                   </td>
                   <td className="text-end">
-                    {formatPeso(
+                    {formatNumber(
                       filteredData().reduce(
                         (sum, row) => sum + (Number(row.days_over_90) || 0),
                         0
@@ -558,7 +558,7 @@ const SOA = () => {
                     )}
                   </td>
                   <td className="text-end">
-                    {formatPeso(
+                    {formatNumber(
                       filteredData().reduce(
                         (sum, row) => sum + (Number(row.total_ar) || 0),
                         0
