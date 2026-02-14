@@ -137,7 +137,7 @@ router.get("/client-list", async (req, res) => {
       clientName: "c.clientName",
       customerName: "c.customerName",
       salesName: "e.name",
-      terms: "c.terms",
+      terms: "COALESCE(pt.days, 999999)",
       creditLimit: "c.creditLimit",
       over30: "c.over30",
       over60: "c.over60",
@@ -170,6 +170,7 @@ router.get("/client-list", async (req, res) => {
          COALESCE(t.over90Billed, 0) AS over90Billed
        FROM client c
        LEFT JOIN employee e ON c.salesId = e.id
+       LEFT JOIN paymentTerms pt ON TRIM(pt.terms) = TRIM(c.terms)
        LEFT JOIN (
          SELECT 
            clientId,
