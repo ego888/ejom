@@ -252,14 +252,9 @@ const Client = () => {
 
     try {
       setSavingTermsClientId(client.id);
-      const payload = {
-        ...client,
-        terms: newTerms,
-      };
-
       const result = await axios.put(
-        `${ServerIP}/auth/edit_client/${client.id}`,
-        payload,
+        `${ServerIP}/auth/client/${client.id}/terms`,
+        { terms: newTerms },
       );
 
       if (result.data.Status) {

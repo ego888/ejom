@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../utils/db.js";
-import { verifyUser } from "../middleware.js";
+import { verifyUser, authorize } from "../middleware.js";
 
 const router = express.Router();
 
@@ -337,6 +337,32 @@ router.put("/edit_client/:id", async (req, res) => {
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {
     console.error("Error updating client:", err);
+    return res.json({ Status: false, Error: "Query Error: " + err.message });
+  }
+});
+
+// Update client terms only (admin)
+router.put("/client/:id/terms", verifyUser, authorize("admin"), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const terms = req.body?.terms || "";
+
+    const sql = `
+      UPDATE client
+      SET terms = ?,
+          lastUpdated = CURDATE()
+      WHERE id = ?
+    `;
+
+    const [result] = await pool.query(sql, [terms, id]);
+
+    if (result.affectedRows === 0) {
+      return res.json({ Status: false, Error: "Client not found" });
+    }
+
+    return res.json({ Status: true, Result: result });
+  } catch (err) {
+    console.error("Error updating client terms:", err);
     return res.json({ Status: false, Error: "Query Error: " + err.message });
   }
 });
