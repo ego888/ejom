@@ -282,8 +282,23 @@ const SOA = () => {
 
     printWindow.document.close();
     printWindow.focus();
+
+    let isClosed = false;
+    const closePrintWindow = () => {
+      if (isClosed || printWindow.closed) return;
+      isClosed = true;
+      printWindow.close();
+    };
+
+    // Most browsers fire this after the print dialog is closed (print or cancel).
+    printWindow.addEventListener("afterprint", closePrintWindow, {
+      once: true,
+    });
+
     setTimeout(() => {
       printWindow.print();
+      // Fallback for environments where afterprint is not fired reliably.
+      setTimeout(closePrintWindow, 1500);
     }, 200);
   };
 
