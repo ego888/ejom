@@ -247,6 +247,14 @@
   border-bottom: 1px solid #dee2e6;
 }
 
+.report-table tbody tr.soa-aging-red td {
+  background-color: #f8d7da !important;
+}
+
+.report-table tbody tr.soa-aging-yellow td {
+  background-color: #fff3cd !important;
+}
+
 .report-table tfoot {
   position: sticky;
   bottom: 0;

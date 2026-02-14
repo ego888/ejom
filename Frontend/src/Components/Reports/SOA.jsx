@@ -151,6 +151,21 @@ const SOA = () => {
     );
   };
 
+  const getAgingRowClass = (row) => {
+    if ((Number(row.days_over_90) || 0) > 0) {
+      return "soa-aging-red";
+    }
+
+    if (
+      (Number(row.days_over_90) || 0) === 0 &&
+      (Number(row.days_61_90) || 0) > 0
+    ) {
+      return "soa-aging-yellow";
+    }
+
+    return "";
+  };
+
   return (
     <div className="reports-content">
       <div className="d-flex justify-content-center pt-4">
@@ -250,7 +265,7 @@ const SOA = () => {
               </thead>
               <tbody>
                 {filteredData()?.map((row, index) => (
-                  <tr key={index}>
+                  <tr key={index} className={getAgingRowClass(row)}>
                     <td
                       className="clickable"
                       onClick={() => handlePrintSOA(row.clientId)}
