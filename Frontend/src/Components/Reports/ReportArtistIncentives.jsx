@@ -20,18 +20,20 @@ const ReportArtistIncentives = () => {
     setDateTo(to);
   };
 
+  const toCents = (value) => Math.round((Number(value) || 0) * 100);
+
   const handleGenerateReport = async () => {
     try {
       const token = localStorage.getItem("token");
+      const requestConfig = {
+        headers: { Authorization: `Bearer ${token}` },
+      };
 
-      // Get settings and orders data in parallel
       const [artistIncentiveResponse, ordersResponse] = await Promise.all([
-        axios.get(`${ServerIP}/auth/jomcontrol/artistIncentive`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        axios.get(`${ServerIP}/auth/jomcontrol/artistIncentive`, requestConfig),
         axios.get(`${ServerIP}/auth/artist-incentive`, {
+          ...requestConfig,
           params: { dateFrom, dateTo },
-          headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
 
@@ -48,28 +50,39 @@ const ReportArtistIncentives = () => {
         );
       }
 
-      console.log("Orders Response", ordersResponse.data.Result);
-      // Calculate incentives
       const calculatedOrders = calculateArtistIncentive(
         ordersResponse.data.Result,
         artistIncentiveResponse.data.Result
       );
 
-      // Save calculated incentives
-      const updates = calculatedOrders.map((order) => ({
-        Id: order.id,
-        artistIncentive: order.totalIncentive,
-      }));
-      console.log("Updates", updates);
-
-      const saveResponse = await axios.put(
-        `${ServerIP}/auth/order_details/update_incentives_calculation`,
-        updates,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const existingById = new Map(
+        (ordersResponse.data.Result || []).map((order) => [order.id, order])
       );
 
-      if (!saveResponse.data.Status) {
-        throw new Error(saveResponse.data.Error || "Failed to save incentives");
+      const updates = calculatedOrders
+        .filter((order) => {
+          const existingOrder = existingById.get(order.id);
+          if (!existingOrder) return true;
+          return (
+            toCents(order.totalIncentive) !==
+            toCents(existingOrder.artistIncentiveAmount)
+          );
+        })
+        .map((order) => ({
+          Id: order.id,
+          artistIncentive: order.totalIncentive,
+        }));
+
+      if (updates.length > 0) {
+        const saveResponse = await axios.put(
+          `${ServerIP}/auth/order_details/update_incentives_calculation`,
+          updates,
+          requestConfig
+        );
+
+        if (!saveResponse.data.Status) {
+          throw new Error(saveResponse.data.Error || "Failed to save incentives");
+        }
       }
 
       setReportData({

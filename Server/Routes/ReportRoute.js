@@ -280,6 +280,7 @@ router.get("/artist-incentive", verifyUser, async (req, res) => {
         o.grandTotal,
         od.id,
         od.artistIncentive,
+        od.artistIncentiveAmount,
         od.quantity,
         od.amount,
         od.perSqFt,
