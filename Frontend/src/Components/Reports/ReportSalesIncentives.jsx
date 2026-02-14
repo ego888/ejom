@@ -20,65 +20,28 @@ const ReportSalesIncentives = () => {
     setDateTo(to);
   };
 
+  const toCents = (value) => Math.round((Number(value) || 0) * 100);
+
   const handleGenerateReport = async () => {
     try {
       const token = localStorage.getItem("token");
+      const requestConfig = {
+        headers: { Authorization: `Bearer ${token}` },
+      };
 
-      // First get the settings
-      const salesIncentiveResponse = await axios.get(
-        `${ServerIP}/auth/jomcontrol/salesIncentive`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const [salesIncentiveResponse, ordersResponse] = await Promise.all([
+        axios.get(`${ServerIP}/auth/jomcontrol/salesIncentive`, requestConfig),
+        axios.get(`${ServerIP}/auth/sales-incentive`, {
+          ...requestConfig,
+          params: { dateFrom, dateTo },
+        }),
+      ]);
 
       if (!salesIncentiveResponse.data.Status) {
         throw new Error(salesIncentiveResponse.data.Error);
       }
 
-      // Then get the orders data
-      const ordersResponse = await axios.get(
-        `${ServerIP}/auth/sales-incentive`,
-        {
-          params: { dateFrom, dateTo },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      console.log("Orders Response", ordersResponse.data);
-      if (ordersResponse.data.Status) {
-        // Calculate incentives right after fetching data
-        const calculatedOrders = calculateSalesIncentive(
-          ordersResponse.data.Result,
-          salesIncentiveResponse.data.Result
-        );
-
-        // Save calculated incentives back to database
-        const updates = calculatedOrders.map((order) => ({
-          Id: order.id,
-          salesIncentive: order.salesIncentive,
-          overideIncentive: order.overideIncentive,
-        }));
-
-        const saveResponse = await axios.put(
-          `${ServerIP}/auth/order_details/update_sales_incentives_calculation`,
-          updates,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (!saveResponse.data.Status) {
-          throw new Error(
-            saveResponse.data.Error || "Failed to save incentives"
-          );
-        }
-
-        setReportData({
-          orders: calculatedOrders,
-          settings: salesIncentiveResponse.data.Result,
-        });
-      } else {
+      if (!ordersResponse.data.Status) {
         setAlert({
           show: true,
           title: "Error",
@@ -86,7 +49,56 @@ const ReportSalesIncentives = () => {
             ordersResponse.data.Error || "Failed to fetch sales incentives",
           type: "error",
         });
+        return;
       }
+
+      // Calculate incentives right after fetching data
+      const calculatedOrders = calculateSalesIncentive(
+        ordersResponse.data.Result,
+        salesIncentiveResponse.data.Result
+      );
+
+      const existingById = new Map(
+        (ordersResponse.data.Result || []).map((order) => [order.id, order])
+      );
+
+      // Save only changed incentive values to reduce write load.
+      const updates = calculatedOrders
+        .filter(
+          (order) => {
+            const existingOrder = existingById.get(order.id);
+            if (!existingOrder) return true;
+
+            return (
+              toCents(order.salesIncentive) !==
+                toCents(existingOrder.salesIncentive) ||
+              toCents(order.overideIncentive) !==
+                toCents(existingOrder.overideIncentive)
+            );
+          }
+        )
+        .map((order) => ({
+          Id: order.id,
+          salesIncentive: order.salesIncentive,
+          overideIncentive: order.overideIncentive,
+        }));
+
+      if (updates.length > 0) {
+        const saveResponse = await axios.put(
+          `${ServerIP}/auth/order_details/update_sales_incentives_calculation`,
+          updates,
+          requestConfig
+        );
+
+        if (!saveResponse.data.Status) {
+          throw new Error(saveResponse.data.Error || "Failed to save incentives");
+        }
+      }
+
+      setReportData({
+        orders: calculatedOrders,
+        settings: salesIncentiveResponse.data.Result,
+      });
     } catch (error) {
       console.error("Error generating sales incentive report:", error);
       setAlert({
