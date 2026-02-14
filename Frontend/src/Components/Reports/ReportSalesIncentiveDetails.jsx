@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  formatDate,
   formatNumber,
   formatPeso,
   formatNumberZ,
@@ -273,9 +274,7 @@ const ReportSalesIncentiveDetails = ({ data }) => {
                   <tr key={`item-${index}`}>
                     <td>{!sameOrder ? item.orderId : ""}</td>
                     <td>
-                      {!sameOrder
-                        ? new Date(item.productionDate).toLocaleDateString()
-                        : ""}
+                      {!sameOrder ? formatDate(item.productionDate) : ""}
                     </td>
                     <td>{!sameOrder ? item.preparedBy : ""}</td>
                     <td>{!sameOrder ? item.clientName : ""}</td>

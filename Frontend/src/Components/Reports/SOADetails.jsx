@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { formatNumber, formatPeso } from "../../utils/orderUtils";
+import { formatDate, formatNumber, formatPeso } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 
 const SOADetails = ({ data, onClose }) => {
@@ -45,7 +45,7 @@ const SOADetails = ({ data, onClose }) => {
           {data.map((item, index) => (
             <tr key={index}>
               <td>{item.orderId}</td>
-              <td>{new Date(item.productionDate).toLocaleDateString()}</td>
+              <td>{formatDate(item.productionDate)}</td>
               <td>{item.orderReference}</td>
               <td>{item.projectName}</td>
               <td>{item.terms}</td>
@@ -69,9 +69,7 @@ const SOADetails = ({ data, onClose }) => {
                 {item.balance > 0 ? formatPeso(item.balance) : ""}
               </td>
               <td>
-                {item.datePaid
-                  ? new Date(item.datePaid).toLocaleDateString()
-                  : ""}
+                {item.datePaid ? formatDate(item.datePaid) : ""}
               </td>
             </tr>
           ))}

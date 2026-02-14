@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ServerIP } from "../config";
-import { formatPeso } from "../utils/orderUtils";
+import { formatPeso, formatDate } from "../utils/orderUtils";
 import Button from "./UI/Button";
 import DateFromTo from "./UI/DateFromTo";
 import "./style.css";
@@ -60,7 +60,7 @@ function InvoiceInquiry() {
       if (activeTab === "charge") {
         return {
           "Invoice #": `${item.invoicePrefix}${item.invoiceNumber}`,
-          "Bill Date": new Date(item.billDate).toLocaleDateString(),
+          "Bill Date": formatDate(item.billDate),
           Customer: item.customerName,
           TIN: item.tinNumber,
           "Invoice Amount": parseFloat(item.invoiceAmount),
@@ -79,7 +79,7 @@ function InvoiceInquiry() {
 
       return {
         "OR #": item.ornum,
-        "Payment Date": new Date(item.payDate).toLocaleDateString(),
+        "Payment Date": formatDate(item.payDate),
         Customer: item.customerName,
         TIN: item.tinNumber,
         "Paid Amount": isFirstOccurrence ? parseFloat(item.amount) : "",
@@ -310,9 +310,7 @@ function InvoiceInquiry() {
                                   </td>
                                   <td className="text-center">
                                     {lastInvoiceNumber !== currentInvoiceNumber
-                                      ? new Date(
-                                          item.billDate
-                                        ).toLocaleDateString()
+                                      ? formatDate(item.billDate)
                                       : ""}
                                   </td>
                                   <td className="text-center">
@@ -480,9 +478,7 @@ function InvoiceInquiry() {
                                   </td>
                                   <td className="text-center">
                                     {lastPayId !== item.payId
-                                      ? new Date(
-                                          item.payDate
-                                        ).toLocaleDateString()
+                                      ? formatDate(item.payDate)
                                       : ""}
                                   </td>
                                   <td className="text-center">

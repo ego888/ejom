@@ -5,6 +5,7 @@ import { ServerIP } from "../config";
 import { handleApiError } from "../utils/handleApiError";
 import GoLargeLogo from "../assets/Go Large logo 2009C2 small.jpg";
 import { QRCodeSVG } from "qrcode.react";
+import { formatDate } from "../utils/orderUtils";
 
 function PrintOrder() {
   const { id } = useParams();
@@ -192,7 +193,7 @@ function PrintOrder() {
           <div className="header-item">
             <span className="label">Order Date:</span>{" "}
             <span className="label">
-              <strong>{new Date(data.orderDate).toLocaleDateString()}</strong>
+              <strong>{formatDate(data.orderDate)}</strong>
             </span>
           </div>
           <div className="header-item">

@@ -1128,7 +1128,7 @@ function Prod() {
                     <td>{order.orderedBy}</td>
                     <td>
                       {order.dueDate
-                        ? new Date(order.dueDate).toLocaleDateString()
+                        ? formatDate(order.dueDate)
                         : ""}
                     </td>
                     <td>{order.dueTime || ""}</td>
@@ -1177,9 +1177,7 @@ function Prod() {
                         : formatNumber(order.amountPaid)}
                     </td>
                     <td>
-                      {order.datePaid
-                        ? new Date(order.datePaid).toLocaleDateString()
-                        : ""}
+                      {order.datePaid ? formatDate(order.datePaid) : ""}
                     </td>
                     <td
                       className="client-cell"

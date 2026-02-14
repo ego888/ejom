@@ -20,6 +20,7 @@ import {
   calculateTotals,
   calculatePerSqFt,
   calculatePrintHrs,
+  formatDateInputValue,
 } from "../utils/orderUtils";
 import { ServerIP } from "../config";
 import { debounce } from "lodash";
@@ -55,7 +56,7 @@ function AddQuote() {
     clientName: "",
     projectName: "",
     preparedBy: "",
-    quoteDate: new Date().toISOString().split("T")[0],
+    quoteDate: formatDateInputValue(),
     orderedBy: "",
     orderReference: "",
     email: "",
@@ -400,8 +401,7 @@ function AddQuote() {
               overdue: quoteData.overdue || "",
               projectName: quoteData.projectName || "",
               preparedBy: quoteData.preparedBy || "",
-              quoteDate:
-                quoteData.quoteDate || new Date().toISOString().split("T")[0],
+              quoteDate: quoteData.quoteDate || formatDateInputValue(),
               orderedBy: quoteData.orderedBy || "",
               orderReference: quoteData.refId || "",
               email: quoteData.email || "",

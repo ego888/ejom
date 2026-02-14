@@ -10,7 +10,7 @@ import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
 import "./Quotes.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
-import { formatPeso } from "../utils/orderUtils";
+import { formatPeso, formatDate } from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
 import Modal from "./UI/Modal";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
@@ -589,9 +589,7 @@ function Quotes() {
                     <td>{quote.projectName}</td>
                     <td>{quote.orderedBy}</td>
                     <td>
-                      {quote.dueDate
-                        ? new Date(quote.dueDate).toLocaleDateString()
-                        : ""}
+                      {quote.dueDate ? formatDate(quote.dueDate) : ""}
                     </td>
                     <td>{quote.dueTime || ""}</td>
                     <td className="text-center">

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "../utils/axiosConfig"; // Import configured axios
 import { ServerIP } from "../config";
 import { handleApiError } from "../utils/handleApiError";
+import { formatDate } from "../utils/orderUtils";
 
 function ProdPrintProduction() {
   const navigate = useNavigate();
@@ -142,9 +143,7 @@ function ProdPrintProduction() {
                 <td>
                   {!isSameOrder
                     ? `${
-                        order.dueDate
-                          ? new Date(order.dueDate).toLocaleDateString("en-US")
-                          : ""
+                        order.dueDate ? formatDate(order.dueDate) : ""
                       } ${order.dueTime || ""}`
                     : ""}
                 </td>

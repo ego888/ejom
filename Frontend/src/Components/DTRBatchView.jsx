@@ -6,6 +6,7 @@ import ModalAlert from "./UI/ModalAlert";
 import Modal from "react-bootstrap/Modal";
 import DTRTotalView from "./DTRTotalView";
 import "./DTRBatchView.css";
+import { parseDateValue } from "../utils/orderUtils";
 
 const getDayColor = (day) => {
   switch (day?.toLowerCase()) {
@@ -1824,7 +1825,8 @@ const AddDateModal = ({
     setLoading(true);
 
     try {
-      const dayOfWeek = new Date(localDate).toLocaleDateString("en-US", {
+      const parsedLocalDate = parseDateValue(localDate);
+      const dayOfWeek = (parsedLocalDate || new Date(localDate)).toLocaleDateString("en-US", {
         weekday: "short",
       });
 

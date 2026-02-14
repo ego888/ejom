@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { formatNumber } from "../../utils/orderUtils";
+import { formatDate, formatNumber } from "../../utils/orderUtils";
 import "./PrintReports.css";
 
 const PrintMaterialUsageReport = ({ data, dateFrom, dateTo, groupBy }) => {
@@ -77,8 +77,7 @@ const PrintMaterialUsageReport = ({ data, dateFrom, dateTo, groupBy }) => {
       <div className="print-header">
         <h2>{getReportTitle()}</h2>
         <p>
-          Date Range: {new Date(dateFrom).toLocaleDateString()} to{" "}
-          {new Date(dateTo).toLocaleDateString()}
+          Date Range: {formatDate(dateFrom)} to {formatDate(dateTo)}
         </p>
       </div>
 

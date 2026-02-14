@@ -8,6 +8,7 @@ import {
   formatNumber,
   formatDate,
   formatDateTime,
+  formatDateInputValue,
 } from "../../utils/orderUtils";
 
 const MaterialUsageReport = () => {
@@ -180,14 +181,8 @@ const MaterialUsageReport = () => {
     const headers = getColumnHeaders();
     const title = getReportTitle();
 
-    // Format dates correctly by adjusting for timezone
     const formatDateForDisplay = (dateString) => {
-      const date = new Date(dateString);
-      // Adjust for timezone offset to get the correct local date
-      const adjustedDate = new Date(
-        date.getTime() - date.getTimezoneOffset() * 60000
-      );
-      return adjustedDate.toISOString().split("T")[0];
+      return formatDateInputValue(dateString);
     };
 
     // Generate the HTML content

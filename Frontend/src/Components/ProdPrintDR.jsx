@@ -4,6 +4,7 @@ import axios from "../utils/axiosConfig"; // Import configured axios
 import { ServerIP } from "../config";
 import PrintDR from "./PrintDR";
 import ModalAlert from "./UI/ModalAlert";
+import { formatDateInputValue } from "../utils/orderUtils";
 
 function ProdPrintDR() {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ function ProdPrintDR() {
         // Prepare orders with DR numbers
         const preparedOrders = orders.map((order) => {
           // Check if drDate is empty for each individual order
-          const drDate = order.drDate || new Date().toISOString().split("T")[0];
+          const drDate = order.drDate || formatDateInputValue();
 
           return {
             orderId: order.id,

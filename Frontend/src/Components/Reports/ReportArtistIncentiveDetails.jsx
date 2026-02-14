@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { formatNumber, formatPeso } from "../../utils/orderUtils";
+import { formatDate, formatNumber, formatPeso } from "../../utils/orderUtils";
 import "./ReportSalesSummary.css";
 import { jwtDecode } from "jwt-decode";
 
@@ -212,7 +212,7 @@ const ReportArtistIncentiveDetails = ({ data }) => {
                       <tr key={`data-${index}`}>
                         <td>{item.orderId}</td>
                         <td>
-                          {new Date(item.productionDate).toLocaleDateString()}
+                          {formatDate(item.productionDate)}
                         </td>
                         <td>{currentClient}</td>
                         <td>{currentMaterial}</td>

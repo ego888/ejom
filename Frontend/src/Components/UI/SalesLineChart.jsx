@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import PropTypes from "prop-types";
-import { formatPeso } from "../../utils/orderUtils";
+import { formatPeso, formatDateInputValue } from "../../utils/orderUtils";
 import Modal from "./Modal";
 
 const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
@@ -58,7 +58,7 @@ const SalesLineChart = ({ data, selectedMonth, selectedYear, size = 400 }) => {
     allDays.forEach((day) => {
       // Convert backend date format (ISO) to match frontend format
       const existingDay = employeeData.find((d) => {
-        const backendDate = new Date(d.date).toISOString().split("T")[0];
+        const backendDate = formatDateInputValue(d.date);
         return backendDate === day;
       });
 

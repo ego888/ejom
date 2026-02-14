@@ -5,6 +5,7 @@ import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
 import "./DTRHolidays.css";
+import { formatDateInputValue } from "../utils/orderUtils";
 
 const DTRHolidays = () => {
   const [date, setDate] = useState(new Date());
@@ -42,9 +43,7 @@ const DTRHolidays = () => {
         const formattedHolidays = (response.data.Holidays || []).map(
           (holiday) => ({
             ...holiday,
-            holidayDate: new Date(holiday.holidayDate)
-              .toISOString()
-              .split("T")[0],
+            holidayDate: formatDateInputValue(holiday.holidayDate),
           })
         );
         setHolidays(formattedHolidays);

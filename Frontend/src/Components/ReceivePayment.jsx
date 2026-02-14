@@ -16,7 +16,12 @@ import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
 import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
-import { formatPeso, formatDate, formatDateTime } from "../utils/orderUtils";
+import {
+  formatPeso,
+  formatDate,
+  formatDateTime,
+  formatDateInputValue,
+} from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
 import ViewCustomerInfo from "./UI/ViewCustomerInfo";
 
@@ -57,7 +62,7 @@ function ReceivePayment() {
   // const [paymentTypes, setPaymentTypes] = useState([]);
   const [paymentInfo, setPaymentInfo] = useState({
     clientName: "",
-    payDate: new Date().toISOString().split("T")[0],
+    payDate: formatDateInputValue(),
     payType: "CASH",
     amount: "",
     payReference: "",
@@ -1002,11 +1007,9 @@ function ReceivePayment() {
                           return balance > 0 ? formatPeso(balance) : "";
                         })()}
                       </td>
-                      <td>
-                        {order.datePaid
-                          ? new Date(order.datePaid).toLocaleDateString()
-                          : ""}
-                      </td>
+                        <td>
+                          {order.datePaid ? formatDate(order.datePaid) : ""}
+                        </td>
                     </tr>
                   ))}
                   {/* Totals row */}

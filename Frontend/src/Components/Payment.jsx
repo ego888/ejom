@@ -10,7 +10,12 @@ import SalesFilter from "./Logic/SalesFilter";
 import StatusBadges from "./UI/StatusBadges";
 import "./Payment.css";
 import axios from "../utils/axiosConfig"; // Import configured axios
-import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
+import {
+  formatPeso,
+  formatPesoZ,
+  formatDate,
+  formatDateInputValue,
+} from "../utils/orderUtils";
 import ModalAlert from "../Components/UI/ModalAlert";
 import Modal from "./UI/Modal";
 import PaymentAllocationModal from "./PaymentAllocationModal";
@@ -73,7 +78,7 @@ function Payment() {
   const [paymentTypes, setPaymentTypes] = useState([]);
   const [paymentInfo, setPaymentInfo] = useState({
     clientName: "",
-    payDate: new Date().toISOString().split("T")[0], // Format as YYYY-MM-DD
+    payDate: formatDateInputValue(), // Format as YYYY-MM-DD
     payType: "CASH",
     amount: "",
     payReference: "",
@@ -695,7 +700,7 @@ function Payment() {
         // Reset payment form state
         setPaymentInfo({
           clientName: "",
-          payDate: new Date().toISOString().split("T")[0],
+          payDate: formatDateInputValue(),
           payType: "CASH",
           amount: "",
           payReference: "",
@@ -776,7 +781,7 @@ function Payment() {
         // Reset payment form state
         setPaymentInfo({
           clientName: "",
-          payDate: new Date().toISOString().split("T")[0],
+          payDate: formatDateInputValue(),
           payType: "CASH",
           amount: "",
           payReference: "",
@@ -841,8 +846,8 @@ function Payment() {
           payType: tempPayment.payType || "",
           payReference: tempPayment.payReference || "",
           payDate: tempPayment.payDate
-            ? new Date(tempPayment.payDate).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
+            ? formatDateInputValue(tempPayment.payDate)
+            : formatDateInputValue(),
           ornum: tempPayment.ornum || "",
           transactedBy: tempPayment.transactedBy || "",
         });
@@ -895,7 +900,7 @@ function Payment() {
       amount: "",
       payType: "CASH",
       payReference: "",
-      payDate: new Date().toISOString().split("T")[0],
+      payDate: formatDateInputValue(),
       ornum: "",
       transactedBy: localStorage.getItem("userName") || "",
       payId: null,
@@ -1499,9 +1504,7 @@ function Payment() {
                       })()}
                     </td>
                     <td>
-                      {order.datePaid
-                        ? new Date(order.datePaid).toLocaleDateString()
-                        : ""}
+                      {order.datePaid ? formatDate(order.datePaid) : ""}
                     </td>
                   </tr>
                 );

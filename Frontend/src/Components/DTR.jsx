@@ -13,6 +13,7 @@ import DTRHolidays from "./DTRHolidays";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "./DTRHolidays.css";
+import { formatDateInputValue } from "../utils/orderUtils";
 
 const DTR = () => {
   const navigate = useNavigate();
@@ -101,18 +102,8 @@ const DTR = () => {
     setIsEditingExistingBatch(true);
     setBatchName(batch.batchName);
 
-    // Fix date handling to prevent off-by-one day issues
-    // For periodStart
-    const startDate = new Date(batch.periodStart);
-    startDate.setMinutes(
-      startDate.getMinutes() + startDate.getTimezoneOffset()
-    );
-    setPeriodStart(startDate.toISOString().substring(0, 10));
-
-    // For periodEnd
-    const endDate = new Date(batch.periodEnd);
-    endDate.setMinutes(endDate.getMinutes() + endDate.getTimezoneOffset());
-    setPeriodEnd(endDate.toISOString().substring(0, 10));
+    setPeriodStart(formatDateInputValue(batch.periodStart));
+    setPeriodEnd(formatDateInputValue(batch.periodEnd));
 
     setActiveTab("upload");
   };

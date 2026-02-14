@@ -273,6 +273,22 @@ export const parseDateValue = (input) => {
     const trimmed = input.trim();
     if (!trimmed) return null;
 
+    const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      const parsed = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        0,
+        0,
+        0
+      );
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
     const replaceSpaceWithT = trimmed.replace(" ", "T");
 
     const candidates = [
@@ -407,6 +423,10 @@ export const formatDate = (input) => {
   const day = String(d.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+};
+
+export const formatDateInputValue = (input = new Date()) => {
+  return formatDate(input);
 };
 
 export const formatTime = (timeString) => {

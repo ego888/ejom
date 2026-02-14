@@ -21,6 +21,7 @@ import {
   calculatePrintHrs,
   autoExpandTextarea,
   parseDateValue,
+  formatDateInputValue,
 } from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 import Input from "./UI/Input";
@@ -52,7 +53,7 @@ function AddOrder() {
     clientId: "",
     projectName: "",
     preparedBy: "",
-    orderDate: new Date().toISOString().slice(0, 10), // Today's date
+    orderDate: formatDateInputValue(), // Today's date
     orderedBy: "",
     orderReference: "",
     cellNumber: "",
@@ -444,8 +445,7 @@ function AddOrder() {
             setData((prev) => ({
               ...prev,
               ...orderData,
-              orderDate:
-                orderData.orderDate || new Date().toISOString().split("T")[0],
+              orderDate: orderData.orderDate || formatDateInputValue(),
               dueDate: orderData.dueDate || "",
               dueTime: orderData.dueTime || "",
               orderedBy: orderData.orderedBy || "",

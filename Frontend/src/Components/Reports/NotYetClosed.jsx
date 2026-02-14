@@ -4,7 +4,7 @@ import { ServerIP } from "../../config";
 import Button from "../UI/Button";
 import DateFromTo from "../UI/DateFromTo";
 import ModalAlert from "../UI/ModalAlert";
-import { formatNumber, formatDate } from "../../utils/orderUtils";
+import { formatNumber, formatDate, formatDateInputValue } from "../../utils/orderUtils";
 import { BiSortAlt2, BiSortUp, BiSortDown } from "react-icons/bi";
 
 const NotYetClosed = () => {
@@ -152,14 +152,8 @@ const NotYetClosed = () => {
 
     const title = "Not Yet Closed Orders Report";
 
-    // Format dates correctly by adjusting for timezone
     const formatDateForDisplay = (dateString) => {
-      const date = new Date(dateString);
-      // Adjust for timezone offset to get the correct local date
-      const adjustedDate = new Date(
-        date.getTime() - date.getTimezoneOffset() * 60000
-      );
-      return adjustedDate.toISOString().split("T")[0];
+      return formatDateInputValue(dateString);
     };
 
     // Generate the HTML content

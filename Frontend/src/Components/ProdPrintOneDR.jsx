@@ -4,6 +4,7 @@ import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import PrintDR from "./PrintDR";
 import ModalAlert from "./UI/ModalAlert";
+import { formatDateInputValue } from "../utils/orderUtils";
 
 function ProdPrintOneDR() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ function ProdPrintOneDR() {
 
         // Check if drDate is empty and assign today's date if it is
         if (!orderInfo.drDate) {
-          orderInfo.drDate = new Date().toISOString().split("T")[0];
+          orderInfo.drDate = formatDateInputValue();
         }
 
         console.log("orderInfo DR Date", orderInfo);

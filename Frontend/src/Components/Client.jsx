@@ -9,14 +9,19 @@ import Pagination from "./UI/Pagination";
 import debounce from "lodash/debounce";
 import { jwtDecode } from "jwt-decode";
 import { BsCalendar2Week } from "react-icons/bs";
-import { formatPeso, formatPesoZ, formatDate } from "../utils/orderUtils";
+import {
+  formatPeso,
+  formatPesoZ,
+  formatDate,
+  formatDateInputValue,
+} from "../utils/orderUtils";
 import Modal from "./UI/Modal";
 
 const CLIENT_SEARCH_KEY = "clientListSearch";
 const getDefaultHoldNoteDate = () => {
   const date = new Date();
   date.setDate(date.getDate() + 1);
-  return date.toISOString().split("T")[0];
+  return formatDateInputValue(date);
 };
 const formatHoldDateSafe = (value) => {
   if (!value) return "";

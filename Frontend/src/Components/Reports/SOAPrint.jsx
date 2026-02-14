@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../utils/axiosConfig";
 import { ServerIP } from "../../config";
 import GoLargeLogo from "../../assets/Go Large logo 2009C2 small.jpg";
-import { formatNumber, formatPeso } from "../../utils/orderUtils";
+import { formatDate, formatNumber, formatPeso } from "../../utils/orderUtils";
 import "./SOAPrint.css";
 
 function SOAPrint() {
@@ -171,7 +171,7 @@ function SOAPrint() {
           <tbody>
             {soaData.map((item, index) => (
               <tr key={index} className={index % 2 === 0 ? "row-gray" : ""}>
-                <td>{new Date(item.productionDate).toLocaleDateString()}</td>
+                <td>{formatDate(item.productionDate)}</td>
                 <td>{item.drNum}</td>
                 <td>{getInvoiceDisplay(item)}</td>
                 <td>{item.orderReference || ""}</td>
@@ -179,9 +179,7 @@ function SOAPrint() {
                 <td className="text-right">{formatPeso(item.grandTotal)}</td>
                 <td className="text-right">{formatPeso(item.amountPaid)}</td>
                 <td>
-                  {item.datePaid
-                    ? new Date(item.datePaid).toLocaleDateString()
-                    : ""}
+                  {item.datePaid ? formatDate(item.datePaid) : ""}
                 </td>
                 <td className="text-right">
                   {formatPeso(item.grandTotal - item.amountPaid)}

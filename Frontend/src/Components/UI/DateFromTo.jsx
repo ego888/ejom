@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
 import "./DateFromTo.css";
+import { formatDateInputValue, parseDateValue } from "../../utils/orderUtils";
+
+const parseInputDate = (value) => {
+  const parsed = parseDateValue(value);
+  return parsed ? new Date(parsed.getTime()) : null;
+};
 
 const DateFromTo = ({ onDateChange, className }) => {
   const [dateFrom, setDateFrom] = useState("");
@@ -10,17 +16,8 @@ const DateFromTo = ({ onDateChange, className }) => {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-    // Format dates without timezone conversion
-    const formatDate = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    const fromDate = formatDate(firstDay);
-    const toDate = formatDate(lastDay);
+    const fromDate = formatDateInputValue(firstDay);
+    const toDate = formatDateInputValue(lastDay);
 
     setDateFrom(fromDate);
     setDateTo(toDate);
@@ -31,17 +28,17 @@ const DateFromTo = ({ onDateChange, className }) => {
 
   // Date adjustment functions
   const adjustFromDate = (months) => {
-    const fromDate = new Date(dateFrom);
-    fromDate.setHours(12);
+    const fromDate = parseInputDate(dateFrom);
+    if (!fromDate) return;
     fromDate.setMonth(fromDate.getMonth() + months);
-    const newDate = fromDate.toISOString().slice(0, 10);
+    const newDate = formatDateInputValue(fromDate);
     setDateFrom(newDate);
     onDateChange?.(newDate, dateTo);
   };
 
   const adjustToDate = (months) => {
-    let toDate = new Date(dateTo);
-    toDate.setHours(12);
+    let toDate = parseInputDate(dateTo);
+    if (!toDate) return;
 
     const currentYear = toDate.getFullYear();
     const currentMonth = toDate.getMonth();
@@ -79,23 +76,23 @@ const DateFromTo = ({ onDateChange, className }) => {
       toDate = new Date(newYear, newMonth, currentDate, 12);
     }
 
-    const newDate = toDate.toISOString().slice(0, 10);
+    const newDate = formatDateInputValue(toDate);
     setDateTo(newDate);
     onDateChange?.(dateFrom, newDate);
   };
 
   const adjustFromYear = (years) => {
-    const fromDate = new Date(dateFrom);
-    fromDate.setHours(12);
+    const fromDate = parseInputDate(dateFrom);
+    if (!fromDate) return;
     fromDate.setFullYear(fromDate.getFullYear() + years);
-    const newDate = fromDate.toISOString().slice(0, 10);
+    const newDate = formatDateInputValue(fromDate);
     setDateFrom(newDate);
     onDateChange?.(newDate, dateTo);
   };
 
   const adjustToYear = (years) => {
-    let toDate = new Date(dateTo);
-    toDate.setHours(12);
+    let toDate = parseInputDate(dateTo);
+    if (!toDate) return;
 
     const currentYear = toDate.getFullYear();
     const currentMonth = toDate.getMonth();
@@ -123,21 +120,21 @@ const DateFromTo = ({ onDateChange, className }) => {
       toDate = new Date(newYear, currentMonth, currentDate, 12);
     }
 
-    const newDate = toDate.toISOString().slice(0, 10);
+    const newDate = formatDateInputValue(toDate);
     setDateTo(newDate);
     onDateChange?.(dateFrom, newDate);
   };
 
   const adjustBothDates = (months) => {
     // Calculate new from date
-    const fromDate = new Date(dateFrom);
-    fromDate.setHours(12);
+    const fromDate = parseInputDate(dateFrom);
+    if (!fromDate) return;
     fromDate.setMonth(fromDate.getMonth() + months);
-    const newFromDate = fromDate.toISOString().slice(0, 10);
+    const newFromDate = formatDateInputValue(fromDate);
 
     // Calculate new to date
-    let toDate = new Date(dateTo);
-    toDate.setHours(12);
+    let toDate = parseInputDate(dateTo);
+    if (!toDate) return;
     const currentYear = toDate.getFullYear();
     const currentMonth = toDate.getMonth();
     const currentDate = toDate.getDate();
@@ -171,7 +168,7 @@ const DateFromTo = ({ onDateChange, className }) => {
     } else {
       toDate = new Date(newYear, newMonth, currentDate, 12);
     }
-    const newToDate = toDate.toISOString().slice(0, 10);
+    const newToDate = formatDateInputValue(toDate);
 
     // Update both dates at once
     setDateFrom(newFromDate);
@@ -181,14 +178,14 @@ const DateFromTo = ({ onDateChange, className }) => {
 
   const adjustBothYears = (years) => {
     // Calculate new from date
-    const fromDate = new Date(dateFrom);
-    fromDate.setHours(12);
+    const fromDate = parseInputDate(dateFrom);
+    if (!fromDate) return;
     fromDate.setFullYear(fromDate.getFullYear() + years);
-    const newFromDate = fromDate.toISOString().slice(0, 10);
+    const newFromDate = formatDateInputValue(fromDate);
 
     // Calculate new to date
-    let toDate = new Date(dateTo);
-    toDate.setHours(12);
+    let toDate = parseInputDate(dateTo);
+    if (!toDate) return;
     const currentYear = toDate.getFullYear();
     const currentMonth = toDate.getMonth();
     const currentDate = toDate.getDate();
@@ -213,7 +210,7 @@ const DateFromTo = ({ onDateChange, className }) => {
     } else {
       toDate = new Date(newYear, currentMonth, currentDate, 12);
     }
-    const newToDate = toDate.toISOString().slice(0, 10);
+    const newToDate = formatDateInputValue(toDate);
 
     // Update both dates at once
     setDateFrom(newFromDate);

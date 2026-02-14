@@ -10,6 +10,7 @@ import {
   formatNumberZ,
   formatPeso,
   formatPesoZ,
+  formatDate,
 } from "../utils/orderUtils";
 
 function PrintQuote() {
@@ -209,7 +210,7 @@ function PrintQuote() {
             <div className="info-item">
               <span className="label">Quote Date:</span>
               <span className="value">
-                {new Date(quote.quoteDate).toLocaleDateString()}
+                {formatDate(quote.quoteDate)}
               </span>
             </div>
           </div>
@@ -244,7 +245,7 @@ function PrintQuote() {
               <span className="label">Due Date:</span>
               <span className="value">
                 {quote.dueDate
-                  ? new Date(quote.dueDate).toLocaleDateString()
+                  ? formatDate(quote.dueDate)
                   : ""}
               </span>
             </div>

@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import Button from "./UI/Button";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
-import { formatDateTime, formatNumber, formatPeso } from "../utils/orderUtils";
+import {
+  formatDate,
+  formatDateTime,
+  formatNumber,
+  formatPeso,
+} from "../utils/orderUtils";
 import "./ArtistLog.css";
 import ModalAlert from "./UI/ModalAlert";
 
@@ -345,9 +350,7 @@ function ArtistLog() {
                     </td>
                     <td className="due-date" id={`due-datetime-${index}`}>
                       {index === 0 && item.dueDate
-                        ? `${new Date(item.dueDate).toLocaleDateString()} ${
-                            item.dueTime || ""
-                          }`
+                        ? `${formatDate(item.dueDate)} ${item.dueTime || ""}`
                         : ""}
                     </td>
                     <td

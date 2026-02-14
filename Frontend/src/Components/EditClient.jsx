@@ -6,7 +6,11 @@ import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
-import { formatNumber, formatPeso } from "../utils/orderUtils";
+import {
+  formatNumber,
+  formatPeso,
+  formatDateInputValue,
+} from "../utils/orderUtils";
 
 const EditClient = () => {
   const [client, setClient] = useState({
@@ -82,17 +86,19 @@ const EditClient = () => {
         const clientData = result.data.Result;
         setClient({
           ...clientData,
-          // Format dates properly for input fields
-          overdue: clientData.overdue ? clientData.overdue.split("T")[0] : "",
-          hold: clientData.hold ? clientData.hold.split("T")[0] : "",
+          // Format dates safely for input fields (avoid timezone drift)
+          overdue: clientData.overdue
+            ? formatDateInputValue(clientData.overdue)
+            : "",
+          hold: clientData.hold ? formatDateInputValue(clientData.hold) : "",
           lastTransaction: clientData.lastTransaction
-            ? clientData.lastTransaction.split("T")[0]
+            ? formatDateInputValue(clientData.lastTransaction)
             : "",
           lastPaymentDate: clientData.lastPaymentDate
-            ? clientData.lastPaymentDate.split("T")[0]
+            ? formatDateInputValue(clientData.lastPaymentDate)
             : "",
           lastUpdated: clientData.lastUpdated
-            ? clientData.lastUpdated.split("T")[0]
+            ? formatDateInputValue(clientData.lastUpdated)
             : "",
         });
       }

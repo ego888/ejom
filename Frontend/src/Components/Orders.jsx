@@ -596,7 +596,7 @@ function Orders() {
                   </td> */}
                     <td>
                       {order.dueDate
-                        ? new Date(order.dueDate).toLocaleDateString()
+                        ? formatDate(order.dueDate)
                         : ""}
                     </td>
                     <td>{order.dueTime || ""}</td>
@@ -627,9 +627,7 @@ function Orders() {
                         : formatPeso(order.amountPaid)}
                     </td>
                     <td>
-                      {order.datePaid
-                        ? new Date(order.datePaid).toLocaleDateString()
-                        : ""}
+                      {order.datePaid ? formatDate(order.datePaid) : ""}
                     </td>
                     <td
                       className="client-cell"
