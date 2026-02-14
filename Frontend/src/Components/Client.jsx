@@ -2,6 +2,7 @@ import axios from "../utils/axiosConfig"; // Import configured axios
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
+import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
 import DisplayPage from "./UI/DisplayPage";
@@ -18,6 +19,43 @@ import {
 import Modal from "./UI/Modal";
 
 const CLIENT_SEARCH_KEY = "clientListSearch";
+const CLIENT_SORT_KEY = "clientListSort";
+const CLIENT_RECORDS_PER_PAGE_KEY = "clientListRecordsPerPage";
+const CLIENT_CURRENT_PAGE_KEY = "clientListCurrentPage";
+
+const DEFAULT_CLIENT_SORT = {
+  key: null,
+  direction: "ascending",
+};
+
+const getStoredPageSize = () => {
+  const value = Number(localStorage.getItem(CLIENT_RECORDS_PER_PAGE_KEY));
+  return [10, 25, 50, 100].includes(value) ? value : 10;
+};
+
+const getStoredCurrentPage = () => {
+  const value = Number(localStorage.getItem(CLIENT_CURRENT_PAGE_KEY));
+  return Number.isInteger(value) && value > 0 ? value : 1;
+};
+
+const getStoredSortConfig = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CLIENT_SORT_KEY) || "null");
+    const validDirection =
+      parsed?.direction === "ascending" || parsed?.direction === "descending";
+    const validKey =
+      parsed?.key === null || typeof parsed?.key === "string";
+
+    if (validDirection && validKey) {
+      return parsed;
+    }
+  } catch (error) {
+    // Ignore malformed storage and fall back to defaults.
+  }
+
+  return DEFAULT_CLIENT_SORT;
+};
+
 const getDefaultHoldNoteDate = () => {
   const date = new Date();
   date.setDate(date.getDate() + 1);
@@ -34,8 +72,8 @@ const formatHoldDateSafe = (value) => {
 
 const Client = () => {
   const [clients, setClients] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage, setRecordsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(getStoredCurrentPage);
+  const [recordsPerPage, setRecordsPerPage] = useState(getStoredPageSize);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [searchInput, setSearchInput] = useState(
@@ -45,10 +83,9 @@ const Client = () => {
     () => localStorage.getItem(CLIENT_SEARCH_KEY) || "",
   );
   const [isAdmin, setIsAdmin] = useState(false);
-  const [sortConfig, setSortConfig] = useState({
-    key: null,
-    direction: "ascending",
-  });
+  const [paymentTerms, setPaymentTerms] = useState([]);
+  const [savingTermsClientId, setSavingTermsClientId] = useState(null);
+  const [sortConfig, setSortConfig] = useState(getStoredSortConfig);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -72,6 +109,31 @@ const Client = () => {
       const decoded = jwtDecode(token);
       setIsAdmin(decoded.categoryId === 1);
     }
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get(`${ServerIP}/auth/payment_terms`)
+      .then((result) => {
+        if (result.data.Status) {
+          setPaymentTerms(result.data.Result || []);
+        } else {
+          setAlert({
+            show: true,
+            title: "Error",
+            message: result.data.Error || "Failed to load payment terms",
+            type: "alert",
+          });
+        }
+      })
+      .catch((err) => {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: err.message || "Failed to load payment terms",
+          type: "alert",
+        });
+      });
   }, []);
 
   const fetchClients = useCallback(() => {
@@ -142,6 +204,21 @@ const Client = () => {
     fetchClients();
   }, [fetchClients]);
 
+  useEffect(() => {
+    localStorage.setItem(CLIENT_SORT_KEY, JSON.stringify(sortConfig));
+  }, [sortConfig]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      CLIENT_RECORDS_PER_PAGE_KEY,
+      String(recordsPerPage),
+    );
+  }, [recordsPerPage]);
+
+  useEffect(() => {
+    localStorage.setItem(CLIENT_CURRENT_PAGE_KEY, String(currentPage));
+  }, [currentPage]);
+
   const handleDelete = useCallback(
     (id) => {
       setAlert({
@@ -169,6 +246,47 @@ const Client = () => {
     },
     [fetchClients],
   );
+
+  const handleTermsChange = async (client, newTerms) => {
+    if (!isAdmin || newTerms === client.terms) return;
+
+    try {
+      setSavingTermsClientId(client.id);
+      const payload = {
+        ...client,
+        terms: newTerms,
+      };
+
+      const result = await axios.put(
+        `${ServerIP}/auth/edit_client/${client.id}`,
+        payload,
+      );
+
+      if (result.data.Status) {
+        setClients((prev) =>
+          prev.map((item) =>
+            item.id === client.id ? { ...item, terms: newTerms } : item,
+          ),
+        );
+      } else {
+        setAlert({
+          show: true,
+          title: "Error",
+          message: result.data.Error || "Failed to update terms",
+          type: "alert",
+        });
+      }
+    } catch (err) {
+      setAlert({
+        show: true,
+        title: "Error",
+        message: err.message || "Failed to update terms",
+        type: "alert",
+      });
+    } finally {
+      setSavingTermsClientId(null);
+    }
+  };
 
   const openHoldNoteModal = (client) => {
     setHoldNoteModal({
@@ -466,7 +584,31 @@ const Client = () => {
                     {client.salesName}
                   </td>
                   <td className="text-center d-none d-sm-table-cell">
-                    {client.terms}
+                    {isAdmin ? (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <Dropdown
+                          variant="table"
+                          size="small"
+                          id={`terms-${client.id}`}
+                          name={`terms-${client.id}`}
+                          value={client.terms || ""}
+                          onChange={(e) =>
+                            handleTermsChange(client, e.target.value)
+                          }
+                          options={paymentTerms}
+                          placeholder="Select Terms"
+                          labelKey="terms"
+                          valueKey="terms"
+                          disabled={savingTermsClientId === client.id}
+                          label={`Terms for ${client.clientName}`}
+                        />
+                      </div>
+                    ) : (
+                      client.terms
+                    )}
                   </td>
                   <td className="text-end d-none d-sm-table-cell">
                     <div>{formatPesoZ(client.creditLimit)}</div>
