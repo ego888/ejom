@@ -17,6 +17,7 @@ const EditClient = () => {
     clientName: "",
     customerName: "",
     contact: "",
+    active: 1,
     telNo: "",
     faxNo: "",
     celNo: "",
@@ -86,6 +87,7 @@ const EditClient = () => {
         const clientData = result.data.Result;
         setClient({
           ...clientData,
+          active: Number(clientData.active ?? 1),
           // Format dates safely for input fields (avoid timezone drift)
           overdue: clientData.overdue
             ? formatDateInputValue(clientData.overdue)
@@ -258,7 +260,7 @@ const EditClient = () => {
           </div>
 
           <div className="row">
-            <div className="col-md-6 mb-3">
+            <div className="col-md-5 mb-3">
               <label htmlFor="contact">Contact Person:</label>
               <input
                 type="text"
@@ -271,7 +273,8 @@ const EditClient = () => {
                 }
               />
             </div>
-            <div className="col-md-6 mb-3">
+
+            <div className="col-md-5 mb-3">
               <label htmlFor="email">Email:</label>
               <input
                 type="email"
@@ -284,6 +287,23 @@ const EditClient = () => {
                   setClient({ ...client, email: e.target.value })
                 }
               />
+            </div>
+            <div className="col-md-2 mb-3 d-flex align-items-end">
+              <div className="form-check mb-2">
+                <input
+                  type="checkbox"
+                  id="active"
+                  name="active"
+                  className="form-check-input"
+                  checked={Number(client.active) === 1}
+                  onChange={(e) =>
+                    setClient({ ...client, active: e.target.checked ? 1 : 0 })
+                  }
+                />
+                <label htmlFor="active" className="form-check-label ms-1">
+                  Active
+                </label>
+              </div>
             </div>
           </div>
 
@@ -614,10 +634,7 @@ const EditClient = () => {
           </div>
 
           <div className="d-flex justify-content-end gap-2">
-            <Button
-              variant="cancel"
-              onClick={handleCancel}
-            >
+            <Button variant="cancel" onClick={handleCancel}>
               Cancel
             </Button>
             <Button variant="save" type="submit">
