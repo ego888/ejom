@@ -256,6 +256,7 @@
   text-transform: uppercase;
   color: #6c757d;
   border-top: none;
+  background: rgba(248, 250, 252, 0.75);
 }
 
 .recent-prod-table td {
@@ -282,6 +283,41 @@
 .recent-prod-table th:nth-child(3),
 .recent-prod-table td:nth-child(3) {
   width: 30%;
+}
+
+.recent-prod-table th[role="button"] {
+  cursor: pointer;
+}
+
+.recent-prod-table.delivered-recent-prod-table {
+  table-layout: auto;
+}
+
+.recent-prod-table.delivered-recent-prod-table th,
+.recent-prod-table.delivered-recent-prod-table td {
+  vertical-align: middle;
+}
+
+.recent-prod-table.delivered-recent-prod-table th:nth-child(1),
+.recent-prod-table.delivered-recent-prod-table td:nth-child(1) {
+  width: 12%;
+}
+
+.recent-prod-table.delivered-recent-prod-table th:nth-child(2),
+.recent-prod-table.delivered-recent-prod-table td:nth-child(2) {
+  width: 46%;
+  min-width: 120px;
+}
+
+.recent-prod-table.delivered-recent-prod-table th:nth-child(3),
+.recent-prod-table.delivered-recent-prod-table td:nth-child(3) {
+  width: 20%;
+}
+
+.recent-prod-table.delivered-recent-prod-table th:nth-child(4),
+.recent-prod-table.delivered-recent-prod-table td:nth-child(4) {
+  width: 22%;
+  min-width: 118px;
 }
 
 .recent-prod-table tbody tr:last-child td {

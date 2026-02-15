@@ -140,7 +140,11 @@ const DashProd = () => {
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "2-digit",
+    });
   };
 
   const formatCurrency = (value) =>
@@ -206,6 +210,9 @@ const DashProd = () => {
       }
       if (deliveredSort.key === "clientName") {
         return a.clientName.localeCompare(b.clientName);
+      }
+      if (deliveredSort.key === "totalSales") {
+        return a.totalSales - b.totalSales;
       }
       if (deliveredSort.key === "dateRange") {
         const oldestDiff =
@@ -297,7 +304,13 @@ const DashProd = () => {
                       </div>
                       {orders.length ? (
                         <div className="table-responsive">
-                          <table className="table table-sm align-middle recent-prod-table">
+                          <table
+                            className={`table table-sm align-middle recent-prod-table ${
+                              status === "Delivered"
+                                ? "delivered-recent-prod-table"
+                                : ""
+                            }`}
+                          >
                             <thead>
                               <tr>
                                 {status === "Delivered" ? (
@@ -314,8 +327,17 @@ const DashProd = () => {
                                       role="button"
                                       onClick={() => handleDeliveredSort("clientName")}
                                     >
-                                      Client / Total Sales
+                                      Client
                                       {getDeliveredSortIndicator("clientName")}
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      className="text-end"
+                                      role="button"
+                                      onClick={() => handleDeliveredSort("totalSales")}
+                                    >
+                                      Amount
+                                      {getDeliveredSortIndicator("totalSales")}
                                     </th>
                                     <th
                                       scope="col"
@@ -355,14 +377,12 @@ const DashProd = () => {
                                             {group.totalJO}
                                           </td>
                                           <td>
-                                            <div className="d-flex justify-content-between align-items-center recent-prod-client">
-                                              <span className="text-truncate fw-semibold">
-                                                {group.clientName}
-                                              </span>
-                                              <span className="text-muted small ms-2 text-nowrap">
-                                                {formatCurrency(group.totalSales)}
-                                              </span>
-                                            </div>
+                                            <span className="text-truncate fw-semibold">
+                                              {group.clientName}
+                                            </span>
+                                          </td>
+                                          <td className="text-end text-muted small text-nowrap">
+                                            {formatCurrency(group.totalSales)}
                                           </td>
                                           <td className="text-end text-muted small text-nowrap">
                                             {`${formatDate(
@@ -384,19 +404,17 @@ const DashProd = () => {
                                                   </Link>
                                                 </td>
                                                 <td>
-                                                  <div className="d-flex justify-content-between align-items-center recent-prod-client">
-                                                    <span className="text-truncate">
-                                                      {production.salesName || "-"}
-                                                    </span>
-                                                    <span className="text-muted small ms-2 text-nowrap">
-                                                      {formatCurrency(
-                                                        getOrderSalesValue(production)
-                                                      )}
-                                                    </span>
-                                                  </div>
+                                                  <span className="text-truncate">
+                                                    {production.salesName || "-"}
+                                                  </span>
                                                   <div className="text-muted small text-truncate recent-prod-project">
                                                     {production.projectName || "-"}
                                                   </div>
+                                                </td>
+                                                <td className="text-end text-muted small text-nowrap">
+                                                  {formatCurrency(
+                                                    getOrderSalesValue(production)
+                                                  )}
                                                 </td>
                                                 <td className="text-end text-muted small text-nowrap">
                                                   {formatDate(
