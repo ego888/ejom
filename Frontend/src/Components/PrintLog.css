@@ -110,3 +110,13 @@
   margin-bottom: 15px;
   font-weight: 600;
 }
+
+.printlog-machine-badge {
+  cursor: pointer;
+  user-select: none;
+}
+
+.printlog-machine-badge.active {
+  outline: 3px solid #0d6efd;
+  outline-offset: 1px;
+}

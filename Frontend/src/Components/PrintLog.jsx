@@ -263,6 +263,14 @@ function PrintLog() {
     debouncedSearch(term);
   };
 
+  const handleMachineTypeBadgeClick = (machineType) => {
+    setSelectedMachineType((prev) =>
+      prev === machineType ? "All" : machineType
+    );
+    setCurrentPage(1);
+    localStorage.setItem("ordersListPage", "1");
+  };
+
   // Sort handler
   const handleSort = (key) => {
     let direction = "asc";
@@ -525,9 +533,20 @@ function PrintLog() {
               {machineSummary.map((stat, index) => (
                 <div className="col" key={stat.machineType}>
                   <div
-                    className={`dashboard-card status-badge ${
+                    className={`dashboard-card status-badge printlog-machine-badge ${
+                      selectedMachineType === stat.machineType ? "active" : ""
+                    } ${
                       machineTypeColors[index % machineTypeColors.length]
                     }`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleMachineTypeBadgeClick(stat.machineType)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleMachineTypeBadgeClick(stat.machineType);
+                      }
+                    }}
                   >
                     <div className="card-label">{stat.machineType}</div>
                     <div className="card-value">
