@@ -518,17 +518,14 @@ function PrintLog() {
         <div className="printlog-header d-flex justify-content-center">
           <h3>Print Log</h3>
         </div>
-        <div className="dashboard-section h-100 p-3 mb-4">
+        <div className="dashboard-section printlog-machine-summary h-100 p-3 mb-4">
           <h4 className="section-title mb-3">Print Hours by Machine Type</h4>
           {machineSummary.length ? (
-            <div className="row g-3">
+            <div className="row g-2 row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5">
               {machineSummary.map((stat, index) => (
-                <div
-                  className="col-12 col-sm-6 col-md-4 col-lg-3"
-                  key={stat.machineType}
-                >
+                <div className="col" key={stat.machineType}>
                   <div
-                    className={`dashboard-card status-badge ${
+                    className={`dashboard-card printlog-machine-card status-badge ${
                       machineTypeColors[index % machineTypeColors.length]
                     }`}
                   >

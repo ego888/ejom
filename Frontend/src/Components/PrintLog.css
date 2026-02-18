@@ -110,3 +110,27 @@
   margin-bottom: 15px;
   font-weight: 600;
 }
+
+.printlog-machine-summary .printlog-machine-card {
+  min-height: 65px;
+  padding: 0.875rem 0.625rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+}
+
+.printlog-machine-summary .printlog-machine-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 22px rgba(15, 23, 42, 0.12);
+}
+
+.printlog-machine-summary .printlog-machine-card .card-value {
+  font-size: 1.25rem;
+  margin-bottom: 0.1rem;
+  line-height: 1.1;
+}
+
+.printlog-machine-summary .printlog-machine-card .card-label {
+  font-size: 0.55rem;
+  line-height: 1.1;
+  letter-spacing: 0.03rem;
+}
