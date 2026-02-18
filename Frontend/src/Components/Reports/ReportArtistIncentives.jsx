@@ -103,7 +103,26 @@ const ReportArtistIncentives = () => {
   };
 
   const handleExportToExcel = async () => {
-    if (!reportData) return;
+    if (!reportData) {
+      setAlert({
+        show: true,
+        title: "Info",
+        message: "Please click Calculate first before exporting.",
+        type: "warning",
+      });
+      return;
+    }
+
+    if (!Array.isArray(reportData.orders) || reportData.orders.length === 0) {
+      setAlert({
+        show: true,
+        title: "Info",
+        message: "No records found to export for the selected date range.",
+        type: "warning",
+      });
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${ServerIP}/auth/artist-incentive/export`, {
@@ -167,7 +186,6 @@ const ReportArtistIncentives = () => {
           <Button
             variant="print"
             onClick={handleExportToExcel}
-            disabled={!reportData}
           >
             Save as XLS
           </Button>
