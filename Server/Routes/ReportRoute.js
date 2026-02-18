@@ -112,7 +112,7 @@ router.post("/artist-incentive/export", verifyUser, async (req, res) => {
       });
     });
 
-    [
+    const moneyHeaders = [
       "Grand Total",
       "Quantity",
       "Per SqFt",
@@ -124,9 +124,11 @@ router.post("/artist-incentive/export", verifyUser, async (req, res) => {
       "Minor Amount",
       "Total Incentive",
       "Max Order Incentive",
-    ].forEach((key) => {
-      const col = ws.getColumn(key);
-      if (col) col.numFmt = "#,##0.00";
+    ];
+    headers.forEach((header, index) => {
+      if (moneyHeaders.includes(header)) {
+        ws.getColumn(index + 1).numFmt = "#,##0.00";
+      }
     });
 
     const filename = `Artist_Incentives_${dateFrom || ""}_to_${dateTo || ""}.xlsx`;

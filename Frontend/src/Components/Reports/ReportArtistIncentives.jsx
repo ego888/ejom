@@ -106,20 +106,34 @@ const ReportArtistIncentives = () => {
     if (!reportData) return;
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${ServerIP}/auth/report/artist-incentive/export`,
-        {
+      const response = await fetch(`${ServerIP}/auth/artist-incentive/export`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
           orders: reportData.orders,
           dateFrom,
           dateTo,
-        },
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          responseType: "blob",
-        }
-      );
+        }),
+      });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to export artist incentives.");
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const json = await response.json();
+        throw new Error(
+          json?.Error || json?.message || "Failed to export artist incentives."
+        );
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute(
@@ -132,7 +146,7 @@ const ReportArtistIncentives = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error exporting artist incentives:", error);
-      alert("Failed to export artist incentives.");
+      alert(error.message || "Failed to export artist incentives.");
     }
   };
 
