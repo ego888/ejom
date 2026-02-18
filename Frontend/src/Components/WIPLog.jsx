@@ -5,6 +5,8 @@ import { handleApiError } from "../utils/handleApiError";
 import "./WIPLog.css";
 
 function WIPLog() {
+  const [checkOrderId, setCheckOrderId] = useState("");
+  const [checkStatusResult, setCheckStatusResult] = useState(null);
   const [prodPrintedOrderId, setProdPrintedOrderId] = useState("");
   const [finishedOrderId, setFinishedOrderId] = useState("");
   const [deliverOrderId, setDeliverOrderId] = useState("");
@@ -82,11 +84,81 @@ function WIPLog() {
     }
   };
 
+  const handleCheckStatusSubmit = async (e) => {
+    e.preventDefault();
+    if (!checkOrderId) return;
+
+    try {
+      const response = await axios.get(`${ServerIP}/auth/order/${checkOrderId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+
+      const orderStatus = response?.data?.Result?.status;
+      if (orderStatus === "Prod") {
+        setCheckStatusResult({
+          isProd: true,
+          message: "OK",
+        });
+      } else {
+        setCheckStatusResult({
+          isProd: false,
+          message: "Status NOT PROD! DO NOT PRINT!",
+        });
+      }
+    } catch (error) {
+      setCheckStatusResult({
+        isProd: false,
+        message: "Status NOT PROD! DO NOT PRINT!",
+      });
+    }
+  };
+
   return (
     <div className="wiplog-container p-4">
       <h2 className="mb-4">WIP Log</h2>
 
       <div className="row g-4">
+        <div className="col-md-12">
+          <div className="card status-badge">
+            <div className="card-body">
+              <h5 className="card-title">Check Status</h5>
+              <form onSubmit={handleCheckStatusSubmit}>
+                <div className="input-group mb-2">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter JO #"
+                    value={checkOrderId}
+                    onChange={(e) => {
+                      setCheckOrderId(e.target.value);
+                      setCheckStatusResult(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCheckStatusSubmit(e);
+                      }
+                    }}
+                    autoComplete="off"
+                  />
+                  <button className="btn btn-primary" type="submit">
+                    Check
+                  </button>
+                </div>
+                {checkStatusResult && (
+                  <div
+                    className={`fw-bold ${
+                      checkStatusResult.isProd ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {checkStatusResult.message}
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+        </div>
+
         <div className="col-md-12">
           <div className="card status-badge Prod Printed">
             <div className="card-body">
