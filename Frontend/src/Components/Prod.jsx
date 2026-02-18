@@ -379,6 +379,12 @@ function Prod() {
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
+  const isOrderFullyPaid = (order) => {
+    const grandTotal = Number(order?.grandTotal) || 0;
+    const amountPaid = Number(order?.amountPaid) || 0;
+    return grandTotal > 0 && amountPaid >= grandTotal;
+  };
+
   // Add function to handle forProd update
   const handleForProdChange = async (orderId, newValue) => {
     // Find the order to check its status
@@ -402,7 +408,7 @@ function Prod() {
       const currentDate = new Date();
       currentDate.setHours(0, 0, 0, 0);
 
-      if (order.holdDate) {
+      if (order.holdDate && !isOrderFullyPaid(order)) {
         const holdDate = new Date(order.holdDate);
         holdDate.setHours(0, 0, 0, 0);
 
@@ -492,6 +498,7 @@ function Prod() {
           // Check if client is on hold and order status is Open or Printed
           if (
             order.holdDate &&
+            !isOrderFullyPaid(order) &&
             (order.status === "Open" || order.status === "Printed")
           ) {
             const holdDate = new Date(order.holdDate);
