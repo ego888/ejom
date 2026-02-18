@@ -165,12 +165,17 @@ router.post("/invoice-export", verifyUser, async (req, res) => {
     ws.columns = headers.map((h) => ({ header: h, key: h, width: 18 }));
     rows.forEach((row) => ws.addRow(row));
 
-    ["Invoice Amount", "Order Total", "Paid Amount", "Amount Applied"].forEach(
-      (key) => {
-        const col = ws.getColumn(key);
-        if (col) col.numFmt = "#,##0.00";
+    const moneyHeaders = [
+      "Invoice Amount",
+      "Order Total",
+      "Paid Amount",
+      "Amount Applied",
+    ];
+    headers.forEach((header, index) => {
+      if (moneyHeaders.includes(header)) {
+        ws.getColumn(index + 1).numFmt = "#,##0.00";
       }
-    );
+    });
 
     const filename = `${
       activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
