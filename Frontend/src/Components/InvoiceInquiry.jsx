@@ -106,19 +106,17 @@ function InvoiceInquiry() {
         }
       );
 
-      const blob = new Blob([response.data], {
-        type:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
+      link.href = url;
       link.download = `${
         activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
       }_${dateFrom}-${dateTo}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(link.href);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Export invoices failed:", error);
       alert("Failed to export invoices.");
