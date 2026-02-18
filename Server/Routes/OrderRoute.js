@@ -682,21 +682,40 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     let logMessage = "";
     let statusToSet = newStatus;
     let isRestricted = false;
+    let customMessage = "";
+
+    // Special rule: Production done printing can only move Open/Printed -> Prod.
+    if (newStatus === "Prod") {
+      if (["Open", "Printed"].includes(currentOrder.status)) {
+        statusToSet = "Prod";
+      } else {
+        statusToSet = currentOrder.status;
+        isRestricted = true;
+        if (currentOrder.status !== "Prod") {
+          logMessage = `\n${now}\nWARNING: Order status was ${currentOrder.status}\n${employeeName}`;
+        }
+        customMessage =
+          currentOrder.status === "Prod"
+            ? "Order is already in Prod status"
+            : "Order status not changed. Warning logged.";
+      }
+    }
 
     // Handle status change rules
     if (
+      newStatus !== "Prod" &&
       newStatus === "Printed" &&
       (currentOrder.status === "Prod" ||
         currentOrder.status === "Finish" ||
         currentOrder.status === "Delivered")
     ) {
       statusToSet = currentOrder.status;
-    } else if (currentOrder.status === "Closed") {
+    } else if (newStatus !== "Prod" && currentOrder.status === "Closed") {
       // Don't change status from Closed, but log the attempt
       statusToSet = currentOrder.status;
       logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
       isRestricted = true;
-    } else if (currentOrder.status === "Billed") {
+    } else if (newStatus !== "Prod" && currentOrder.status === "Billed") {
       // Handle Billed status based on isAdmin flag
       if (isAdmin && newStatus === "Closed") {
         // Allow admin to change from Billed to Closed
@@ -708,12 +727,15 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
         logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
         isRestricted = true;
       }
-    } else if (currentOrder.status === "Cancel") {
+    } else if (newStatus !== "Prod" && currentOrder.status === "Cancel") {
       // Allow status change from Cancel, but log it
       statusToSet = newStatus;
       logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
       isRestricted = true;
-    } else if (restrictedStatuses.includes(currentOrder.status)) {
+    } else if (
+      newStatus !== "Prod" &&
+      restrictedStatuses.includes(currentOrder.status)
+    ) {
       // For other restricted statuses, just log the attempt
       logMessage = `\n${employeeName}\n${currentOrder.status}-${newStatus}\n${now}`;
       isRestricted = true;
@@ -729,7 +751,6 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
 
     // Prepare update query
     const values = [];
-    const updateFields = [];
 
     // Build update query
     let sql = `
@@ -766,10 +787,10 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
 
     return res.json({
       Status: true,
-      Result: { status: newStatus },
+      Result: { status: statusToSet },
       Message: deliveryScan
         ? "Order scanned and marked as delivered successfully"
-        : "Status updated successfully",
+        : customMessage || "Status updated successfully",
     });
   } catch (err) {
     console.error("Error updating order status:", err);

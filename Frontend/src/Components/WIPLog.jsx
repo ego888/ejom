@@ -5,6 +5,7 @@ import { handleApiError } from "../utils/handleApiError";
 import "./WIPLog.css";
 
 function WIPLog() {
+  const [prodPrintedOrderId, setProdPrintedOrderId] = useState("");
   const [finishedOrderId, setFinishedOrderId] = useState("");
   const [deliverOrderId, setDeliverOrderId] = useState("");
   const [billedOrderId, setBilledOrderId] = useState("");
@@ -34,6 +35,8 @@ function WIPLog() {
         // Clear the corresponding input
         if (newStatus === "Finished") {
           setFinishedOrderId("");
+        } else if (newStatus === "Prod") {
+          setProdPrintedOrderId("");
         } else if (newStatus === "Delivered") {
           setDeliverOrderId("");
         } else if (newStatus === "Billed") {
@@ -58,6 +61,13 @@ function WIPLog() {
     }
   };
 
+  const handleProdPrintedSubmit = (e) => {
+    e.preventDefault();
+    if (prodPrintedOrderId) {
+      handleStatusUpdate(prodPrintedOrderId, "Prod");
+    }
+  };
+
   const handleDeliverSubmit = (e) => {
     e.preventDefault();
     if (deliverOrderId) {
@@ -77,6 +87,35 @@ function WIPLog() {
       <h2 className="mb-4">WIP Log</h2>
 
       <div className="row g-4">
+        <div className="col-md-12">
+          <div className="card status-badge Prod Printed">
+            <div className="card-body">
+              <h5 className="card-title">Production done printing</h5>
+              <form onSubmit={handleProdPrintedSubmit}>
+                <div className="input-group mb-3">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter JO #"
+                    value={prodPrintedOrderId}
+                    onChange={(e) => setProdPrintedOrderId(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleProdPrintedSubmit(e);
+                      }
+                    }}
+                    autoComplete="off"
+                  />
+                  <button className="btn btn-primary" type="submit">
+                    Prod Printed
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
         <div className="col-md-12">
           <div className="card status-badge Finished">
             <div className="card-body">
