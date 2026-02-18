@@ -19,6 +19,8 @@ import "./PrintLog.css";
 import "./Dashboard.css";
 import { formatNumber } from "../utils/orderUtils";
 
+const DEFAULT_PRINTLOG_STATUSES = ["Open", "Printed", "Prod"];
+
 function PrintLog() {
   const navigate = useNavigate();
   const [detailRows, setDetailRows] = useState([]);
@@ -87,7 +89,7 @@ function PrintLog() {
       const token = localStorage.getItem("token");
       const statusFilter = selectedStatuses.length
         ? selectedStatuses
-        : ["Prod", "Finish", "Finished", "Delivered"];
+        : DEFAULT_PRINTLOG_STATUSES;
 
       const response = await axios.get(`${ServerIP}/auth/printlog/details`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -204,9 +206,7 @@ function PrintLog() {
           if (!savedStatuses.length) {
             const defaultStatuses = sortedStatuses
               .filter((status) =>
-                ["Prod", "Finish", "Finished", "Delivered"].includes(
-                  status.statusId
-                )
+                DEFAULT_PRINTLOG_STATUSES.includes(status.statusId)
               )
               .map((status) => status.statusId);
 
