@@ -688,6 +688,7 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     if (newStatus === "Prod") {
       if (["Open", "Printed"].includes(currentOrder.status)) {
         statusToSet = "Prod";
+        logMessage = `\n${now}\nWARNING: Order status was ${currentOrder.status}\n${employeeName}`;
       } else {
         statusToSet = currentOrder.status;
         isRestricted = true;

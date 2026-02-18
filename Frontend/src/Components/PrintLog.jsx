@@ -271,6 +271,21 @@ function PrintLog() {
     localStorage.setItem("ordersListPage", "1");
   };
 
+  const updateOrderStatusToProd = async (orderId) => {
+    const response = await axios.put(
+      `${ServerIP}/auth/update_order_status`,
+      {
+        orderId,
+        newStatus: "Prod",
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+
+    return response.data;
+  };
+
   // Sort handler
   const handleSort = (key) => {
     let direction = "asc";
@@ -358,6 +373,7 @@ function PrintLog() {
       }
 
       const result = response.data.Result || {};
+      const detailRow = detailRows.find((row) => row.detailId === detailId);
 
       setDetailRows((prevRows) =>
         prevRows.map((row) => {
@@ -418,6 +434,39 @@ function PrintLog() {
       } else if (expandedRows[detailId]) {
         // Ensure history stays up-to-date
         fetchLogHistory(detailId);
+      }
+
+      if (detailRow && ["Open", "Printed"].includes(detailRow.status)) {
+        try {
+          const statusResponse = await updateOrderStatusToProd(
+            detailRow.orderId
+          );
+
+          if (statusResponse.Status) {
+            setDetailRows((prevRows) =>
+              prevRows.map((row) =>
+                row.orderId === detailRow.orderId
+                  ? { ...row, status: "Prod" }
+                  : row
+              )
+            );
+          } else {
+            setLogErrors((prev) => ({
+              ...prev,
+              [detailId]:
+                statusResponse.Error ||
+                "Logged qty saved, but failed to update order status to Prod.",
+            }));
+          }
+        } catch (statusError) {
+          console.error("Error updating status to Prod:", statusError);
+          setLogErrors((prev) => ({
+            ...prev,
+            [detailId]:
+              statusError.response?.data?.Error ||
+              "Logged qty saved, but failed to update order status to Prod.",
+          }));
+        }
       }
 
       setLogInputs((prev) => ({ ...prev, [detailId]: "" }));
