@@ -93,7 +93,7 @@ function InvoiceInquiry() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        `${ServerIP}/auth/report/invoice-export`,
+        `${ServerIP}/auth/invoice-export`,
         {
           rows: exportData,
           activeTab,
