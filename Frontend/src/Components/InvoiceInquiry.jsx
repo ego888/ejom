@@ -92,21 +92,32 @@ function InvoiceInquiry() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${ServerIP}/auth/invoice-export`,
-        {
+      const response = await fetch(`${ServerIP}/auth/invoice-export`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
           rows: exportData,
           activeTab,
           dateFrom,
           dateTo,
-        },
-        {
-          responseType: "blob",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
-      );
+        }),
+      });
 
-      const blob = response.data;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to export invoices.");
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const json = await response.json();
+        throw new Error(json?.Error || json?.message || "Failed to export invoices.");
+      }
+
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -119,7 +130,7 @@ function InvoiceInquiry() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Export invoices failed:", error);
-      alert("Failed to export invoices.");
+      alert(error.message || "Failed to export invoices.");
     }
   };
 
