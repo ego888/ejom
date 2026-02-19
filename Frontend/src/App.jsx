@@ -48,6 +48,7 @@ import DashSales from "./Components/DashSales";
 import DashProd from "./Components/DashProd";
 import DTR from "./Components/DTR";
 import MaterialUsageReport from "./Components/Reports/MaterialUsageReport";
+import AveragePrice from "./Components/Reports/AveragePrice";
 import NotYetClosed from "./Components/Reports/NotYetClosed";
 import DTRAbsences from "./Components/Reports/DTRAbsences";
 import DTRMonthly from "./Components/Reports/DTRMonthly";
@@ -271,6 +272,7 @@ function App() {
             path="material-usage-report"
             element={<MaterialUsageReport />}
           />
+          <Route path="average-price-report" element={<AveragePrice />} />
           <Route path="dtr-absences" element={<DTRAbsences />} />
           <Route path="dtr-monthly" element={<DTRMonthly />} />
           <Route path="not-close" element={<NotYetClosed />} />

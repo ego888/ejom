@@ -106,6 +106,11 @@ const MATERIAL_USAGE_REPORT = {
   icon: "bi-box-seam",
   text: "Material Usage Report",
 };
+const AVERAGE_PRICE_REPORT = {
+  path: "average-price-report",
+  icon: "bi-cash-coin",
+  text: "Average Price",
+};
 const CHECK_ORDER_TOTAL = {
   path: "check-order-total",
   icon: "bi-box-seam",
@@ -138,6 +143,7 @@ const REPORTS = {
     ARTIST_INCENTIVES,
     SALES_INCENTIVES,
     MATERIAL_USAGE_REPORT,
+    AVERAGE_PRICE_REPORT,
     DTR_ABSENCES,
     DTR_MONTHLY,
     NOT_CLOSE,
@@ -182,7 +188,12 @@ const REPORTS_SALES = {
 
 const REPORTS_PRODUCTION = {
   ...REPORTS,
-  subItems: [MATERIAL_USAGE_REPORT, DTR_ABSENCES, DTR_MONTHLY],
+  subItems: [
+    MATERIAL_USAGE_REPORT,
+    AVERAGE_PRICE_REPORT,
+    DTR_ABSENCES,
+    DTR_MONTHLY,
+  ],
 };
 
 const DTR = { path: "dtr", icon: "bi-clock-history", text: "DTR" };
@@ -359,6 +370,7 @@ const Dashboard = () => {
         INVOICE_INQUIRY,
         SOA,
         MATERIAL_USAGE_REPORT,
+        AVERAGE_PRICE_REPORT,
         DTR_ABSENCES,
         DTR_MONTHLY,
       );

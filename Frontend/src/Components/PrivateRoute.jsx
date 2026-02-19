@@ -107,6 +107,7 @@ const checkRouteAccess = (route, permissions) => {
     case "profile":
       return true;
     case "material-usage-report":
+    case "average-price-report":
       return (
         permissions.categoryId === 1 ||
         permissions.isProduction ||

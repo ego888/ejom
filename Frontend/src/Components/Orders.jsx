@@ -408,7 +408,7 @@ function Orders() {
                 name="orderSearch"
                 type="text"
                 className="form-control form-control-sm orders-search__input"
-                placeholder="Search by ID, client, project, ordered by, DR#, INV#, OR#, sales, amount, ref..."
+                placeholder="Search by ID/client/project... (space = OR, +term = AND)"
                 onChange={handleSearch}
                 value={displaySearchTerm}
                 aria-label="Search orders"

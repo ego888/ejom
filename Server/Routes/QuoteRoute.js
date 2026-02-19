@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
+import { buildAdvancedLikeSearchClause } from "../utils/advancedSearch.js";
 
 const router = express.Router();
 
@@ -35,17 +36,21 @@ router.get("/quotes", verifyUser, async (req, res) => {
     let params = [];
 
     if (search) {
-      whereConditions.push(
-        "(q.quoteId LIKE ? OR q.clientName LIKE ? OR q.projectName LIKE ? OR q.refId LIKE ? OR q.orderedBy LIKE ?)"
-      );
-      const searchParam = `%${search}%`;
-      params.push(
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam
-      );
+      const { clause, params: searchParams } = buildAdvancedLikeSearchClause({
+        search,
+        columns: [
+          "q.quoteId",
+          "q.clientName",
+          "q.projectName",
+          "q.refId",
+          "q.orderedBy",
+        ],
+      });
+
+      if (clause) {
+        whereConditions.push(clause);
+        params.push(...searchParams);
+      }
     }
 
     if (statusArray.length > 0) {

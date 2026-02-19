@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../utils/db.js";
 import { verifyUser } from "../middleware.js";
+import { buildAdvancedLikeSearchClause } from "../utils/advancedSearch.js";
 
 const router = express.Router();
 
@@ -345,10 +346,14 @@ router.get("/payments", verifyUser, async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push(
-        "(p.ornum LIKE ? OR p.payReference LIKE ? OR p.transactedBy LIKE ?)"
-      );
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      const { clause, params: searchParams } = buildAdvancedLikeSearchClause({
+        search,
+        columns: ["p.ornum", "p.payReference", "p.transactedBy"],
+      });
+      if (clause) {
+        whereConditions.push(clause);
+        params.push(...searchParams);
+      }
     }
 
     if (remittedDate) {
@@ -1320,19 +1325,22 @@ router.get("/all-payments", verifyUser, async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push(
-        "(p.payId LIKE ? OR p.ornum LIKE ? OR p.payReference LIKE ? OR p.transactedBy LIKE ? OR o.projectName LIKE ? OR c.clientName LIKE ? OR c.customerName LIKE ?)"
-      );
-      const searchParam = `%${search}%`;
-      params.push(
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam
-      );
+      const { clause, params: searchParams } = buildAdvancedLikeSearchClause({
+        search,
+        columns: [
+          "p.payId",
+          "p.ornum",
+          "p.payReference",
+          "p.transactedBy",
+          "o.projectName",
+          "c.clientName",
+          "c.customerName",
+        ],
+      });
+      if (clause) {
+        whereConditions.push(clause);
+        params.push(...searchParams);
+      }
     }
 
     const whereClause = whereConditions.join(" AND ");
@@ -1536,35 +1544,26 @@ router.get("/get-order-tempPaymentAllocation", verifyUser, async (req, res) => {
     const havingParams = [];
 
     if (search) {
-      const searchParam = `%${search}%`;
-      havingClause = `
-        HAVING (
-          o.orderID LIKE ? OR
-          c.clientName LIKE ? OR
-          c.customerName LIKE ? OR
-          o.projectName LIKE ? OR
-          o.orderedBy LIKE ? OR
-          o.drnum LIKE ? OR
-          o.invoiceNum LIKE ? OR
-          e.name LIKE ? OR
-          o.grandTotal LIKE ? OR
-          o.orderReference LIKE ? OR
-          orNums LIKE ?
-        )
-      `;
-      havingParams.push(
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam,
-        searchParam // orNums
-      );
+      const { clause, params: searchParams } = buildAdvancedLikeSearchClause({
+        search,
+        columns: [
+          "o.orderID",
+          "c.clientName",
+          "c.customerName",
+          "o.projectName",
+          "o.orderedBy",
+          "o.drnum",
+          "o.invoiceNum",
+          "e.name",
+          "o.grandTotal",
+          "o.orderReference",
+          "orNums",
+        ],
+      });
+      if (clause) {
+        havingClause = `HAVING (${clause})`;
+        havingParams.push(...searchParams);
+      }
     }
 
     if (statuses.length) {

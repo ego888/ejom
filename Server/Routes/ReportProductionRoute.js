@@ -190,4 +190,53 @@ router.get("/print_material_usage", verifyUser, async (req, res) => {
   }
 });
 
+// Average Price Report (by material, filtered by month/year)
+router.get("/average-price-report", verifyUser, async (req, res) => {
+  const { month, year } = req.query;
+  const monthNum = Number(month);
+  const yearNum = Number(year);
+
+  if (
+    !Number.isInteger(monthNum) ||
+    !Number.isInteger(yearNum) ||
+    monthNum < 1 ||
+    monthNum > 12
+  ) {
+    return res.json({
+      Status: false,
+      Error: "Invalid month or year",
+    });
+  }
+
+  try {
+    const query = `
+      SELECT
+        od.material AS materialName,
+        COUNT(*) AS itemCount,
+        AVG(od.unitPrice) AS averagePrice
+      FROM orders o
+      JOIN order_details od ON o.orderId = od.orderId
+      WHERE YEAR(o.orderDate) = ?
+        AND MONTH(o.orderDate) = ?
+        AND od.material IS NOT NULL
+        AND od.material <> ''
+      GROUP BY od.material
+      ORDER BY od.material
+    `;
+
+    const [results] = await pool.query(query, [yearNum, monthNum]);
+
+    res.json({
+      Status: true,
+      Result: results,
+    });
+  } catch (error) {
+    console.error("Error in average price report:", error);
+    res.json({
+      Status: false,
+      Error: "Failed to fetch average price report data",
+    });
+  }
+});
+
 export const ReportProductionRouter = router;
