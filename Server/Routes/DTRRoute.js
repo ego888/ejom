@@ -355,7 +355,12 @@ function processDTRData(data, existingEmployees = new Map()) {
     data.forEach((row) => {
       try {
         const empId = row["AC-No."]?.toString().trim();
-        const empName = row["Name"]?.toString().trim();
+        const importedEmpName = row["Name"]?.toString().trim();
+        const empName =
+          importedEmpName ||
+          employeeNames.get(empId) ||
+          existingEmployees.get(empId) ||
+          "";
         const dateTimeStr = row["Time"]?.toString().trim();
         const state = row["State"]?.toString().trim();
 
@@ -973,8 +978,13 @@ router.get("/export-xlsx/:batchId", async (req, res) => {
         remarks: entry.remarks,
       });
 
-      if (!employeeTotals.has(entry.empId)) {
-        employeeTotals.set(entry.empId, {
+      if (entry.deleteRecord) {
+        continue;
+      }
+
+      const empKey = `${entry.empId}-${entry.empName || ""}`;
+      if (!employeeTotals.has(empKey)) {
+        employeeTotals.set(empKey, {
           empId: entry.empId,
           empName: entry.empName,
           hours: 0,
@@ -986,7 +996,7 @@ router.get("/export-xlsx/:batchId", async (req, res) => {
           nightDifferential: 0,
         });
       }
-      const agg = employeeTotals.get(entry.empId);
+      const agg = employeeTotals.get(empKey);
       agg.hours += Number(entry.hours || 0);
       agg.overtime += Number(entry.overtime || 0);
       agg.sundayHours += Number(entry.sundayHours || 0);
@@ -996,16 +1006,32 @@ router.get("/export-xlsx/:batchId", async (req, res) => {
       agg.nightDifferential += Number(entry.nightDifferential || 0);
     }
 
+    const toDateKey = (value) => {
+      const dt = new Date(value);
+      if (Number.isNaN(dt.getTime())) return null;
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const d = String(dt.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
+
+    const [holidayRows] = await connection.query(
+      `SELECT DATE_FORMAT(holidayDate, '%Y-%m-%d') as holidayDate
+       FROM DTRHolidays`
+    );
+    const holidaySet = new Set(
+      holidayRows.map((row) => row.holidayDate).filter(Boolean)
+    );
+
     const workDaysBetween = (start, end) => {
       const s = new Date(start);
       const e = new Date(end);
       let count = 0;
-      for (
-        let d = new Date(s);
-        d <= e;
-        d.setDate(d.getDate() + 1)
-      ) {
-        if (d.getDay() !== 0) count += 1; // exclude Sundays
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+        const dateKey = toDateKey(d);
+        if (d.getDay() !== 0 && dateKey && !holidaySet.has(dateKey)) {
+          count += 1; // exclude Sundays and holidays
+        }
       }
       return count;
     };
@@ -1356,7 +1382,7 @@ async function getExistingEmployeeNames(connection) {
 
     const employeeMap = new Map();
     employees.forEach((emp) => {
-      employeeMap.set(emp.empId, emp.empName);
+      employeeMap.set(String(emp.empId).trim(), emp.empName);
     });
 
     return employeeMap;
