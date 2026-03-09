@@ -152,7 +152,7 @@ const upload = multer({
 });
 // end imag eupload
 
-router.post("/employee/add", upload.single("image"), async (req, res) => {
+router.post("/employee/add", verifyUser, upload.single("image"), async (req, res) => {
   try {
     const { name, fullName, email, password, address, cellNumber, category_id } =
       req.body;

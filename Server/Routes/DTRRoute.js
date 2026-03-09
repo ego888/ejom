@@ -573,7 +573,7 @@ function processDTRData(data, existingEmployees = new Map()) {
 }
 
 // Route to upload DTR files
-router.post("/upload", upload.array("dtrFiles", 10), async (req, res) => {
+router.post("/upload", verifyUser, upload.array("dtrFiles", 10), async (req, res) => {
   let connection;
   const uploadedFiles = req.files || [];
 
@@ -1163,6 +1163,7 @@ router.delete("/DTRdelete/:batchId", async (req, res) => {
 // Add files to existing batch
 router.post(
   "/add-to-batch/:batchId",
+  verifyUser,
   upload.array("dtrFiles", 10),
   async (req, res) => {
     let connection;
@@ -1332,6 +1333,7 @@ router.post(
 // Add this test route
 router.post(
   "/test-upload/:batchId",
+  verifyUser,
   upload.array("dtrFiles", 10),
   (req, res) => {
     res.json({
