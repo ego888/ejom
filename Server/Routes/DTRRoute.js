@@ -210,6 +210,16 @@ const normalizeCell = (cell) => {
   return raw === undefined || raw === null ? "" : String(raw).trim();
 };
 
+// Normalize employee names so control characters like \r don't leak to DB/UI.
+const sanitizeEmpName = (value) => {
+  if (value === undefined || value === null) return "";
+
+  return String(value)
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 // Helper function to parse CSV/Excel files
 async function parseFile(filePath, fileType) {
   try {
@@ -355,7 +365,7 @@ function processDTRData(data, existingEmployees = new Map()) {
     data.forEach((row) => {
       try {
         const empId = row["AC-No."]?.toString().trim();
-        const importedEmpName = row["Name"]?.toString().trim();
+        const importedEmpName = sanitizeEmpName(row["Name"]);
         const empName =
           importedEmpName ||
           employeeNames.get(empId) ||
@@ -459,7 +469,7 @@ function processDTRData(data, existingEmployees = new Map()) {
             empName:
               employeeNames.get(empId) ||
               existingEmployees.get(empId) ||
-              `Employee ${empId}`,
+              "",
             date: dateFormatted,
             day: dayOfWeek,
             records: [],
@@ -1378,13 +1388,26 @@ router.get("/DTRemployees", async (req, res) => {
 async function getExistingEmployeeNames(connection) {
   try {
     const [employees] = await connection.query(`
-      SELECT DISTINCT empId, empName 
-      FROM DTREntries
+      SELECT e.empId, e.empName
+      FROM DTREntries e
+      INNER JOIN (
+        SELECT empId, MAX(id) AS latestId
+        FROM DTREntries
+        WHERE TRIM(COALESCE(empName, '')) <> ''
+        GROUP BY empId
+      ) latest ON latest.latestId = e.id
     `);
 
     const employeeMap = new Map();
     employees.forEach((emp) => {
-      employeeMap.set(String(emp.empId).trim(), emp.empName);
+      const empId = String(emp.empId).trim();
+      const empName = sanitizeEmpName(emp.empName);
+
+      if (!empId || !empName) {
+        return;
+      }
+
+      employeeMap.set(empId, empName);
     });
 
     return employeeMap;
@@ -2224,7 +2247,7 @@ router.post("/add-entry/:batchId", async (req, res) => {
       [
         batchId,
         entry.empId,
-        entry.empName,
+        sanitizeEmpName(entry.empName),
         entry.date,
         entry.day,
         entry.timeIn,
@@ -2507,7 +2530,7 @@ router.post("/change-name/:batchId", async (req, res) => {
     // Group entries by empId to get unique employees
     const uniqueEmployees = entries.reduce((acc, entry) => {
       if (!acc[entry.empId]) {
-        acc[entry.empId] = entry.empName;
+        acc[entry.empId] = sanitizeEmpName(entry.empName);
       }
       return acc;
     }, {});
