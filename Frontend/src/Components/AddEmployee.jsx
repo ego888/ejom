@@ -54,6 +54,17 @@ const AddEmployee = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setAlert({
+        show: true,
+        title: "Authentication Error",
+        message: "No authentication token found. Please log in again.",
+        type: "alert",
+      });
+      return;
+    }
 
     // Frontend validation
     if (!employee.name.trim()) {
@@ -111,7 +122,9 @@ const AddEmployee = () => {
     formData.append("operator", employee.operator);
 
     axios
-      .post(`${ServerIP}/auth/employee/add`, formData)
+      .post(`${ServerIP}/auth/employee/add`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .then((result) => {
         if (result.data.Status) {
           navigate("/dashboard/employee");
