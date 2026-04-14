@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
@@ -26,6 +26,7 @@ const AddEmployee = () => {
   });
   const [category, setCategory] = useState([]);
   const navigate = useNavigate();
+  const nameInputRef = useRef(null);
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -50,6 +51,10 @@ const AddEmployee = () => {
         }
       })
       .catch((err) => console.log(err));
+  }, []);
+
+  useEffect(() => {
+    nameInputRef.current?.focus();
   }, []);
 
   const handleSubmit = (e) => {
@@ -164,6 +169,7 @@ const AddEmployee = () => {
               Name
             </label>
             <input
+              ref={nameInputRef}
               id="employee-name"
               type="text"
               name="name"
