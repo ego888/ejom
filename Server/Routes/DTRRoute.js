@@ -220,6 +220,32 @@ const sanitizeEmpName = (value) => {
     .trim();
 };
 
+const isPlaceholderEmpName = (empId, empName) => {
+  const normalizedEmpId =
+    empId === undefined || empId === null ? "" : String(empId).trim();
+  const normalizedEmpName = sanitizeEmpName(empName);
+
+  if (!normalizedEmpName) {
+    return true;
+  }
+
+  return normalizedEmpId !== "" && normalizedEmpName === normalizedEmpId;
+};
+
+const resolveEmpName = (empId, importedEmpName, employeeNames, existingEmployees) => {
+  const normalizedImportedEmpName = sanitizeEmpName(importedEmpName);
+
+  if (!isPlaceholderEmpName(empId, normalizedImportedEmpName)) {
+    return normalizedImportedEmpName;
+  }
+
+  const knownEmpName =
+    sanitizeEmpName(employeeNames.get(empId)) ||
+    sanitizeEmpName(existingEmployees.get(empId));
+
+  return isPlaceholderEmpName(empId, knownEmpName) ? "" : knownEmpName;
+};
+
 // Helper function to parse CSV/Excel files
 async function parseFile(filePath, fileType) {
   try {
@@ -365,12 +391,13 @@ function processDTRData(data, existingEmployees = new Map()) {
     data.forEach((row) => {
       try {
         const empId = row["AC-No."]?.toString().trim();
-        const importedEmpName = sanitizeEmpName(row["Name"]);
-        const empName =
-          importedEmpName ||
-          employeeNames.get(empId) ||
-          existingEmployees.get(empId) ||
-          "";
+        const importedEmpName = row["Name"];
+        const empName = resolveEmpName(
+          empId,
+          importedEmpName,
+          employeeNames,
+          existingEmployees
+        );
         const dateTimeStr = row["Time"]?.toString().trim();
         const state = row["State"]?.toString().trim();
 
@@ -399,7 +426,7 @@ function processDTRData(data, existingEmployees = new Map()) {
           remarks: "Type 1",
         });
 
-        if (empId && empName) {
+        if (empId && !isPlaceholderEmpName(empId, empName)) {
           employeeNames.set(empId, empName);
         }
       } catch (error) {
@@ -466,10 +493,12 @@ function processDTRData(data, existingEmployees = new Map()) {
         if (!employeeTimeRecords[empId][dateFormatted]) {
           employeeTimeRecords[empId][dateFormatted] = {
             empId,
-            empName:
-              employeeNames.get(empId) ||
-              existingEmployees.get(empId) ||
+            empName: resolveEmpName(
+              empId,
               "",
+              employeeNames,
+              existingEmployees
+            ),
             date: dateFormatted,
             day: dayOfWeek,
             records: [],
@@ -1394,6 +1423,7 @@ async function getExistingEmployeeNames(connection) {
         SELECT empId, MAX(id) AS latestId
         FROM DTREntries
         WHERE TRIM(COALESCE(empName, '')) <> ''
+          AND TRIM(COALESCE(empName, '')) <> TRIM(COALESCE(empId, ''))
         GROUP BY empId
       ) latest ON latest.latestId = e.id
     `);
@@ -1403,7 +1433,7 @@ async function getExistingEmployeeNames(connection) {
       const empId = String(emp.empId).trim();
       const empName = sanitizeEmpName(emp.empName);
 
-      if (!empId || !empName) {
+      if (!empId || isPlaceholderEmpName(empId, empName)) {
         return;
       }
 
