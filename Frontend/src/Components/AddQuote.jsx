@@ -115,6 +115,30 @@ function AddQuote() {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
 
+  const buildSelectableClients = useCallback(
+    (clientList = [], currentClient = null) => {
+      const activeClients = clientList.filter(
+        (client) => Number(client.active) === 1
+      );
+
+      if (!currentClient) {
+        return activeClients;
+      }
+
+      const currentClientId = Number(currentClient.id);
+      const alreadyIncluded = activeClients.some(
+        (client) => Number(client.id) === currentClientId
+      );
+
+      return alreadyIncluded
+        ? activeClients
+        : [...activeClients, currentClient].sort((a, b) =>
+            a.clientName.localeCompare(b.clientName)
+          );
+    },
+    []
+  );
+
   // Move haveTotalsChanged to the top, before any hooks
   const haveTotalsChanged = (newTotals, savedTotals) => {
     return (
@@ -295,7 +319,7 @@ function AddQuote() {
       .get(`${ServerIP}/auth/clients`, config)
       .then((result) => {
         if (result.data.Status) {
-          setClients(result.data.Result);
+          setClients(buildSelectableClients(result.data.Result));
         } else {
           setAlert({
             show: true,
@@ -351,7 +375,7 @@ function AddQuote() {
       setCurrentUser(decoded);
       setData((prev) => ({ ...prev, preparedBy: decoded.id }));
     }
-  }, []);
+  }, [buildSelectableClients]);
 
   useEffect(() => {
     const subtotal = quoteDetails.reduce(
@@ -385,7 +409,7 @@ function AddQuote() {
             Authorization: `Bearer ${token}`,
           },
         })
-        .then((result) => {
+        .then(async (result) => {
           if (result.data.Status) {
             const quoteData = result.data.Result;
             console.log("Raw quote data:", quoteData);
@@ -430,6 +454,25 @@ function AddQuote() {
               status: quoteData.status || "Open",
             };
 
+            try {
+              const clientResult = await axios.get(
+                `${ServerIP}/auth/client/${quoteData.clientId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+
+              if (clientResult.data?.Status) {
+                setClients((prev) =>
+                  buildSelectableClients(prev, clientResult.data.Result)
+                );
+              }
+            } catch (clientErr) {
+              console.error("Error fetching selected client:", clientErr);
+            }
+
             setData(initialData);
             // Set initial lastSavedTotals
             setLastSavedTotals({
@@ -450,7 +493,7 @@ function AddQuote() {
           handleApiError(err, navigate, setAlert);
         });
     }
-  }, [id, navigate, setAlert]);
+  }, [buildSelectableClients, id, navigate, setAlert]);
 
   const fetchDropdownData = async () => {
     if (dropdownsLoaded) return;

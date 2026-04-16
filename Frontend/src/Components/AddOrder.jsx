@@ -119,6 +119,27 @@ function AddOrder() {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const hoverTimerRef = useRef(null);
 
+  const buildSelectableClients = (clientList = [], currentClient = null) => {
+    const activeClients = clientList.filter(
+      (client) => Number(client.active) === 1
+    );
+
+    if (!currentClient) {
+      return activeClients;
+    }
+
+    const currentClientId = Number(currentClient.id);
+    const alreadyIncluded = activeClients.some(
+      (client) => Number(client.id) === currentClientId
+    );
+
+    return alreadyIncluded
+      ? activeClients
+      : [...activeClients, currentClient].sort((a, b) =>
+          a.clientName.localeCompare(b.clientName)
+        );
+  };
+
   // Add state for right panel tabs
   const [activeTab, setActiveTab] = useState("info");
   const [noteDraft, setNoteDraft] = useState("");
@@ -346,7 +367,36 @@ function AddOrder() {
         }
 
         if (clientsResponse.data?.Status) {
-          setClients(clientsResponse.data.Result);
+          let selectableClients = buildSelectableClients(
+            clientsResponse.data.Result
+          );
+
+          const currentClientId = Number(orderResponse.data?.Result?.[0]?.clientId);
+
+          if (
+            currentClientId &&
+            !selectableClients.some(
+              (client) => Number(client.id) === currentClientId
+            )
+          ) {
+            try {
+              const currentClientResponse = await axios.get(
+                `${ServerIP}/auth/client/${currentClientId}`,
+                config
+              );
+
+              if (currentClientResponse.data?.Status) {
+                selectableClients = buildSelectableClients(
+                  selectableClients,
+                  currentClientResponse.data.Result
+                );
+              }
+            } catch (clientError) {
+              console.error("Error fetching selected client:", clientError);
+            }
+          }
+
+          setClients(selectableClients);
         }
 
         setLoading(false);
