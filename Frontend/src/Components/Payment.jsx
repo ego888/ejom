@@ -389,6 +389,13 @@ function Payment() {
     localStorage.setItem("ordersListPage", pageNumber.toString());
   };
 
+  const clearClientFilter = (event) => {
+    event.stopPropagation();
+    setSelectedClients([]);
+    setCurrentPage(1);
+    localStorage.setItem("ordersListPage", "1");
+  };
+
   // Update handleClientSearch to preserve page number
   const handleClientSearch = async (e) => {
     const value = e.target.value.trim();
@@ -1228,10 +1235,26 @@ function Payment() {
                   onClick={() => handleSort("clientName")}
                   style={{ cursor: "pointer" }}
                 >
-                  Client {getSortIndicator("clientName")}
-                  {hasClientFilter && (
-                    <span className="filter-indicator filter-icon"></span>
-                  )}
+                  <span className="filter-header">
+                    <span>Client {getSortIndicator("clientName")}</span>
+                    {hasClientFilter && (
+                      <span className="filter-header__actions">
+                        <span
+                          className="filter-indicator filter-icon"
+                          aria-hidden="true"
+                        ></span>
+                        <button
+                          type="button"
+                          className="filter-reset-button"
+                          onClick={clearClientFilter}
+                          aria-label="Clear client filter"
+                          title="Clear client filter"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                  </span>
                 </th>
                 <th className="text-center">Project Name</th>
                 <th className="text-center">Ordered By</th>
