@@ -229,6 +229,7 @@ const isPlaceholderEmpName = (empId, empName) => {
     return true;
   }
 
+  // Some Type 1 imports place the empId into the Name column.
   return normalizedEmpId !== "" && normalizedEmpName === normalizedEmpId;
 };
 
@@ -275,8 +276,12 @@ const fillMissingImportedEmpNames = (data, existingEmployees = new Map()) => {
     data.forEach((row) => {
       const empId = row["AC-No."]?.toString().trim();
       const importedEmpName = sanitizeEmpName(row["Name"]);
+      const shouldBackfillEmpName = isPlaceholderEmpName(
+        empId,
+        importedEmpName
+      );
 
-      if (!empId || !isPlaceholderEmpName(empId, importedEmpName)) {
+      if (!empId || !shouldBackfillEmpName) {
         return;
       }
 
