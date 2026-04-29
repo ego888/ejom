@@ -313,16 +313,7 @@ const fillMissingImportedEmpNames = (data, existingEmployees = new Map()) => {
         return;
       }
 
-      const importedEmpName = sanitizeEmpName(row[2]);
-      if (!isPlaceholderEmpName(empId, importedEmpName)) {
-        row[2] = importedEmpName;
-        return;
-      }
-
-      const existingEmpName = getExistingEmpNameByEmpId(empId, existingEmployees);
-      if (existingEmpName) {
-        row[2] = existingEmpName;
-      }
+      row.empName = getExistingEmpNameByEmpId(empId, existingEmployees);
     });
 
     return data;
@@ -532,7 +523,7 @@ function processDTRData(data, existingEmployees = new Map()) {
         // Clean and extract data from the row
         let empId = row[0]?.toString().trim();
         let dateTimeStr = "";
-        const importedEmpName = sanitizeEmpName(row[2]);
+        const importedEmpName = sanitizeEmpName(row.empName);
 
         // If the first field contains both ID and datetime (tab separated but parsed as one)
         if (empId.includes(" ") && !row[1]) {
