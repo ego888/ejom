@@ -246,6 +246,86 @@ const resolveEmpName = (empId, importedEmpName, employeeNames, existingEmployees
   return isPlaceholderEmpName(empId, knownEmpName) ? "" : knownEmpName;
 };
 
+const getExistingEmpNameByEmpId = (empId, existingEmployees) => {
+  const normalizedEmpId =
+    empId === undefined || empId === null ? "" : String(empId).trim();
+
+  if (!normalizedEmpId || !(existingEmployees instanceof Map)) {
+    return "";
+  }
+
+  const existingEmpName = sanitizeEmpName(existingEmployees.get(normalizedEmpId));
+
+  return isPlaceholderEmpName(normalizedEmpId, existingEmpName)
+    ? ""
+    : existingEmpName;
+};
+
+const fillMissingImportedEmpNames = (data, existingEmployees = new Map()) => {
+  const isFormatType1 =
+    data.length > 0 &&
+    !Array.isArray(data[0]) &&
+    typeof data[0] === "object" &&
+    "AC-No." in data[0] &&
+    "State" in data[0];
+
+  const isFormatType2 = data.length > 0 && Array.isArray(data[0]);
+
+  if (isFormatType1) {
+    data.forEach((row) => {
+      const empId = row["AC-No."]?.toString().trim();
+      const importedEmpName = sanitizeEmpName(row["Name"]);
+
+      if (!empId || !isPlaceholderEmpName(empId, importedEmpName)) {
+        return;
+      }
+
+      const existingEmpName = getExistingEmpNameByEmpId(empId, existingEmployees);
+      if (existingEmpName) {
+        row["Name"] = existingEmpName;
+      }
+    });
+
+    return data;
+  }
+
+  if (isFormatType2) {
+    data.forEach((row) => {
+      if (!row || row.length === 0) {
+        return;
+      }
+
+      let empId = row[0]?.toString().trim() || "";
+
+      if (empId.includes(" ") && !row[1]) {
+        const parts = empId.split(/\s+/);
+        empId = parts[0].trim();
+      }
+
+      empId = empId.replace(/\D/g, "");
+
+      if (!empId) {
+        return;
+      }
+
+      const importedEmpName = sanitizeEmpName(row[2]);
+      if (!isPlaceholderEmpName(empId, importedEmpName)) {
+        row[2] = importedEmpName;
+        return;
+      }
+
+      const existingEmpName = getExistingEmpNameByEmpId(empId, existingEmployees);
+      if (existingEmpName) {
+        row[2] = existingEmpName;
+      }
+    });
+
+    return data;
+  }
+
+  return data;
+};
+
 // Helper function to parse CSV/Excel files
 async function parseFile(filePath, fileType) {
   try {
@@ -447,6 +527,7 @@ function processDTRData(data, existingEmployees = new Map()) {
         // Clean and extract data from the row
         let empId = row[0]?.toString().trim();
         let dateTimeStr = "";
+        const importedEmpName = sanitizeEmpName(row[2]);
 
         // If the first field contains both ID and datetime (tab separated but parsed as one)
         if (empId.includes(" ") && !row[1]) {
@@ -491,14 +572,20 @@ function processDTRData(data, existingEmployees = new Map()) {
         }
 
         if (!employeeTimeRecords[empId][dateFormatted]) {
+          const empName = resolveEmpName(
+            empId,
+            importedEmpName,
+            employeeNames,
+            existingEmployees
+          );
+
+          if (empId && !isPlaceholderEmpName(empId, empName)) {
+            employeeNames.set(empId, empName);
+          }
+
           employeeTimeRecords[empId][dateFormatted] = {
             empId,
-            empName: resolveEmpName(
-              empId,
-              "",
-              employeeNames,
-              existingEmployees
-            ),
+            empName,
             date: dateFormatted,
             day: dayOfWeek,
             records: [],
@@ -663,6 +750,7 @@ router.post("/upload", verifyUser, upload.array("dtrFiles", 10), async (req, res
       try {
         // Parse the file
         const rawData = await parseFile(filePath, fileType);
+        fillMissingImportedEmpNames(rawData, existingEmployees);
 
         // Process the data
         const processedData = processDTRData(rawData, existingEmployees);
@@ -1268,6 +1356,7 @@ router.post(
         try {
           // Parse the file
           const rawData = await parseFile(filePath, fileType);
+          fillMissingImportedEmpNames(rawData, existingEmployees);
 
           // Pass existingEmployees to processDTRData
           const processedData = processDTRData(rawData, existingEmployees);
