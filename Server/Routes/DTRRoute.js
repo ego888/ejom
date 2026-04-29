@@ -2067,6 +2067,31 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
       return hours * 60 + minutes;
     };
 
+    const getNightDifferentialMinutes = (timeInMinutes, timeOutMinutes) => {
+      let normalizedTimeOutMinutes = timeOutMinutes;
+
+      if (normalizedTimeOutMinutes < timeInMinutes) {
+        normalizedTimeOutMinutes += 24 * 60;
+      }
+
+      let nightMinutes = 0;
+      const nightStart = 22 * 60;
+      const nightEnd = 30 * 60; // 6:00 AM on the following day
+
+      for (let dayOffset = -1; dayOffset <= 1; dayOffset += 1) {
+        const windowStart = nightStart + dayOffset * 24 * 60;
+        const windowEnd = nightEnd + dayOffset * 24 * 60;
+        const overlapStart = Math.max(timeInMinutes, windowStart);
+        const overlapEnd = Math.min(normalizedTimeOutMinutes, windowEnd);
+
+        if (overlapEnd > overlapStart) {
+          nightMinutes += overlapEnd - overlapStart;
+        }
+      }
+
+      return nightMinutes;
+    };
+
     for (const entry of entries) {
       let timeInMinutes = parseMinutes(entry.timeIn);
       let timeOutMinutes = parseMinutes(entry.timeOut);
@@ -2089,6 +2114,8 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
       const totalHours = totalMinutes / 60;
       const regularHours = totalHours > 8 ? 8 : totalHours;
       const overtimeHours = totalHours > 8 ? totalHours - 8 : 0;
+      const nightDifferentialHours =
+        getNightDifferentialMinutes(timeInMinutes, timeOutMinutes) / 60;
 
       await connection.query(
         `
@@ -2096,6 +2123,7 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
         SET
           hours = ?,
           overtime = ?,
+          nightDifferential = ?,
           remarks = IF(
             INSTR(remarks, 'HOURS') = 0,
             CONCAT('HOURS, ', COALESCE(remarks, '')),
@@ -2106,6 +2134,7 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
         [
           Number(regularHours.toFixed(2)),
           Number(overtimeHours.toFixed(2)),
+          Number(nightDifferentialHours.toFixed(2)),
           entry.id,
           batchId,
         ]
@@ -2147,7 +2176,7 @@ router.post("/check-sun-hol/:batchId", async (req, res) => {
 
     const [entries] = await connection.query(
       `SELECT id, day, DATE_FORMAT(date, '%Y-%m-%d') as date,
-       hours, overtime
+       hours, overtime, nightDifferential
        FROM DTREntries
        WHERE batchId = ?
          AND deleteRecord = 0
@@ -2206,7 +2235,7 @@ router.post("/check-sun-hol/:batchId", async (req, res) => {
           Number(holidayHours.toFixed(2)),
           Number(holidayOT.toFixed(2)),
           finalHolidayType,
-          0,
+          Number(Number(entry.nightDifferential || 0).toFixed(2)),
           0,
           0,
           entry.id,
