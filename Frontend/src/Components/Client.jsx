@@ -43,8 +43,7 @@ const getStoredSortConfig = () => {
     const parsed = JSON.parse(localStorage.getItem(CLIENT_SORT_KEY) || "null");
     const validDirection =
       parsed?.direction === "ascending" || parsed?.direction === "descending";
-    const validKey =
-      parsed?.key === null || typeof parsed?.key === "string";
+    const validKey = parsed?.key === null || typeof parsed?.key === "string";
 
     if (validDirection && validKey) {
       return parsed;
@@ -209,10 +208,7 @@ const Client = () => {
   }, [sortConfig]);
 
   useEffect(() => {
-    localStorage.setItem(
-      CLIENT_RECORDS_PER_PAGE_KEY,
-      String(recordsPerPage),
-    );
+    localStorage.setItem(CLIENT_RECORDS_PER_PAGE_KEY, String(recordsPerPage));
   }, [recordsPerPage]);
 
   useEffect(() => {
@@ -447,13 +443,10 @@ const Client = () => {
                 </div>
               </th>
               <th className="d-none d-sm-table-cell align-middle text-center">
-                Contact
+                Contact <br /> Tel No
               </th>
               <th className="d-none d-sm-table-cell align-middle text-center">
-                Tel No
-              </th>
-              <th className="d-none d-sm-table-cell align-middle text-center">
-                Email
+                Last Transaction
               </th>
               <th
                 onClick={() => handleSort("salesName")}
@@ -572,9 +565,15 @@ const Client = () => {
                       </div>
                     )}
                   </td>
-                  <td className="d-none d-sm-table-cell">{client.contact}</td>
-                  <td className="d-none d-sm-table-cell">{client.telNo}</td>
-                  <td className="d-none d-sm-table-cell">{client.email}</td>
+                  <td className="d-none d-sm-table-cell">
+                    <div>{client.contact}</div>
+                    {client.telNo && (
+                      <div className="text-muted small">{client.telNo}</div>
+                    )}
+                  </td>
+                  <td className="d-none d-sm-table-cell">
+                    {formatDate(client.lastTransaction)}
+                  </td>
                   <td className="text-center d-none d-sm-table-cell">
                     {client.salesName}
                   </td>
