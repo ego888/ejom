@@ -117,6 +117,7 @@ router.get("/client-list", async (req, res) => {
     const allowedSortColumns = [
       "clientName",
       "customerName",
+      "lastTransaction",
       "salesName",
       "terms",
       "creditLimit",
@@ -136,6 +137,7 @@ router.get("/client-list", async (req, res) => {
     const sortColumnMap = {
       clientName: "c.clientName",
       customerName: "c.customerName",
+      lastTransaction: "c.lastTransaction",
       salesName: "e.name",
       terms: "COALESCE(pt.days, 999999)",
       creditLimit: "c.creditLimit",

@@ -446,7 +446,13 @@ const Client = () => {
                 Contact <br /> Tel No
               </th>
               <th className="d-none d-sm-table-cell align-middle text-center">
-                Last Transaction
+                <div
+                  onClick={() => handleSort("lastTransaction")}
+                  style={{ cursor: "pointer" }}
+                  className="fw-semibold"
+                >
+                  Last Transaction {getSortIcon("lastTransaction")}
+                </div>
               </th>
               <th
                 onClick={() => handleSort("salesName")}
