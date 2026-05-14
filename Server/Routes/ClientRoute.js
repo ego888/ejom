@@ -43,7 +43,8 @@ router.get("/client", verifyUser, async (req, res) => {
 // Get clients id, clientName, terms, active
 router.get("/clients", verifyUser, async (req, res) => {
   try {
-    const sql = "SELECT id, clientName, customerName, terms, active FROM client";
+    const sql =
+      "SELECT id, clientName, customerName, terms, active FROM client";
     const result = await pool.query(sql);
     return res.json({ Status: true, Result: result[0] });
   } catch (err) {
@@ -348,30 +349,35 @@ router.put("/edit_client/:id", async (req, res) => {
 });
 
 // Update client terms only (admin)
-router.put("/client/:id/terms", verifyUser, authorize("admin"), async (req, res) => {
-  try {
-    const id = req.params.id;
-    const terms = req.body?.terms || "";
+router.put(
+  "/client/:id/terms",
+  verifyUser,
+  authorize("admin"),
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+      const terms = req.body?.terms || "";
 
-    const sql = `
+      const sql = `
       UPDATE client
       SET terms = ?,
           lastUpdated = CURDATE()
       WHERE id = ?
     `;
 
-    const [result] = await pool.query(sql, [terms, id]);
+      const [result] = await pool.query(sql, [terms, id]);
 
-    if (result.affectedRows === 0) {
-      return res.json({ Status: false, Error: "Client not found" });
+      if (result.affectedRows === 0) {
+        return res.json({ Status: false, Error: "Client not found" });
+      }
+
+      return res.json({ Status: true, Result: result });
+    } catch (err) {
+      console.error("Error updating client terms:", err);
+      return res.json({ Status: false, Error: "Query Error: " + err.message });
     }
-
-    return res.json({ Status: true, Result: result });
-  } catch (err) {
-    console.error("Error updating client terms:", err);
-    return res.json({ Status: false, Error: "Query Error: " + err.message });
-  }
-});
+  },
+);
 
 // Delete client
 router.delete("/client/delete/:id", async (req, res) => {
@@ -466,7 +472,9 @@ router.put("/addWeek/:id", async (req, res) => {
       const oldHoldCompact = formatCompactDate(hold);
       const newHoldCompact = formatCompactDate(newHoldStr);
 
-      logLines.push(`Extend ${currentDateCompact}: ${oldHoldCompact}-${newHoldCompact}`);
+      logLines.push(
+        `Extend ${currentDateCompact}: ${oldHoldCompact}-${newHoldCompact}`,
+      );
       logLines.push(`30: ${formatAmount(rows[0].over30)}`);
       logLines.push(`60: ${formatAmount(rows[0].over60)}`);
       logLines.push(`90: ${formatAmount(rows[0].over90)}`);
@@ -496,14 +504,17 @@ router.put("/addWeek/:id", async (req, res) => {
       });
     }
 
-    logLines.push(`Note: ${note}`);
+    logLines.push(`${currentDateCompact}-Note: ${note}`);
 
     const newLogEntry = logLines.join("\n");
     const updatedLog = currentLog
       ? `${newLogEntry}\n${currentLog}`
       : newLogEntry;
 
-    await pool.query("UPDATE client SET log = ? WHERE id = ?", [updatedLog, id]);
+    await pool.query("UPDATE client SET log = ? WHERE id = ?", [
+      updatedLog,
+      id,
+    ]);
     return res.json({ Status: true, newHold: null });
   } catch (err) {
     console.error("Error in addWeek:", err);
