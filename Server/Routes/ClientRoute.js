@@ -403,7 +403,7 @@ router.get("/client-customer", async (req, res) => {
   }
 });
 
-// Add 1 week to hold date if not null
+// Add a hold log entry and optionally update the hold date.
 router.put("/addWeek/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -430,24 +430,12 @@ router.put("/addWeek/:id", async (req, res) => {
     }
     const hold = rows[0].hold;
     const currentLog = rows[0].log || "";
-    if (!hold) {
-      return res.json({
-        Status: false,
-        Error: "Hold date is NULL. Nothing to update.",
-      });
-    }
-    if (!selectedDate) {
+    if (hold && !selectedDate) {
       return res.json({
         Status: false,
         Error: "Date is required.",
       });
     }
-    const newHold = new Date(selectedDate);
-    // Format as yyyy-mm-dd
-    const yyyy = newHold.getFullYear();
-    const mm = String(newHold.getMonth() + 1).padStart(2, "0");
-    const dd = String(newHold.getDate()).padStart(2, "0");
-    const newHoldStr = `${yyyy}-${mm}-${dd}`;
 
     const formatCompactDate = (value) => {
       const d = new Date(value);
@@ -465,33 +453,58 @@ router.put("/addWeek/:id", async (req, res) => {
       });
     };
 
-    const oldHoldCompact = formatCompactDate(hold);
-    const newHoldCompact = formatCompactDate(newHoldStr);
     const currentDateCompact = formatCompactDate(new Date());
 
-    // Create new log entry with aging data
-    const logLines = [
-      `Extend ${currentDateCompact}: ${oldHoldCompact}-${newHoldCompact}`,
-      `30: ${formatAmount(rows[0].over30)}`,
-      `60: ${formatAmount(rows[0].over60)}`,
-      `90: ${formatAmount(rows[0].over90)}`,
-    ];
+    const logLines = [];
 
-    if (note) {
-      logLines.push(`Note: ${note}`);
+    if (hold && selectedDate) {
+      const newHold = new Date(selectedDate);
+      const yyyy = newHold.getFullYear();
+      const mm = String(newHold.getMonth() + 1).padStart(2, "0");
+      const dd = String(newHold.getDate()).padStart(2, "0");
+      const newHoldStr = `${yyyy}-${mm}-${dd}`;
+      const oldHoldCompact = formatCompactDate(hold);
+      const newHoldCompact = formatCompactDate(newHoldStr);
+
+      logLines.push(`Extend ${currentDateCompact}: ${oldHoldCompact}-${newHoldCompact}`);
+      logLines.push(`30: ${formatAmount(rows[0].over30)}`);
+      logLines.push(`60: ${formatAmount(rows[0].over60)}`);
+      logLines.push(`90: ${formatAmount(rows[0].over90)}`);
+
+      if (note) {
+        logLines.push(`Note: ${note}`);
+      }
+
+      const newLogEntry = logLines.join("\n");
+      const updatedLog = currentLog
+        ? `${newLogEntry}\n${currentLog}`
+        : newLogEntry;
+
+      await pool.query("UPDATE client SET hold = ?, log = ? WHERE id = ?", [
+        newHoldStr,
+        updatedLog,
+        id,
+      ]);
+
+      return res.json({ Status: true, newHold: newHoldStr });
     }
+
+    if (!note) {
+      return res.json({
+        Status: false,
+        Error: "Note is required when hold date is NULL.",
+      });
+    }
+
+    logLines.push(`Note: ${note}`);
 
     const newLogEntry = logLines.join("\n");
     const updatedLog = currentLog
       ? `${newLogEntry}\n${currentLog}`
       : newLogEntry;
 
-    await pool.query("UPDATE client SET hold = ?, log = ? WHERE id = ?", [
-      newHoldStr,
-      updatedLog,
-      id,
-    ]);
-    return res.json({ Status: true, newHold: newHoldStr });
+    await pool.query("UPDATE client SET log = ? WHERE id = ?", [updatedLog, id]);
+    return res.json({ Status: true, newHold: null });
   } catch (err) {
     console.error("Error in addWeek:", err);
     return res.json({ Status: false, Error: "Query Error: " + err.message });

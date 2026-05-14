@@ -283,7 +283,7 @@ const Client = () => {
     setHoldNoteModal({
       open: true,
       client,
-      date: getDefaultHoldNoteDate(),
+      date: client?.hold ? getDefaultHoldNoteDate() : "",
       note: "",
     });
   };
@@ -331,8 +331,9 @@ const Client = () => {
       setIsSubmittingHold(true);
       const trimmedNote = holdNoteModal.note.trim();
       const payload = {};
+      const hasExistingHoldDate = Boolean(holdNoteModal.client?.hold);
 
-      if (holdNoteModal.date) {
+      if (hasExistingHoldDate && holdNoteModal.date) {
         payload.date = holdNoteModal.date;
       }
 
@@ -736,7 +737,7 @@ const Client = () => {
                 date: e.target.value,
               }))
             }
-            disabled={isSubmittingHold}
+            disabled={isSubmittingHold || !holdNoteModal.client?.hold}
           />
         </div>
         <div className="mb-3">
