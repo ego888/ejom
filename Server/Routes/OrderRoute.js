@@ -315,7 +315,12 @@ router.get("/orders", async (req, res) => {
           o.orderReference,
           o.forProd,
           o.forBill,
-          o.productionDate,
+          DATE_FORMAT(o.lastEdited, '%Y-%m-%d %H:%i:%s') as lastEdited,
+          DATE_FORMAT(o.productionDate, '%Y-%m-%d %H:%i:%s') as productionDate,
+          DATE_FORMAT(o.readyDate, '%Y-%m-%d %H:%i:%s') as readyDate,
+          DATE_FORMAT(o.deliveryDate, '%Y-%m-%d %H:%i:%s') as deliveryDate,
+          DATE_FORMAT(o.billDate, '%Y-%m-%d %H:%i:%s') as billDate,
+          o.log,
           GROUP_CONCAT(p.orNum SEPARATOR ', ') AS orNums
       FROM orders o
       LEFT JOIN client c ON o.clientId = c.id

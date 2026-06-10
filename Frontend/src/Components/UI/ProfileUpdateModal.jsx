@@ -157,7 +157,10 @@ const ProfileUpdateModal = ({ show, onClose, userId, onUpdate }) => {
       setAlert({
         show: true,
         title: "Error",
-        message: "Failed to update profile",
+        message:
+          error.response?.data?.Error ||
+          error.response?.data?.message ||
+          "Failed to update profile",
         type: "alert",
       });
     } finally {

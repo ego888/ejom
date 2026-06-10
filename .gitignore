@@ -3,6 +3,10 @@ Server/utils/db.js
 Server/index.js
 Frontend/vite.config.js
 Frontend/src/config.js
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
 
 # Dependency directories
 Frontend/node_modules/

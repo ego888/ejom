@@ -18,6 +18,7 @@ import Client from "./Components/Client";
 import AddClient from "./Components/AddClient";
 import EditClient from "./Components/EditClient";
 import Orders from "./Components/Orders";
+import OrderReview from "./Components/OrderReview";
 import AddOrder from "./Components/AddOrder";
 import OrderView from "./Components/OrderView";
 import PaymentView from "./Components/PaymentView";
@@ -215,6 +216,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Orders />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="order-review"
+            element={
+              <PrivateRoute>
+                <OrderReview />
               </PrivateRoute>
             }
           />

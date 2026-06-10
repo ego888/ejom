@@ -33,6 +33,11 @@ const QUOTES = {
   text: "Quotes",
 };
 const ORDERS = { path: "orders", icon: "bi-cart", text: "Orders" };
+const ORDER_REVIEW = {
+  path: "order-review",
+  icon: "bi-journal-text",
+  text: "Order Review",
+};
 const DELIVERY_QR = {
   path: "delivery-qr",
   icon: "bi-qr-code-scan",
@@ -341,6 +346,7 @@ const Dashboard = () => {
         DASHPROD,
         QUOTES,
         ORDERS,
+        ORDER_REVIEW,
         DELIVERY_QR,
         CLIENT,
         PROD,
@@ -357,7 +363,15 @@ const Dashboard = () => {
         DTR,
       );
     } else if (permissions.isSales) {
-      items.push(DASHSALES, QUOTES, ORDERS, DELIVERY_QR, CLIENT, REPORTS_SALES);
+      items.push(
+        DASHSALES,
+        QUOTES,
+        ORDERS,
+        ORDER_REVIEW,
+        DELIVERY_QR,
+        CLIENT,
+        REPORTS_SALES
+      );
     } else if (permissions.isAccounting) {
       items.push(
         DASHPROD,

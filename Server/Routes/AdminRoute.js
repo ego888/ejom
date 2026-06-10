@@ -463,12 +463,14 @@ router.put("/employee/update_profile/:id", verifyUser, async (req, res) => {
     const userId = req.user.id;
 
     // Check if the user is updating their own profile or if they are an admin
-    if (Number(id) !== userId && req.user.categoryId !== 1) {
+    if (Number(id) !== Number(userId) && Number(req.user.categoryId) !== 1) {
       return res.status(403).json({
         Status: false,
         Error: "You can only update your own profile",
       });
     }
+
+    const cellNumber = req.body.cellNumber?.trim() || "";
 
     // If password is included, hash it
     if (req.body.password && req.body.password.trim() !== "") {
@@ -483,7 +485,7 @@ router.put("/employee/update_profile/:id", verifyUser, async (req, res) => {
       const values = [
         req.body.fullName,
         req.body.email,
-        req.body.cellNumber || null,
+        cellNumber,
         hash,
         id,
       ];
@@ -501,19 +503,20 @@ router.put("/employee/update_profile/:id", verifyUser, async (req, res) => {
         WHERE id = ?
       `;
 
-      const values = [
-        req.body.fullName,
-        req.body.email,
-        req.body.cellNumber || null,
-        id,
-      ];
+      const values = [req.body.fullName, req.body.email, cellNumber, id];
 
       await pool.query(sql, values);
       return res.json({ Status: true, Result: "Profile updated successfully" });
     }
   } catch (err) {
     console.log("Profile update error:", err);
-    return res.json({ Status: false, Error: "Failed to update profile" });
+    return res.json({
+      Status: false,
+      Error:
+        err.code === "ER_DUP_ENTRY"
+          ? "Email already exists"
+          : "Failed to update profile",
+    });
   }
 });
 
