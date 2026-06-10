@@ -89,9 +89,17 @@ function WIPLog() {
     if (!checkOrderId) return;
 
     try {
-      const response = await axios.get(`${ServerIP}/auth/order/${checkOrderId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const response = await axios.post(
+        `${ServerIP}/auth/order/${checkOrderId}/check-status`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      if (!response?.data?.Status) {
+        throw new Error(response?.data?.Error || "Failed to check order status");
+      }
 
       const orderStatus = response?.data?.Result?.status;
       if (orderStatus === "Prod") {

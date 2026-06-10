@@ -14,7 +14,7 @@ const calculateOrderDetailArea = (
   top = 0,
   bottom = 0,
   allowanceLeft = 0,
-  allowanceRight = 0
+  allowanceRight = 0,
 ) => {
   // Validate numeric inputs
   width = parseFloat(width) || 0;
@@ -395,7 +395,7 @@ router.get("/orders", async (req, res) => {
 });
 
 // Get single order
-router.get("/order/:id", async (req, res) => {
+router.get("/order/:id", verifyUser, async (req, res) => {
   try {
     const sql = `
     SELECT 
@@ -426,6 +426,45 @@ router.get("/order/:id", async (req, res) => {
   } catch (err) {
     console.log(err);
     return res.json({ Status: false, Error: "Query Error" });
+  }
+});
+
+router.post("/order/:id/check-status", verifyUser, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const employeeName = req.user.name;
+
+    const [result] = await pool.query(
+      "SELECT status FROM orders WHERE orderID = ?",
+      [orderId],
+    );
+
+    const order = result[0];
+
+    if (!order) {
+      return res.json({ Status: false, Error: "Order not found" });
+    }
+
+    const statusLabel = order.status === "Prod" ? "OK" : order.status;
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const logMessage = `\n${employeeName} Checked.\n${now}: ${statusLabel}`;
+
+    await pool.query(
+      "UPDATE orders SET log = RIGHT(CONCAT(?, IFNULL(log, '')), 65535) WHERE orderID = ?",
+      [logMessage, orderId],
+    );
+
+    return res.json({
+      Status: true,
+      Result: {
+        status: order.status,
+        logStatus: statusLabel,
+        isProd: order.status === "Prod",
+      },
+    });
+  } catch (err) {
+    console.error("Error checking order status:", err);
+    return res.json({ Status: false, Error: "Failed to check order status" });
   }
 });
 
@@ -564,7 +603,7 @@ router.put("/update_orders_to_prod", async (req, res) => {
       `SELECT orderID, clientId
        FROM orders
        WHERE forProd = 1
-         AND (status = 'Open' OR status = 'Printed')`
+         AND (status = 'Open' OR status = 'Printed')`,
     );
 
     if (!ordersToUpdate.length) {
@@ -577,7 +616,7 @@ router.put("/update_orders_to_prod", async (req, res) => {
       ...new Set(
         ordersToUpdate
           .map((order) => order.clientId)
-          .filter((clientId) => clientId !== null && clientId !== undefined)
+          .filter((clientId) => clientId !== null && clientId !== undefined),
       ),
     ];
 
@@ -590,7 +629,7 @@ router.put("/update_orders_to_prod", async (req, res) => {
            productionDate = ?,
            forProd = 0
        WHERE orderID IN (?)`,
-      [currentTime, orderIds]
+      [currentTime, orderIds],
     );
 
     if (clientIds.length) {
@@ -598,7 +637,7 @@ router.put("/update_orders_to_prod", async (req, res) => {
         `UPDATE client
          SET lastTransaction = DATE(?)
          WHERE id IN (?)`,
-        [currentTime, clientIds]
+        [currentTime, clientIds],
       );
     }
 
@@ -669,7 +708,7 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     // First check current status
     const [currentOrderResults] = await pool.query(
       "SELECT status, log, productionDate FROM orders WHERE orderID = ?",
-      [orderId]
+      [orderId],
     );
 
     const currentOrder = currentOrderResults[0];
@@ -829,7 +868,7 @@ router.put("/update_orders_drnum", async (req, res) => {
   try {
     // 1. First get the current lastDRNumber from jomcontrol
     const [currentDRResult] = await connection.query(
-      "SELECT lastDRNumber FROM jomControl WHERE controlId = 1"
+      "SELECT lastDRNumber FROM jomControl WHERE controlId = 1",
     );
 
     const currentLastDRNumber = currentDRResult[0].lastDRNumber;
@@ -1066,7 +1105,7 @@ router.post(
     } finally {
       connection.release();
     }
-  }
+  },
 );
 
 // Update order
@@ -1083,7 +1122,7 @@ router.put(
       // Verify the user has permission to edit this order
       const [orderCheck] = await connection.query(
         "SELECT preparedBy FROM orders WHERE orderID = ?",
-        [req.params.id]
+        [req.params.id],
       );
 
       // Only allow admin users or the original creator to edit the order
@@ -1169,7 +1208,7 @@ router.put(
     } finally {
       connection.release();
     }
-  }
+  },
 );
 
 // Update order's edited info and total hours
@@ -1346,7 +1385,7 @@ router.put(
         Error: "Failed to update artist incentives: " + err.message,
       });
     }
-  }
+  },
 );
 
 // Update order detail sales incentives
@@ -1398,7 +1437,7 @@ router.put(
         Error: "Failed to update sales incentives: " + err.message,
       });
     }
-  }
+  },
 );
 
 // Add new route to update order detail by ID
@@ -1436,7 +1475,7 @@ router.put("/order_details/:id", async (req, res) => {
       safeParseFloat(top),
       safeParseFloat(bottom),
       safeParseFloat(allowanceLeft),
-      safeParseFloat(allowanceRight)
+      safeParseFloat(allowanceRight),
     );
 
     const data = {
@@ -1573,7 +1612,7 @@ router.post(
         top,
         bottom,
         allowanceLeft,
-        allowanceRight
+        allowanceRight,
       );
 
       const data = {
@@ -1595,7 +1634,7 @@ router.post(
       // Verify user has permission to add detail to this order
       const [orderCheck] = await connection.query(
         "SELECT preparedBy, amountDisc, percentDisc FROM orders WHERE orderID = ?",
-        [data.orderId]
+        [data.orderId],
       );
 
       if (orderCheck.length === 0) {
@@ -1624,7 +1663,7 @@ router.post(
         // After inserting, calculate new order totals
         const [orderDetails] = await connection.query(
           "SELECT amount, printHrs FROM order_details WHERE orderId = ? AND noPrint = 0",
-          [data.orderId]
+          [data.orderId],
         );
 
         // Calculate total amount
@@ -1639,7 +1678,7 @@ router.post(
         // Get existing discount values
         const [orderCheck] = await connection.query(
           "SELECT amountDisc, percentDisc FROM orders WHERE orderID = ?",
-          [data.orderId]
+          [data.orderId],
         );
 
         const amountDisc = parseFloat(orderCheck[0]?.amountDisc || 0);
@@ -1663,7 +1702,7 @@ router.post(
                lastEdited = NOW(),
                editedBy = ?
            WHERE orderID = ?`,
-          [totalAmount, grandTotal, totalHrs, req.user.name, data.orderId]
+          [totalAmount, grandTotal, totalHrs, req.user.name, data.orderId],
         );
         await connection.commit();
 
@@ -1687,7 +1726,7 @@ router.post(
     } finally {
       connection.release();
     }
-  }
+  },
 );
 
 // Add new route to delete order detail by ID
@@ -1744,7 +1783,7 @@ router.get("/order/ReviseNumber/:id", verifyUser, async (req, res) => {
       // Get current revision number
       const [orderResults] = await connection.query(
         "SELECT revision FROM orders WHERE orderId = ?",
-        [orderId]
+        [orderId],
       );
 
       if (orderResults.length === 0) {
@@ -1760,7 +1799,7 @@ router.get("/order/ReviseNumber/:id", verifyUser, async (req, res) => {
       // Update order with new revision number and status
       await connection.query(
         "UPDATE orders SET revision = ?, status = 'Open' WHERE orderId = ?",
-        [newRevision, orderId]
+        [newRevision, orderId],
       );
 
       // Commit the transaction
@@ -1795,7 +1834,7 @@ router.put("/update_order_invoice", verifyUser, async (req, res) => {
     // First check current status
     const [currentOrderResults] = await connection.query(
       "SELECT status FROM orders WHERE orderID = ?",
-      [orderId]
+      [orderId],
     );
 
     if (!currentOrderResults.length) {
@@ -1831,7 +1870,7 @@ router.put("/update_order_invoice", verifyUser, async (req, res) => {
        SET invoiceNum = IF(invoiceNum = '' OR invoiceNum IS NULL, ?, CONCAT(invoiceNum, ', ', ?)),
            billDate = NOW()
        WHERE orderID = ?`,
-      [invNumber, invNumber, orderId]
+      [invNumber, invNumber, orderId],
     );
 
     // Commit transaction
@@ -1864,7 +1903,7 @@ router.put("/admin-status-update", verifyUser, async (req, res) => {
     // First check current status
     const [currentOrderResults] = await pool.query(
       "SELECT status, log FROM orders WHERE orderID = ?",
-      [orderId]
+      [orderId],
     );
 
     const currentOrder = currentOrderResults[0];
@@ -1891,7 +1930,7 @@ router.put("/admin-status-update", verifyUser, async (req, res) => {
          SET status = ?,
              log = RIGHT(CONCAT(?, IFNULL(log, '')), 65535)
          WHERE orderID = ?`,
-        [newStatus, logMessage, orderId]
+        [newStatus, logMessage, orderId],
       );
 
       // Commit transaction
@@ -1930,7 +1969,7 @@ router.post("/order-reorder", verifyUser, async (req, res) => {
       // 1. Get the original order
       const [originalOrders] = await connection.query(
         `SELECT * FROM orders WHERE orderID = ?`,
-        [orderId]
+        [orderId],
       );
 
       if (!originalOrders.length) {
@@ -1944,7 +1983,7 @@ router.post("/order-reorder", verifyUser, async (req, res) => {
       // 2. Get all details from original order
       const [originalDetails] = await connection.query(
         `SELECT * FROM order_details WHERE orderId = ?`,
-        [orderId]
+        [orderId],
       );
 
       // 3. Prepare new order data
@@ -2159,7 +2198,8 @@ router.get("/print-hours/machine-types", verifyUser, async (req, res) => {
         totalPrintHours: parseFloat(row.totalPrintHours) || 0,
       }))
       .filter(
-        (entry) => entry.totalPrintHours > 0 && entry.machineType !== "Unassigned"
+        (entry) =>
+          entry.totalPrintHours > 0 && entry.machineType !== "Unassigned",
       );
 
     return res.json({ Status: true, Result: result });
@@ -2230,7 +2270,7 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
 
     if (machineTypeFilter) {
       whereClauses.push(
-        `COALESCE(NULLIF(m.machineType, ''), 'Unassigned') = ?`
+        `COALESCE(NULLIF(m.machineType, ''), 'Unassigned') = ?`,
       );
       params.push(machineTypeFilter);
     }
@@ -2416,7 +2456,8 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
         totalPrintHours: parseFloat(row.totalPrintHours) || 0,
       }))
       .filter(
-        (entry) => entry.totalPrintHours > 0 && entry.machineType !== "Unassigned"
+        (entry) =>
+          entry.totalPrintHours > 0 && entry.machineType !== "Unassigned",
       );
 
     return res.json({
@@ -2436,81 +2477,78 @@ router.get("/printlog/details", verifyUser, async (req, res) => {
   }
 });
 
-router.post(
-  "/printlog/details/:detailId/log",
-  verifyUser,
-  async (req, res) => {
-    const detailId = parseInt(req.params.detailId, 10);
-    const employeeId = req.user?.id;
-    const rawQty = req.body?.printedQty;
+router.post("/printlog/details/:detailId/log", verifyUser, async (req, res) => {
+  const detailId = parseInt(req.params.detailId, 10);
+  const employeeId = req.user?.id;
+  const rawQty = req.body?.printedQty;
 
-    if (!employeeId) {
-      return res.status(403).json({
+  if (!employeeId) {
+    return res.status(403).json({
+      Status: false,
+      Error: "Missing employee context",
+    });
+  }
+
+  if (!Number.isInteger(detailId) || detailId <= 0) {
+    return res.status(400).json({
+      Status: false,
+      Error: "Invalid order detail id",
+    });
+  }
+
+  const printedQty = parseFloat(rawQty);
+
+  if (!Number.isFinite(printedQty) || printedQty <= 0) {
+    return res.status(400).json({
+      Status: false,
+      Error: "printedQty must be a positive number",
+    });
+  }
+
+  try {
+    const [[detail]] = await pool.query(
+      "SELECT quantity, printHrs FROM order_details WHERE Id = ?",
+      [detailId],
+    );
+
+    if (!detail) {
+      return res.status(404).json({
         Status: false,
-        Error: "Missing employee context",
+        Error: "Order detail not found",
       });
     }
 
-    if (!Number.isInteger(detailId) || detailId <= 0) {
+    const [[sumRow]] = await pool.query(
+      "SELECT IFNULL(SUM(printedQty), 0) AS totalPrintedQty FROM print_logs WHERE order_detail_id = ?",
+      [detailId],
+    );
+
+    const currentPrinted = parseFloat(sumRow?.totalPrintedQty) || 0;
+    const orderedQty = parseFloat(detail.quantity) || 0;
+    const plannedPrintHrs = parseFloat(detail.printHrs) || 0;
+    const newTotal = currentPrinted + printedQty;
+
+    if (orderedQty && newTotal - orderedQty > 0.000001) {
       return res.status(400).json({
         Status: false,
-        Error: "Invalid order detail id",
+        Error: "Logged quantity exceeds ordered quantity",
+        Result: {
+          remaining: Math.max(orderedQty - currentPrinted, 0),
+        },
       });
     }
 
-    const printedQty = parseFloat(rawQty);
+    const [insertResult] = await pool.query(
+      "INSERT INTO print_logs (order_detail_id, printedQty, employeeId, logDate) VALUES (?, ?, ?, NOW())",
+      [detailId, printedQty, employeeId],
+    );
 
-    if (!Number.isFinite(printedQty) || printedQty <= 0) {
-      return res.status(400).json({
-        Status: false,
-        Error: "printedQty must be a positive number",
-      });
-    }
+    const insertedId = insertResult?.insertId;
 
-    try {
-      const [[detail]] = await pool.query(
-        "SELECT quantity, printHrs FROM order_details WHERE Id = ?",
-        [detailId]
-      );
-
-      if (!detail) {
-        return res.status(404).json({
-          Status: false,
-          Error: "Order detail not found",
-        });
-      }
-
-      const [[sumRow]] = await pool.query(
-        "SELECT IFNULL(SUM(printedQty), 0) AS totalPrintedQty FROM print_logs WHERE order_detail_id = ?",
-        [detailId]
-      );
-
-      const currentPrinted = parseFloat(sumRow?.totalPrintedQty) || 0;
-      const orderedQty = parseFloat(detail.quantity) || 0;
-      const plannedPrintHrs = parseFloat(detail.printHrs) || 0;
-      const newTotal = currentPrinted + printedQty;
-
-      if (orderedQty && newTotal - orderedQty > 0.000001) {
-        return res.status(400).json({
-          Status: false,
-          Error: "Logged quantity exceeds ordered quantity",
-          Result: {
-            remaining: Math.max(orderedQty - currentPrinted, 0),
-          },
-        });
-      }
-
-      const [insertResult] = await pool.query(
-        "INSERT INTO print_logs (order_detail_id, printedQty, employeeId, logDate) VALUES (?, ?, ?, NOW())",
-        [detailId, printedQty, employeeId]
-      );
-
-      const insertedId = insertResult?.insertId;
-
-      let logEntry = null;
-      if (insertedId) {
-        const [[row]] = await pool.query(
-          `SELECT 
+    let logEntry = null;
+    if (insertedId) {
+      const [[row]] = await pool.query(
+        `SELECT 
               pl.id,
               pl.printedQty,
               pl.logDate,
@@ -2518,60 +2556,56 @@ router.post(
             FROM print_logs pl
             LEFT JOIN employee e ON e.id = pl.employeeId
             WHERE pl.id = ?`,
-          [insertedId]
-        );
-        if (row) {
-          logEntry = {
-            id: row.id,
-            printedQty: parseFloat(row.printedQty) || 0,
-            logDate: row.logDate,
-            employeeName: row.employeeName || "",
-          };
-        }
+        [insertedId],
+      );
+      if (row) {
+        logEntry = {
+          id: row.id,
+          printedQty: parseFloat(row.printedQty) || 0,
+          logDate: row.logDate,
+          employeeName: row.employeeName || "",
+        };
       }
-
-      const printedHrs =
-        orderedQty > 0 ? (newTotal / orderedQty) * plannedPrintHrs : 0;
-      const remainingQty = Math.max(orderedQty - newTotal, 0);
-      const remainingPrintHrs = Math.max(plannedPrintHrs - printedHrs, 0);
-
-      return res.json({
-        Status: true,
-        Result: {
-          printedQty: newTotal,
-          balance: remainingQty,
-          remainingQty,
-          printedHrs,
-          remainingPrintHrs,
-          logEntry,
-        },
-      });
-    } catch (error) {
-      console.error("Error logging printed quantity:", error);
-      return res.status(500).json({
-        Status: false,
-        Error: "Failed to log printed quantity",
-      });
     }
+
+    const printedHrs =
+      orderedQty > 0 ? (newTotal / orderedQty) * plannedPrintHrs : 0;
+    const remainingQty = Math.max(orderedQty - newTotal, 0);
+    const remainingPrintHrs = Math.max(plannedPrintHrs - printedHrs, 0);
+
+    return res.json({
+      Status: true,
+      Result: {
+        printedQty: newTotal,
+        balance: remainingQty,
+        remainingQty,
+        printedHrs,
+        remainingPrintHrs,
+        logEntry,
+      },
+    });
+  } catch (error) {
+    console.error("Error logging printed quantity:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to log printed quantity",
+    });
   }
-);
+});
 
-router.get(
-  "/printlog/details/:detailId/logs",
-  verifyUser,
-  async (req, res) => {
-    const detailId = parseInt(req.params.detailId, 10);
+router.get("/printlog/details/:detailId/logs", verifyUser, async (req, res) => {
+  const detailId = parseInt(req.params.detailId, 10);
 
-    if (!Number.isInteger(detailId) || detailId <= 0) {
-      return res.status(400).json({
-        Status: false,
-        Error: "Invalid order detail id",
-      });
-    }
+  if (!Number.isInteger(detailId) || detailId <= 0) {
+    return res.status(400).json({
+      Status: false,
+      Error: "Invalid order detail id",
+    });
+  }
 
-    try {
-      const [rows] = await pool.query(
-        `SELECT 
+  try {
+    const [rows] = await pool.query(
+      `SELECT 
             pl.id,
             pl.printedQty,
             pl.logDate,
@@ -2581,27 +2615,26 @@ router.get(
           LEFT JOIN employee e ON e.id = pl.employeeId
           WHERE pl.order_detail_id = ?
           ORDER BY pl.logDate DESC, pl.id DESC`,
-        [detailId]
-      );
+      [detailId],
+    );
 
-      const logs = rows.map((row) => ({
-        id: row.id,
-        printedQty: parseFloat(row.printedQty) || 0,
-        logDate: row.logDate,
-        employeeId: row.employeeId,
-        employeeName: row.employeeName || "",
-      }));
+    const logs = rows.map((row) => ({
+      id: row.id,
+      printedQty: parseFloat(row.printedQty) || 0,
+      logDate: row.logDate,
+      employeeId: row.employeeId,
+      employeeName: row.employeeName || "",
+    }));
 
-      return res.json({ Status: true, Result: logs });
-    } catch (error) {
-      console.error("Error fetching print logs:", error);
-      return res.status(500).json({
-        Status: false,
-        Error: "Failed to fetch print logs",
-      });
-    }
+    return res.json({ Status: true, Result: logs });
+  } catch (error) {
+    console.error("Error fetching print logs:", error);
+    return res.status(500).json({
+      Status: false,
+      Error: "Failed to fetch print logs",
+    });
   }
-);
+});
 
 // Route to get monthly sales data for user and total
 router.get("/monthly_sales", verifyUser, async (req, res) => {
@@ -2612,12 +2645,12 @@ router.get("/monthly_sales", verifyUser, async (req, res) => {
     const firstDayOfMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
-      1
+      1,
     );
     const lastDayOfMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth() + 1,
-      0
+      0,
     );
 
     // Format date to YYYY-MM-DD for MySQL compatibility
@@ -2837,7 +2870,7 @@ router.get(
         Details: error.message,
       });
     }
-  }
+  },
 );
 
 // Update special instructions, delivery instructions, and order reference
@@ -2872,7 +2905,7 @@ router.put(
       console.error("Error updating order details:", error);
       res.json({ Status: false, Error: "Failed to update order details" });
     }
-  }
+  },
 );
 
 // Update order note
@@ -2891,7 +2924,7 @@ router.put("/update-order-note", verifyUser, async (req, res) => {
            lastEdited = NOW(),
            editedBy = ?
        WHERE orderId = ?`,
-      [note ?? null, userName, orderId]
+      [note ?? null, userName, orderId],
     );
 
     res.json({ Status: true, Message: "Order note updated successfully" });
