@@ -790,7 +790,7 @@ router.put("/update_order_status", verifyUser, async (req, res) => {
     }
 
     if (deliveryScan && newStatus === "Delivered") {
-      logMessage += `\n${employeeName}\nScanned delivered by ${employeeName}\n${now}`;
+      logMessage += `\n${employeeName} Scanned.\n${now}\nDelivered`;
     }
 
     // Prepare update query
