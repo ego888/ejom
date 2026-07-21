@@ -148,14 +148,80 @@ router.post("/artist-incentive/export", verifyUser, async (req, res) => {
   }
 });
 
-// Export Invoices/Cash invoices to Excel (payload from client)
+// Export invoices directly from the database so large reports do not exceed
+// the request body limit.
 router.post("/invoice-export", verifyUser, async (req, res) => {
   try {
-    const { rows = [], activeTab, dateFrom, dateTo } = req.body || {};
-    if (!Array.isArray(rows) || rows.length === 0) {
+    const { activeTab, dateFrom, dateTo } = req.body || {};
+    if (!["charge", "cash"].includes(activeTab)) {
       return res
         .status(400)
-        .json({ Status: false, Error: "No rows provided for export" });
+        .json({ Status: false, Error: "Invalid invoice type" });
+    }
+    if (!dateFrom || !dateTo) {
+      return res
+        .status(400)
+        .json({ Status: false, Error: "Date range is required" });
+    }
+
+    let rows;
+    if (activeTab === "charge") {
+      const [results] = await pool.query(
+        `SELECT
+          CONCAT(i.invoicePrefix, i.invoiceNumber) AS \`Invoice #\`,
+          DATE_FORMAT(o.billDate, '%Y-%m-%d') AS \`Bill Date\`,
+          c.customerName AS Customer,
+          c.tinNumber AS TIN,
+          i.invoiceAmount AS \`Invoice Amount\`,
+          o.orderId AS \`Order ID\`,
+          o.grandTotal AS \`Order Total\`,
+          c.clientName AS Client
+        FROM invoice i
+        LEFT JOIN orders o ON i.orderId = o.orderId
+        LEFT JOIN client c ON o.clientId = c.id
+        WHERE o.billDate >= ?
+          AND o.billDate < DATE_ADD(?, INTERVAL 1 DAY)
+          AND i.invoiceNumber IS NOT NULL
+          AND i.invoiceNumber != 'NaN'
+        ORDER BY i.invoicePrefix, i.invoiceNumber ASC`,
+        [dateFrom, dateTo]
+      );
+      rows = results;
+    } else {
+      const [results] = await pool.query(
+        `SELECT
+          p.payId,
+          p.ornum AS \`OR #\`,
+          DATE_FORMAT(p.payDate, '%Y-%m-%d') AS \`Payment Date\`,
+          c.customerName AS Customer,
+          c.tinNumber AS TIN,
+          p.amount AS \`Paid Amount\`,
+          o.orderId AS \`Order ID\`,
+          pja.amountApplied AS \`Amount Applied\`,
+          o.grandTotal AS \`Order Total\`,
+          c.clientName AS Client
+        FROM payments p
+        JOIN paymentJoAllocation pja ON p.payId = pja.payId
+        JOIN orders o ON pja.orderId = o.orderId
+        JOIN client c ON o.clientId = c.id
+        WHERE p.payDate >= ?
+          AND p.payDate < DATE_ADD(?, INTERVAL 1 DAY)
+        ORDER BY p.ornum, p.payDate`,
+        [dateFrom, dateTo]
+      );
+
+      const processedPayIds = new Set();
+      rows = results.map(({ payId, ...row }) => {
+        if (processedPayIds.has(payId)) row["Paid Amount"] = "";
+        processedPayIds.add(payId);
+        return row;
+      });
+    }
+
+    if (rows.length === 0) {
+      return res
+        .status(404)
+        .json({ Status: false, Error: "No invoices found to export" });
     }
 
     const wb = new ExcelJS.Workbook();

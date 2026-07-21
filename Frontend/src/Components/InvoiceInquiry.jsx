@@ -53,44 +53,6 @@ function InvoiceInquiry() {
     const data = activeTab === "charge" ? invoices : cashInvoices;
     if (!data.length || exporting) return;
 
-    // Prepare data for export (same structure as before)
-    const processedPayIds = new Set();
-    const amountAppliedTotals = {};
-
-    const exportData = data.map((item) => {
-      if (activeTab === "charge") {
-        return {
-          "Invoice #": `${item.invoicePrefix}${item.invoiceNumber}`,
-          "Bill Date": formatDate(item.billDate),
-          Customer: item.customerName,
-          TIN: item.tinNumber,
-          "Invoice Amount": parseFloat(item.invoiceAmount),
-          "Order ID": item.orderId,
-          "Order Total": parseFloat(item.grandTotal),
-          Client: item.clientName,
-        };
-      }
-
-      const isFirstOccurrence = !processedPayIds.has(item.payId);
-      if (isFirstOccurrence) processedPayIds.add(item.payId);
-
-      const prefix = item.ornum ? item.ornum.substring(0, 2) : "";
-      if (!amountAppliedTotals[prefix]) amountAppliedTotals[prefix] = 0;
-      amountAppliedTotals[prefix] += parseFloat(item.amountApplied);
-
-      return {
-        "OR #": item.ornum,
-        "Payment Date": formatDate(item.payDate),
-        Customer: item.customerName,
-        TIN: item.tinNumber,
-        "Paid Amount": isFirstOccurrence ? parseFloat(item.amount) : "",
-        "Order ID": item.orderId,
-        "Amount Applied": parseFloat(item.amountApplied),
-        "Order Total": parseFloat(item.grandTotal),
-        Client: item.clientName,
-      };
-    });
-
     try {
       setExporting(true);
       setError(null);
@@ -102,7 +64,6 @@ function InvoiceInquiry() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          rows: exportData,
           activeTab,
           dateFrom,
           dateTo,
