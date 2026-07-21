@@ -12,6 +12,7 @@ function InvoiceInquiry() {
   const [invoices, setInvoices] = useState([]);
   const [cashInvoices, setCashInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("charge");
 
@@ -50,7 +51,7 @@ function InvoiceInquiry() {
 
   const handleExportToExcel = async () => {
     const data = activeTab === "charge" ? invoices : cashInvoices;
-    if (!data.length) return;
+    if (!data.length || exporting) return;
 
     // Prepare data for export (same structure as before)
     const processedPayIds = new Set();
@@ -91,6 +92,8 @@ function InvoiceInquiry() {
     });
 
     try {
+      setExporting(true);
+      setError(null);
       const token = localStorage.getItem("token");
       const response = await fetch(`${ServerIP}/auth/invoice-export`, {
         method: "POST",
@@ -107,8 +110,17 @@ function InvoiceInquiry() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to export invoices.");
+        const errorBody = await response.text();
+        let message = errorBody;
+
+        try {
+          const parsedError = JSON.parse(errorBody);
+          message = parsedError?.Error || parsedError?.message;
+        } catch {
+          // The server may return a plain-text error response.
+        }
+
+        throw new Error(message || "Failed to export invoices.");
       }
 
       const contentType = response.headers.get("content-type") || "";
@@ -118,19 +130,29 @@ function InvoiceInquiry() {
       }
 
       const blob = await response.blob();
+      if (!blob.size) {
+        throw new Error("The exported workbook was empty.");
+      }
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${
-        activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
-      }_${dateFrom}-${dateTo}.xlsx`;
+      const disposition = response.headers.get("content-disposition") || "";
+      const serverFilename = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+      link.download =
+        serverFilename ||
+        `${activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"}_${
+          dateFrom || "all"
+        }-${dateTo || "all"}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error("Export invoices failed:", error);
-      alert(error.message || "Failed to export invoices.");
+      setError(error.message || "Failed to export invoices.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -181,6 +203,7 @@ function InvoiceInquiry() {
   const subtotals = calculateSubtotals(
     activeTab === "charge" ? invoices : cashInvoices
   );
+  const activeInvoices = activeTab === "charge" ? invoices : cashInvoices;
 
   return (
     <div className="container-fluid p-4">
@@ -197,9 +220,13 @@ function InvoiceInquiry() {
               <Button variant="view" onClick={handleSearch}>
                 Search
               </Button>{" "}
-              {(invoices.length > 0 || cashInvoices.length > 0) && (
-                <Button variant="print" onClick={handleExportToExcel}>
-                  Save as XLS
+              {activeInvoices.length > 0 && (
+                <Button
+                  variant="print"
+                  onClick={handleExportToExcel}
+                  disabled={exporting}
+                >
+                  {exporting ? "Saving..." : "Save as XLSX"}
                 </Button>
               )}
             </div>
