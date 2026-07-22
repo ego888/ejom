@@ -224,6 +224,24 @@ router.post("/invoice-export", verifyUser, async (req, res) => {
         .json({ Status: false, Error: "No invoices found to export" });
     }
 
+    const moneyHeaders = [
+      "Invoice Amount",
+      "Order Total",
+      "Paid Amount",
+      "Amount Applied",
+    ];
+    rows = rows.map((row) => {
+      const numericRow = { ...row };
+      moneyHeaders.forEach((header) => {
+        const value = numericRow[header];
+        if (value === "" || value === null || value === undefined) return;
+
+        const numericValue = Number(value);
+        numericRow[header] = Number.isFinite(numericValue) ? numericValue : "";
+      });
+      return numericRow;
+    });
+
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet(
       activeTab === "charge" ? "Charge-Invoice" : "Cash-Invoice"
@@ -233,12 +251,6 @@ router.post("/invoice-export", verifyUser, async (req, res) => {
     ws.columns = headers.map((h) => ({ header: h, key: h, width: 18 }));
     rows.forEach((row) => ws.addRow(row));
 
-    const moneyHeaders = [
-      "Invoice Amount",
-      "Order Total",
-      "Paid Amount",
-      "Amount Applied",
-    ];
     headers.forEach((header, index) => {
       if (moneyHeaders.includes(header)) {
         ws.getColumn(index + 1).numFmt = "#,##0.00";
