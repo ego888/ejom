@@ -1,5 +1,6 @@
 #!/bin/bash
 
+find .git -name '._*' -delete
 # Check if a commit message is provided
 if [ -z "$1" ]; then
   echo "Error: Commit message is required."

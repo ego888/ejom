@@ -9,6 +9,7 @@ import csv from "csv-parser";
 import { verifyUser } from "../middleware.js";
 import pool from "../utils/db.js";
 import moment from "moment";
+import analyticsRouter from "./DTRAnalyticsRoute.js";
 import {
   getActualWindow,
   getCreditedWindow,
@@ -68,6 +69,7 @@ const upload = multer({
 });
 
 const router = express.Router();
+router.use(analyticsRouter);
 
 router.post("/compare-schedules/:batchId", verifyUser, async (req, res) => {
   const connection = await pool.getConnection();

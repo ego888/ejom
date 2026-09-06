@@ -1,0 +1,30 @@
+.dtr-attendance-overview .attendance-comparison th,
+.dtr-attendance-overview .attendance-comparison td {
+  padding: .6rem .75rem;
+  white-space: nowrap;
+}
+
+.dtr-attendance-overview .attendance-sort {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+
+.dtr-attendance-overview .attendance-sort:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 3px;
+}
+
+.dtr-attendance-overview .attendance-rate-bar {
+  width: 5rem;
+  height: .6rem;
+  accent-color: var(--bs-primary);
+}
+
+.dtr-attendance-overview details summary {
+  cursor: pointer;
+}

@@ -10,7 +10,7 @@ export const loadSchedulingContext = async (connection, dateFrom, dateTo) => {
       TIME_FORMAT(timeOut,'%H:%i') timeOut,
       TIME_FORMAT(mealBreakStart,'%H:%i') mealBreakStart,
       TIME_FORMAT(mealBreakEnd,'%H:%i') mealBreakEnd,
-      standardMinutes FROM DTRShiftTemplates`),
+      standardMinutes, graceMinutes FROM DTRShiftTemplates`),
     connection.query(`SELECT employeeId, groupId,
       DATE_FORMAT(effectiveFrom,'%Y-%m-%d') effectiveFrom,
       DATE_FORMAT(effectiveUntil,'%Y-%m-%d') effectiveUntil

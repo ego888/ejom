@@ -74,6 +74,7 @@ export const authorize = (...roles) => {
 };
 
 const getDtrPermissionForPath = (path) => {
+  if (path === "/overview") return "dtr.analytics";
   if (path.startsWith("/schedules/calendar")) return "dtr.calendar";
   if (path.startsWith("/schedules/assignment")) return "dtr.assignments";
   if (path.startsWith("/schedules/overrides")) return "dtr.overrides";
@@ -93,7 +94,9 @@ export const authorizeDtrRequest = (req, res, next) => {
     ? req.user.dtrPermissions
     : [];
   const required = getDtrPermissionForPath(req.path);
-  const allowed = required === "dtr.scheduling"
+  const allowed = required === "dtr.analytics"
+    ? ["dtr.batches", "dtr.monthly", "dtr.absences"].some((key) => permissions.includes(key))
+    : required === "dtr.scheduling"
     ? ["dtr.calendar", "dtr.assignments", "dtr.groups", "dtr.overrides"].some((key) => permissions.includes(key))
     : permissions.includes(required);
   if (allowed) return next();
