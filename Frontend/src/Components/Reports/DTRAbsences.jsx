@@ -142,6 +142,10 @@ const DTRAbsences = () => {
       {!loading && !error && report && (
         <div className="card shadow-sm">
           <div className="card-body">
+            <p className="small text-muted">
+              Absence calculations start on each employee’s earliest recorded DTR date.
+              Earlier dates are excluded. Month headings show working days for the full reporting period.
+            </p>
             {report.activeMonths.length === 0 ||
             report.employees.length === 0 ? (
               <div className="alert alert-info mb-0" role="alert">
@@ -195,6 +199,7 @@ const DTRAbsences = () => {
                               key={`${employee.empId}-${report.activeMonths[index]}`}
                               className="text-end"
                               style={style}
+                              title={employee.workingDays ? `${employee.workingDays[report.activeMonths[index] - 1]} eligible working days; first DTR record: ${employee.firstAttendanceDate}` : undefined}
                             >
                               {formatNumber(value)}
                             </td>

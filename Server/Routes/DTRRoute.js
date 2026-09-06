@@ -10,6 +10,7 @@ import { verifyUser } from "../middleware.js";
 import pool from "../utils/db.js";
 import moment from "moment";
 import analyticsRouter from "./DTRAnalyticsRoute.js";
+import { calculateAbsenceWorkingDays } from "../utils/dtrAbsenceWorkingDays.js";
 import {
   getActualWindow,
   getCreditedWindow,
@@ -3189,36 +3190,6 @@ router.get("/absences", verifyUser, async (req, res) => {
     return `${year}-${month}-${day}`;
   };
 
-  const calculateWorkingDays = (year, holidaySet, monthEndDays = {}) => {
-    const workingDays = Array(12).fill(0);
-
-    for (let month = 0; month < 12; month++) {
-      const date = new Date(year, month, 1);
-      const limitDay = monthEndDays[month + 1];
-
-      while (date.getMonth() === month) {
-        if (
-          typeof limitDay === "number" &&
-          !Number.isNaN(limitDay) &&
-          date.getDate() > limitDay
-        ) {
-          break;
-        }
-
-        const isSunday = date.getDay() === 0;
-        const dateKey = parseDateKey(date);
-
-        if (!isSunday && !holidaySet.has(dateKey)) {
-          workingDays[month] += 1;
-        }
-
-        date.setDate(date.getDate() + 1);
-      }
-    }
-
-    return workingDays;
-  };
-
   try {
     const requestedYear = parseInt(req.query.year, 10);
     const year = Number.isNaN(requestedYear)
@@ -3254,13 +3225,17 @@ router.get("/absences", verifyUser, async (req, res) => {
       };
     }
 
-    const workingDays = calculateWorkingDays(year, holidaySet, monthEndDays);
+    const workingDays = calculateAbsenceWorkingDays(year, holidaySet, monthEndDays);
 
     const [employeeRows] = await connection.query(
-      `SELECT DISTINCT empId, empName
-       FROM DTREntries
-       WHERE YEAR(date) = ? AND deleteRecord = 0
-       ORDER BY empName, empId`,
+      `SELECT DISTINCT d.empId, d.empName, firstEntry.firstAttendanceDate
+       FROM DTREntries d
+       JOIN (
+         SELECT empId, DATE_FORMAT(MIN(date), '%Y-%m-%d') firstAttendanceDate
+         FROM DTREntries WHERE deleteRecord = 0 GROUP BY empId
+       ) firstEntry ON firstEntry.empId = d.empId
+       WHERE YEAR(d.date) = ? AND d.deleteRecord = 0
+       ORDER BY d.empName, d.empId`,
       [year]
     );
 
@@ -3306,11 +3281,14 @@ router.get("/absences", verifyUser, async (req, res) => {
     const monthlyTotals = Array(activeMonths.length).fill(0);
 
     const employees = employeeRows.map((employee) => {
+      const employeeWorkingDays = calculateAbsenceWorkingDays(
+        year, holidaySet, monthEndDays, employee.firstAttendanceDate
+      );
       const monthlyAbsences = [];
       let totalAbsence = 0;
 
       activeMonths.forEach((monthNumber, index) => {
-        const expectedHours = workingDays[monthNumber - 1] * 8;
+        const expectedHours = employeeWorkingDays[monthNumber - 1] * 8;
         const actualKey = `${employee.empId}__${monthNumber}`;
         const actualHours = hoursMap.get(actualKey) || 0;
 
@@ -3331,6 +3309,8 @@ router.get("/absences", verifyUser, async (req, res) => {
       return {
         empId: employee.empId,
         empName: employee.empName,
+        firstAttendanceDate: employee.firstAttendanceDate,
+        workingDays: employeeWorkingDays,
         monthlyAbsences,
         totalAbsence: parseFloat(totalAbsence.toFixed(2)),
       };
