@@ -1,0 +1,42 @@
+.dtr-shifts {
+  padding: 20px;
+}
+
+.dtr-shifts .shift-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.shift-template-form {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.5fr) repeat(7, minmax(105px, 1fr)) 75px 75px auto;
+  gap: 12px;
+  align-items: end;
+  min-width: 1280px;
+}
+
+.shift-field {
+  min-width: 0;
+}
+
+.shift-field .form-label {
+  white-space: nowrap;
+}
+
+.shift-active-field {
+  padding-bottom: 8px;
+}
+
+.shift-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dtr-shifts .card-body {
+  overflow-x: auto;
+}

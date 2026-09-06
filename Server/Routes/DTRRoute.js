@@ -9,6 +9,15 @@ import csv from "csv-parser";
 import { verifyUser } from "../middleware.js";
 import pool from "../utils/db.js";
 import moment from "moment";
+import {
+  getActualWindow,
+  getCreditedWindow,
+  getScheduledWindow,
+  loadSchedulingContext,
+  minutesToTime,
+  resolveSchedule,
+  timeToMinutes,
+} from "../utils/dtrScheduleEngine.js";
 
 // Setup directory paths
 const __filename = fileURLToPath(import.meta.url);
@@ -59,6 +68,329 @@ const upload = multer({
 });
 
 const router = express.Router();
+
+router.post("/compare-schedules/:batchId", verifyUser, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [batchRows] = await connection.query(
+      `SELECT DATE_FORMAT(periodStart,'%Y-%m-%d') periodStart,
+              DATE_FORMAT(periodEnd,'%Y-%m-%d') periodEnd
+       FROM DTRBatches WHERE id=?`, [req.params.batchId]
+    );
+    if (!batchRows.length) {
+      await connection.rollback();
+      return res.status(404).json({ Status: false, Error: "Batch not found" });
+    }
+    const context = await loadSchedulingContext(connection, batchRows[0].periodStart, batchRows[0].periodEnd);
+    const [entries] = await connection.query(
+      `SELECT d.id, d.batchId, d.empId, d.empName,
+              DATE_FORMAT(d.date,'%Y-%m-%d') date,
+              DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut,
+              d.timeIn, d.timeOut, e.id employeeId
+       FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
+       WHERE d.batchId=? AND d.processed=1 AND d.deleteRecord=0
+         AND d.timeIn IS NOT NULL AND d.timeOut IS NOT NULL`, [req.params.batchId]
+    );
+    const detectedKeys = new Set();
+    let unmatchedEmployees = 0;
+    for (const entry of entries) {
+      if (!entry.employeeId) { unmatchedEmployees += 1; continue; }
+      const actual = getActualWindow(entry);
+      const schedule = resolveSchedule(context, entry.employeeId, entry.date);
+      const exceptions = [];
+      if (!schedule) {
+        exceptions.push({ type: "NO_SCHEDULE", scheduled: null, actual: entry.timeOut, minutes: Math.max(0, actual.end - actual.start) });
+      } else if (schedule.type !== "WORK" || !schedule.shift) {
+        exceptions.push({ type: "REST_DAY_WORK", scheduled: null, actual: entry.timeOut, minutes: Math.max(0, actual.end - actual.start) });
+      } else {
+        const planned = getScheduledWindow(schedule.shift);
+        if (actual.start < planned.start) exceptions.push({ type: "EARLY_IN", scheduled: schedule.shift.timeIn, actual: entry.timeIn, minutes: planned.start - actual.start });
+        if (actual.end > planned.end) exceptions.push({ type: "LATE_OUT", scheduled: schedule.shift.timeOut, actual: entry.timeOut, minutes: actual.end - planned.end });
+      }
+      for (const item of exceptions) {
+        detectedKeys.add(`${entry.id}:${item.type}`);
+        const [existing] = await connection.query(
+          `SELECT id, scheduledTime, actualTime, availableMinutes FROM DTRScheduleExceptions
+           WHERE dtrEntryId=? AND exceptionType=?`, [entry.id, item.type]
+        );
+        const scheduled = item.scheduled ? `${String(item.scheduled).slice(0,5)}:00` : null;
+        const actualTime = item.actual ? `${String(item.actual).slice(0,5)}:00` : null;
+        const unchanged = existing[0] && String(existing[0].scheduledTime || "").slice(0,5) === String(item.scheduled || "").slice(0,5) && String(existing[0].actualTime || "").slice(0,5) === String(item.actual || "").slice(0,5) && Number(existing[0].availableMinutes) === item.minutes;
+        if (unchanged) continue;
+        await connection.query(
+          `INSERT INTO DTRScheduleExceptions
+           (batchId,dtrEntryId,employeeId,workDate,exceptionType,scheduledTime,actualTime,availableMinutes)
+           VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE employeeId=VALUES(employeeId),
+             workDate=VALUES(workDate), scheduledTime=VALUES(scheduledTime), actualTime=VALUES(actualTime),
+             availableMinutes=VALUES(availableMinutes), approvedMinutes=0, status='PENDING',
+             reviewedBy=NULL, reviewedAt=NULL, reviewNotes=NULL`,
+          [entry.batchId, entry.id, entry.employeeId, entry.date, item.type, scheduled, actualTime, item.minutes]
+        );
+      }
+    }
+    const [oldRows] = await connection.query("SELECT id,dtrEntryId,exceptionType FROM DTRScheduleExceptions WHERE batchId=?", [req.params.batchId]);
+    const obsoleteIds = oldRows.filter((row) => !detectedKeys.has(`${row.dtrEntryId}:${row.exceptionType}`)).map((row) => row.id);
+    if (obsoleteIds.length) await connection.query(`DELETE FROM DTRScheduleExceptions WHERE id IN (${obsoleteIds.map(() => "?").join(",")})`, obsoleteIds);
+    await connection.commit();
+    res.json({ Status: true, ExceptionCount: detectedKeys.size, UnmatchedEmployees: unmatchedEmployees });
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ Status: false, Error: error.message });
+  } finally { connection.release(); }
+});
+
+router.get("/schedule-exceptions/:batchId", verifyUser, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT x.*, DATE_FORMAT(x.workDate,'%Y-%m-%d') workDate,
+              TIME_FORMAT(x.scheduledTime,'%H:%i') scheduledTime,
+              TIME_FORMAT(x.actualTime,'%H:%i') actualTime,
+              e.fullName employeeName, d.empName, d.timeIn, d.timeOut,
+              reviewer.fullName reviewerName
+       FROM DTRScheduleExceptions x JOIN DTREntries d ON d.id=x.dtrEntryId
+       JOIN employee e ON e.id=x.employeeId LEFT JOIN employee reviewer ON reviewer.id=x.reviewedBy
+       WHERE x.batchId=?
+       ORDER BY e.fullName, x.workDate DESC, x.exceptionType, x.id`, [req.params.batchId]
+    );
+    res.json({ Status: true, Exceptions: rows });
+  } catch (error) { res.status(500).json({ Status: false, Error: error.message }); }
+});
+
+router.put("/schedule-exceptions/:id/approve", verifyUser, async (req, res) => {
+  const requested = Number.parseInt(req.body.approvedMinutes, 10);
+  try {
+    const [rows] = await pool.query("SELECT availableMinutes FROM DTRScheduleExceptions WHERE id=?", [req.params.id]);
+    if (!rows.length) return res.status(404).json({ Status: false, Error: "Exception not found" });
+    if (!Number.isInteger(requested) || requested < 1 || requested > Number(rows[0].availableMinutes)) {
+      return res.status(400).json({ Status: false, Error: `Approved minutes must be between 1 and ${rows[0].availableMinutes}` });
+    }
+    await pool.query(`UPDATE DTRScheduleExceptions SET approvedMinutes=?, status='APPROVED',
+      reviewedBy=?, reviewedAt=NOW(), reviewNotes=? WHERE id=?`,
+      [requested, req.user.id, req.body.reviewNotes || null, req.params.id]);
+    res.json({ Status: true });
+  } catch (error) { res.status(500).json({ Status: false, Error: error.message }); }
+});
+
+const normalizeShiftPayload = (body) => {
+  const name = String(body.name || "").trim();
+  const timeIn = String(body.timeIn || "").trim();
+  const timeOut = String(body.timeOut || "").trim();
+  const amBreakMinutes = Number.parseInt(body.amBreakMinutes, 10);
+  const mealBreakStart = String(body.mealBreakStart || "").trim();
+  const mealBreakEnd = String(body.mealBreakEnd || "").trim();
+  const pmBreakMinutes = Number.parseInt(body.pmBreakMinutes, 10);
+  const graceMinutes = Number.parseInt(body.graceMinutes, 10);
+  const color = /^#[0-9a-f]{6}$/i.test(body.color || "")
+    ? body.color
+    : "#0d6efd";
+  const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  if (
+    !name ||
+    !timePattern.test(timeIn) ||
+    !timePattern.test(timeOut) ||
+    !timePattern.test(mealBreakStart) ||
+    !timePattern.test(mealBreakEnd)
+  ) {
+    return { error: "Shift times and meal-break times are required" };
+  }
+  const safeAmBreakMinutes = Number.isInteger(amBreakMinutes)
+    ? Math.min(Math.max(amBreakMinutes, 0), 180)
+    : 0;
+  const safePmBreakMinutes = Number.isInteger(pmBreakMinutes)
+    ? Math.min(Math.max(pmBreakMinutes, 0), 180)
+    : 0;
+  const safeGraceMinutes = Number.isInteger(graceMinutes)
+    ? Math.min(Math.max(graceMinutes, 0), 180)
+    : 0;
+  const toMinutes = (value) => {
+    const [hours, minutes] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  const shiftStartMinutes = toMinutes(timeIn);
+  let shiftEndMinutes = toMinutes(timeOut);
+  if (shiftEndMinutes <= shiftStartMinutes) shiftEndMinutes += 24 * 60;
+  let mealStartMinutes = toMinutes(mealBreakStart);
+  if (mealStartMinutes < shiftStartMinutes) mealStartMinutes += 24 * 60;
+  let mealEndMinutes = toMinutes(mealBreakEnd);
+  if (mealEndMinutes <= mealStartMinutes) mealEndMinutes += 24 * 60;
+  const elapsedMinutes = shiftEndMinutes - shiftStartMinutes;
+  const safeBreakMinutes = mealEndMinutes - mealStartMinutes;
+
+  if (
+    mealStartMinutes < shiftStartMinutes ||
+    mealEndMinutes > shiftEndMinutes
+  ) {
+    return { error: "Meal break must fall within the shift" };
+  }
+  const standardMinutes = elapsedMinutes - safeBreakMinutes;
+
+  if (standardMinutes <= 0) {
+    return { error: "Break duration must be shorter than the shift" };
+  }
+
+  return {
+    value: {
+      name,
+      timeIn,
+      timeOut,
+      amBreakMinutes: safeAmBreakMinutes,
+      mealBreakStart,
+      mealBreakEnd,
+      pmBreakMinutes: safePmBreakMinutes,
+      breakMinutes: safeBreakMinutes,
+      graceMinutes: safeGraceMinutes,
+      standardMinutes,
+      color,
+      active: body.active === false || body.active === 0 ? 0 : 1,
+    },
+  };
+};
+
+// Reusable work-shift templates used by employee schedules.
+router.get("/shifts", verifyUser, async (req, res) => {
+  try {
+    const [shifts] = await pool.query(
+      `SELECT id, name,
+              TIME_FORMAT(timeIn, '%H:%i') AS timeIn,
+              TIME_FORMAT(timeOut, '%H:%i') AS timeOut,
+              amBreakMinutes,
+              TIME_FORMAT(mealBreakStart, '%H:%i') AS mealBreakStart,
+              TIME_FORMAT(mealBreakEnd, '%H:%i') AS mealBreakEnd,
+              pmBreakMinutes,
+              breakMinutes, graceMinutes,
+              standardMinutes, color, active
+       FROM DTRShiftTemplates
+       ORDER BY active DESC, name`
+    );
+    return res.json({ Status: true, Shifts: shifts });
+  } catch (error) {
+    console.error("Error fetching DTR shifts:", error);
+    return res.status(500).json({ Status: false, Error: error.message });
+  }
+});
+
+router.post(
+  "/shifts",
+  verifyUser,
+  async (req, res) => {
+    const normalized = normalizeShiftPayload(req.body);
+    if (normalized.error) {
+      return res.status(400).json({ Status: false, Error: normalized.error });
+    }
+
+    try {
+      const shift = normalized.value;
+      const [result] = await pool.query(
+        `INSERT INTO DTRShiftTemplates
+         (name, timeIn, timeOut, amBreakMinutes, mealBreakStart, mealBreakEnd, pmBreakMinutes,
+          breakMinutes, graceMinutes, standardMinutes, color, active, createdBy)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          shift.name,
+          shift.timeIn,
+          shift.timeOut,
+          shift.amBreakMinutes,
+          shift.mealBreakStart,
+          shift.mealBreakEnd,
+          shift.pmBreakMinutes,
+          shift.breakMinutes,
+          shift.graceMinutes,
+          shift.standardMinutes,
+          shift.color,
+          shift.active,
+          req.user.id,
+        ]
+      );
+      return res.status(201).json({ Status: true, Id: result.insertId });
+    } catch (error) {
+      const message =
+        error.code === "ER_DUP_ENTRY"
+          ? "A shift with that name already exists"
+          : error.message;
+      return res.status(error.code === "ER_DUP_ENTRY" ? 409 : 500).json({
+        Status: false,
+        Error: message,
+      });
+    }
+  }
+);
+
+router.put(
+  "/shifts/:id",
+  verifyUser,
+  async (req, res) => {
+    const normalized = normalizeShiftPayload(req.body);
+    if (normalized.error) {
+      return res.status(400).json({ Status: false, Error: normalized.error });
+    }
+
+    try {
+      const shift = normalized.value;
+      const [result] = await pool.query(
+        `UPDATE DTRShiftTemplates
+         SET name = ?, timeIn = ?, timeOut = ?, amBreakMinutes = ?,
+             mealBreakStart = ?, mealBreakEnd = ?, pmBreakMinutes = ?, breakMinutes = ?,
+             graceMinutes = ?, standardMinutes = ?, color = ?, active = ?
+         WHERE id = ?`,
+        [
+          shift.name,
+          shift.timeIn,
+          shift.timeOut,
+          shift.amBreakMinutes,
+          shift.mealBreakStart,
+          shift.mealBreakEnd,
+          shift.pmBreakMinutes,
+          shift.breakMinutes,
+          shift.graceMinutes,
+          shift.standardMinutes,
+          shift.color,
+          shift.active,
+          req.params.id,
+        ]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ Status: false, Error: "Shift not found" });
+      }
+      return res.json({ Status: true });
+    } catch (error) {
+      const message =
+        error.code === "ER_DUP_ENTRY"
+          ? "A shift with that name already exists"
+          : error.message;
+      return res.status(error.code === "ER_DUP_ENTRY" ? 409 : 500).json({
+        Status: false,
+        Error: message,
+      });
+    }
+  }
+);
+
+router.delete(
+  "/shifts/:id",
+  verifyUser,
+  async (req, res) => {
+    try {
+      const [result] = await pool.query(
+        "DELETE FROM DTRShiftTemplates WHERE id = ?",
+        [req.params.id]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ Status: false, Error: "Shift not found" });
+      }
+      return res.json({ Status: true });
+    } catch (error) {
+      if (error.code === "ER_ROW_IS_REFERENCED_2") {
+        return res.status(409).json({
+          Status: false,
+          Error: "This shift is assigned to employees. Deactivate it instead.",
+        });
+      }
+      return res.status(500).json({ Status: false, Error: error.message });
+    }
+  }
+);
 
 // Helper function to parse date from various formats
 const parseDate = (dateStr) => {
@@ -1001,22 +1333,62 @@ router.get("/export/:batchId", async (req, res) => {
 
     // Get all entries for this batch - format date and dateOut as strings
     const [entries] = await connection.query(
-      `SELECT id, batchId, empId, empName, 
+      `SELECT d.id, d.batchId, d.empId, d.empName, e.id AS employeeId,
        DATE_FORMAT(date, '%Y-%m-%d') as date, 
        DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut, 
        day, time, rawState, timeIn, timeOut, state, 
        hours, overtime, sundayHours, sundayOT, holidayHours, holidayOT, holidayType, nightDifferential,
        processed, deleteRecord, editedIn, editedOut, remarks
-       FROM DTREntries 
-       WHERE batchId = ? 
-       ORDER BY empId, date, time`,
+       FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
+       WHERE d.batchId = ? 
+       ORDER BY d.empId, d.date, d.time`,
       [batchId]
     );
+
+    const periodStart = moment(batchDetails[0].periodStart).format("YYYY-MM-DD");
+    const periodEnd = moment(batchDetails[0].periodEnd).format("YYYY-MM-DD");
+    const scheduleContext = await loadSchedulingContext(connection, periodStart, periodEnd);
+    const [approvalRows] = await connection.query(
+      `SELECT dtrEntryId, exceptionType, approvedMinutes
+       FROM DTRScheduleExceptions WHERE batchId=? AND status='APPROVED'`,
+      [batchId]
+    );
+    const approvals = new Map(
+      approvalRows.map((row) => [
+        `${row.dtrEntryId}:${row.exceptionType}`,
+        Number(row.approvedMinutes),
+      ])
+    );
+    const entriesWithCreditedTimes = entries.map((entry) => {
+      const actual = getActualWindow(entry);
+      const schedule = entry.employeeId
+        ? resolveSchedule(scheduleContext, entry.employeeId, entry.date)
+        : null;
+      const unscheduledType = schedule ? "REST_DAY_WORK" : "NO_SCHEDULE";
+      const earlyApprovedMinutes = approvals.get(`${entry.id}:EARLY_IN`) || 0;
+      const lateApprovedMinutes = approvals.get(`${entry.id}:LATE_OUT`) || 0;
+      const unscheduledApprovedMinutes = approvals.get(`${entry.id}:${unscheduledType}`) || 0;
+      const credited = getCreditedWindow({
+        actual,
+        schedule,
+        earlyApproved: earlyApprovedMinutes,
+        lateApproved: lateApprovedMinutes,
+        unscheduledApproved: unscheduledApprovedMinutes,
+      });
+      return {
+        ...entry,
+        creditedTimeIn: credited ? minutesToTime(credited.start) : null,
+        creditedTimeOut: credited ? minutesToTime(credited.end) : null,
+        earlyApprovedMinutes,
+        lateApprovedMinutes,
+        unscheduledApprovedMinutes,
+      };
+    });
 
     res.json({
       Status: true,
       BatchDetails: batchDetails[0],
-      Entries: entries,
+      Entries: entriesWithCreditedTimes,
     });
   } catch (error) {
     console.error("Error exporting batch data:", error);
@@ -2046,26 +2418,39 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
+    const [batchRows] = await connection.query(
+      `SELECT DATE_FORMAT(periodStart,'%Y-%m-%d') periodStart,
+              DATE_FORMAT(periodEnd,'%Y-%m-%d') periodEnd
+       FROM DTRBatches WHERE id=?`, [batchId]
+    );
+    if (!batchRows.length) {
+      await connection.rollback();
+      return res.status(404).json({ Status: false, Error: "Batch not found" });
+    }
+    const scheduleContext = await loadSchedulingContext(
+      connection, batchRows[0].periodStart, batchRows[0].periodEnd
+    );
     const [entries] = await connection.query(
-      `SELECT id, timeIn, timeOut
-       FROM DTREntries
-       WHERE batchId = ?
-         AND processed = 1
-         AND deleteRecord = 0
-         AND timeIn IS NOT NULL
-         AND timeOut IS NOT NULL`,
+      `SELECT d.id, d.timeIn, d.timeOut,
+              DATE_FORMAT(d.date,'%Y-%m-%d') date,
+              DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut,
+              e.id employeeId
+       FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
+       WHERE d.batchId = ?
+         AND d.processed = 1
+         AND d.deleteRecord = 0
+         AND d.timeIn IS NOT NULL
+         AND d.timeOut IS NOT NULL`,
       [batchId]
     );
 
-    const parseMinutes = (timeString) => {
-      if (!timeString) return null;
-      const parts = timeString.split(":").map(Number);
-      if (parts.length < 2) return null;
-      const hours = parts[0];
-      const minutes = parts[1];
-      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-      return hours * 60 + minutes;
-    };
+    const [approvalRows] = await connection.query(
+      `SELECT dtrEntryId, exceptionType, approvedMinutes
+       FROM DTRScheduleExceptions WHERE batchId=? AND status='APPROVED'`, [batchId]
+    );
+    const approvals = new Map(
+      approvalRows.map((row) => [`${row.dtrEntryId}:${row.exceptionType}`, Number(row.approvedMinutes)])
+    );
 
     const getNightDifferentialMinutes = (timeInMinutes, timeOutMinutes) => {
       let normalizedTimeOutMinutes = timeOutMinutes;
@@ -2093,29 +2478,48 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
     };
 
     for (const entry of entries) {
-      let timeInMinutes = parseMinutes(entry.timeIn);
-      let timeOutMinutes = parseMinutes(entry.timeOut);
-      if (timeInMinutes === null || timeOutMinutes === null) continue;
+      const actual = getActualWindow(entry);
+      if (!actual) continue;
+      const schedule = entry.employeeId
+        ? resolveSchedule(scheduleContext, entry.employeeId, entry.date)
+        : null;
+      let regularMinutes = 0;
+      let overtimeMinutes = 0;
+      let effectiveStart = actual.start;
+      let effectiveEnd = actual.end;
 
-      if (timeOutMinutes < timeInMinutes) {
-        timeOutMinutes += 24 * 60;
+      if (schedule?.type === "WORK" && schedule.shift) {
+        const planned = getScheduledWindow(schedule.shift);
+        const regularStart = Math.max(actual.start, planned.start);
+        const regularEnd = Math.min(actual.end, planned.end);
+        regularMinutes = Math.max(0, regularEnd - regularStart);
+
+        const mealStartRaw = timeToMinutes(schedule.shift.mealBreakStart);
+        const mealEndRaw = timeToMinutes(schedule.shift.mealBreakEnd);
+        if (mealStartRaw !== null && mealEndRaw !== null) {
+          let mealStart = mealStartRaw < planned.start ? mealStartRaw + 1440 : mealStartRaw;
+          let mealEnd = mealEndRaw <= mealStart ? mealEndRaw + 1440 : mealEndRaw;
+          const mealOverlap = Math.max(0, Math.min(regularEnd, mealEnd) - Math.max(regularStart, mealStart));
+          regularMinutes = Math.max(0, regularMinutes - mealOverlap);
+        }
+        const earlyApproved = approvals.get(`${entry.id}:EARLY_IN`) || 0;
+        const lateApproved = approvals.get(`${entry.id}:LATE_OUT`) || 0;
+        overtimeMinutes = earlyApproved + lateApproved;
+        const credited = getCreditedWindow({ actual, schedule, earlyApproved, lateApproved });
+        effectiveStart = credited?.start ?? actual.start;
+        effectiveEnd = credited?.end ?? actual.start;
+      } else {
+        const unscheduledApproved = approvals.get(`${entry.id}:${schedule ? "REST_DAY_WORK" : "NO_SCHEDULE"}`) || 0;
+        overtimeMinutes = unscheduledApproved;
+        const credited = getCreditedWindow({ actual, schedule, unscheduledApproved });
+        effectiveStart = credited?.start ?? actual.start;
+        effectiveEnd = credited?.end ?? actual.start;
       }
 
-      let totalMinutes = timeOutMinutes - timeInMinutes;
-
-      if (timeInMinutes < 13 * 60 && timeOutMinutes > 12 * 60) {
-        totalMinutes -= 60;
-      }
-
-      if (timeInMinutes < 19 * 60 && timeOutMinutes > 20 * 60) {
-        totalMinutes -= 60;
-      }
-
-      const totalHours = totalMinutes / 60;
-      const regularHours = totalHours > 8 ? 8 : totalHours;
-      const overtimeHours = totalHours > 8 ? totalHours - 8 : 0;
+      const regularHours = regularMinutes / 60;
+      const overtimeHours = overtimeMinutes / 60;
       const nightDifferentialHours =
-        getNightDifferentialMinutes(timeInMinutes, timeOutMinutes) / 60;
+        getNightDifferentialMinutes(effectiveStart, effectiveEnd) / 60;
 
       await connection.query(
         `

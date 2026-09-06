@@ -5,6 +5,11 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
 import { verifyUser, authorize, logUserAction } from "../middleware.js";
+import {
+  loadEmployeeDtrPermissions,
+  normalizeDtrPermissions,
+  replaceEmployeeDtrPermissions,
+} from "../utils/dtrPermissions.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET_KEY || "jwt_secret_key";
@@ -154,24 +159,37 @@ const upload = multer({
 
 router.post("/employee/add", verifyUser, upload.single("image"), async (req, res) => {
   try {
-    const { name, fullName, email, password, address, cellNumber, category_id } =
-      req.body;
+    const {
+      name,
+      fullName,
+      email,
+      password,
+      address,
+      cellNumber,
+      category_id,
+    } = req.body;
+    const dtrEmpId = req.body.dtrEmpId?.trim() || null;
     const salary = req.body.salary || 0; // Use 0 if salary is empty
     const sales = req.body.sales === "true" ? 1 : 0;
     const accounting = req.body.accounting === "true" ? 1 : 0;
     const artist = req.body.artist === "true" ? 1 : 0;
     const production = req.body.production === "true" ? 1 : 0;
     const operator = req.body.operator === "true" ? 1 : 0;
+    const requestedDtrPermissions = normalizeDtrPermissions(req.body.dtrPermissions);
+    if (requestedDtrPermissions.length && req.user.categoryId !== 1) {
+      return res.status(403).json({ Status: false, Error: "Only administrators can assign DTR access" });
+    }
 
     // Hash password
     const hash = await bcrypt.hash(password, 10);
 
     const sql = `
     INSERT INTO employee 
-    (name, fullName, email, password, address, cellNumber, salary, category_id, active, sales, accounting, artist, production, operator, image) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`;
+    (dtrEmpId, name, fullName, email, password, address, cellNumber, salary, category_id, active, sales, accounting, artist, production, operator, image)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`;
 
     const values = [
+      dtrEmpId,
       name,
       fullName || "",
       email,
@@ -189,9 +207,20 @@ router.post("/employee/add", verifyUser, upload.single("image"), async (req, res
     ];
 
     const [result] = await pool.query(sql, values);
+    await replaceEmployeeDtrPermissions(pool, result.insertId, requestedDtrPermissions);
     return res.json({ Status: true, Result: result });
   } catch (err) {
     console.log("Insert Error:", err);
+    if (
+      err.code === "ER_DUP_ENTRY" &&
+      (err.message?.includes("dtrEmpId") ||
+        err.message?.includes("uq_employee_dtr_emp_id"))
+    ) {
+      return res.status(409).json({
+        Status: false,
+        Error: "That DTR Employee ID is already assigned to another employee",
+      });
+    }
     return res.status(500).json({
       Status: false,
       Error: err.sqlMessage || err.message || "Failed to add employee",
@@ -227,59 +256,42 @@ router.get("/employee/:id", async (req, res) => {
   }
 });
 
-router.put("/employee/edit/:id", (req, res) => {
-  const id = req.params.id;
-  let sql, values;
-
-  // Check if password is provided and not empty
-  if (req.body.password && req.body.password.trim() !== "") {
-    bcrypt.hash(req.body.password, 10, (err, hash) => {
-      if (err) {
-        console.log("Hashing error:", err);
-        return res.json({ Status: false, Error: "Hashing Error" });
-      }
-
-      sql = `UPDATE employee 
-             SET name = ?, email = ?, password = ?, salary = ?, 
-                 category_id = ?, active = ?, sales = ?, accounting = ?, 
-                 artist = ?, production = ?, operator = ?, admin = ?
-             WHERE id = ?`;
-
-      values = [
-        req.body.name,
-        req.body.email,
-        hash,
-        req.body.salary,
-        req.body.category_id,
-        req.body.active,
-        req.body.sales,
-        req.body.accounting,
-        req.body.artist,
-        req.body.production,
-        req.body.operator,
-        req.body.admin,
-        id,
-      ];
-
-      pool.query(sql, values, (err, result) => {
-        if (err) {
-          console.log("Query error:", err);
-          return res.json({ Status: false, Error: "Query Error" });
-        }
-        return res.json({ Status: true, Result: result });
-      });
-    });
-  } else {
-    sql = `UPDATE employee 
-           SET name = ?, email = ?, salary = ?, 
-               category_id = ?, active = ?, sales = ?, accounting = ?, 
-               artist = ?, production = ?, operator = ?, admin = ?
-           WHERE id = ?`;
-
-    values = [
+router.put("/employee/edit/:id", verifyUser, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const dtrEmpId = req.body.dtrEmpId?.trim() || null;
+    const requestedDtrPermissions = normalizeDtrPermissions(req.body.dtrPermissions);
+    const existingDtrPermissions = await loadEmployeeDtrPermissions(pool, id);
+    const permissionsChanged = [...requestedDtrPermissions].sort().join("|") !==
+      [...existingDtrPermissions].sort().join("|");
+    if (permissionsChanged && req.user.categoryId !== 1) {
+      return res.status(403).json({ Status: false, Error: "Only administrators can change DTR access" });
+    }
+    const fields = [
+      "dtrEmpId = ?",
+      "name = ?",
+      "fullName = ?",
+      "email = ?",
+      "salary = ?",
+      "address = ?",
+      "cellNumber = ?",
+      "category_id = ?",
+      "active = ?",
+      "sales = ?",
+      "accounting = ?",
+      "artist = ?",
+      "production = ?",
+      "operator = ?",
+      "admin = ?",
+    ];
+    const values = [
+      dtrEmpId,
       req.body.name,
+      req.body.fullName || "",
       req.body.email,
-      req.body.salary,
+      req.body.salary || 0,
+      req.body.address || "",
+      req.body.cellNumber || "",
       req.body.category_id,
       req.body.active,
       req.body.sales,
@@ -288,15 +300,41 @@ router.put("/employee/edit/:id", (req, res) => {
       req.body.production,
       req.body.operator,
       req.body.admin,
-      id,
     ];
 
-    pool.query(sql, values, (err, result) => {
-      if (err) {
-        console.log("Query error:", err);
-        return res.json({ Status: false, Error: "Query Error" });
-      }
-      return res.json({ Status: true, Result: result });
+    if (req.body.password?.trim()) {
+      fields.push("password = ?");
+      values.push(await bcrypt.hash(req.body.password, 10));
+    }
+
+    values.push(id);
+    const [result] = await pool.query(
+      `UPDATE employee SET ${fields.join(", ")} WHERE id = ?`,
+      values
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ Status: false, Error: "Employee not found" });
+    }
+
+    await replaceEmployeeDtrPermissions(pool, id, requestedDtrPermissions);
+
+    return res.json({ Status: true, Result: result });
+  } catch (err) {
+    console.log("Employee update error:", err);
+    if (
+      err.code === "ER_DUP_ENTRY" &&
+      (err.message?.includes("dtrEmpId") ||
+        err.message?.includes("uq_employee_dtr_emp_id"))
+    ) {
+      return res.status(409).json({
+        Status: false,
+        Error: "That DTR Employee ID is already assigned to another employee",
+      });
+    }
+    return res.status(500).json({
+      Status: false,
+      Error: err.sqlMessage || err.message || "Failed to update employee",
     });
   }
 });
@@ -329,6 +367,7 @@ router.post("/login", async (req, res) => {
       );
 
       if (response) {
+        const dtrPermissions = await loadEmployeeDtrPermissions(pool, employee.id);
         const token = jwt.sign(
           {
             name: employee.name,
@@ -340,6 +379,7 @@ router.post("/login", async (req, res) => {
             production: employee.production,
             artist: employee.artist,
             operator: employee.operator,
+            dtrPermissions,
           },
           JWT_SECRET,
           { expiresIn: "1d" }
@@ -384,6 +424,7 @@ router.get("/get_employee/:id", async (req, res) => {
         production: result[0].production === 1,
         operator: result[0].operator === 1,
         admin: result[0].admin === 1,
+        dtrPermissions: await loadEmployeeDtrPermissions(pool, id),
       };
       return res.json({ Status: true, Result: [employee] });
     }

@@ -145,6 +145,12 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [resumeAnalysis, setResumeAnalysis] = useState(false);
   const [isBatchLocked, setIsBatchLocked] = useState(false);
   const [unlockBatch, setUnlockBatch] = useState(false);
+  const [scheduleExceptions, setScheduleExceptions] = useState([]);
+  const [approvalMinutes, setApprovalMinutes] = useState({});
+  const [approvalSort, setApprovalSort] = useState({
+    key: "employeeName",
+    direction: "ascending",
+  });
 
   useEffect(() => {
     fetchHolidays();
@@ -252,6 +258,69 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
+  const fetchScheduleExceptions = async () => {
+    try {
+      const response = await axios.get(
+        `${ServerIP}/auth/dtr/schedule-exceptions/${batch.id}`,
+      );
+      if (response.data.Status) setScheduleExceptions(response.data.Exceptions || []);
+    } catch (err) {
+      console.error("Error fetching schedule exceptions:", err);
+    }
+  };
+
+  const compareSchedules = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.post(
+        `${ServerIP}/auth/dtr/compare-schedules/${batch.id}`,
+      );
+      if (!response.data.Status) throw new Error(response.data.Error);
+      await fetchScheduleExceptions();
+      setActiveTab("approvals");
+      if (response.data.UnmatchedEmployees > 0) {
+        setAlert({ show: true, title: "Employee Mapping Required", message: `${response.data.UnmatchedEmployees} processed entries could not be matched to an active employee DTR ID.`, variant: "warning" });
+      }
+    } catch (err) {
+      setError(err.response?.data?.Error || err.message || "Failed to compare schedules");
+    } finally { setLoading(false); }
+  };
+
+  const approveException = async (exception, minutes) => {
+    const approved = Math.min(Number(minutes), Number(exception.availableMinutes));
+    if (!Number.isInteger(approved) || approved < 1) return;
+    try {
+      await axios.put(`${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/approve`, {
+        approvedMinutes: approved,
+      });
+      await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
+      await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
+    } catch (err) {
+      setError(err.response?.data?.Error || "Failed to approve exception");
+    }
+  };
+
+  const approveExceptionType = async (type = null) => {
+    const pending = scheduleExceptions.filter(
+      (item) => item.status === "PENDING" && (!type || item.exceptionType === type),
+    );
+    if (!pending.length) return;
+    const label = type === "EARLY_IN" ? "all pending early time-ins" : type === "LATE_OUT" ? "all pending late time-outs" : "all pending outside-schedule time";
+    if (!window.confirm(`Approve ${label} in this batch?`)) return;
+    try {
+      setLoading(true);
+      await Promise.all(pending.map((item) => axios.put(
+        `${ServerIP}/auth/dtr/schedule-exceptions/${item.id}/approve`,
+        { approvedMinutes: item.availableMinutes },
+      )));
+      await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
+      await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
+    } catch (err) {
+      setError(err.response?.data?.Error || "Failed to approve exceptions");
+    } finally { setLoading(false); }
+  };
+
   const handleSort = (key) => {
     let direction = "ascending";
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
@@ -316,6 +385,83 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
     return sortableEntries;
   }, [entries, sortConfig, searchTerm, hideDeleted]);
+
+  const sortedScheduleExceptions = React.useMemo(() => {
+    const rows = [...scheduleExceptions];
+    const compareText = (a, b) => String(a ?? "").localeCompare(
+      String(b ?? ""),
+      undefined,
+      { numeric: true, sensitivity: "base" },
+    );
+    const employeeName = (item) => item.employeeName || item.empName || "";
+
+    rows.sort((a, b) => {
+      const getValue = (item) => {
+        if (approvalSort.key === "employeeName") {
+          return item.employeeName || item.empName || "";
+        }
+        if (approvalSort.key === "approvalStatus") {
+          return `${item.status}-${String(item.approvedMinutes || 0).padStart(5, "0")}`;
+        }
+        return item[approvalSort.key] ?? "";
+      };
+      const aValue = getValue(a);
+      const bValue = getValue(b);
+      const comparison = typeof aValue === "number" && typeof bValue === "number"
+        ? aValue - bValue
+        : compareText(aValue, bValue);
+      const primaryComparison = approvalSort.direction === "ascending"
+        ? comparison
+        : -comparison;
+      if (primaryComparison !== 0) return primaryComparison;
+
+      // Keep equal values in a predictable employee/date order. Approval changes
+      // must not move a row merely because its status changed.
+      const employeeComparison = compareText(employeeName(a), employeeName(b));
+      if (employeeComparison !== 0) return employeeComparison;
+      const dateComparison = compareText(a.workDate, b.workDate);
+      if (dateComparison !== 0) return dateComparison;
+      const exceptionComparison = compareText(a.exceptionType, b.exceptionType);
+      if (exceptionComparison !== 0) return exceptionComparison;
+      return Number(a.id) - Number(b.id);
+    });
+    return rows;
+  }, [scheduleExceptions, approvalSort]);
+
+  const handleApprovalSort = (key) => {
+    setApprovalSort((current) => ({
+      key,
+      direction:
+        current.key === key && current.direction === "ascending"
+          ? "descending"
+          : "ascending",
+    }));
+  };
+
+  const getApprovalSortIndicator = (key) => {
+    if (approvalSort.key !== key) return "";
+    return approvalSort.direction === "ascending" ? " ↑" : " ↓";
+  };
+
+  const addApprovalMinutes = (exception, minutesToAdd) => {
+    setApprovalMinutes((current) => {
+      const currentMinutes = Number.parseInt(current[exception.id], 10) || 0;
+      return {
+        ...current,
+        [exception.id]: Math.min(
+          currentMinutes + minutesToAdd,
+          Number(exception.availableMinutes),
+        ),
+      };
+    });
+  };
+
+  const setAllApprovalMinutes = (exception) => {
+    setApprovalMinutes((current) => ({
+      ...current,
+      [exception.id]: Number(exception.availableMinutes),
+    }));
+  };
 
   const handleReset = async () => {
     if (
@@ -488,6 +634,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
+      await axios.post(`${ServerIP}/auth/dtr/compare-schedules/${batch.id}`);
       const response = await axios.post(
         `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`,
       );
@@ -495,6 +642,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         throw new Error(response.data.Error || "Failed to calculate hours.");
       }
       await fetchEntries();
+      await fetchScheduleExceptions();
     } catch (error) {
       setError("Failed to calculate hours. Please try again.");
     } finally {
@@ -924,6 +1072,16 @@ const DTRBatchView = ({ batch, onBack }) => {
       </li>
       <li className="nav-item">
         <button
+          className={`nav-link ${activeTab === "approvals" ? "active" : ""}`}
+          onClick={() => { setActiveTab("approvals"); fetchScheduleExceptions(); }}
+        >
+          Approvals
+          {scheduleExceptions.filter((item) => item.status === "PENDING").length > 0 &&
+            <span className="badge text-bg-warning ms-2">{scheduleExceptions.filter((item) => item.status === "PENDING").length}</span>}
+        </button>
+      </li>
+      <li className="nav-item">
+        <button
           className={`nav-link ${activeTab === "totals" ? "active" : ""}`}
           onClick={() => setActiveTab("totals")}
         >
@@ -948,6 +1106,13 @@ const DTRBatchView = ({ batch, onBack }) => {
         disabled={loading || isEditLocked}
       >
         Analyze Time In/Out
+      </Button>
+      <Button
+        variant="warning"
+        onClick={compareSchedules}
+        disabled={loading || isEditLocked}
+      >
+        Compare Schedules
       </Button>
       <Button
         variant="view"
@@ -1157,10 +1322,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Orig Time {getSortIndicator("time")}
                     </th>
                     <th
-                      onClick={() => handleSort("timeIn")}
+                      onClick={() => handleSort("creditedTimeIn")}
                       style={{ cursor: "pointer" }}
                     >
-                      Time In {getSortIndicator("timeIn")}
+                      Time In {getSortIndicator("creditedTimeIn")}
                     </th>
                     <th
                       onClick={() => handleSort("dateOut")}
@@ -1169,10 +1334,16 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Date Out {getSortIndicator("dateOut")}
                     </th>
                     <th
+                      onClick={() => handleSort("creditedTimeOut")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Time Out {getSortIndicator("creditedTimeOut")}
+                    </th>
+                    <th
                       onClick={() => handleSort("timeOut")}
                       style={{ cursor: "pointer" }}
                     >
-                      Time Out {getSortIndicator("timeOut")}
+                      Orig Time Out {getSortIndicator("timeOut")}
                     </th>
                     <th
                       onClick={() => handleSort("state")}
@@ -1298,7 +1469,9 @@ const DTRBatchView = ({ batch, onBack }) => {
                             backgroundColor:
                               rightClickTarget === `${entry.id}-in`
                                 ? "#fff3cd"
-                                : undefined,
+                                : Number(entry.earlyApprovedMinutes) > 0
+                                  ? "#d1e7dd"
+                                  : undefined,
                             transition: "background-color 0.3s",
                           }}
                           onClick={(e) => handleTimeClick(entry, "in", e)}
@@ -1307,7 +1480,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                           }
                           title="Right-click to set reference time"
                         >
-                          {formatTime(entry.timeIn)}
+                          {formatTime(entry.creditedTimeIn)}
                         </td>
                         <td style={rowStyle}>{formatDate(entry.dateOut)}</td>
                         <td
@@ -1327,17 +1500,21 @@ const DTRBatchView = ({ batch, onBack }) => {
                             backgroundColor:
                               rightClickTarget === `${entry.id}-out`
                                 ? "#fff3cd"
-                                : undefined,
+                                : Number(entry.lateApprovedMinutes) > 0 ||
+                                    Number(entry.unscheduledApprovedMinutes) > 0
+                                  ? "#d1e7dd"
+                                  : undefined,
                             transition: "background-color 0.3s",
                           }}
                           onClick={(e) => handleTimeClick(entry, "out", e)}
                           onContextMenu={(e) =>
                             handleTimeRightClick(e, entry, "out")
                           }
-                          title="Right-click to set reference time"
+                          title="Credited time out used to calculate hours"
                         >
-                          {formatTime(entry.timeOut)}
+                          {formatTime(entry.creditedTimeOut)}
                         </td>
+                        <td style={rowStyle}>{formatTime(entry.timeOut)}</td>
                         <td style={rowStyle}>{entry.state || "-"}</td>
                         <td style={rowStyle}>
                           {Number(entry.hours || 0) > 0
@@ -1386,6 +1563,37 @@ const DTRBatchView = ({ batch, onBack }) => {
             </div>
           )}
         </>
+      ) : activeTab === "approvals" ? (
+        <div className="schedule-approvals">
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <Button variant="success" onClick={() => approveExceptionType()}>Approve All</Button>
+            <Button variant="info" onClick={() => approveExceptionType("EARLY_IN")}>Approve All Early In</Button>
+            <Button variant="info" onClick={() => approveExceptionType("LATE_OUT")}>Approve All Late Out</Button>
+          </div>
+          <div className="table-responsive"><table className="table table-bordered table-hover align-middle">
+            <thead><tr>
+              <th className="sortable-header" onClick={() => handleApprovalSort("employeeName")}>Employee{getApprovalSortIndicator("employeeName")}</th>
+              <th className="sortable-header" onClick={() => handleApprovalSort("workDate")}>Date{getApprovalSortIndicator("workDate")}</th>
+              <th className="sortable-header" onClick={() => handleApprovalSort("exceptionType")}>Exception{getApprovalSortIndicator("exceptionType")}</th>
+              <th className="sortable-header" onClick={() => handleApprovalSort("scheduledTime")}>Scheduled{getApprovalSortIndicator("scheduledTime")}</th>
+              <th className="sortable-header" onClick={() => handleApprovalSort("actualTime")}>Actual{getApprovalSortIndicator("actualTime")}</th>
+              <th className="sortable-header" onClick={() => handleApprovalSort("availableMinutes")}>Available{getApprovalSortIndicator("availableMinutes")}</th>
+              <th className="sortable-header" onClick={() => handleApprovalSort("approvalStatus")}>Approved{getApprovalSortIndicator("approvalStatus")}</th>
+              <th>Actions</th>
+            </tr></thead>
+            <tbody>{scheduleExceptions.length === 0 ? <tr><td colSpan="8" className="text-center text-muted">No schedule exceptions. Run Compare Schedules after analyzing punches.</td></tr> : sortedScheduleExceptions.map((item) => <tr key={item.id}>
+              <td>{item.employeeName || item.empName}</td><td>{formatDate(item.workDate)}</td><td>{item.exceptionType.replaceAll("_", " ")}</td><td>{formatTime(item.scheduledTime)}</td><td>{formatTime(item.actualTime)}</td><td>{item.availableMinutes} min</td><td>{item.status === "APPROVED" ? <span className="badge bg-success fs-6">{item.approvedMinutes} min</span> : "Pending"}</td>
+              <td><div className="d-flex flex-wrap gap-1 align-items-center">
+                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 30)}>+30m</button>
+                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 60)}>+1hr</button>
+                <button type="button" className="btn btn-sm btn-primary" onClick={() => setAllApprovalMinutes(item)}>All</button>
+                <input type="number" min="1" max={item.availableMinutes} className="form-control form-control-sm" style={{ width: 80 }} placeholder="Minutes" value={approvalMinutes[item.id] || ""} onChange={(e) => setApprovalMinutes({ ...approvalMinutes, [item.id]: e.target.value })} />
+                <button type="button" className="btn btn-sm btn-success" onClick={() => approveException(item, Number(approvalMinutes[item.id]))}>Approve</button>
+              </div></td>
+            </tr>)}</tbody>
+          </table></div>
+          <p className="text-muted">Pending records are ignored when payable hours are calculated. Actual punch times are never changed.</p>
+        </div>
       ) : (
         <DTRTotalView
           entries={sortedEntries}

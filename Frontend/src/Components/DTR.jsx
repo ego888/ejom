@@ -10,14 +10,16 @@ import DTRSummaryReport from "./DTRSummaryReport";
 import DTRDetailReport from "./DTRDetailReport";
 import DTRBatchView from "./DTRBatchView";
 import DTRHolidays from "./DTRHolidays";
+import DTRShifts from "./DTRShifts";
+import DTRScheduling from "./DTRScheduling";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "./DTRHolidays.css";
 import { formatDateInputValue } from "../utils/orderUtils";
 
-const DTR = () => {
+const DTR = ({ initialTab = "upload", showTabs = true }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("upload");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState(null);
@@ -39,6 +41,10 @@ const DTR = () => {
   useEffect(() => {
     fetchBatches();
   }, []);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const fetchBatches = async () => {
     setLoading(true);
@@ -665,6 +671,10 @@ const DTR = () => {
         );
       case "holidays":
         return <DTRHolidays />;
+      case "shifts":
+        return <DTRShifts />;
+      case "schedules":
+        return <DTRScheduling />;
       case "report":
         if (viewMode === "batch-view") {
           return (
@@ -702,7 +712,7 @@ const DTR = () => {
 
   return (
     <div className="dtr-container">
-      <div className="dtr-header">
+      {showTabs && <div className="dtr-header">
         <h2>Daily Time Record (DTR) Management</h2>
         <div className="dtr-tabs">
           <div
@@ -716,6 +726,18 @@ const DTR = () => {
             onClick={() => handleTabClick("batches")}
           >
             View Batches
+          </div>
+          <div
+            className={`dtr-tab ${activeTab === "schedules" ? "active" : ""}`}
+            onClick={() => handleTabClick("schedules")}
+          >
+            Schedules
+          </div>
+          <div
+            className={`dtr-tab ${activeTab === "shifts" ? "active" : ""}`}
+            onClick={() => handleTabClick("shifts")}
+          >
+            Shifts
           </div>
           <div
             className={`dtr-tab ${activeTab === "holidays" ? "active" : ""}`}
@@ -736,7 +758,7 @@ const DTR = () => {
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       <div className="dtr-content">{renderContent()}</div>
     </div>

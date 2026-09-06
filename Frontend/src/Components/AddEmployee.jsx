@@ -5,9 +5,11 @@ import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
+import DTRPermissionSelector from "./DTRPermissionSelector";
 
 const AddEmployee = () => {
   const [employee, setEmployee] = useState({
+    dtrEmpId: "",
     name: "",
     fullName: "",
     email: "",
@@ -23,6 +25,7 @@ const AddEmployee = () => {
     artist: false,
     production: false,
     operator: false,
+    dtrPermissions: [],
   });
   const [category, setCategory] = useState([]);
   const navigate = useNavigate();
@@ -110,6 +113,7 @@ const AddEmployee = () => {
     }
 
     const formData = new FormData();
+    formData.append("dtrEmpId", employee.dtrEmpId.trim());
     formData.append("name", employee.name);
     formData.append("fullName", employee.fullName);
     formData.append("email", employee.email);
@@ -125,6 +129,7 @@ const AddEmployee = () => {
     formData.append("artist", employee.artist);
     formData.append("production", employee.production);
     formData.append("operator", employee.operator);
+    formData.append("dtrPermissions", JSON.stringify(employee.dtrPermissions));
 
     axios
       .post(`${ServerIP}/auth/employee/add`, formData, {
@@ -164,6 +169,23 @@ const AddEmployee = () => {
       <div className="p-3 rounded w-50 border">
         <h3 className="text-center">Add Employee</h3>
         <form className="row g-1" onSubmit={handleSubmit}>
+          <div className="col-12">
+            <label htmlFor="employee-dtr-id" className="form-label">
+              DTR Employee ID
+            </label>
+            <input
+              id="employee-dtr-id"
+              type="text"
+              name="dtrEmpId"
+              className="form-control rounded-0"
+              placeholder="Biometric employee ID (optional)"
+              maxLength={10}
+              value={employee.dtrEmpId}
+              onChange={(e) =>
+                setEmployee({ ...employee, dtrEmpId: e.target.value })
+              }
+            />
+          </div>
           <div className="col-12">
             <label htmlFor="employee-name" className="form-label">
               Name
@@ -297,6 +319,12 @@ const AddEmployee = () => {
               placeholder="Select Category"
               labelKey="name"
               valueKey="id"
+            />
+          </div>
+          <div className="col-12">
+            <DTRPermissionSelector
+              value={employee.dtrPermissions}
+              onChange={(dtrPermissions) => setEmployee({ ...employee, dtrPermissions })}
             />
           </div>
           <div className="col-12">

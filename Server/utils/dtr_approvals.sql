@@ -1,0 +1,26 @@
+-- Run once in phpMyAdmin after dtr_scheduling.sql.
+CREATE TABLE IF NOT EXISTS DTRScheduleExceptions (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  batchId INT NOT NULL,
+  dtrEntryId INT NOT NULL,
+  employeeId INT NOT NULL,
+  workDate DATE NOT NULL,
+  exceptionType ENUM('EARLY_IN','LATE_OUT','REST_DAY_WORK','NO_SCHEDULE') NOT NULL,
+  scheduledTime TIME NULL,
+  actualTime TIME NULL,
+  availableMinutes SMALLINT UNSIGNED NOT NULL,
+  approvedMinutes SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  status ENUM('PENDING','APPROVED') NOT NULL DEFAULT 'PENDING',
+  reviewedBy INT NULL,
+  reviewedAt DATETIME NULL,
+  reviewNotes VARCHAR(255) NULL,
+  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_dtr_entry_exception (dtrEntryId, exceptionType),
+  KEY idx_dtr_exception_batch_status (batchId, status),
+  CONSTRAINT fk_dtr_exception_batch FOREIGN KEY (batchId) REFERENCES DTRBatches(id) ON DELETE CASCADE,
+  CONSTRAINT fk_dtr_exception_entry FOREIGN KEY (dtrEntryId) REFERENCES DTREntries(id) ON DELETE CASCADE,
+  CONSTRAINT fk_dtr_exception_employee FOREIGN KEY (employeeId) REFERENCES employee(id),
+  CONSTRAINT fk_dtr_exception_reviewer FOREIGN KEY (reviewedBy) REFERENCES employee(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

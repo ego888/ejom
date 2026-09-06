@@ -20,13 +20,16 @@ const PrivateRoute = ({ children }) => {
       isOperator: decoded.operator === 1,
       isActive: decoded.active === 1,
       categoryId: decoded.categoryId,
+      dtrPermissions: Array.isArray(decoded.dtrPermissions) ? decoded.dtrPermissions : [],
     };
 
     // Get the current route from pathname
-    const route = location.pathname.split("/")[2] || "";
+    const routeParts = location.pathname.split("/").filter(Boolean);
+    const route = routeParts[1] || "";
+    const subRoute = routeParts[2] || "";
 
     // Check route access
-    const hasAccess = checkRouteAccess(route, permissions);
+    const hasAccess = checkRouteAccess(route, permissions, subRoute);
 
     if (!hasAccess) {
       // Redirect to appropriate route based on permissions
@@ -42,9 +45,26 @@ const PrivateRoute = ({ children }) => {
 };
 
 // Helper function to check route access
-const checkRouteAccess = (route, permissions) => {
+const checkRouteAccess = (route, permissions, subRoute = "") => {
   if (permissions.categoryId === 1) return true;
   if (!permissions.isActive) return false;
+
+  if (route === "dtr") {
+    const requiredBySubRoute = {
+      batches: "dtr.batches",
+      import: "dtr.import",
+      calendar: "dtr.calendar",
+      assignments: "dtr.assignments",
+      groups: "dtr.groups",
+      shifts: "dtr.shifts",
+      overrides: "dtr.overrides",
+      holidays: "dtr.holidays",
+      monthly: "dtr.monthly",
+      absences: "dtr.absences",
+    };
+    if (!subRoute) return permissions.dtrPermissions.length > 0;
+    return permissions.dtrPermissions.includes(requiredBySubRoute[subRoute]);
+  }
 
   if (permissions.isOperator) {
     return ["printlog", "wiplog", "delivery-qr"].includes(route);
@@ -133,6 +153,7 @@ const getDefaultRoute = (permissions) => {
   if (permissions.isOperator) return "/dashboard/printlog";
   if (permissions.isProduction) return "/dashboard/wiplog";
   if (permissions.isArtist) return "/dashboard/artistlog";
+  if (permissions.dtrPermissions?.length) return "/dashboard/dtr";
   return "/"; // fallback to login
 };
 

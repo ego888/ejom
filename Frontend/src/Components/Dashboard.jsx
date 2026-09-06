@@ -201,7 +201,24 @@ const REPORTS_PRODUCTION = {
   ],
 };
 
-const DTR = { path: "dtr", icon: "bi-clock-history", text: "DTR" };
+const DTR = {
+  path: "dtr",
+  icon: "bi-clock-history",
+  text: "DTR",
+  subItems: [
+    { path: "dtr", icon: "bi-grid", text: "Overview" },
+    { path: "dtr/batches", icon: "bi-folder2-open", text: "Attendance Batches", permission: "dtr.batches" },
+    { path: "dtr/import", icon: "bi-upload", text: "Import DTR", permission: "dtr.import" },
+    { path: "dtr/calendar", icon: "bi-calendar3", text: "Schedule Calendar", permission: "dtr.calendar" },
+    { path: "dtr/assignments", icon: "bi-calendar2-plus", text: "Shift Assignments", permission: "dtr.assignments" },
+    { path: "dtr/groups", icon: "bi-people", text: "Shift Groups", permission: "dtr.groups" },
+    { path: "dtr/shifts", icon: "bi-clock", text: "Shift Templates", permission: "dtr.shifts" },
+    { path: "dtr/overrides", icon: "bi-calendar2-event", text: "Overrides", permission: "dtr.overrides" },
+    { path: "dtr/holidays", icon: "bi-calendar2-week", text: "Holidays", permission: "dtr.holidays" },
+    { path: "dtr/monthly", icon: "bi-bar-chart-line", text: "Monthly Hours", permission: "dtr.monthly" },
+    { path: "dtr/absences", icon: "bi-person-dash", text: "Absences", permission: "dtr.absences" },
+  ],
+};
 
 const Dashboard = () => {
   const [permissions, setPermissions] = useState({
@@ -213,6 +230,7 @@ const Dashboard = () => {
     isOperator: false,
     isActive: false,
     categoryId: null,
+    dtrPermissions: [],
   });
   const [employeeName, setEmployeeName] = useState(
     localStorage.getItem("userName") || "",
@@ -257,6 +275,7 @@ const Dashboard = () => {
         isOperator: decoded.operator === 1,
         isActive: decoded.active === 1,
         categoryId: decoded.categoryId,
+        dtrPermissions: Array.isArray(decoded.dtrPermissions) ? decoded.dtrPermissions : [],
       };
 
       setPermissions(newPermissions);
@@ -396,6 +415,15 @@ const Dashboard = () => {
       items.push(ARTISTLOG, DTR_ABSENCES, DTR_MONTHLY);
     }
 
+    if (!permissions.isAdmin && permissions.dtrPermissions.length) {
+      items.push({
+        ...DTR,
+        subItems: DTR.subItems.filter(
+          (item) => !item.permission || permissions.dtrPermissions.includes(item.permission),
+        ),
+      });
+    }
+
     if (
       isCompactView ||
       (!permissions.isProduction && !permissions.isOperator)
@@ -413,6 +441,7 @@ const Dashboard = () => {
     if (permissions.isOperator) return "/dashboard/printlog";
     if (permissions.isProduction) return "/dashboard/wiplog";
     if (permissions.isArtist) return "/dashboard/artistlog";
+    if (permissions.dtrPermissions?.length) return "/dashboard/dtr";
     return "/dashboard/orders"; // fallback
   };
 

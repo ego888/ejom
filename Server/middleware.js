@@ -73,6 +73,37 @@ export const authorize = (...roles) => {
   };
 };
 
+const getDtrPermissionForPath = (path) => {
+  if (path.startsWith("/schedules/calendar")) return "dtr.calendar";
+  if (path.startsWith("/schedules/assignment")) return "dtr.assignments";
+  if (path.startsWith("/schedules/overrides")) return "dtr.overrides";
+  if (path.startsWith("/schedules/groups") || path.startsWith("/schedules/members")) return "dtr.groups";
+  if (path.startsWith("/schedules/employees")) return "dtr.scheduling";
+  if (path.startsWith("/shifts")) return "dtr.shifts";
+  if (path.startsWith("/holidays") || path.startsWith("/add-holiday")) return "dtr.holidays";
+  if (path.startsWith("/monthly")) return "dtr.monthly";
+  if (path.startsWith("/absences")) return "dtr.absences";
+  if (path.startsWith("/upload")) return "dtr.import";
+  return "dtr.batches";
+};
+
+export const authorizeDtrRequest = (req, res, next) => {
+  if (req.user?.categoryId === 1) return next();
+  const permissions = Array.isArray(req.user?.dtrPermissions)
+    ? req.user.dtrPermissions
+    : [];
+  const required = getDtrPermissionForPath(req.path);
+  const allowed = required === "dtr.scheduling"
+    ? ["dtr.calendar", "dtr.assignments", "dtr.groups", "dtr.overrides"].some((key) => permissions.includes(key))
+    : permissions.includes(required);
+  if (allowed) return next();
+  return res.status(403).json({
+    Status: false,
+    Error: "Not authorized",
+    message: "You do not have access to this DTR feature",
+  });
+};
+
 // Helper to log important user actions
 export const logUserAction = (action) => {
   return (req, res, next) => {

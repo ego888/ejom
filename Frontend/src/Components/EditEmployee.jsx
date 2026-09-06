@@ -5,10 +5,12 @@ import Button from "./UI/Button";
 import Dropdown from "./UI/Dropdown";
 import { ServerIP } from "../config";
 import ModalAlert from "./UI/ModalAlert";
+import DTRPermissionSelector from "./DTRPermissionSelector";
 
 const EditEmployee = () => {
   const { id } = useParams();
   const [data, setData] = useState({
+    dtrEmpId: "",
     name: "",
     fullName: "",
     email: "",
@@ -24,6 +26,7 @@ const EditEmployee = () => {
     production: false,
     operator: false,
     admin: false,
+    dtrPermissions: [],
   });
   const [category, setCategory] = useState([]);
   const [alert, setAlert] = useState({
@@ -60,6 +63,7 @@ const EditEmployee = () => {
           const employeeData = result.data.Result[0];
           console.log("Fetched employee data:", employeeData); // Debug log
           setData({
+            dtrEmpId: employeeData.dtrEmpId || "",
             name: employeeData.name || "",
             fullName: employeeData.fullName || "",
             email: employeeData.email || "",
@@ -75,6 +79,7 @@ const EditEmployee = () => {
             production: Boolean(employeeData.production),
             operator: Boolean(employeeData.operator),
             admin: Boolean(employeeData.admin),
+            dtrPermissions: employeeData.dtrPermissions || [],
           });
         }
       })
@@ -116,7 +121,10 @@ const EditEmployee = () => {
 
     console.log("it pass validation");
     axios
-      .put(`${ServerIP}/auth/employee/update/${id}`, data)
+      .put(`${ServerIP}/auth/employee/edit/${id}`, {
+        ...data,
+        dtrEmpId: data.dtrEmpId.trim() || null,
+      })
       .then((result) => {
         console.log("THEN result: ", result);
         if (result.data.Status) {
@@ -141,7 +149,9 @@ const EditEmployee = () => {
         setAlert({
           show: true,
           title: "Error",
-          message: "Failed to save employee. Please try again.",
+          message:
+            err.response?.data?.Error ||
+            "Failed to save employee. Please try again.",
           type: "alert",
         });
       });
@@ -156,6 +166,20 @@ const EditEmployee = () => {
       <div className="p-3 rounded w-50 border">
         <h3 className="text-center">Edit Employee</h3>
         <form className="row g-1" onSubmit={handleSubmit}>
+          <div className="col-12">
+            <label htmlFor="inputDtrEmpId" className="form-label">
+              DTR Employee ID
+            </label>
+            <input
+              type="text"
+              className="form-control rounded-0"
+              id="inputDtrEmpId"
+              placeholder="Biometric employee ID (optional)"
+              maxLength={10}
+              value={data.dtrEmpId}
+              onChange={(e) => setData({ ...data, dtrEmpId: e.target.value })}
+            />
+          </div>
           <div className="col-12">
             <label htmlFor="inputName" className="form-label">
               Name
@@ -351,6 +375,12 @@ const EditEmployee = () => {
             </label>
           </div>
           <div className="col-12">
+            <DTRPermissionSelector
+              value={data.dtrPermissions}
+              onChange={(dtrPermissions) => setData({ ...data, dtrPermissions })}
+            />
+          </div>
+          <div className="col-12">
             <div className="form-check">
               <input
                 type="checkbox"
@@ -382,7 +412,7 @@ const EditEmployee = () => {
         type={alert.type}
         onClose={() => {
           setAlert({ ...alert, show: false });
-          if (alert.type === "alert") {
+          if (alert.title === "Success") {
             navigate("/dashboard/employee");
           }
         }}

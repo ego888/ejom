@@ -1,0 +1,8 @@
+.dtr-module { margin: 20px; }
+.dtr-module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.dtr-module-header h2 { margin: 0; }
+.dtr-module-header p { margin: 4px 0 0; color: #6c757d; }
+.dtr-module-content { background: white; border-radius: 8px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.dtr-module-content .dtr-container { margin: 0; padding: 0; box-shadow: none; background: transparent; }
+.dtr-module-content .dtr-content { padding: 0; box-shadow: none; }
+@media (max-width: 576px) { .dtr-module { margin: 12px; } .dtr-module-content { padding: 12px; } }

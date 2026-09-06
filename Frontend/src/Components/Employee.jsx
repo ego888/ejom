@@ -79,6 +79,12 @@ const Employee = () => {
     () => [
       { key: "name", label: "Name", sortable: true, render: (row) => row.name },
       {
+        key: "dtrEmpId",
+        label: "DTR ID",
+        sortable: true,
+        render: (row) => row.dtrEmpId || "—",
+      },
+      {
         key: "image",
         label: "Image",
         sortable: false,

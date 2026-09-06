@@ -12,3 +12,12 @@
 }
 
 /* ... existing styles ... */
+.schedule-approvals .sortable-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.schedule-approvals .sortable-header:hover {
+  background-color: #e9ecef;
+}

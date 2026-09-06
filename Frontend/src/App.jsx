@@ -48,6 +48,11 @@ import WIPLog from "./Components/WIPLog";
 import DashSales from "./Components/DashSales";
 import DashProd from "./Components/DashProd";
 import DTR from "./Components/DTR";
+import DTRModuleLayout from "./Components/DTRModuleLayout";
+import DTRDashboard from "./Components/DTRDashboard";
+import DTRScheduling from "./Components/DTRScheduling";
+import DTRShifts from "./Components/DTRShifts";
+import DTRHolidays from "./Components/DTRHolidays";
 import MaterialUsageReport from "./Components/Reports/MaterialUsageReport";
 import AveragePrice from "./Components/Reports/AveragePrice";
 import NotYetClosed from "./Components/Reports/NotYetClosed";
@@ -264,7 +269,19 @@ function App() {
             path="/dashboard/receive-payment"
             element={<ReceivePayment />}
           ></Route>
-          <Route path="/dashboard/dtr" element={<DTR />}></Route>
+          <Route path="/dashboard/dtr" element={<DTRModuleLayout />}>
+            <Route index element={<DTRDashboard />} />
+            <Route path="batches" element={<DTR initialTab="batches" showTabs={false} />} />
+            <Route path="import" element={<DTR initialTab="upload" showTabs={false} />} />
+            <Route path="calendar" element={<DTRScheduling initialSection="calendar" showNavigation={false} />} />
+            <Route path="assignments" element={<DTRScheduling initialSection="assign" showNavigation={false} />} />
+            <Route path="groups" element={<DTRScheduling initialSection="groups" showNavigation={false} />} />
+            <Route path="overrides" element={<DTRScheduling initialSection="override" showNavigation={false} />} />
+            <Route path="shifts" element={<DTRShifts />} />
+            <Route path="holidays" element={<DTRHolidays />} />
+            <Route path="monthly" element={<DTRMonthly />} />
+            <Route path="absences" element={<DTRAbsences />} />
+          </Route>
           <Route path="/dashboard/sales-report" element={<ReportSales />} />
           <Route path="/dashboard/soa" element={<SOA />} />
           <Route
