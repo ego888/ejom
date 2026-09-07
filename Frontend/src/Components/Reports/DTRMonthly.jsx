@@ -57,45 +57,46 @@ const getBarColorForDay = (day) => {
   const hours = day.totalHours || 0;
   if (hours <= 0) return BAR_COLOR_ABSENT;
 
-  const isSaturday =
-    day.date && new Date(day.date).getDay
-      ? new Date(day.date).getDay() === 6
-      : false;
-
-  if (isSaturday && hours >= 3) return BAR_COLOR_OK;
   if (hours < BASELINE_HOURS) return BAR_COLOR_LOW;
   return BAR_COLOR_OK;
 };
 
 const MonthBarChart = ({ monthNumber, days }) => {
+  const workingDays = days.filter((day) => !day.isSunday && !day.isHoliday).length;
+  const expectedWorkHours = workingDays * BASELINE_HOURS;
+  const totalWorkHours = days.reduce((total, day) => total + (Number(day.totalHours) || 0), 0);
   const maxHours = Math.max(...days.map((day) => day.totalHours || 0), 8) || 8;
   const baselinePosition =
     (BASELINE_HOURS / Math.max(maxHours, BASELINE_HOURS)) * MAX_BAR_HEIGHT;
   const absenceDays = days.filter(
     (day) => !day.isSunday && !day.isHoliday && (day.totalHours || 0) === 0
   ).length;
-  const undertimeDays = days.filter((day) => {
+  const undertimeEntries = days.filter((day) => {
     const hours = day.totalHours || 0;
     if (hours <= 0) return false; // absent not counted as undertime
     if (day.isSunday || day.isHoliday) return false;
-    const isSaturday =
-      day.date && new Date(day.date).getDay
-        ? new Date(day.date).getDay() === 6
-        : false;
-    if (isSaturday) return hours < 3;
     return hours < BASELINE_HOURS;
-  }).length;
+  });
+  const undertimeDays = undertimeEntries.length;
+  const undertimeHours = undertimeEntries.reduce(
+    (total, day) => total + BASELINE_HOURS - Number(day.totalHours), 0
+  );
 
   return (
     <div className="mb-4">
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
         <h5 className="mb-0">{MONTH_LABELS[monthNumber - 1]}</h5>
-        <div className="d-flex align-items-center gap-3 text-muted small">
+        <div className="d-flex flex-wrap align-items-center gap-3 text-muted small">
           <span>Peak day: {maxHours.toFixed(2)} hrs</span>
-          <span>
-            Total absences: {absenceDays} day(s) | Undertime: {undertimeDays}{" "}
-            day(s)
+          <span title={`${workingDays} working days × ${BASELINE_HOURS} hours. Full month, including Saturdays and excluding Sundays and holidays; independent of attendance and assigned schedules.`}>
+            Expected work hours: {expectedWorkHours.toFixed(2)} hrs
           </span>
+          <span>Actual work hours: {totalWorkHours.toFixed(2)} hrs</span>
+          <span>Total absences: {absenceDays} day(s)</span>
+          <span title="Sum of hours below 8 on worked days, including Saturdays. Sundays, holidays, and absent days are excluded. Extra hours on another day do not offset undertime.">
+            Undertime hours: {undertimeHours.toFixed(2)} hrs
+          </span>
+          <span>Undertime: {undertimeDays} day(s)</span>
         </div>
       </div>
       <div className="border rounded-3 p-3 bg-white shadow-sm">
