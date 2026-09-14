@@ -17,6 +17,7 @@ export function manualPunchUpdate(entry, type, time, date) {
         dateOut: type === "in" ? date : otherDate,
         editedIn: 1,
         editedOut: 1,
+        swapLoneOriginal: true,
       },
     };
   }

@@ -1,4 +1,5 @@
 import express from "express";
+import { swappedLoneOriginal } from "../utils/dtrLoneOriginalSwap.js";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
@@ -2956,6 +2957,23 @@ router.post("/update-time-in-out/:batchId", async (req, res) => {
     ];
 
     const updateValues = [timeIn, timeOut, editedIn, editedOut];
+
+    if (req.body.swapLoneOriginal === true) {
+      const [rows] = await connection.query(
+        "SELECT time, origTimeOut, timeIn, timeOut FROM DTREntries WHERE id=? AND batchId=? FOR UPDATE",
+        [id, batchId]
+      );
+      if (!rows.length) {
+        await connection.rollback();
+        return res.status(404).json({ Status: false, Error: "Entry not found" });
+      }
+      const originals = swappedLoneOriginal(rows[0]);
+      if (originals) {
+        updateFields.push("time = ?", "origTimeOut = ?");
+        updateValues.push(originals.time, originals.origTimeOut);
+      }
+    }
+
 
     if (date) {
       updateFields.push("date = ?");
