@@ -2817,21 +2817,22 @@ router.post("/add-entry/:batchId", async (req, res) => {
     // Insert the new entry
     await connection.query(
       `INSERT INTO DTREntries 
-       (batchId, empId, empName, date, day, timeIn, timeOut, 
+       (batchId, empId, empName, date, dateOut, day, timeIn, timeOut,
         processed, editedIn, editedOut, remarks) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         batchId,
         entry.empId,
         sanitizeEmpName(entry.empName),
         entry.date,
+        entry.dateOut || entry.date,
         entry.day,
         entry.timeIn,
         entry.timeOut,
         entry.processed,
-        entry.editedIn,
-        entry.editedOut,
-        entry.remarks,
+        1,
+        1,
+        `MANUAL ADD${entry.remarks && entry.remarks !== "MANUAL ADD" ? `, ${entry.remarks}` : ""}`,
       ]
     );
 

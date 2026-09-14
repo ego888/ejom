@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "../utils/axiosConfig";
+import { canEditDtrTime } from "../utils/dtrManualEditing";
 import { manualPunchUpdate } from "../utils/manualPunchUpdate";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
@@ -662,16 +663,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       return;
     }
 
-    // Only allow clicking if the record isn't deleted and either:
-    // 1. The field is empty, or
-    // 2. The field has been manually edited before
-    if (
-      entry.deleteRecord ||
-      (type === "in" && entry.timeIn && !entry.editedIn) ||
-      (type === "out" && entry.timeOut && !entry.editedOut)
-    ) {
-      return;
-    }
+    if (!canEditDtrTime(entry, type)) return;
 
     let defaultTimeValue = "";
     let defaultDateValue = "";
@@ -680,7 +672,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     if (type === "in") {
       defaultDateValue = entry.date;
     } else if (type === "out") {
-      defaultDateValue = entry.dateOut === "" ? entry.date : entry.dateOut;
+      defaultDateValue = entry.dateOut || entry.date;
     }
 
     // If there's an existing time for this type, use it
@@ -701,7 +693,7 @@ const DTRBatchView = ({ batch, onBack }) => {
         defaultTimeValue = `${String(newHours).padStart(2, "0")}:${minutes}`;
       } else {
         // If no existing times, use the raw time from the entry
-        defaultTimeValue = entry.time.substring(0, 5); // Remove seconds
+        defaultTimeValue = (entry.time || "").substring(0, 5); // Remove seconds
       }
     }
 
@@ -1349,13 +1341,11 @@ const DTRBatchView = ({ batch, onBack }) => {
                           style={{
                             ...rowStyle,
                             cursor:
-                              (!entry.timeIn || entry.editedIn) &&
-                              !entry.deleteRecord
+                              canEditDtrTime(entry, "in")
                                 ? "pointer"
                                 : "default",
                             color:
-                              (!entry.timeIn || entry.editedIn) &&
-                              !entry.deleteRecord
+                              canEditDtrTime(entry, "in")
                                 ? "blue"
                                 : "inherit",
                             fontWeight: entry.editedIn ? "bold" : "normal",
@@ -1380,13 +1370,11 @@ const DTRBatchView = ({ batch, onBack }) => {
                           style={{
                             ...rowStyle,
                             cursor:
-                              (!entry.timeOut || entry.editedOut) &&
-                              !entry.deleteRecord
+                              canEditDtrTime(entry, "out")
                                 ? "pointer"
                                 : "default",
                             color:
-                              (!entry.timeOut || entry.editedOut) &&
-                              !entry.deleteRecord
+                              canEditDtrTime(entry, "out")
                                 ? "blue"
                                 : "inherit",
                             fontWeight: entry.editedOut ? "bold" : "normal",
