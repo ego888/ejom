@@ -639,9 +639,6 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
-      const comparison = await axios.post(`${ServerIP}/auth/dtr/compare-schedules/${batch.id}`);
-      if (!comparison.data.Status) throw new Error(comparison.data.Error || "Failed to compare schedules");
-      setComparisonReport(comparison.data);
       const response = await axios.post(
         `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`,
       );
@@ -649,7 +646,6 @@ const DTRBatchView = ({ batch, onBack }) => {
         throw new Error(response.data.Error || "Failed to calculate hours.");
       }
       await fetchEntries();
-      await fetchScheduleExceptions();
     } catch (error) {
       setError("Failed to calculate hours. Please try again.");
     } finally {

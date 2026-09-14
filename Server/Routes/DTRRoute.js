@@ -1,4 +1,5 @@
 import express from "express";
+import { calculatePunchHours } from "../utils/dtrPunchHours.js";
 import { swappedLoneOriginal } from "../utils/dtrLoneOriginalSwap.js";
 import multer from "multer";
 import fs from "fs";
@@ -2455,29 +2456,11 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
       await connection.rollback();
       return res.status(404).json({ Status: false, Error: "Batch not found" });
     }
-    const scheduleContext = await loadSchedulingContext(
-      connection, batchRows[0].periodStart, batchRows[0].periodEnd
-    );
     const [entries] = await connection.query(
-      `SELECT d.id, d.timeIn, d.timeOut,
-              DATE_FORMAT(d.date,'%Y-%m-%d') date,
-              DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut,
-              e.id employeeId
-       FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
-       WHERE d.batchId = ?
-         AND d.processed = 1
-         AND d.deleteRecord = 0
-         AND d.timeIn IS NOT NULL
-         AND d.timeOut IS NOT NULL`,
-      [batchId]
-    );
-
-    const [approvalRows] = await connection.query(
-      `SELECT dtrEntryId, exceptionType, approvedMinutes
-       FROM DTRScheduleExceptions WHERE batchId=? AND status='APPROVED'`, [batchId]
-    );
-    const approvals = new Map(
-      approvalRows.map((row) => [`${row.dtrEntryId}:${row.exceptionType}`, Number(row.approvedMinutes)])
+      `SELECT id, timeIn, timeOut,
+              DATE_FORMAT(date,'%Y-%m-%d') date,
+              DATE_FORMAT(dateOut,'%Y-%m-%d') dateOut
+       FROM DTREntries WHERE batchId=? AND deleteRecord=0`, [batchId]
     );
 
     const getNightDifferentialMinutes = (timeInMinutes, timeOutMinutes) => {
@@ -2507,47 +2490,9 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
 
     for (const entry of entries) {
       const actual = getActualWindow(entry);
-      if (!actual) continue;
-      const schedule = entry.employeeId
-        ? resolveSchedule(scheduleContext, entry.employeeId, entry.date)
-        : null;
-      let regularMinutes = 0;
-      let overtimeMinutes = 0;
-      let effectiveStart = actual.start;
-      let effectiveEnd = actual.end;
-
-      if (schedule?.type === "WORK" && schedule.shift) {
-        const planned = getScheduledWindow(schedule.shift);
-        const regularStart = Math.max(actual.start, planned.start);
-        const regularEnd = Math.min(actual.end, planned.end);
-        regularMinutes = Math.max(0, regularEnd - regularStart);
-
-        const mealStartRaw = timeToMinutes(schedule.shift.mealBreakStart);
-        const mealEndRaw = timeToMinutes(schedule.shift.mealBreakEnd);
-        if (mealStartRaw !== null && mealEndRaw !== null) {
-          let mealStart = mealStartRaw < planned.start ? mealStartRaw + 1440 : mealStartRaw;
-          let mealEnd = mealEndRaw <= mealStart ? mealEndRaw + 1440 : mealEndRaw;
-          const mealOverlap = Math.max(0, Math.min(regularEnd, mealEnd) - Math.max(regularStart, mealStart));
-          regularMinutes = Math.max(0, regularMinutes - mealOverlap);
-        }
-        const earlyApproved = approvals.get(`${entry.id}:EARLY_IN`) || 0;
-        const lateApproved = approvals.get(`${entry.id}:LATE_OUT`) || 0;
-        overtimeMinutes = earlyApproved + lateApproved;
-        const credited = getCreditedWindow({ actual, schedule, earlyApproved, lateApproved });
-        effectiveStart = credited?.start ?? actual.start;
-        effectiveEnd = credited?.end ?? actual.start;
-      } else {
-        const unscheduledApproved = approvals.get(`${entry.id}:${schedule ? "REST_DAY_WORK" : "NO_SCHEDULE"}`) || 0;
-        overtimeMinutes = unscheduledApproved;
-        const credited = getCreditedWindow({ actual, schedule, unscheduledApproved });
-        effectiveStart = credited?.start ?? actual.start;
-        effectiveEnd = credited?.end ?? actual.start;
-      }
-
-      const regularHours = regularMinutes / 60;
-      const overtimeHours = overtimeMinutes / 60;
-      const nightDifferentialHours =
-        getNightDifferentialMinutes(effectiveStart, effectiveEnd) / 60;
+      const { hours: regularHours, overtime: overtimeHours } = calculatePunchHours(actual);
+      const nightDifferentialHours = actual
+        ? getNightDifferentialMinutes(actual.start, actual.end) / 60 : 0;
 
       await connection.query(
         `
