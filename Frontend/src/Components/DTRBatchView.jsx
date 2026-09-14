@@ -146,6 +146,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [isBatchLocked, setIsBatchLocked] = useState(false);
   const [unlockBatch, setUnlockBatch] = useState(false);
   const [scheduleExceptions, setScheduleExceptions] = useState([]);
+  const [comparisonReport, setComparisonReport] = useState(null);
   const [approvalMinutes, setApprovalMinutes] = useState({});
   const [approvalSort, setApprovalSort] = useState({
     key: "employeeName",
@@ -277,11 +278,9 @@ const DTRBatchView = ({ batch, onBack }) => {
         `${ServerIP}/auth/dtr/compare-schedules/${batch.id}`,
       );
       if (!response.data.Status) throw new Error(response.data.Error);
+      setComparisonReport(response.data);
       await fetchScheduleExceptions();
       setActiveTab("approvals");
-      if (response.data.UnmatchedEmployees > 0) {
-        setAlert({ show: true, title: "Employee Mapping Required", message: `${response.data.UnmatchedEmployees} processed entries could not be matched to an active employee DTR ID.`, variant: "warning" });
-      }
     } catch (err) {
       setError(err.response?.data?.Error || err.message || "Failed to compare schedules");
     } finally { setLoading(false); }
@@ -634,7 +633,9 @@ const DTRBatchView = ({ batch, onBack }) => {
     setError(null);
 
     try {
-      await axios.post(`${ServerIP}/auth/dtr/compare-schedules/${batch.id}`);
+      const comparison = await axios.post(`${ServerIP}/auth/dtr/compare-schedules/${batch.id}`);
+      if (!comparison.data.Status) throw new Error(comparison.data.Error || "Failed to compare schedules");
+      setComparisonReport(comparison.data);
       const response = await axios.post(
         `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`,
       );
@@ -1565,6 +1566,25 @@ const DTRBatchView = ({ batch, onBack }) => {
         </>
       ) : activeTab === "approvals" ? (
         <div className="schedule-approvals">
+          {comparisonReport && (
+            <div className={`alert ${comparisonReport.SkippedEntries?.length ? "alert-warning" : "alert-info"}`}>
+              <p className="mb-1">Last comparison: {comparisonReport.ComparedCount} of {comparisonReport.TotalEntries} non-deleted entries compared; {comparisonReport.NoExceptionCount} had no exception; {comparisonReport.ExceptionCount} exceptions found.</p>
+              <p className="mb-0">Only early arrivals, late departures, and work without a work schedule appear in the approval list.</p>
+              {comparisonReport.SkippedEntries?.length > 0 && (
+                <details className="mt-2" open>
+                  <summary>{comparisonReport.SkippedEntries.length} skipped entries — correct these and run Compare Schedules again</summary>
+                  <div className="table-responsive mt-2" style={{ maxHeight: 320, overflowY: "auto" }}>
+                    <table className="table table-sm mb-0">
+                      <thead><tr><th>Entry</th><th>Employee / DTR ID</th><th>Date</th><th>In</th><th>Out</th><th>Reason</th></tr></thead>
+                      <tbody>{comparisonReport.SkippedEntries.map((entry) => (
+                        <tr key={entry.id}><td>{entry.id}</td><td>{entry.empName} / {entry.empId}</td><td>{formatDate(entry.date)}</td><td>{formatTime(entry.timeIn)}</td><td>{formatTime(entry.timeOut)}</td><td>{entry.reason}</td></tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
           <div className="d-flex flex-wrap gap-2 mb-3">
             <Button variant="success" onClick={() => approveExceptionType()}>Approve All</Button>
             <Button variant="info" onClick={() => approveExceptionType("EARLY_IN")}>Approve All Early In</Button>

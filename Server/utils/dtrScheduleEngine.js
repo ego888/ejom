@@ -40,12 +40,17 @@ export const resolveSchedule = (context, employeeId, workDate) => {
   return null;
 };
 
-export const getActualWindow = (entry) => {
+export const getActualPunchWindow = (entry) => {
   const start = timeToMinutes(entry.timeIn);
   let end = timeToMinutes(entry.timeOut);
-  if (start === null || end === null) return null;
-  if ((entry.dateOut && entry.dateOut > entry.date) || end < start) end += 1440;
+  if (start === null && end === null) return null;
+  if (end !== null && ((entry.dateOut && entry.dateOut > entry.date) || (start !== null && end < start))) end += 1440;
   return { start, end };
+};
+
+export const getActualWindow = (entry) => {
+  const actual = getActualPunchWindow(entry);
+  return actual && actual.start !== null && actual.end !== null ? actual : null;
 };
 
 export const getScheduledWindow = (shift) => {
@@ -76,11 +81,11 @@ export const getCreditedWindow = ({
     const planned = getScheduledWindow(schedule.shift);
     if (!planned) return null;
     return {
-      start: Math.max(actual.start, planned.start - Number(earlyApproved || 0)),
-      end: Math.min(actual.end, planned.end + Number(lateApproved || 0)),
+      start: actual.start === null ? null : Math.max(actual.start, planned.start - Number(earlyApproved || 0)),
+      end: actual.end === null ? null : Math.min(actual.end, planned.end + Number(lateApproved || 0)),
     };
   }
-  if (Number(unscheduledApproved) > 0) {
+  if (Number(unscheduledApproved) > 0 && actual.start !== null && actual.end !== null) {
     return {
       start: actual.start,
       end: Math.min(actual.end, actual.start + Number(unscheduledApproved)),

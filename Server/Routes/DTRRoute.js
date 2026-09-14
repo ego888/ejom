@@ -11,8 +11,10 @@ import pool from "../utils/db.js";
 import moment from "moment";
 import analyticsRouter from "./DTRAnalyticsRoute.js";
 import { calculateAbsenceWorkingDays } from "../utils/dtrAbsenceWorkingDays.js";
+import { comparisonSkipReason } from "../utils/dtrComparisonEligibility.js";
 import {
   getActualWindow,
+  getActualPunchWindow,
   getCreditedWindow,
   getScheduledWindow,
   loadSchedulingContext,
@@ -90,27 +92,46 @@ router.post("/compare-schedules/:batchId", verifyUser, async (req, res) => {
       `SELECT d.id, d.batchId, d.empId, d.empName,
               DATE_FORMAT(d.date,'%Y-%m-%d') date,
               DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut,
-              d.timeIn, d.timeOut, e.id employeeId
+              d.timeIn, d.timeOut, d.processed, e.id employeeId
        FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
-       WHERE d.batchId=? AND d.processed=1 AND d.deleteRecord=0
-         AND d.timeIn IS NOT NULL AND d.timeOut IS NOT NULL`, [req.params.batchId]
+       WHERE d.batchId=? AND d.deleteRecord=0
+       ORDER BY d.empId, d.date, d.id`, [req.params.batchId]
     );
     const detectedKeys = new Set();
     let unmatchedEmployees = 0;
+    const skippedEntries = [];
+    let comparedCount = 0;
+    let noExceptionCount = 0;
     for (const entry of entries) {
-      if (!entry.employeeId) { unmatchedEmployees += 1; continue; }
-      const actual = getActualWindow(entry);
+      const reason = comparisonSkipReason(entry);
+      if (reason) {
+        if (!entry.employeeId) unmatchedEmployees += 1;
+        skippedEntries.push({ id: entry.id, empId: entry.empId, empName: entry.empName,
+          date: entry.date, timeIn: entry.timeIn, timeOut: entry.timeOut, reason });
+        continue;
+      }
+      comparedCount += 1;
+      const actual = getActualPunchWindow(entry);
       const schedule = resolveSchedule(context, entry.employeeId, entry.date);
       const exceptions = [];
+      if ((!schedule || schedule.type !== "WORK" || !schedule.shift) &&
+          (actual.start === null || actual.end === null)) {
+        comparedCount -= 1;
+        skippedEntries.push({ id: entry.id, empId: entry.empId, empName: entry.empName,
+          date: entry.date, timeIn: entry.timeIn, timeOut: entry.timeOut,
+          reason: "Both punches are required to determine work duration without a work schedule" });
+        continue;
+      }
       if (!schedule) {
         exceptions.push({ type: "NO_SCHEDULE", scheduled: null, actual: entry.timeOut, minutes: Math.max(0, actual.end - actual.start) });
       } else if (schedule.type !== "WORK" || !schedule.shift) {
         exceptions.push({ type: "REST_DAY_WORK", scheduled: null, actual: entry.timeOut, minutes: Math.max(0, actual.end - actual.start) });
       } else {
         const planned = getScheduledWindow(schedule.shift);
-        if (actual.start < planned.start) exceptions.push({ type: "EARLY_IN", scheduled: schedule.shift.timeIn, actual: entry.timeIn, minutes: planned.start - actual.start });
-        if (actual.end > planned.end) exceptions.push({ type: "LATE_OUT", scheduled: schedule.shift.timeOut, actual: entry.timeOut, minutes: actual.end - planned.end });
+        if (actual.start !== null && actual.start < planned.start) exceptions.push({ type: "EARLY_IN", scheduled: schedule.shift.timeIn, actual: entry.timeIn, minutes: planned.start - actual.start });
+        if (actual.end !== null && actual.end > planned.end) exceptions.push({ type: "LATE_OUT", scheduled: schedule.shift.timeOut, actual: entry.timeOut, minutes: actual.end - planned.end });
       }
+      if (!exceptions.length) noExceptionCount += 1;
       for (const item of exceptions) {
         detectedKeys.add(`${entry.id}:${item.type}`);
         const [existing] = await connection.query(
@@ -136,7 +157,9 @@ router.post("/compare-schedules/:batchId", verifyUser, async (req, res) => {
     const obsoleteIds = oldRows.filter((row) => !detectedKeys.has(`${row.dtrEntryId}:${row.exceptionType}`)).map((row) => row.id);
     if (obsoleteIds.length) await connection.query(`DELETE FROM DTRScheduleExceptions WHERE id IN (${obsoleteIds.map(() => "?").join(",")})`, obsoleteIds);
     await connection.commit();
-    res.json({ Status: true, ExceptionCount: detectedKeys.size, UnmatchedEmployees: unmatchedEmployees });
+    res.json({ Status: true, ExceptionCount: detectedKeys.size, UnmatchedEmployees: unmatchedEmployees,
+      TotalEntries: entries.length, ComparedCount: comparedCount, NoExceptionCount: noExceptionCount,
+      SkippedEntries: skippedEntries });
   } catch (error) {
     await connection.rollback();
     res.status(500).json({ Status: false, Error: error.message });
@@ -1363,7 +1386,7 @@ router.get("/export/:batchId", async (req, res) => {
       ])
     );
     const entriesWithCreditedTimes = entries.map((entry) => {
-      const actual = getActualWindow(entry);
+      const actual = getActualPunchWindow(entry);
       const schedule = entry.employeeId
         ? resolveSchedule(scheduleContext, entry.employeeId, entry.date)
         : null;
@@ -2112,6 +2135,7 @@ router.post("/analyze-time/:batchId", async (req, res) => {
           batchId,
         ]
       );
+      Object.assign(entry, updates);
     };
 
     for (let i = 0; i < entries.length - 1; i++) {
@@ -2132,10 +2156,10 @@ router.post("/analyze-time/:batchId", async (req, res) => {
         const hours = getHours(current.time);
         await updateEntry(current, {
           dateOut: current.date,
-          timeIn: hours !== null && hours < 12 ? current.time : null,
-          timeOut: hours !== null && hours >= 12 ? current.time : null,
-          editedIn: hours !== null && hours < 12 ? 0 : 1,
-          editedOut: hours !== null && hours < 12 ? 1 : 0,
+          timeIn: hours !== null && hours < 14 ? current.time : null,
+          timeOut: hours !== null && hours >= 14 ? current.time : null,
+          editedIn: hours !== null && hours < 14 ? 0 : 1,
+          editedOut: hours !== null && hours < 14 ? 1 : 0,
           processed: 0,
           deleteRecord: 0,
           remarks: `LACK1, ${current.remarks || ""}`.trim(),
@@ -2190,10 +2214,10 @@ router.post("/analyze-time/:batchId", async (req, res) => {
           const hours = getHours(current.time);
           await updateEntry(current, {
             dateOut: current.date,
-            timeIn: hours !== null && hours > 12 ? null : current.time,
-            timeOut: hours !== null && hours > 12 ? current.time : null,
-            editedIn: hours !== null && hours > 12 ? 1 : 0,
-            editedOut: hours !== null && hours > 12 ? 0 : 1,
+            timeIn: hours !== null && hours >= 14 ? null : current.time,
+            timeOut: hours !== null && hours >= 14 ? current.time : null,
+            editedIn: hours !== null && hours >= 14 ? 1 : 0,
+            editedOut: hours !== null && hours >= 14 ? 0 : 1,
             processed: 0,
             deleteRecord: 0,
             remarks: `LACK2, ${current.remarks || ""}`.trim(),
@@ -2232,10 +2256,10 @@ router.post("/analyze-time/:batchId", async (req, res) => {
         const hours = getHours(lastRecord.time);
         await updateEntry(lastRecord, {
           dateOut: lastRecord.date,
-          timeIn: hours !== null && hours < 12 ? lastRecord.time : null,
-          timeOut: hours !== null && hours >= 12 ? lastRecord.time : null,
-          editedIn: hours !== null && hours < 12 ? 0 : 1,
-          editedOut: hours !== null && hours < 12 ? 1 : 0,
+          timeIn: hours !== null && hours < 14 ? lastRecord.time : null,
+          timeOut: hours !== null && hours >= 14 ? lastRecord.time : null,
+          editedIn: hours !== null && hours < 14 ? 0 : 1,
+          editedOut: hours !== null && hours < 14 ? 1 : 0,
           processed: 0,
           deleteRecord: 0,
           remarks: `LACK3, ${lastRecord.remarks || ""}`.trim(),
@@ -2261,10 +2285,10 @@ router.post("/analyze-time/:batchId", async (req, res) => {
       const hours = getHours(entry.time);
       await updateEntry(entry, {
         dateOut: entry.date,
-        timeIn: hours !== null && hours < 12 ? entry.time : null,
-        timeOut: hours !== null && hours >= 12 ? entry.time : null,
-        editedIn: hours !== null && hours < 12 ? 0 : 1,
-        editedOut: hours !== null && hours < 12 ? 1 : 0,
+        timeIn: hours !== null && hours < 14 ? entry.time : null,
+        timeOut: hours !== null && hours >= 14 ? entry.time : null,
+        editedIn: hours !== null && hours < 14 ? 0 : 1,
+        editedOut: hours !== null && hours < 14 ? 1 : 0,
         processed: 0,
         deleteRecord: 0,
         remarks: `LACK4, ${entry.remarks || ""}`.trim(),
