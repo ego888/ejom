@@ -218,30 +218,20 @@ CREATE TABLE IF NOT EXISTS EmployeeDTRPermissions (
     FOREIGN KEY (employeeId) REFERENCES employee(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-
--- 6. Preserve original punches during manual edits
--- Preserve originals on the first manual edit. Existing overwritten punches cannot be recovered.
--- Select the existing eJOM database before importing this MySQL 8 script.
-DROP PROCEDURE IF EXISTS upgrade_ejom_manual_punches;
+-- Original OUT punch storage
+-- Select the existing eJOM database before importing.
+-- Add only the original OUT punch. Do not backfill from editable timeOut values.
+DROP PROCEDURE IF EXISTS upgrade_ejom_orig_time_out;
 DELIMITER $$
-CREATE PROCEDURE upgrade_ejom_manual_punches()
+CREATE PROCEDURE upgrade_ejom_orig_time_out()
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DTREntries' AND COLUMN_NAME='originalTimeIn') THEN
-    ALTER TABLE DTREntries ADD COLUMN originalTimeIn VARCHAR(20) NULL;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DTREntries' AND COLUMN_NAME='originalTimeOut') THEN
-    ALTER TABLE DTREntries ADD COLUMN originalTimeOut VARCHAR(20) NULL;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DTREntries' AND COLUMN_NAME='originalPunchesCaptured') THEN
-    ALTER TABLE DTREntries ADD COLUMN originalPunchesCaptured TINYINT NOT NULL DEFAULT 0;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DTREntries' AND COLUMN_NAME='manualIn') THEN
-    ALTER TABLE DTREntries ADD COLUMN manualIn TINYINT NOT NULL DEFAULT 0;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DTREntries' AND COLUMN_NAME='manualOut') THEN
-    ALTER TABLE DTREntries ADD COLUMN manualOut TINYINT NOT NULL DEFAULT 0;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DTREntries' AND COLUMN_NAME='origTimeOut'
+  ) THEN
+    ALTER TABLE DTREntries ADD COLUMN origTimeOut VARCHAR(20) NULL AFTER time;
   END IF;
 END$$
 DELIMITER ;
-CALL upgrade_ejom_manual_punches();
-DROP PROCEDURE upgrade_ejom_manual_punches;
+CALL upgrade_ejom_orig_time_out();
+DROP PROCEDURE upgrade_ejom_orig_time_out;

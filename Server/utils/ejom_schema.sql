@@ -60,6 +60,7 @@ CREATE TABLE `DTREntries` (
   `dateOut` date DEFAULT NULL,
   `day` varchar(10) NOT NULL,
   `time` varchar(50) DEFAULT NULL,
+  `origTimeOut` varchar(20) DEFAULT NULL,
   `rawState` varchar(50) DEFAULT NULL,
   `timeIn` varchar(20) DEFAULT NULL,
   `timeOut` varchar(20) DEFAULT NULL,

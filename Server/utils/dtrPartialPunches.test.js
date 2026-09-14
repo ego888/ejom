@@ -30,8 +30,9 @@ async function analyze(times) {
     query: async (sql, values) => {
       if (sql.includes("UPDATE DTREntries")) {
         const keys = ["dateOut", "timeIn", "timeOut", "editedIn", "editedOut", "processed", "deleteRecord", "remarks"];
-        const row = rows.find((row) => row.id === values[8]);
+        const row = rows.find((row) => row.id === values[9]);
         keys.forEach((key, index) => { row[key] = values[index]; });
+        row.origTimeOut ??= values[8];
         return [{}];
       }
       const selected = sql.includes("AND processed = 0")
@@ -52,6 +53,8 @@ test("Analyze Time classifies lone punches using 2 PM, leaving the opposite punc
     const [row] = await analyze([time]);
     assert.equal(row.timeIn, time < "14:00" ? time : null);
     assert.equal(row.timeOut, time >= "14:00" ? time : null);
+    assert.equal(row.origTimeOut, time >= "14:00" ? time : null);
+    assert.equal(row.time, time);
   }
 });
 
@@ -59,6 +62,8 @@ test("Analyze Time does not revive the last consumed time-out as an incomplete e
   const rows = await analyze(["08:00", "17:00"]);
   assert.equal(rows[0].timeIn, "08:00");
   assert.equal(rows[0].timeOut, "17:00");
+  assert.equal(rows[0].origTimeOut, "17:00");
+  assert.equal(rows[0].time, "08:00");
   assert.equal(rows[1].deleteRecord, 1);
   assert.equal(rows[1].processed, 1);
 });

@@ -366,14 +366,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
 
     // Sort filtered entries
-    const sortableEntries = filteredEntries.map((entry) => ({
-      ...entry,
-      // Show the raw punch before analysis, but never show a classified OUT as IN.
-      originalTimeIn: entry.originalPunchesCaptured
-        ? entry.originalTimeIn
-        : entry.timeIn || (entry.timeOut ? null : entry.time) || null,
-      originalTimeOut: entry.originalPunchesCaptured ? entry.originalTimeOut : entry.timeOut,
-    }));
+    const sortableEntries = [...filteredEntries];
     if (sortConfig.key) {
       sortableEntries.sort((a, b) => {
         if (a[sortConfig.key] === null) return 1;
@@ -1216,10 +1209,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Date {getSortIndicator("date")}
                     </th>
                     <th
-                      onClick={() => handleSort("originalTimeIn")}
+                      onClick={() => handleSort("time")}
                       style={{ cursor: "pointer" }}
                     >
-                      Orig Time {getSortIndicator("originalTimeIn")}
+                      Orig Time {getSortIndicator("time")}
                     </th>
                     <th
                       onClick={() => handleSort("creditedTimeIn")}
@@ -1240,10 +1233,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Time Out {getSortIndicator("creditedTimeOut")}
                     </th>
                     <th
-                      onClick={() => handleSort("originalTimeOut")}
+                      onClick={() => handleSort("origTimeOut")}
                       style={{ cursor: "pointer" }}
                     >
-                      Orig Time Out {getSortIndicator("originalTimeOut")}
+                      Orig Time Out {getSortIndicator("origTimeOut")}
                     </th>
                     <th
                       onClick={() => handleSort("state")}
@@ -1351,7 +1344,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                         >
                           {formatDate(entry.date)}
                         </td>
-                        <td style={rowStyle}>{formatTime(entry.originalTimeIn)}</td>
+                        <td style={rowStyle}>{formatTime(entry.time)}</td>
                         <td
                           style={{
                             ...rowStyle,
@@ -1414,7 +1407,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                         >
                           {formatTime(entry.creditedTimeOut)}
                         </td>
-                        <td style={rowStyle}>{formatTime(entry.originalTimeOut)}</td>
+                        <td style={rowStyle}>{formatTime(entry.origTimeOut)}</td>
                         <td style={rowStyle}>{entry.state || "-"}</td>
                         <td style={rowStyle}>
                           {Number(entry.hours || 0) > 0
