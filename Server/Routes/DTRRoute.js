@@ -2892,7 +2892,7 @@ router.post("/update-time-in-only/:batchId", async (req, res) => {
 
     const sql = `
       UPDATE DTREntries 
-      SET editedIn=1, processed=1, timeIn = ?
+      SET timeIn = ?
       WHERE id = ? AND batchId = ?
     `;
 
@@ -2916,7 +2916,7 @@ router.post("/update-time-out-only/:batchId", async (req, res) => {
 
     const sql = `
       UPDATE DTREntries 
-      SET editedOut=1, processed=1, timeOut = ?
+      SET timeOut = ?
       WHERE id = ? AND batchId = ?
     `;
 

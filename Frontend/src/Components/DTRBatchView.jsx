@@ -860,9 +860,8 @@ const DTRBatchView = ({ batch, onBack }) => {
     const referenceTime = `${referenceHours}:${referenceMinutes}:00`;
 
     try {
-      const { endpoint, payload } = manualPunchUpdate(
-        entry, type, referenceTime, type === "in" ? entry.date : entry.dateOut || entry.date,
-      );
+      const endpoint = type === "in" ? "update-time-in-only" : "update-time-out-only";
+      const payload = { id: entry.id, time: referenceTime };
 
       const response = await axios.post(
         `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
