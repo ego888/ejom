@@ -97,3 +97,50 @@ test("Compare Schedules creates approvals independently for incomplete analyzed 
     [2, "LATE_OUT", "17:00:00", "18:00:00", 60],
   ]);
 });
+
+test("Unscheduled lone punches are offered for approval without inventing duration", async () => {
+  const entries = [
+    { id: 1, timeIn: "07:00", timeOut: null },
+    { id: 2, timeIn: null, timeOut: "18:00" },
+    { id: 3, timeIn: "09:00", timeOut: null },
+    { id: 4, timeIn: null, timeOut: "16:00" },
+  ].map((row) => ({ ...row, batchId: 1, employeeId: 10, empId: "10", date: "2026-09-01", processed: 0 }));
+  const inserts = [];
+  const connection = {
+    beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release: () => {},
+    query: async (sql, values) => {
+      if (sql.includes("FROM DTRBatches")) return [[{ periodStart: "2026-09-01", periodEnd: "2026-09-30" }]];
+      if (sql.includes("FROM DTREntries")) return [entries];
+      if (sql.includes("INSERT INTO DTRScheduleExceptions")) inserts.push(values);
+      return [[]];
+    },
+  };
+  let handler;
+  const comparisonSource = source.slice(source.indexOf('router.post("/compare-schedules/'), source.indexOf('router.get("/schedule-exceptions/'));
+  vm.runInNewContext(comparisonSource, {
+    router: { post: (_path, _auth, fn) => { handler = fn; } }, verifyUser: () => {},
+    pool: { getConnection: async () => connection }, loadSchedulingContext: async () => ({}),
+    resolveSchedule: () => null, getActualPunchWindow, getScheduledWindow, comparisonSkipReason,
+  });
+  let response;
+  await handler({ params: { batchId: 1 } }, { json: (body) => { response = body; }, status: () => { throw new Error("Comparison failed"); } });
+  assert.equal(response.ComparedCount, 4);
+  assert.equal(response.NoExceptionCount, 0);
+  assert.equal(response.SkippedEntries.length, 0);
+  assert.deepEqual(inserts.map((values) => Array.from(values).slice(1, 2).concat(Array.from(values).slice(4))), [
+    [1, "NO_SCHEDULE", null, "07:00:00", 0],
+    [2, "NO_SCHEDULE", null, "18:00:00", 0],
+    [3, "NO_SCHEDULE", null, "09:00:00", 0],
+    [4, "NO_SCHEDULE", null, "16:00:00", 0],
+  ]);
+});
+
+
+test("approved unscheduled or rest-day lone punches retain only the available side", () => {
+  for (const schedule of [null, { type: "REST" }]) {
+    for (const actual of [{ start: 805, end: null }, { start: null, end: 1114 }]) {
+      assert.equal(getCreditedWindow({ actual, schedule }), null);
+      assert.deepEqual(getCreditedWindow({ actual, schedule, unscheduledPunchApproved: true }), actual);
+    }
+  }
+});

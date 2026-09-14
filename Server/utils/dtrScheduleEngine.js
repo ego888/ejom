@@ -75,6 +75,7 @@ export const getCreditedWindow = ({
   earlyApproved = 0,
   lateApproved = 0,
   unscheduledApproved = 0,
+  unscheduledPunchApproved = false,
 }) => {
   if (!actual) return null;
   if (schedule?.type === "WORK" && schedule.shift) {
@@ -84,6 +85,9 @@ export const getCreditedWindow = ({
       start: actual.start === null ? null : Math.max(actual.start, planned.start - Number(earlyApproved || 0)),
       end: actual.end === null ? null : Math.min(actual.end, planned.end + Number(lateApproved || 0)),
     };
+  }
+  if (unscheduledPunchApproved && (actual.start === null || actual.end === null)) {
+    return { start: actual.start, end: actual.end };
   }
   if (Number(unscheduledApproved) > 0 && actual.start !== null && actual.end !== null) {
     return {

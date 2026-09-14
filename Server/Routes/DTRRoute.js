@@ -114,18 +114,10 @@ router.post("/compare-schedules/:batchId", verifyUser, async (req, res) => {
       const actual = getActualPunchWindow(entry);
       const schedule = resolveSchedule(context, entry.employeeId, entry.date);
       const exceptions = [];
-      if ((!schedule || schedule.type !== "WORK" || !schedule.shift) &&
-          (actual.start === null || actual.end === null)) {
-        comparedCount -= 1;
-        skippedEntries.push({ id: entry.id, empId: entry.empId, empName: entry.empName,
-          date: entry.date, timeIn: entry.timeIn, timeOut: entry.timeOut,
-          reason: "Both punches are required to determine work duration without a work schedule" });
-        continue;
-      }
       if (!schedule) {
-        exceptions.push({ type: "NO_SCHEDULE", scheduled: null, actual: entry.timeOut, minutes: Math.max(0, actual.end - actual.start) });
+        exceptions.push({ type: "NO_SCHEDULE", scheduled: null, actual: entry.timeOut || entry.timeIn, minutes: actual.start === null || actual.end === null ? 0 : Math.max(0, actual.end - actual.start) });
       } else if (schedule.type !== "WORK" || !schedule.shift) {
-        exceptions.push({ type: "REST_DAY_WORK", scheduled: null, actual: entry.timeOut, minutes: Math.max(0, actual.end - actual.start) });
+        exceptions.push({ type: "REST_DAY_WORK", scheduled: null, actual: entry.timeOut || entry.timeIn, minutes: actual.start === null || actual.end === null ? 0 : Math.max(0, actual.end - actual.start) });
       } else {
         const planned = getScheduledWindow(schedule.shift);
         if (actual.start !== null && actual.start < planned.start) exceptions.push({ type: "EARLY_IN", scheduled: schedule.shift.timeIn, actual: entry.timeIn, minutes: planned.start - actual.start });
@@ -186,10 +178,11 @@ router.get("/schedule-exceptions/:batchId", verifyUser, async (req, res) => {
 router.put("/schedule-exceptions/:id/approve", verifyUser, async (req, res) => {
   const requested = Number.parseInt(req.body.approvedMinutes, 10);
   try {
-    const [rows] = await pool.query("SELECT availableMinutes FROM DTRScheduleExceptions WHERE id=?", [req.params.id]);
+    const [rows] = await pool.query("SELECT availableMinutes, exceptionType FROM DTRScheduleExceptions WHERE id=?", [req.params.id]);
     if (!rows.length) return res.status(404).json({ Status: false, Error: "Exception not found" });
-    if (!Number.isInteger(requested) || requested < 1 || requested > Number(rows[0].availableMinutes)) {
-      return res.status(400).json({ Status: false, Error: `Approved minutes must be between 1 and ${rows[0].availableMinutes}` });
+    const minimum = Number(rows[0].availableMinutes) === 0 && ["NO_SCHEDULE", "REST_DAY_WORK"].includes(rows[0].exceptionType) ? 0 : 1;
+    if (!Number.isInteger(requested) || requested < minimum || requested > Number(rows[0].availableMinutes)) {
+      return res.status(400).json({ Status: false, Error: `Approved minutes must be between ${minimum} and ${rows[0].availableMinutes}` });
     }
     await pool.query(`UPDATE DTRScheduleExceptions SET approvedMinutes=?, status='APPROVED',
       reviewedBy=?, reviewedAt=NOW(), reviewNotes=? WHERE id=?`,
@@ -1400,6 +1393,7 @@ router.get("/export/:batchId", async (req, res) => {
         earlyApproved: earlyApprovedMinutes,
         lateApproved: lateApprovedMinutes,
         unscheduledApproved: unscheduledApprovedMinutes,
+        unscheduledPunchApproved: approvals.has(`${entry.id}:${unscheduledType}`),
       });
       return {
         ...entry,

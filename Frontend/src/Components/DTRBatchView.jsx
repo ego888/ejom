@@ -288,7 +288,7 @@ const DTRBatchView = ({ batch, onBack }) => {
 
   const approveException = async (exception, minutes) => {
     const approved = Math.min(Number(minutes), Number(exception.availableMinutes));
-    if (!Number.isInteger(approved) || approved < 1) return;
+    if (!Number.isInteger(approved) || approved < 0 || (approved === 0 && Number(exception.availableMinutes) !== 0)) return;
     try {
       await axios.put(`${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/approve`, {
         approvedMinutes: approved,
@@ -301,14 +301,18 @@ const DTRBatchView = ({ batch, onBack }) => {
   };
 
   const approveExceptionType = async (type = null) => {
-    const pending = scheduleExceptions.filter(
-      (item) => item.status === "PENDING" && (!type || item.exceptionType === type),
-    );
-    if (!pending.length) return;
     const label = type === "EARLY_IN" ? "all pending early time-ins" : type === "LATE_OUT" ? "all pending late time-outs" : "all pending outside-schedule time";
     if (!window.confirm(`Approve ${label} in this batch?`)) return;
     try {
       setLoading(true);
+      const comparison = await axios.post(`${ServerIP}/auth/dtr/compare-schedules/${batch.id}`);
+      if (!comparison.data.Status) throw new Error(comparison.data.Error);
+      setComparisonReport(comparison.data);
+      const latest = await axios.get(`${ServerIP}/auth/dtr/schedule-exceptions/${batch.id}`);
+      if (!latest.data.Status) throw new Error(latest.data.Error);
+      const pending = latest.data.Exceptions.filter(
+        (item) => item.status === "PENDING" && (!type || item.exceptionType === type),
+      );
       await Promise.all(pending.map((item) => axios.put(
         `${ServerIP}/auth/dtr/schedule-exceptions/${item.id}/approve`,
         { approvedMinutes: item.availableMinutes },
@@ -1606,12 +1610,12 @@ const DTRBatchView = ({ batch, onBack }) => {
               <th>Actions</th>
             </tr></thead>
             <tbody>{scheduleExceptions.length === 0 ? <tr><td colSpan="8" className="text-center text-muted">No schedule exceptions. Run Compare Schedules after analyzing punches.</td></tr> : sortedScheduleExceptions.map((item) => <tr key={item.id}>
-              <td>{item.employeeName || item.empName}</td><td>{formatDate(item.workDate)}</td><td>{item.exceptionType.replaceAll("_", " ")}</td><td>{formatTime(item.scheduledTime)}</td><td>{formatTime(item.actualTime)}</td><td>{item.availableMinutes} min</td><td>{item.status === "APPROVED" ? <span className="badge bg-success fs-6">{item.approvedMinutes} min</span> : "Pending"}</td>
+              <td>{item.employeeName || item.empName}</td><td>{formatDate(item.workDate)}</td><td>{item.exceptionType.replaceAll("_", " ")}</td><td>{formatTime(item.scheduledTime)}</td><td>{formatTime(item.actualTime)}</td><td>{Number(item.availableMinutes) === 0 ? "Punch only (no hours)" : `${item.availableMinutes} min`}</td><td>{item.status === "APPROVED" ? <span className="badge bg-success fs-6">{item.approvedMinutes} min</span> : "Pending"}</td>
               <td><div className="d-flex flex-wrap gap-1 align-items-center">
                 <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 30)}>+30m</button>
                 <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 60)}>+1hr</button>
                 <button type="button" className="btn btn-sm btn-primary" onClick={() => setAllApprovalMinutes(item)}>All</button>
-                <input type="number" min="1" max={item.availableMinutes} className="form-control form-control-sm" style={{ width: 80 }} placeholder="Minutes" value={approvalMinutes[item.id] || ""} onChange={(e) => setApprovalMinutes({ ...approvalMinutes, [item.id]: e.target.value })} />
+                <input type="number" min={Number(item.availableMinutes) === 0 ? 0 : 1} max={item.availableMinutes} className="form-control form-control-sm" style={{ width: 80 }} placeholder="Minutes" value={approvalMinutes[item.id] || ""} onChange={(e) => setApprovalMinutes({ ...approvalMinutes, [item.id]: e.target.value })} />
                 <button type="button" className="btn btn-sm btn-success" onClick={() => approveException(item, Number(approvalMinutes[item.id]))}>Approve</button>
               </div></td>
             </tr>)}</tbody>
