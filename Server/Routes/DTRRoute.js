@@ -71,6 +71,11 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
+// MySQL evaluates these assignments before changing the working punch fields.
+const preserveOriginalPunches = `originalTimeIn = IF(originalPunchesCaptured=0, timeIn, originalTimeIn),
+  originalTimeOut = IF(originalPunchesCaptured=0, timeOut, originalTimeOut),
+  originalPunchesCaptured = 1`;
+
 const router = express.Router();
 router.use(analyticsRouter);
 
@@ -92,7 +97,8 @@ router.post("/compare-schedules/:batchId", verifyUser, async (req, res) => {
       `SELECT d.id, d.batchId, d.empId, d.empName,
               DATE_FORMAT(d.date,'%Y-%m-%d') date,
               DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut,
-              d.timeIn, d.timeOut, d.processed, e.id employeeId
+              IF(d.originalPunchesCaptured=1,d.originalTimeIn,d.timeIn) timeIn,
+              IF(d.originalPunchesCaptured=1,d.originalTimeOut,d.timeOut) timeOut, d.processed, e.id employeeId
        FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
        WHERE d.batchId=? AND d.deleteRecord=0
        ORDER BY d.empId, d.date, d.id`, [req.params.batchId]
@@ -1357,7 +1363,8 @@ router.get("/export/:batchId", async (req, res) => {
        DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut, 
        day, time, rawState, timeIn, timeOut, state, 
        hours, overtime, sundayHours, sundayOT, holidayHours, holidayOT, holidayType, nightDifferential,
-       processed, deleteRecord, editedIn, editedOut, remarks
+       processed, deleteRecord, editedIn, editedOut, remarks,
+       originalTimeIn, originalTimeOut, originalPunchesCaptured, manualIn, manualOut
        FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
        WHERE d.batchId = ? 
        ORDER BY d.empId, d.date, d.time`,
@@ -1379,7 +1386,7 @@ router.get("/export/:batchId", async (req, res) => {
       ])
     );
     const entriesWithCreditedTimes = entries.map((entry) => {
-      const actual = getActualPunchWindow(entry);
+      const actual = getActualPunchWindow(entry.originalPunchesCaptured ? { ...entry, timeIn: entry.originalTimeIn, timeOut: entry.originalTimeOut } : entry);
       const schedule = entry.employeeId
         ? resolveSchedule(scheduleContext, entry.employeeId, entry.date)
         : null;
@@ -1397,8 +1404,8 @@ router.get("/export/:batchId", async (req, res) => {
       });
       return {
         ...entry,
-        creditedTimeIn: credited ? minutesToTime(credited.start) : null,
-        creditedTimeOut: credited ? minutesToTime(credited.end) : null,
+        creditedTimeIn: entry.manualIn ? entry.timeIn : credited ? minutesToTime(credited.start) : null,
+        creditedTimeOut: entry.manualOut ? entry.timeOut : credited ? minutesToTime(credited.end) : null,
         earlyApprovedMinutes,
         lateApprovedMinutes,
         unscheduledApprovedMinutes,
@@ -2452,7 +2459,7 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
       connection, batchRows[0].periodStart, batchRows[0].periodEnd
     );
     const [entries] = await connection.query(
-      `SELECT d.id, d.timeIn, d.timeOut,
+      `SELECT d.id, d.timeIn, d.timeOut, d.manualIn, d.manualOut, d.originalTimeIn, d.originalTimeOut, d.originalPunchesCaptured,
               DATE_FORMAT(d.date,'%Y-%m-%d') date,
               DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut,
               e.id employeeId
@@ -2523,8 +2530,8 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
           const mealOverlap = Math.max(0, Math.min(regularEnd, mealEnd) - Math.max(regularStart, mealStart));
           regularMinutes = Math.max(0, regularMinutes - mealOverlap);
         }
-        const earlyApproved = approvals.get(`${entry.id}:EARLY_IN`) || 0;
-        const lateApproved = approvals.get(`${entry.id}:LATE_OUT`) || 0;
+        const earlyApproved = entry.manualIn ? Math.max(0, planned.start - actual.start) : approvals.get(`${entry.id}:EARLY_IN`) || 0;
+        const lateApproved = entry.manualOut ? Math.max(0, actual.end - planned.end) : approvals.get(`${entry.id}:LATE_OUT`) || 0;
         overtimeMinutes = earlyApproved + lateApproved;
         const credited = getCreditedWindow({ actual, schedule, earlyApproved, lateApproved });
         effectiveStart = credited?.start ?? actual.start;
@@ -2532,9 +2539,17 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
       } else {
         const unscheduledApproved = approvals.get(`${entry.id}:${schedule ? "REST_DAY_WORK" : "NO_SCHEDULE"}`) || 0;
         overtimeMinutes = unscheduledApproved;
-        const credited = getCreditedWindow({ actual, schedule, unscheduledApproved });
-        effectiveStart = credited?.start ?? actual.start;
-        effectiveEnd = credited?.end ?? actual.start;
+        const originalActual = getActualPunchWindow(entry.originalPunchesCaptured
+          ? { ...entry, timeIn: entry.originalTimeIn, timeOut: entry.originalTimeOut } : entry);
+        const credited = getCreditedWindow({ actual: originalActual, schedule, unscheduledApproved,
+          unscheduledPunchApproved: approvals.has(`${entry.id}:${schedule ? "REST_DAY_WORK" : "NO_SCHEDULE"}`) });
+        const start = entry.manualIn ? actual.start : credited?.start;
+        const end = entry.manualOut ? actual.end : credited?.end;
+        if (entry.manualIn || entry.manualOut) {
+          overtimeMinutes = Number.isFinite(start) && Number.isFinite(end) ? Math.max(0, end - start) : 0;
+        }
+        effectiveStart = start ?? actual.start;
+        effectiveEnd = end ?? effectiveStart;
       }
 
       const regularHours = regularMinutes / 60;
@@ -2709,6 +2724,8 @@ router.post("/update-time-in/:batchId", async (req, res) => {
       `
       UPDATE DTREntries 
       SET 
+        ${preserveOriginalPunches},
+        manualIn = 1,
         timeIn = ?,
         processed = ?,
         editedIn = 1,
@@ -2760,6 +2777,8 @@ router.post("/update-time-out/:batchId", async (req, res) => {
       `
       UPDATE DTREntries 
       SET 
+        ${preserveOriginalPunches},
+        manualOut = 1,
         timeOut = ?,
         processed = ?,
         editedOut = 1,
@@ -2884,8 +2903,8 @@ router.post("/update-time-in-only/:batchId", async (req, res) => {
 
     const sql = `
       UPDATE DTREntries 
-      SET timeIn = ?
-      WHERE id = ?
+      SET ${preserveOriginalPunches}, manualIn=1, editedIn=1, processed=1, timeIn = ?
+      WHERE id = ? AND batchId = ?
     `;
 
     const [result] = await pool.query(sql, [time, id, batchId]);
@@ -2908,8 +2927,8 @@ router.post("/update-time-out-only/:batchId", async (req, res) => {
 
     const sql = `
       UPDATE DTREntries 
-      SET timeOut = ?
-      WHERE id = ?
+      SET ${preserveOriginalPunches}, manualOut=1, editedOut=1, processed=1, timeOut = ?
+      WHERE id = ? AND batchId = ?
     `;
 
     const [result] = await pool.query(sql, [time, id, batchId]);
@@ -2929,7 +2948,7 @@ router.post("/update-time-out-only/:batchId", async (req, res) => {
 router.post("/update-time-in-out/:batchId", async (req, res) => {
   let connection;
   try {
-    // const { batchId } = req.params;
+    const { batchId } = req.params;
     const { id, timeIn, timeOut, editedIn, editedOut, date, dateOut } =
       req.body;
 
@@ -2944,6 +2963,9 @@ router.post("/update-time-in-out/:batchId", async (req, res) => {
     await connection.beginTransaction();
 
     const updateFields = [
+      preserveOriginalPunches,
+      "manualIn = 1",
+      "manualOut = 1",
       "timeIn = ?",
       "timeOut = ?",
       "editedIn = ?",
@@ -2964,14 +2986,14 @@ router.post("/update-time-in-out/:batchId", async (req, res) => {
     }
 
     // Add ID at the end of values array
-    updateValues.push(id);
+    updateValues.push(id, batchId);
 
     await connection.query(
       `
       UPDATE DTREntries 
       SET 
         ${updateFields.join(", ")}
-      WHERE id = ?
+      WHERE id = ? AND batchId = ?
     `,
       updateValues
     );
@@ -3142,7 +3164,7 @@ router.post("/reset-entries/:batchId", async (req, res) => {
 
     await connection.beginTransaction();
     await connection.query(
-      `UPDATE DTREntries SET processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, holidayHours = 0, holidayOT = 0, holidayType = '', nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
+      `UPDATE DTREntries SET manualIn=0, manualOut=0, processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, holidayHours = 0, holidayOT = 0, holidayType = '', nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
       [batchId]
     );
     await connection.commit();

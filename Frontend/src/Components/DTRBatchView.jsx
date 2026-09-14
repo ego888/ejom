@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "../utils/axiosConfig";
+import { manualPunchUpdate } from "../utils/manualPunchUpdate";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
 import ModalAlert from "./UI/ModalAlert";
@@ -368,7 +369,10 @@ const DTRBatchView = ({ batch, onBack }) => {
     const sortableEntries = filteredEntries.map((entry) => ({
       ...entry,
       // Show the raw punch before analysis, but never show a classified OUT as IN.
-      originalTimeIn: entry.timeIn || (entry.timeOut ? null : entry.time) || null,
+      originalTimeIn: entry.originalPunchesCaptured
+        ? entry.originalTimeIn
+        : entry.timeIn || (entry.timeOut ? null : entry.time) || null,
+      originalTimeOut: entry.originalPunchesCaptured ? entry.originalTimeOut : entry.timeOut,
     }));
     if (sortConfig.key) {
       sortableEntries.sort((a, b) => {
@@ -736,109 +740,10 @@ const DTRBatchView = ({ batch, onBack }) => {
     if (!newTime || !selectedEntry || !newDate) return;
 
     try {
-      let needsSwap = false;
-
-      // Check if we need to swap times
-      if (selectedEntry.editedIn === 1) {
-        // compare newdate+newTime with dateOut+timeOut
-        const newDateTime = new Date(`${newDate}T${newTime}`);
-        const dateOut = new Date(
-          `${selectedEntry.dateOut}T${selectedEntry.timeOut}`,
-        );
-        needsSwap = newDateTime > dateOut;
-      } else if (selectedEntry.editedOut === 1) {
-        // compare newdate+newTime with date+timeIn
-        const newDateTime = new Date(`${newDate}T${newTime}`);
-        const dateIn = new Date(
-          `${selectedEntry.date}T${selectedEntry.timeIn}`,
-        );
-        needsSwap = newDateTime < dateIn;
-      }
-
-      if (needsSwap) {
-        // Handle swap case
-        const newEditedIn = selectedEntry.editedOut;
-        const newEditedOut = selectedEntry.editedIn;
-        const [newTimeIn, newTimeOut] =
-          selectedEntry.editedIn === 0
-            ? [newTime, selectedEntry.timeIn]
-            : [selectedEntry.timeOut, newTime];
-
-        const response = await axios.post(
-          `${ServerIP}/auth/dtr/update-time-in-out/${batch.id}`,
-          {
-            id: selectedEntry.id,
-            timeIn: newTimeIn,
-            timeOut: newTimeOut,
-            editedIn: newEditedIn,
-            editedOut: newEditedOut,
-            date: timeType === "in" ? newDate : selectedEntry.date,
-            dateOut:
-              timeType === "out"
-                ? newDate
-                : selectedEntry.dateOut || selectedEntry.date,
-          },
-        );
-
-        if (response.data.Status) {
-          setEntries((prevEntries) =>
-            prevEntries.map((prevEntry) => {
-              if (prevEntry.id === selectedEntry.id) {
-                return {
-                  ...prevEntry,
-                  timeIn: newTimeIn,
-                  timeOut: newTimeOut,
-                  editedIn: newEditedIn,
-                  editedOut: newEditedOut,
-                  date: timeType === "in" ? newDate : prevEntry.date,
-                  dateOut:
-                    timeType === "out"
-                      ? newDate
-                      : prevEntry.dateOut || prevEntry.date,
-                  processed: 1,
-                  remarks: (prevEntry.remarks || "") + " | TIMES SWAPPED",
-                };
-              }
-              return prevEntry;
-            }),
-          );
-        }
-      } else {
-        // Handle normal update case
-        const endpoint =
-          timeType === "in" ? "update-time-in" : "update-time-out";
-        const payload = {
-          id: selectedEntry.id,
-          [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
-          [timeType === "in" ? "date" : "dateOut"]: newDate,
-          processed: 1,
-        };
-
-        const response = await axios.post(
-          `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
-          payload,
-        );
-
-        if (response.data.Status) {
-          setEntries((prevEntries) =>
-            prevEntries.map((prevEntry) => {
-              if (prevEntry.id === selectedEntry.id) {
-                return {
-                  ...prevEntry,
-                  [timeType === "in" ? "timeIn" : "timeOut"]: newTime,
-                  [timeType === "in" ? "date" : "dateOut"]: newDate,
-                  [timeType === "in" ? "editedIn" : "editedOut"]: 1,
-                  processed: 1,
-                  remarks:
-                    (prevEntry.remarks || "") +
-                    (timeType === "in" ? " | MANUAL IN" : " | MANUAL OUT"),
-                };
-              }
-              return prevEntry;
-            }),
-          );
-        }
-      }
+      const { endpoint, payload } = manualPunchUpdate(selectedEntry, timeType, newTime, newDate);
+      const response = await axios.post(`${ServerIP}/auth/dtr/${endpoint}/${batch.id}`, payload);
+      if (!response.data.Status) throw new Error(response.data.Error || "Failed to save manual time");
+      await fetchEntries();
     } catch (error) {
       console.error("Error updating time:", error);
       alert("Failed to update time. Please try again.");
@@ -970,12 +875,9 @@ const DTRBatchView = ({ batch, onBack }) => {
     const referenceTime = `${referenceHours}:${referenceMinutes}:00`;
 
     try {
-      const endpoint =
-        type === "in" ? "update-time-in-only" : "update-time-out-only";
-      const payload = {
-        id: entry.id,
-        time: referenceTime,
-      };
+      const { endpoint, payload } = manualPunchUpdate(
+        entry, type, referenceTime, type === "in" ? entry.date : entry.dateOut || entry.date,
+      );
 
       const response = await axios.post(
         `${ServerIP}/auth/dtr/${endpoint}/${batch.id}`,
@@ -983,18 +885,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       );
 
       if (response.data.Status) {
-        // Update the local state instead of fetching all data
-        setEntries((prevEntries) =>
-          prevEntries.map((prevEntry) => {
-            if (prevEntry.id === entry.id) {
-              return {
-                ...prevEntry,
-                [type === "in" ? "timeIn" : "timeOut"]: referenceTime,
-              };
-            }
-            return prevEntry;
-          }),
-        );
+        await fetchEntries();
       } else {
         setError(response.data.Error || `Failed to update ${type} time`);
       }
@@ -1349,10 +1240,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Time Out {getSortIndicator("creditedTimeOut")}
                     </th>
                     <th
-                      onClick={() => handleSort("timeOut")}
+                      onClick={() => handleSort("originalTimeOut")}
                       style={{ cursor: "pointer" }}
                     >
-                      Orig Time Out {getSortIndicator("timeOut")}
+                      Orig Time Out {getSortIndicator("originalTimeOut")}
                     </th>
                     <th
                       onClick={() => handleSort("state")}
@@ -1523,7 +1414,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                         >
                           {formatTime(entry.creditedTimeOut)}
                         </td>
-                        <td style={rowStyle}>{formatTime(entry.timeOut)}</td>
+                        <td style={rowStyle}>{formatTime(entry.originalTimeOut)}</td>
                         <td style={rowStyle}>{entry.state || "-"}</td>
                         <td style={rowStyle}>
                           {Number(entry.hours || 0) > 0
