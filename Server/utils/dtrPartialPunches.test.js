@@ -23,21 +23,22 @@ test("approving a lone arrival or departure preserves the absent punch", () => {
 // Run the actual analysis handler against an in-memory query adapter.
 const source = fs.readFileSync(new URL("../Routes/DTRRoute.js", import.meta.url), "utf8");
 const analysisSource = source.slice(source.indexOf('router.post("/analyze-time/'), source.indexOf('// Delete repeated records'));
-async function analyze(times) {
+async function analyze(times, repeat = false) {
   const rows = times.map((time, index) => ({ id: index + 1, batchId: 1, empId: "10", date: "2026-09-01", time, processed: 0, deleteRecord: 0 }));
   const connection = {
     beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release: () => {},
     query: async (sql, values) => {
       if (sql.includes("UPDATE DTREntries")) {
         const keys = ["dateOut", "timeIn", "timeOut", "editedIn", "editedOut", "processed", "deleteRecord", "remarks"];
-        const row = rows.find((row) => row.id === values[9]);
+        const row = rows.find((row) => row.id === values[10]);
         keys.forEach((key, index) => { row[key] = values[index]; });
         row.origTimeOut ??= values[8];
+        row.time = values[9];
         return [{}];
       }
       const selected = sql.includes("AND processed = 0")
         ? rows.filter((row) => !row.processed && !row.deleteRecord && !row.timeIn && !row.timeOut) : rows;
-      return [structuredClone(selected)];
+      return [structuredClone(selected).map((row) => ({ ...row, time: row.time ?? row.origTimeOut }))];
     },
   };
   let handler;
@@ -45,6 +46,7 @@ async function analyze(times) {
   let response;
   await handler({ params: { batchId: 1 } }, { json: (body) => { response = body; }, status: () => { throw new Error("Analysis failed"); } });
   assert.equal(response.Status, true);
+  if (repeat) await handler({ params: { batchId: 1 } }, { json: () => {}, status: () => { throw new Error("Repeated analysis failed"); } });
   return rows;
 }
 
@@ -54,7 +56,7 @@ test("Analyze Time classifies lone punches using 2 PM, leaving the opposite punc
     assert.equal(row.timeIn, time < "14:00" ? time : null);
     assert.equal(row.timeOut, time >= "14:00" ? time : null);
     assert.equal(row.origTimeOut, time >= "14:00" ? time : null);
-    assert.equal(row.time, time);
+    assert.equal(row.time, time >= "14:00" ? null : time);
   }
 });
 
@@ -148,4 +150,13 @@ test("approved unscheduled or rest-day lone punches retain only the available si
       assert.deepEqual(getCreditedWindow({ actual, schedule, unscheduledPunchApproved: true }), actual);
     }
   }
+});
+
+
+test("repeated analysis preserves a lone OUT after the original IN column is cleared", async () => {
+  const [row] = await analyze(["18:34"], true);
+  assert.equal(row.time, null);
+  assert.equal(row.origTimeOut, "18:34");
+  assert.equal(row.timeIn, null);
+  assert.equal(row.timeOut, "18:34");
 });

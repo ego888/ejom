@@ -2072,7 +2072,7 @@ router.post("/analyze-time/:batchId", async (req, res) => {
       `SELECT id, batchId, empId, empName,
        DATE_FORMAT(date, '%Y-%m-%d') as date,
        DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut,
-       day, time, origTimeOut, timeIn, timeOut, processed, deleteRecord, editedIn, editedOut, remarks
+       day, COALESCE(time, origTimeOut) AS time, origTimeOut, timeIn, timeOut, processed, deleteRecord, editedIn, editedOut, remarks
        FROM DTREntries
        WHERE batchId = ?
        ORDER BY empId, date, time`,
@@ -2117,7 +2117,8 @@ router.post("/analyze-time/:batchId", async (req, res) => {
           processed = ?,
           deleteRecord = ?,
           remarks = ?,
-          origTimeOut = COALESCE(origTimeOut, ?)
+          origTimeOut = COALESCE(origTimeOut, ?),
+          time = ?
         WHERE id = ? AND batchId = ?
       `,
         [
@@ -2130,6 +2131,7 @@ router.post("/analyze-time/:batchId", async (req, res) => {
           deleteRecord ?? 0,
           remarks ?? null,
           deleteRecord ? null : timeOut ?? null,
+          !deleteRecord && !timeIn && timeOut ? null : entry.time,
           entry.id,
           batchId,
         ]
@@ -2270,7 +2272,7 @@ router.post("/analyze-time/:batchId", async (req, res) => {
       `SELECT id, batchId, empId, empName,
        DATE_FORMAT(date, '%Y-%m-%d') as date,
        DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut,
-       day, time, origTimeOut, timeIn, timeOut, processed, deleteRecord, editedIn, editedOut, remarks
+       day, COALESCE(time, origTimeOut) AS time, origTimeOut, timeIn, timeOut, processed, deleteRecord, editedIn, editedOut, remarks
        FROM DTREntries
        WHERE batchId = ?
          AND processed = 0
@@ -3164,7 +3166,7 @@ router.post("/reset-entries/:batchId", async (req, res) => {
 
     await connection.beginTransaction();
     await connection.query(
-      `UPDATE DTREntries SET processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, holidayHours = 0, holidayOT = 0, holidayType = '', nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
+      `UPDATE DTREntries SET time = COALESCE(time, origTimeOut), processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, holidayHours = 0, holidayOT = 0, holidayType = '', nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
       [batchId]
     );
     await connection.commit();
