@@ -361,7 +361,11 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
 
     // Sort filtered entries
-    const sortableEntries = [...filteredEntries];
+    const sortableEntries = filteredEntries.map((entry) => ({
+      ...entry,
+      // Show the raw punch before analysis, but never show a classified OUT as IN.
+      originalTimeIn: entry.timeIn || (entry.timeOut ? null : entry.time) || null,
+    }));
     if (sortConfig.key) {
       sortableEntries.sort((a, b) => {
         if (a[sortConfig.key] === null) return 1;
@@ -1317,10 +1321,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                       Date {getSortIndicator("date")}
                     </th>
                     <th
-                      onClick={() => handleSort("time")}
+                      onClick={() => handleSort("originalTimeIn")}
                       style={{ cursor: "pointer" }}
                     >
-                      Orig Time {getSortIndicator("time")}
+                      Orig Time {getSortIndicator("originalTimeIn")}
                     </th>
                     <th
                       onClick={() => handleSort("creditedTimeIn")}
@@ -1452,7 +1456,7 @@ const DTRBatchView = ({ batch, onBack }) => {
                         >
                           {formatDate(entry.date)}
                         </td>
-                        <td style={rowStyle}>{formatTime(entry.time)}</td>
+                        <td style={rowStyle}>{formatTime(entry.originalTimeIn)}</td>
                         <td
                           style={{
                             ...rowStyle,
