@@ -430,7 +430,12 @@ const Dashboard = () => {
     ) {
       items.push(PROFILE);
     }
-    return items;
+    return items.filter((item) => {
+      if (permissions.isAdmin) return true;
+      if (item.path === "dtr-monthly") return permissions.dtrPermissions.includes("dtr.monthly");
+      if (item.path === "dtr-absences") return permissions.dtrPermissions.includes("dtr.absences");
+      return true;
+    });
   };
 
   // Add function to determine initial route

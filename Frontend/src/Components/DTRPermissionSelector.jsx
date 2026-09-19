@@ -48,10 +48,9 @@ const DTRPermissionSelector = ({ value = [], onChange }) => {
           </div>
         ))}
       </div>
-      <small className="text-muted d-block mt-2">Overview is automatically available when any DTR access is selected. Administrators always have full access.</small>
+      <small className="text-muted d-block mt-2">Attendance Overview is available with Attendance Batches, Monthly Hours, or Absences access. Administrators always have full access.</small>
     </fieldset>
   );
 };
 
 export default DTRPermissionSelector;
-

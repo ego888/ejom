@@ -94,6 +94,16 @@ export const authorizeDtrRequest = (req, res, next) => {
     ? req.user.dtrPermissions
     : [];
   const required = getDtrPermissionForPath(req.path);
+  // Related pages can read required reference data without management permissions.
+  const canReadOptions = req.method === "GET" && (
+    (req.path.replace(/\/$/, "") === "/shifts" &&
+      ["dtr.assignments", "dtr.overrides"].some((key) => permissions.includes(key))) ||
+    (req.path.replace(/\/$/, "") === "/schedules/groups" &&
+      permissions.includes("dtr.assignments")) ||
+    (req.path.replace(/\/$/, "") === "/holidays" &&
+      permissions.includes("dtr.batches"))
+  );
+  if (canReadOptions) return next();
   const allowed = required === "dtr.analytics"
     ? ["dtr.batches", "dtr.monthly", "dtr.absences"].some((key) => permissions.includes(key))
     : required === "dtr.scheduling"

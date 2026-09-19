@@ -66,6 +66,12 @@ const checkRouteAccess = (route, permissions, subRoute = "") => {
     return permissions.dtrPermissions.includes(requiredBySubRoute[subRoute]);
   }
 
+  if (route === "dtr-monthly" || route === "dtr-absences") {
+    return permissions.dtrPermissions.includes(
+      route === "dtr-monthly" ? "dtr.monthly" : "dtr.absences"
+    );
+  }
+
   if (permissions.isOperator) {
     return ["printlog", "wiplog", "delivery-qr"].includes(route);
   }
@@ -115,15 +121,6 @@ const checkRouteAccess = (route, permissions, subRoute = "") => {
       return permissions.isOperator;
     case "delivery-qr":
       return permissions.isSales;
-    case "dtr-absences":
-    case "dtr-monthly":
-      return (
-        permissions.isSales ||
-        permissions.isAccounting ||
-        permissions.isProduction ||
-        permissions.isArtist ||
-        permissions.isOperator
-      );
     case "profile":
       return true;
     case "material-usage-report":

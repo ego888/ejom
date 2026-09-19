@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
 import Button from "./UI/Button";
@@ -9,6 +10,8 @@ const today = new Date().toISOString().slice(0, 10);
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) => {
+  const user = jwtDecode(localStorage.getItem("token"));
+  const canManageOverrides = user.categoryId === 1 || user.dtrPermissions?.includes("dtr.overrides");
   const [section, setSection] = useState(initialSection);
   const [employees, setEmployees] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -34,8 +37,12 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
     try {
       const [employeeRes, groupRes, shiftRes] = await Promise.all([
         axios.get(`${ServerIP}/auth/dtr/schedules/employees`),
-        axios.get(`${ServerIP}/auth/dtr/schedules/groups`),
-        axios.get(`${ServerIP}/auth/dtr/shifts`),
+        ["groups", "assign"].includes(section)
+          ? axios.get(`${ServerIP}/auth/dtr/schedules/groups`)
+          : Promise.resolve({ data: {} }),
+        ["assign", "override"].includes(section)
+          ? axios.get(`${ServerIP}/auth/dtr/shifts`)
+          : Promise.resolve({ data: {} }),
       ]);
       setEmployees(employeeRes.data.Employees || []);
       setGroups(groupRes.data.Groups || []);
@@ -43,18 +50,21 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
     } catch (error) { showError(error); }
   };
   const loadCalendar = async () => {
+    if (section !== "calendar") return;
     try {
       const response = await axios.get(`${ServerIP}/auth/dtr/schedules/calendar`, { params: { month } });
       setCalendar(response.data.Schedules || []);
     } catch (error) { showError(error); }
   };
   const loadAssignments = async () => {
+    if (section !== "assign") return;
     try {
       const response = await axios.get(`${ServerIP}/auth/dtr/schedules/assignments`);
       setAssignments(response.data.Assignments || []);
     } catch (error) { showError(error); }
   };
   const loadOverrides = async () => {
+    if (section !== "override") return;
     try {
       const response = await axios.get(`${ServerIP}/auth/dtr/schedules/overrides`);
       setOverrideRecords(response.data.Overrides || []);
@@ -72,8 +82,8 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
       setGroupMembers(response.data.Members || []);
     } catch (error) { showError(error); }
   };
-  useEffect(() => { loadOptions(); loadAssignments(); loadOverrides(); }, []);
-  useEffect(() => { loadCalendar(); }, [month]);
+  useEffect(() => { loadOptions(); loadAssignments(); loadOverrides(); }, [section]);
+  useEffect(() => { loadCalendar(); }, [month, section]);
   useEffect(() => { setSection(initialSection); }, [initialSection]);
 
   const days = useMemo(() => calendar[0]?.days || [], [calendar]);
@@ -227,6 +237,7 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
     } catch (error) { showError(error); }
   };
   const openOverrideFromCalendar = (employee, day) => {
+    if (!canManageOverrides) return;
     const scheduleType = day.type || "WORK";
     setOverride({
       employeeId: String(employee.id),
@@ -278,12 +289,12 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
         <thead><tr><th className="employee-column">Employee</th>{days.map((day) => <th key={day.date}>{day.date.slice(8)}<small>{weekdayLabels[new Date(`${day.date}T00:00:00`).getDay()]}</small></th>)}</tr></thead>
         <tbody>{calendar.map((employee) => <tr key={employee.id}>
           <th className="employee-column">{employee.fullName || employee.name}</th>
-          {employee.days.map((day) => <td key={day.date} title={`${day.date} — ${day.source || "Unassigned"}. Click to override.`}
+          {employee.days.map((day) => <td key={day.date} title={`${day.date} — ${day.source || "Unassigned"}.${canManageOverrides ? " Click to override." : ""}`}
             style={day.shift ? { backgroundColor: `${day.shift.color}33` } : undefined}
             className={`schedule-cell ${day.type && day.type !== "WORK" ? "non-work-day" : ""}`}
-            role="button" tabIndex={0}
-            onClick={() => openOverrideFromCalendar(employee, day)}
-            onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") openOverrideFromCalendar(employee, day); }}>
+            role={canManageOverrides ? "button" : undefined} tabIndex={canManageOverrides ? 0 : undefined}
+            onClick={canManageOverrides ? () => openOverrideFromCalendar(employee, day) : undefined}
+            onKeyDown={canManageOverrides ? (event) => { if (event.key === "Enter" || event.key === " ") openOverrideFromCalendar(employee, day); } : undefined}>
             {day.type === "WORK" ? day.shift?.name : day.type || "—"}
           </td>)}
         </tr>)}</tbody>

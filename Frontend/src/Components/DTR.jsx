@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
@@ -18,6 +19,8 @@ import "./DTRHolidays.css";
 import { formatDateInputValue } from "../utils/orderUtils";
 
 const DTR = ({ initialTab = "upload", showTabs = true }) => {
+  const user = jwtDecode(localStorage.getItem("token"));
+  const canManageBatches = user.categoryId === 1 || user.dtrPermissions?.includes("dtr.batches");
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [batches, setBatches] = useState([]);
@@ -47,6 +50,7 @@ const DTR = ({ initialTab = "upload", showTabs = true }) => {
   }, [initialTab]);
 
   const fetchBatches = async () => {
+    if (!canManageBatches) return;
     setLoading(true);
     setError(null);
     try {
@@ -425,9 +429,11 @@ const DTR = ({ initialTab = "upload", showTabs = true }) => {
 
       console.log("Switching to batches tab...");
       // Wait a moment before switching tabs to ensure batches are loaded
-      setTimeout(() => {
-        setActiveTab("batches");
-      }, 1000);
+      if (canManageBatches) {
+        setTimeout(() => {
+          setActiveTab("batches");
+        }, 1000);
+      }
     } catch (err) {
       console.error("Upload error details:", {
         message: err.message,
