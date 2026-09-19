@@ -70,6 +70,19 @@ router.put("/groups/:id", ...canManage, async (req, res) => {
   }
 });
 
+router.delete("/groups/:id", ...canManage, async (req, res) => {
+  try {
+    // Foreign keys cascade deletion to group memberships and assignments.
+    const [result] = await pool.query("DELETE FROM DTRShiftGroups WHERE id=?", [req.params.id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ Status: false, Error: "Shift group not found" });
+    }
+    res.json({ Status: true });
+  } catch (error) {
+    res.status(500).json({ Status: false, Error: error.message });
+  }
+});
+
 router.get("/groups/:id/members", verifyUser, async (req, res) => {
   try {
     const [rows] = await pool.query(

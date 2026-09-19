@@ -24,6 +24,7 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
   const [message, setMessage] = useState(null);
   const [groupForm, setGroupForm] = useState({ name: "", color: "#6c757d" });
   const [editingGroupId, setEditingGroupId] = useState(null);
+  const [deletingGroupId, setDeletingGroupId] = useState(null);
   const [memberForm, setMemberForm] = useState({ groupId: "", employeeIds: [], effectiveFrom: today, effectiveUntil: "" });
   const [assignment, setAssignment] = useState({ targetType: "group", targetId: "", shiftId: "", dateFrom: today, dateTo: today, weekdaysMask: 127 });
   const [override, setOverride] = useState({ employeeId: "", workDate: today, scheduleType: "WORK", shiftId: "", notes: "" });
@@ -107,6 +108,32 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
   const cancelGroupEdit = () => {
     setEditingGroupId(null);
     setGroupForm({ name: "", color: "#6c757d" });
+  };
+  const deleteGroup = async (group) => {
+    if (deletingGroupId !== null) return;
+    if (!window.confirm(`Delete shift group "${group.name}"? This permanently removes all of its membership records and group shift assignments, including past assignments, and may change the resolved schedules. This cannot be undone.`)) return;
+    setDeletingGroupId(group.id);
+    try {
+      await axios.delete(`${ServerIP}/auth/dtr/schedules/groups/${group.id}`);
+      if (String(editingGroupId) === String(group.id)) cancelGroupEdit();
+      if (String(rosterGroupId) === String(group.id)) {
+        setRosterGroupId("");
+        setGroupMembers([]);
+      }
+      if (String(memberForm.groupId) === String(group.id)) {
+        setMemberForm((current) => ({ ...current, groupId: "", employeeIds: [] }));
+      }
+      if (assignment.targetType === "group" && String(assignment.targetId) === String(group.id)) {
+        setAssignment((current) => ({ ...current, targetId: "" }));
+        setEditingAssignmentId(null);
+      }
+      setAssignmentPreview([]);
+      setGroups((current) => current.filter((item) => String(item.id) !== String(group.id)));
+      setAssignments((current) => current.filter((item) => String(item.groupId) !== String(group.id)));
+      setMessage({ type: "success", text: "Shift group deleted." });
+      await Promise.all([loadOptions(), loadAssignments(), loadCalendar()]);
+    } catch (error) { showError(error); }
+    finally { setDeletingGroupId(null); }
   };
   const saveMembers = async (event) => {
     event.preventDefault();
@@ -270,7 +297,7 @@ const DTRScheduling = ({ initialSection = "calendar", showNavigation = true }) =
           <input type="color" className="form-control form-control-color" value={groupForm.color} onChange={(e) => setGroupForm({ ...groupForm, color: e.target.value })} />
           <Button variant="save" type="submit">{editingGroupId ? "Save" : "Add"}</Button>
           {editingGroupId && <Button variant="cancel" type="button" onClick={cancelGroupEdit}>Cancel</Button>}
-        </form><ul className="list-group mt-3">{groups.map((group) => <li className="list-group-item d-flex align-items-center gap-2" key={group.id}><span className="group-dot" style={{ background: group.color }} /><span className="flex-grow-1">{group.name} <span className="text-muted">({group.memberCount} active)</span></span><Button variant="edit" iconOnly size="sm" onClick={() => editGroup(group)} /><button type="button" className="btn btn-sm btn-outline-primary" onClick={() => viewMembers(group.id)}>Members</button></li>)}</ul>
+        </form><ul className="list-group mt-3">{groups.map((group) => <li className="list-group-item d-flex align-items-center gap-2" key={group.id}><span className="group-dot" style={{ background: group.color }} /><span className="flex-grow-1">{group.name} <span className="text-muted">({group.memberCount} active)</span></span><Button variant="edit" iconOnly size="sm" onClick={() => editGroup(group)} /><button type="button" className="btn btn-sm btn-outline-primary" onClick={() => viewMembers(group.id)}>Members</button><Button variant="delete" iconOnly size="sm" aria-label={`Delete shift group ${group.name}`} title="Delete shift group" disabled={deletingGroupId !== null} onClick={() => deleteGroup(group)} /></li>)}</ul>
       </div></div></div>
       <div className="col-lg-8"><div className="card"><div className="card-body">
         <h5>Add employees to group</h5><form onSubmit={saveMembers}>
