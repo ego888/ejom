@@ -2641,6 +2641,21 @@ router.post("/check-sun-hol/:batchId", async (req, res) => {
 });
 
 // Route to update timeIn
+const readSavedPunchEntry = async (connection, id, batchId) => {
+  const [[entry]] = await connection.query(
+    `SELECT d.*, DATE_FORMAT(d.date, '%Y-%m-%d') AS date,
+     DATE_FORMAT(d.dateOut, '%Y-%m-%d') AS dateOut
+     FROM DTREntries d WHERE d.id = ? AND d.batchId = ?`,
+    [id, batchId]
+  );
+  if (!entry) throw new Error("Entry not found");
+  return {
+    ...entry,
+    creditedTimeIn: entry.timeIn,
+    creditedTimeOut: entry.timeOut,
+  };
+};
+
 router.post("/update-time-in/:batchId", async (req, res) => {
   let connection;
   try {
@@ -2673,10 +2688,12 @@ router.post("/update-time-in/:batchId", async (req, res) => {
         : [timeIn, processed || 0, id, batchId]
     );
 
+    const savedEntry = await readSavedPunchEntry(connection, id, batchId);
     await connection.commit();
 
     res.json({
       Status: true,
+      Entry: savedEntry,
       Message: "Successfully updated time in",
     });
   } catch (error) {
@@ -2724,10 +2741,12 @@ router.post("/update-time-out/:batchId", async (req, res) => {
         : [timeOut, processed || 0, id, batchId]
     );
 
+    const savedEntry = await readSavedPunchEntry(connection, id, batchId);
     await connection.commit();
 
     res.json({
       Status: true,
+      Entry: savedEntry,
       Message: "Successfully updated time out",
     });
   } catch (error) {
@@ -2963,10 +2982,12 @@ router.post("/update-time-in-out/:batchId", async (req, res) => {
       updateValues
     );
 
+    const savedEntry = await readSavedPunchEntry(connection, id, batchId);
     await connection.commit();
 
     res.json({
       Status: true,
+      Entry: savedEntry,
       Message: "Successfully updated time in and out",
     });
   } catch (error) {

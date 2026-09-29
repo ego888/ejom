@@ -724,7 +724,21 @@ const DTRBatchView = ({ batch, onBack }) => {
       const { endpoint, payload } = manualPunchUpdate(selectedEntry, timeType, newTime, newDate);
       const response = await axios.post(`${ServerIP}/auth/dtr/${endpoint}/${batch.id}`, payload);
       if (!response.data.Status) throw new Error(response.data.Error || "Failed to save manual time");
-      await fetchEntries();
+      let savedEntry = response.data.Entry;
+      if (!savedEntry) {
+        // Support older servers without hiding the table during the fetch.
+        const refreshed = await axios.get(`${ServerIP}/auth/dtr/export/${batch.id}`);
+        if (!refreshed.data.Status) {
+          throw new Error(refreshed.data.Error || "Failed to load updated entry");
+        }
+        savedEntry = refreshed.data.Entries.find((entry) => entry.id === payload.id);
+      }
+      if (!savedEntry) throw new Error("Updated entry not found");
+      setEntries((currentEntries) =>
+        currentEntries.map((entry) =>
+          entry.id === payload.id ? { ...entry, ...savedEntry } : entry,
+        ),
+      );
     } catch (error) {
       console.error("Error updating time:", error);
       alert("Failed to update time. Please try again.");
