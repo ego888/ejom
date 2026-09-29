@@ -745,7 +745,33 @@ const DTRBatchView = ({ batch, onBack }) => {
       );
 
       if (response.data.Status) {
-        await fetchEntries();
+        const savedEntry = response.data.Entry;
+        if (savedEntry?.id != null) {
+          setEntries((currentEntries) => {
+            const nextEntries = [...currentEntries];
+            // Preserve the export's date order within each employee group.
+            const insertAt = nextEntries.findIndex((currentEntry) =>
+              String(currentEntry.empId) === String(savedEntry.empId) &&
+              (currentEntry.date > savedEntry.date ||
+                (currentEntry.date === savedEntry.date &&
+                  (currentEntry.time || "") > (savedEntry.time || ""))),
+            );
+            if (insertAt === -1) {
+              nextEntries.push(savedEntry);
+            } else {
+              nextEntries.splice(insertAt, 0, savedEntry);
+            }
+            return nextEntries;
+          });
+        } else {
+          // Older servers do not return the inserted row. Keep the table visible
+          // while fetching its persisted ID and database defaults.
+          const refreshed = await axios.get(`${ServerIP}/auth/dtr/export/${batch.id}`);
+          if (!refreshed.data.Status) {
+            throw new Error(refreshed.data.Error || "Failed to load added entry");
+          }
+          setEntries(refreshed.data.Entries);
+        }
       } else {
         setError(response.data.Error || "Failed to add entry");
       }

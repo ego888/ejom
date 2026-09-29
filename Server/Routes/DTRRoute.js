@@ -2760,7 +2760,7 @@ router.post("/add-entry/:batchId", async (req, res) => {
     await connection.beginTransaction();
 
     // Insert the new entry
-    await connection.query(
+    const [result] = await connection.query(
       `INSERT INTO DTREntries 
        (batchId, empId, empName, date, dateOut, day, timeIn, timeOut,
         processed, editedIn, editedOut, remarks) 
@@ -2781,11 +2781,28 @@ router.post("/add-entry/:batchId", async (req, res) => {
       ]
     );
 
+    const [[savedEntry]] = await connection.query(
+      `SELECT d.*, e.id AS employeeId,
+       DATE_FORMAT(d.date, '%Y-%m-%d') AS date,
+       DATE_FORMAT(d.dateOut, '%Y-%m-%d') AS dateOut
+       FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId = d.empId
+       WHERE d.id = ? AND d.batchId = ?`,
+      [result.insertId, batchId]
+    );
+
     await connection.commit();
 
     res.json({
       Status: true,
       Message: "Successfully added new entry",
+      Entry: {
+        ...savedEntry,
+        creditedTimeIn: savedEntry.timeIn,
+        creditedTimeOut: savedEntry.timeOut,
+        earlyApprovedMinutes: 0,
+        lateApprovedMinutes: 0,
+        unscheduledApprovedMinutes: 0,
+      },
     });
   } catch (error) {
     if (connection) await connection.rollback();
