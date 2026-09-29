@@ -865,7 +865,19 @@ const DTRBatchView = ({ batch, onBack }) => {
       );
 
       if (response.data.Status) {
-        await fetchEntries();
+        const timeField = type === "in" ? "timeIn" : "timeOut";
+        const creditedTimeField = type === "in" ? "creditedTimeIn" : "creditedTimeOut";
+        setEntries((currentEntries) =>
+          currentEntries.map((currentEntry) =>
+            currentEntry.id === entry.id
+              ? {
+                  ...currentEntry,
+                  [timeField]: referenceTime,
+                  [creditedTimeField]: referenceTime,
+                }
+              : currentEntry,
+          ),
+        );
       } else {
         setError(response.data.Error || `Failed to update ${type} time`);
       }
