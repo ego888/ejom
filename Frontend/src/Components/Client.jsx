@@ -57,7 +57,8 @@ const getStoredSortConfig = () => {
 
 const getDefaultHoldNoteDate = () => {
   const date = new Date();
-  date.setDate(date.getDate() + 1);
+  const daysToAdd = date.getHours() >= 17 ? 2 : 1;
+  date.setDate(date.getDate() + daysToAdd);
   return formatDateInputValue(date);
 };
 const formatHoldDateSafe = (value) => {
@@ -659,7 +660,7 @@ const Client = () => {
                             variant="view"
                             iconOnly
                             size="sm"
-                            title="Add 1 day to Hold Date"
+                            title="Add 1 day to Hold Date (2 days from 5 PM)"
                             icon={<BsCalendar2Week size={14} />}
                             onClick={(e) => {
                               e.stopPropagation();
