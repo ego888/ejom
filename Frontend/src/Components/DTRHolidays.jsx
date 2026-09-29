@@ -8,7 +8,9 @@ import "./DTRHolidays.css";
 import { formatDateInputValue } from "../utils/orderUtils";
 
 const DTRHolidays = () => {
-  const [date, setDate] = useState(new Date());
+  const [activeStartDate, setActiveStartDate] = useState(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  );
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -58,6 +60,7 @@ const DTRHolidays = () => {
   };
 
   const handleDateClick = (date) => {
+    if (loading) return;
     // Format date as YYYY-MM-DD without timezone conversion
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -125,25 +128,25 @@ const DTRHolidays = () => {
     return null;
   };
 
-  if (loading && !showModal) {
-    return <div className="text-center">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="alert alert-danger">{error}</div>;
-  }
-
   return (
     <div className="dtr-holidays">
+      {error && <div className="alert alert-danger">{error}</div>}
       <Calendar
-        onChange={setDate}
+        activeStartDate={activeStartDate}
+        onActiveStartDateChange={({ activeStartDate }) =>
+          setActiveStartDate(activeStartDate)
+        }
         value={null}
+        tileDisabled={() => loading}
         tileClassName={tileClassName}
         tileContent={tileContent}
         className="custom-calendar"
         locale="en-US"
         onClickDay={handleDateClick}
       />
+      <div className="text-center" role="status" style={{ minHeight: "1.5em" }}>
+        {loading ? "Loading..." : ""}
+      </div>
       <div className="holiday-legend mt-3">
         <div className="legend-item">
           <div className="holiday-indicator regular"></div>
