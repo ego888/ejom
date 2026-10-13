@@ -200,6 +200,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [comparisonReport, setComparisonReport] = useState(null);
   const [approvalMinutes, setApprovalMinutes] = useState({});
   const [approvalTimes, setApprovalTimes] = useState({});
+  const [updatingApprovalIds, setUpdatingApprovalIds] = useState(() => new Set());
   const [approvalSort, setApprovalSort] = useState({
     key: "employeeName",
     direction: "ascending",
@@ -294,9 +295,12 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
-  const fetchEntries = async (followScheduleValue = followSchedule) => {
+  const fetchEntries = async (
+    followScheduleValue = followSchedule,
+    { silent = false } = {},
+  ) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await axios.get(
         `${ServerIP}/auth/dtr/export/${batch.id}`,
         { params: { followSchedule: followScheduleValue ? 1 : 0 } },
@@ -308,7 +312,7 @@ const DTRBatchView = ({ batch, onBack }) => {
       setError("Failed to load DTR entries");
       console.error("Error fetching entries:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -342,19 +346,30 @@ const DTRBatchView = ({ batch, onBack }) => {
   const approveException = async (exception, minutes, approvedTime = null) => {
     const approved = Math.min(Number(minutes), Number(exception.availableMinutes));
     if (!Number.isInteger(approved) || approved < 0 || (approved === 0 && Number(exception.availableMinutes) !== 0)) return;
+    setUpdatingApprovalIds((current) => new Set(current).add(exception.id));
     try {
       await axios.put(`${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/approve`, {
         approvedMinutes: approved,
         ...(approvedTime ? { approvedTime } : {}),
       });
       await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
-      await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
+      await Promise.all([
+        fetchScheduleExceptions(),
+        fetchEntries(followSchedule, { silent: true }),
+      ]);
     } catch (err) {
       setError(err.response?.data?.Error || "Failed to approve exception");
+    } finally {
+      setUpdatingApprovalIds((current) => {
+        const next = new Set(current);
+        next.delete(exception.id);
+        return next;
+      });
     }
   };
 
   const clearExceptionApproval = async (exception) => {
+    setUpdatingApprovalIds((current) => new Set(current).add(exception.id));
     try {
       await axios.put(
         `${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/clear`,
@@ -370,9 +385,18 @@ const DTRBatchView = ({ batch, onBack }) => {
         delete next[exception.id];
         return next;
       });
-      await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
+      await Promise.all([
+        fetchScheduleExceptions(),
+        fetchEntries(followSchedule, { silent: true }),
+      ]);
     } catch (err) {
       setError(err.response?.data?.Error || "Failed to clear approval");
+    } finally {
+      setUpdatingApprovalIds((current) => {
+        const next = new Set(current);
+        next.delete(exception.id);
+        return next;
+      });
     }
   };
 
@@ -584,6 +608,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     const isPunchApproval =
       ["NO_SCHEDULE", "REST_DAY_WORK"].includes(item.exceptionType) &&
       ["IN", "OUT"].includes(item.punchSide);
+    const isUpdating = updatingApprovalIds.has(item.id);
 
     if (isPunchApproval) {
       const approvedTime = approvalTimes[item.id] ?? formatTime(item.actualTime);
@@ -600,10 +625,10 @@ const DTRBatchView = ({ batch, onBack }) => {
                 max={item.punchSide === "OUT" ? formatTime(item.actualTime) : undefined}
                 onChange={(e) => setApprovalTimes((current) => ({ ...current, [item.id]: e.target.value }))}
               />
-              <button type="button" className="btn btn-sm btn-success" onClick={() => approveException(item, 0, approvedTime)}>Approve</button>
+              <button type="button" className="btn btn-sm btn-success" disabled={isUpdating} onClick={() => approveException(item, 0, approvedTime)}>{isUpdating ? "Approving..." : "Approve"}</button>
             </>
           )}
-          {item.status === "APPROVED" && <Button variant="delete" size="sm" onClick={() => clearExceptionApproval(item)}>Clear</Button>}
+          {item.status === "APPROVED" && <Button variant="delete" size="sm" disabled={isUpdating} onClick={() => clearExceptionApproval(item)}>{isUpdating ? "Clearing..." : "Clear"}</Button>}
         </div>
       );
     }
@@ -614,8 +639,8 @@ const DTRBatchView = ({ batch, onBack }) => {
         <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 60)}>+1hr</button>
         <button type="button" className="btn btn-sm btn-primary" onClick={() => setAllApprovalMinutes(item)}>All</button>
         <input type="number" min="1" max={item.availableMinutes} className="form-control form-control-sm" style={{ width: 80 }} placeholder="Minutes" value={approvalMinutes[item.id] || ""} onChange={(e) => setApprovalMinutes({ ...approvalMinutes, [item.id]: e.target.value })} />
-        <button type="button" className="btn btn-sm btn-success" onClick={() => approveException(item, Number(approvalMinutes[item.id]))}>Approve</button>
-        {item.status === "APPROVED" && <Button variant="delete" size="sm" onClick={() => clearExceptionApproval(item)}>Clear</Button>}
+        <button type="button" className="btn btn-sm btn-success" disabled={isUpdating} onClick={() => approveException(item, Number(approvalMinutes[item.id]))}>{isUpdating ? "Approving..." : "Approve"}</button>
+        {item.status === "APPROVED" && <Button variant="delete" size="sm" disabled={isUpdating} onClick={() => clearExceptionApproval(item)}>{isUpdating ? "Clearing..." : "Clear"}</Button>}
       </div>
     );
   };
