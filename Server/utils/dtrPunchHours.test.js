@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculatePunchHours } from "./dtrPunchHours.js";
+import { allocateDailyPunchHours, calculatePunchHours } from "./dtrPunchHours.js";
 import {
   getActualWindow,
   getApprovalPunchWindow,
@@ -26,6 +26,15 @@ test("overnight punches use the same rules", () => {
 test("missing punches clear stale hours and overtime", () => {
   assert.deepEqual(run(null, "18:00"), { hours: 0, overtime: 0 });
   assert.deepEqual(run("09:00", null), { hours: 0, overtime: 0 });
+});
+
+test("split entries share one daily eight-hour regular limit", () => {
+  const allocation = allocateDailyPunchHours([
+    { id: 1, employeeKey: 385, workDate: "2026-10-01", credited: { start: 780, end: 1048 } },
+    { id: 2, employeeKey: 385, workDate: "2026-10-01", credited: { start: 1097, end: 1681 } },
+  ]);
+  assert.deepEqual(allocation.get(1), { hours: 4.47, overtime: 0 });
+  assert.deepEqual(allocation.get(2), { hours: 3.53, overtime: 5.2 });
 });
 
 test("batch calculation uses approved schedule boundaries and includes unprocessed rows", async () => {
@@ -54,7 +63,7 @@ test("batch calculation uses approved schedule boundaries and includes unprocess
   let handler;
   runInNewContext(source.slice(start, source.indexOf('// Process Sunday/Holiday hours', start)), {
     router: { post: (_path, fn) => { handler = fn; } }, pool: { getConnection: async () => connection },
-    calculatePunchHours, getApprovalPunchWindow, getCreditedWindow, timeToMinutes,
+    allocateDailyPunchHours, getApprovalPunchWindow, getCreditedWindow, timeToMinutes,
     loadSchedulingContext: async () => ({}),
     resolveSchedule: (_context, employeeId) => employeeId
       ? { type: 'WORK', shift: { timeIn: '08:00', timeOut: '17:00' } }

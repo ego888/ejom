@@ -1,5 +1,5 @@
 import express from "express";
-import { calculatePunchHours } from "../utils/dtrPunchHours.js";
+import { allocateDailyPunchHours } from "../utils/dtrPunchHours.js";
 import { swappedLoneOriginal } from "../utils/dtrLoneOriginalSwap.js";
 import multer from "multer";
 import fs from "fs";
@@ -2595,7 +2595,7 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
       return nightMinutes;
     };
 
-    for (const entry of entries) {
+    const calculatedEntries = entries.map((entry) => {
       const actual = getApprovalPunchWindow(entry);
       const schedule = entry.employeeId
         ? resolveSchedule(scheduleContext, entry.employeeId, entry.date)
@@ -2617,9 +2617,22 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
         unscheduledInTime: timeToMinutes(unscheduledInApproval?.approvedTime),
         unscheduledOutTime,
       });
-      const { hours: regularHours, overtime: overtimeHours } = calculatePunchHours(credited);
       const nightDifferentialHours = Number.isFinite(credited?.start) && Number.isFinite(credited?.end)
         ? getNightDifferentialMinutes(credited.start, credited.end) / 60 : 0;
+
+      return {
+        ...entry,
+        credited,
+        nightDifferentialHours,
+        employeeKey: entry.employeeId ?? `dtr:${entry.empId}`,
+        workDate: entry.date,
+      };
+    });
+
+    const dailyHours = allocateDailyPunchHours(calculatedEntries);
+    for (const entry of calculatedEntries) {
+      const { hours: regularHours, overtime: overtimeHours } =
+        dailyHours.get(entry.id) || { hours: 0, overtime: 0 };
 
       await connection.query(
         `
@@ -2638,7 +2651,7 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
         [
           Number(regularHours.toFixed(2)),
           Number(overtimeHours.toFixed(2)),
-          Number(nightDifferentialHours.toFixed(2)),
+          Number(entry.nightDifferentialHours.toFixed(2)),
           entry.id,
           batchId,
         ]
