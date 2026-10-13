@@ -1,4 +1,5 @@
 import express from "express";
+import { loadSchedulingContext, resolveSchedule } from "../utils/dtrScheduleEngine.js";
 import pool from "../utils/db.js";
 import { verifyUser } from "../middleware.js";
 
@@ -251,7 +252,8 @@ router.put("/assignments/:id", ...canManage, async (req, res) => {
   try {
     const [result] = await pool.query(
       `UPDATE DTRShiftAssignments
-       SET groupId=?, employeeId=?, shiftId=?, dateFrom=?, dateTo=?, weekdaysMask=?
+       SET groupId=?, employeeId=?, shiftId=?, dateFrom=?, dateTo=?, weekdaysMask=?,
+           createdAt=CURRENT_TIMESTAMP
        WHERE id=?`,
       [targetType === "group" ? targetId : null,
        targetType === "employee" ? targetId : null,
@@ -326,38 +328,23 @@ router.get("/calendar", verifyUser, async (req, res) => {
   const [year, monthNumber] = month.split("-").map(Number);
   const end = `${month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, "0")}`;
   try {
-    const [[employees], [shifts], [members], [assignments], [overrides]] = await Promise.all([
+    const [[employees], context] = await Promise.all([
       pool.query("SELECT id, dtrEmpId, fullName, name FROM employee WHERE active=1 ORDER BY fullName, name"),
-      pool.query("SELECT id, name, color FROM DTRShiftTemplates"),
-      pool.query(`SELECT *, DATE_FORMAT(effectiveFrom,'%Y-%m-%d') effectiveFrom,
-        DATE_FORMAT(effectiveUntil,'%Y-%m-%d') effectiveUntil
-        FROM DTRShiftGroupMembers WHERE effectiveFrom<=? AND COALESCE(effectiveUntil,'9999-12-31')>=?`, [end, start]),
-      pool.query(`SELECT *, DATE_FORMAT(dateFrom,'%Y-%m-%d') dateFrom,
-        DATE_FORMAT(dateTo,'%Y-%m-%d') dateTo
-        FROM DTRShiftAssignments WHERE dateFrom<=? AND dateTo>=? ORDER BY id`, [end, start]),
-      pool.query(`SELECT *, DATE_FORMAT(workDate,'%Y-%m-%d') workDate
-        FROM DTRScheduleOverrides WHERE workDate BETWEEN ? AND ?`, [start, end]),
+      loadSchedulingContext(pool, start, end),
     ]);
-    const shiftMap = new Map(shifts.map((s) => [Number(s.id), s]));
     const daysInMonth = new Date(year, monthNumber, 0).getDate();
     const schedules = employees.map((employee) => {
       const days = [];
       for (let day = 1; day <= daysInMonth; day++) {
         const date = `${month}-${String(day).padStart(2, "0")}`;
-        const weekday = new Date(`${date}T00:00:00`).getDay();
-        const override = overrides.find((o) => Number(o.employeeId) === Number(employee.id) && String(o.workDate).slice(0, 10) === date);
-        let resolved = override ? { type: override.scheduleType, shiftId: override.shiftId, source: "override" } : null;
-        if (!resolved) {
-          const individual = assignments.filter((a) => Number(a.employeeId) === Number(employee.id) && date >= String(a.dateFrom).slice(0,10) && date <= String(a.dateTo).slice(0,10) && (a.weekdaysMask & (1 << weekday))).at(-1);
-          if (individual) resolved = { type: "WORK", shiftId: individual.shiftId, source: "employee" };
-        }
-        if (!resolved) {
-          const groupIds = members.filter((m) => Number(m.employeeId) === Number(employee.id) && date >= String(m.effectiveFrom).slice(0,10) && (!m.effectiveUntil || date <= String(m.effectiveUntil).slice(0,10))).map((m) => Number(m.groupId));
-          const groupAssignment = assignments.filter((a) => groupIds.includes(Number(a.groupId)) && date >= String(a.dateFrom).slice(0,10) && date <= String(a.dateTo).slice(0,10) && (a.weekdaysMask & (1 << weekday))).at(-1);
-          if (groupAssignment) resolved = { type: "WORK", shiftId: groupAssignment.shiftId, source: "group" };
-        }
-        const shift = resolved?.shiftId ? shiftMap.get(Number(resolved.shiftId)) : null;
-        days.push({ date, type: resolved?.type || null, source: resolved?.source || null, shift });
+        const resolved = resolveSchedule(context, employee.id, date);
+        days.push({
+          date,
+          type: resolved?.type || null,
+          source: resolved?.source || null,
+          shift: resolved?.shift || null,
+          group: resolved?.group || null,
+        });
       }
       return { ...employee, days };
     });

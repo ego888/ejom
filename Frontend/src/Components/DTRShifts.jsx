@@ -58,6 +58,7 @@ const DTRShifts = () => {
         : await axios.post(url, form);
       if (!response.data.Status) throw new Error(response.data.Error);
       setMessage({ type: "success", text: `Shift ${editingId ? "updated" : "created"}.` });
+      window.dispatchEvent(new CustomEvent("dtr-schedules-changed"));
       resetForm();
       await fetchShifts();
     } catch (error) {
@@ -88,6 +89,7 @@ const DTRShifts = () => {
     if (!window.confirm(`Delete shift "${shift.name}"?`)) return;
     try {
       await axios.delete(`${ServerIP}/auth/dtr/shifts/${shift.id}`);
+      window.dispatchEvent(new CustomEvent("dtr-schedules-changed"));
       if (editingId === shift.id) resetForm();
       await fetchShifts();
     } catch (error) {

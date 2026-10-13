@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { getActualPunchWindow, getActualWindow, getCreditedWindow, getScheduledWindow, minutesToTime } from "./dtrScheduleEngine.js";
+import { getAnalyzedScheduleTimes, getApprovalPunchWindow, resolveSchedule, getActualPunchWindow, getActualWindow, getCreditedWindow, getScheduledWindow, minutesToTime } from "./dtrScheduleEngine.js";
 import { comparisonSkipReason } from "./dtrComparisonEligibility.js";
 
 const schedule = { type: "WORK", shift: { timeIn: "08:00", timeOut: "17:00" } };
@@ -23,11 +23,17 @@ test("approving a lone arrival or departure preserves the absent punch", () => {
 // Run the actual analysis handler against an in-memory query adapter.
 const source = fs.readFileSync(new URL("../Routes/DTRRoute.js", import.meta.url), "utf8");
 const analysisSource = source.slice(source.indexOf('router.post("/analyze-time/'), source.indexOf('// Delete repeated records'));
-async function analyze(times, repeat = false) {
+async function analyze(times, repeat = false, schedule = null) {
   const rows = times.map((time, index) => ({ id: index + 1, batchId: 1, empId: "10", date: "2026-09-01", time, processed: 0, deleteRecord: 0 }));
   const connection = {
     beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release: () => {},
     query: async (sql, values) => {
+      if (sql.includes("SELECT id, dtrEmpId FROM employee")) return [[{ id: 1, dtrEmpId: "10" }]];
+      if (sql.includes("SET timeIn=?, timeOut=?, dateOut=?")) {
+        const row = rows.find((row) => row.id === values[3]);
+        [row.timeIn, row.timeOut, row.dateOut] = values;
+        return [{}];
+      }
       if (sql.includes("UPDATE DTREntries")) {
         const keys = ["dateOut", "timeIn", "timeOut", "editedIn", "editedOut", "processed", "deleteRecord", "remarks"];
         const row = rows.find((row) => row.id === values[10]);
@@ -42,7 +48,9 @@ async function analyze(times, repeat = false) {
     },
   };
   let handler;
-  vm.runInNewContext(analysisSource, { router: { post: (_path, fn) => { handler = fn; } }, pool: { getConnection: async () => connection }, console });
+  vm.runInNewContext(analysisSource, { router: { post: (_path, fn) => { handler = fn; } }, pool: { getConnection: async () => connection },
+    loadSchedulingContext: async () => ({ shifts: new Map(schedule ? [[1, schedule.shift]] : []), members: [], overrides: [], assignments: schedule ? [{ employeeId: 1, shiftId: 1, dateFrom: "2026-09-01", dateTo: "2026-09-30", weekdaysMask: 127 }] : [] }),
+    getAnalyzedScheduleTimes, resolveSchedule, console });
   let response;
   await handler({ params: { batchId: 1 } }, { json: (body) => { response = body; }, status: () => { throw new Error("Analysis failed"); } });
   assert.equal(response.Status, true);
@@ -92,7 +100,7 @@ test("Compare Schedules creates approvals independently for incomplete analyzed 
   vm.runInNewContext(comparisonSource, {
     router: { post: (_path, _auth, fn) => { handler = fn; } }, verifyUser: () => {},
     pool: { getConnection: async () => connection }, loadSchedulingContext: async () => ({}),
-    resolveSchedule: () => schedule, getActualPunchWindow, getScheduledWindow, comparisonSkipReason,
+    resolveSchedule: () => schedule, getApprovalPunchWindow, getScheduledWindow, comparisonSkipReason,
   });
   let response;
   await handler({ params: { batchId: 1 } }, { json: (body) => { response = body; }, status: () => { throw new Error("Comparison failed"); } });
@@ -100,8 +108,8 @@ test("Compare Schedules creates approvals independently for incomplete analyzed 
   assert.equal(response.NoExceptionCount, 2);
   assert.equal(response.SkippedEntries.length, 0);
   assert.deepEqual(inserts.map((values) => Array.from(values).slice(1, 2).concat(Array.from(values).slice(4))), [
-    [1, "EARLY_IN", "08:00:00", "07:00:00", 60],
-    [2, "LATE_OUT", "17:00:00", "18:00:00", 60],
+    [1, "EARLY_IN", "WINDOW", "08:00:00", "07:00:00", 60],
+    [2, "LATE_OUT", "WINDOW", "17:00:00", "18:00:00", 60],
   ]);
 });
 
@@ -127,7 +135,7 @@ test("Unscheduled lone punches are offered for approval without inventing durati
   vm.runInNewContext(comparisonSource, {
     router: { post: (_path, _auth, fn) => { handler = fn; } }, verifyUser: () => {},
     pool: { getConnection: async () => connection }, loadSchedulingContext: async () => ({}),
-    resolveSchedule: () => null, getActualPunchWindow, getScheduledWindow, comparisonSkipReason,
+    resolveSchedule: () => null, getApprovalPunchWindow, getScheduledWindow, comparisonSkipReason,
   });
   let response;
   await handler({ params: { batchId: 1 } }, { json: (body) => { response = body; }, status: () => { throw new Error("Comparison failed"); } });
@@ -135,11 +143,33 @@ test("Unscheduled lone punches are offered for approval without inventing durati
   assert.equal(response.NoExceptionCount, 0);
   assert.equal(response.SkippedEntries.length, 0);
   assert.deepEqual(inserts.map((values) => Array.from(values).slice(1, 2).concat(Array.from(values).slice(4))), [
-    [1, "NO_SCHEDULE", null, "07:00:00", 0],
-    [2, "NO_SCHEDULE", null, "18:00:00", 0],
-    [3, "NO_SCHEDULE", null, "09:00:00", 0],
-    [4, "NO_SCHEDULE", null, "16:00:00", 0],
+    [1, "NO_SCHEDULE", "IN", null, "07:00:00", 0],
+    [2, "NO_SCHEDULE", "OUT", null, "18:00:00", 0],
+    [3, "NO_SCHEDULE", "IN", null, "09:00:00", 0],
+    [4, "NO_SCHEDULE", "OUT", null, "16:00:00", 0],
   ]);
+});
+
+test("unscheduled IN and OUT approvals are independent", () => {
+  const actual = { start: 496, end: 1021 };
+  assert.deepEqual(getCreditedWindow({ actual, schedule: null, unscheduledInApproved: true }),
+    { start: 496, end: null });
+  assert.deepEqual(getCreditedWindow({ actual, schedule: null, unscheduledOutApproved: true }),
+    { start: null, end: 1021 });
+  assert.deepEqual(getCreditedWindow({ actual, schedule: null, unscheduledInApproved: true, unscheduledOutApproved: true }),
+    actual);
+});
+
+test("approved unscheduled punch times can only reduce the credited window", () => {
+  const actual = { start: 496, end: 1021 };
+  assert.deepEqual(getCreditedWindow({
+    actual,
+    schedule: null,
+    unscheduledInApproved: true,
+    unscheduledOutApproved: true,
+    unscheduledInTime: 510,
+    unscheduledOutTime: 990,
+  }), { start: 510, end: 990 });
 });
 
 
@@ -159,4 +189,46 @@ test("repeated analysis preserves a lone OUT after the original IN column is cle
   assert.equal(row.origTimeOut, "18:34");
   assert.equal(row.timeIn, null);
   assert.equal(row.timeOut, "18:34");
+});
+
+test("Analyze Time applies schedules, preserves late arrivals and early departures, and retains originals", async () => {
+  for (const [punches, expected] of [
+    [["07:30", "18:00"], ["08:00:00", "17:00:00"]],
+    [["08:30", "16:30"], ["08:30:00", "16:30:00"]],
+    [["07:30", "16:30"], ["08:00:00", "16:30:00"]],
+    [["08:30", "18:00"], ["08:30:00", "17:00:00"]],
+  ]) {
+    const [row] = await analyze(punches, true, schedule);
+    assert.deepEqual([row.timeIn, row.timeOut], expected);
+    assert.equal(row.time, punches[0]);
+    assert.equal(row.origTimeOut, punches[1]);
+  }
+});
+
+test("scheduled analysis keeps missing punches empty", async () => {
+  const [arrival] = await analyze(["07:30"], true, schedule);
+  assert.equal(arrival.timeIn, "08:00:00");
+  assert.equal(arrival.timeOut, null);
+  const [departure] = await analyze(["18:00"], true, schedule);
+  assert.equal(departure.timeIn, null);
+  assert.equal(departure.timeOut, "17:00:00");
+});
+
+test("schedule boundaries preserve overnight checkout dates", () => {
+  assert.deepEqual(getAnalyzedScheduleTimes({ date: "2026-09-01", dateOut: "2026-09-02", timeIn: "21:30", timeOut: "06:30" },
+    { type: "WORK", shift: { timeIn: "22:00", timeOut: "06:00" } }),
+    { timeIn: "22:00:00", timeOut: "06:00:00", dateOut: "2026-09-02" });
+});
+
+test("schedule resolution reads edited assignments and shift templates with override precedence", () => {
+  const context = { shifts: new Map([[1, { name: "Morning" }], [2, { name: "Evening" }]]),
+    members: [{ employeeId: 1, groupId: 3, effectiveFrom: "2026-09-01" }],
+    assignments: [{ groupId: 3, shiftId: 1, dateFrom: "2026-09-01", dateTo: "2026-09-30", weekdaysMask: 127 }], overrides: [] };
+  assert.equal(resolveSchedule(context, 1, "2026-09-01").shift.name, "Morning");
+  context.assignments[0].shiftId = 2;
+  assert.equal(resolveSchedule(context, 1, "2026-09-01").shift.name, "Evening");
+  context.shifts.get(2).name = "Updated evening";
+  assert.equal(resolveSchedule(context, 1, "2026-09-01").shift.name, "Updated evening");
+  context.overrides.push({ employeeId: 1, workDate: "2026-09-01", scheduleType: "REST" });
+  assert.equal(resolveSchedule(context, 1, "2026-09-01").type, "REST");
 });

@@ -5,12 +5,13 @@ export const timeToMinutes = (value) => {
 };
 
 export const loadSchedulingContext = async (connection, dateFrom, dateTo) => {
-  const [[shifts], [members], [assignments], [overrides]] = await Promise.all([
-    connection.query(`SELECT id, name, TIME_FORMAT(timeIn,'%H:%i') timeIn,
+  const [[shifts], [groups], [members], [assignments], [overrides]] = await Promise.all([
+    connection.query(`SELECT id, name, color, TIME_FORMAT(timeIn,'%H:%i') timeIn,
       TIME_FORMAT(timeOut,'%H:%i') timeOut,
       TIME_FORMAT(mealBreakStart,'%H:%i') mealBreakStart,
       TIME_FORMAT(mealBreakEnd,'%H:%i') mealBreakEnd,
       standardMinutes, graceMinutes FROM DTRShiftTemplates`),
+    connection.query("SELECT id, name, color FROM DTRShiftGroups"),
     connection.query(`SELECT employeeId, groupId,
       DATE_FORMAT(effectiveFrom,'%Y-%m-%d') effectiveFrom,
       DATE_FORMAT(effectiveUntil,'%Y-%m-%d') effectiveUntil
@@ -18,12 +19,18 @@ export const loadSchedulingContext = async (connection, dateFrom, dateTo) => {
       AND COALESCE(effectiveUntil,'9999-12-31')>=?`, [dateTo, dateFrom]),
     connection.query(`SELECT * , DATE_FORMAT(dateFrom,'%Y-%m-%d') dateFrom,
       DATE_FORMAT(dateTo,'%Y-%m-%d') dateTo FROM DTRShiftAssignments
-      WHERE dateFrom<=? AND dateTo>=? ORDER BY id`, [dateTo, dateFrom]),
+      WHERE dateFrom<=? AND dateTo>=? ORDER BY createdAt, id`, [dateTo, dateFrom]),
     connection.query(`SELECT employeeId, shiftId, scheduleType,
       DATE_FORMAT(workDate,'%Y-%m-%d') workDate FROM DTRScheduleOverrides
       WHERE workDate BETWEEN ? AND ?`, [dateFrom, dateTo]),
   ]);
-  return { shifts: new Map(shifts.map((s) => [Number(s.id), s])), members, assignments, overrides };
+  return {
+    shifts: new Map(shifts.map((shift) => [Number(shift.id), shift])),
+    groups: new Map(groups.map((group) => [Number(group.id), group])),
+    members,
+    assignments,
+    overrides,
+  };
 };
 
 export const resolveSchedule = (context, employeeId, workDate) => {
@@ -36,7 +43,12 @@ export const resolveSchedule = (context, employeeId, workDate) => {
   if (individual) return { type: "WORK", shift: context.shifts.get(Number(individual.shiftId)), source: "employee" };
   const groupIds = context.members.filter((row) => Number(row.employeeId) === id && workDate >= row.effectiveFrom && (!row.effectiveUntil || workDate <= row.effectiveUntil)).map((row) => Number(row.groupId));
   const group = context.assignments.filter((row) => groupIds.includes(Number(row.groupId)) && applies(row)).at(-1);
-  if (group) return { type: "WORK", shift: context.shifts.get(Number(group.shiftId)), source: "group" };
+  if (group) return {
+    type: "WORK",
+    shift: context.shifts.get(Number(group.shiftId)),
+    group: context.groups?.get(Number(group.groupId)) || null,
+    source: "group",
+  };
   return null;
 };
 
@@ -52,6 +64,13 @@ export const getActualWindow = (entry) => {
   const actual = getActualPunchWindow(entry);
   return actual && actual.start !== null && actual.end !== null ? actual : null;
 };
+
+// Use imported punches for approvals while respecting explicit manual edits.
+export const getApprovalPunchWindow = (entry) => getActualPunchWindow({
+  ...entry,
+  timeIn: entry.editedIn ? entry.timeIn : entry.time || entry.timeIn,
+  timeOut: entry.editedOut ? entry.timeOut : entry.origTimeOut || entry.timeOut,
+});
 
 export const getScheduledWindow = (shift) => {
   const start = timeToMinutes(shift?.timeIn);
@@ -76,6 +95,10 @@ export const getCreditedWindow = ({
   lateApproved = 0,
   unscheduledApproved = 0,
   unscheduledPunchApproved = false,
+  unscheduledInApproved = false,
+  unscheduledOutApproved = false,
+  unscheduledInTime = null,
+  unscheduledOutTime = null,
 }) => {
   if (!actual) return null;
   if (schedule?.type === "WORK" && schedule.shift) {
@@ -84,6 +107,16 @@ export const getCreditedWindow = ({
     return {
       start: actual.start === null ? null : Math.max(actual.start, planned.start - Number(earlyApproved || 0)),
       end: actual.end === null ? null : Math.min(actual.end, planned.end + Number(lateApproved || 0)),
+    };
+  }
+  if (unscheduledInApproved || unscheduledOutApproved) {
+    return {
+      start: unscheduledInApproved && Number.isFinite(unscheduledInTime)
+        ? unscheduledInTime
+        : unscheduledInApproved ? actual.start : null,
+      end: unscheduledOutApproved && Number.isFinite(unscheduledOutTime)
+        ? unscheduledOutTime
+        : unscheduledOutApproved ? actual.end : null,
     };
   }
   if (unscheduledPunchApproved && (actual.start === null || actual.end === null)) {
@@ -96,4 +129,15 @@ export const getCreditedWindow = ({
     };
   }
   return null;
+};
+
+// Apply schedule boundaries only to punches that actually exist.
+export const getAnalyzedScheduleTimes = (entry, schedule) => {
+  if (schedule?.type !== "WORK" || !schedule.shift) return null;
+  const window = getCreditedWindow({ actual: getActualPunchWindow(entry), schedule });
+  if (!window) return null;
+  const dateOut = window.end === null ? entry.dateOut : new Date(
+    Date.parse(`${entry.date}T00:00:00Z`) + Math.floor(window.end / 1440) * 86400000
+  ).toISOString().slice(0, 10);
+  return { timeIn: minutesToTime(window.start), timeOut: minutesToTime(window.end), dateOut };
 };

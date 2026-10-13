@@ -52,6 +52,52 @@ const formatTime = (timeString) => {
   return timeString.substring(0, 5); // Takes only HH:MM from HH:MM:SS
 };
 
+const formatApprovedTime = (exception) => {
+  if (exception.status !== "APPROVED") return "Pending";
+  if (
+    ["NO_SCHEDULE", "REST_DAY_WORK"].includes(exception.exceptionType) &&
+    ["IN", "OUT"].includes(exception.punchSide)
+  ) {
+    return formatTime(exception.approvedTime || exception.actualTime);
+  }
+  const approvedMinutes = Number(exception.approvedMinutes) || 0;
+  if (
+    !exception.scheduledTime ||
+    !["EARLY_IN", "LATE_OUT"].includes(exception.exceptionType)
+  ) {
+    return `${approvedMinutes} min`;
+  }
+  const [hours, minutes] = String(exception.scheduledTime)
+    .split(":")
+    .map(Number);
+  const scheduledMinutes = hours * 60 + minutes;
+  const adjustedMinutes = exception.exceptionType === "EARLY_IN"
+    ? scheduledMinutes - approvedMinutes
+    : scheduledMinutes + approvedMinutes;
+  const normalized = ((adjustedMinutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")} (${approvedMinutes} min)`;
+};
+
+const formatApprovalActual = (exception) => {
+  if (["IN", "OUT"].includes(exception.punchSide)) {
+    return formatTime(exception.actualTime);
+  }
+  if (["NO_SCHEDULE", "REST_DAY_WORK"].includes(exception.exceptionType)) {
+    const timeIn = formatTime(exception.actualTimeIn);
+    const timeOut = formatTime(exception.actualTimeOut);
+    if (timeIn !== "-" && timeOut !== "-") return `${timeIn}–${timeOut}`;
+    return timeIn !== "-" ? timeIn : timeOut;
+  }
+  return formatTime(exception.actualTime);
+};
+
+const formatExceptionType = (exception) => {
+  const type = exception.exceptionType.replaceAll("_", " ");
+  return exception.punchSide && exception.punchSide !== "WINDOW"
+    ? `${type} ${exception.punchSide}`
+    : type;
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
 
@@ -111,6 +157,9 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [analyzedEntries, setAnalyzedEntries] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hideDeleted, setHideDeleted] = useState(false);
+  const [followSchedule, setFollowSchedule] = useState(
+    () => localStorage.getItem("dtrFollowSchedule") === "true",
+  );
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [timeType, setTimeType] = useState(null); // 'in' or 'out'
@@ -150,6 +199,7 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [scheduleExceptions, setScheduleExceptions] = useState([]);
   const [comparisonReport, setComparisonReport] = useState(null);
   const [approvalMinutes, setApprovalMinutes] = useState({});
+  const [approvalTimes, setApprovalTimes] = useState({});
   const [approvalSort, setApprovalSort] = useState({
     key: "employeeName",
     direction: "ascending",
@@ -244,11 +294,12 @@ const DTRBatchView = ({ batch, onBack }) => {
     }
   };
 
-  const fetchEntries = async () => {
+  const fetchEntries = async (followScheduleValue = followSchedule) => {
     try {
       setLoading(true);
       const response = await axios.get(
         `${ServerIP}/auth/dtr/export/${batch.id}`,
+        { params: { followSchedule: followScheduleValue ? 1 : 0 } },
       );
       if (response.data.Status) {
         setEntries(response.data.Entries);
@@ -288,17 +339,40 @@ const DTRBatchView = ({ batch, onBack }) => {
     } finally { setLoading(false); }
   };
 
-  const approveException = async (exception, minutes) => {
+  const approveException = async (exception, minutes, approvedTime = null) => {
     const approved = Math.min(Number(minutes), Number(exception.availableMinutes));
     if (!Number.isInteger(approved) || approved < 0 || (approved === 0 && Number(exception.availableMinutes) !== 0)) return;
     try {
       await axios.put(`${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/approve`, {
         approvedMinutes: approved,
+        ...(approvedTime ? { approvedTime } : {}),
       });
       await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
       await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
     } catch (err) {
       setError(err.response?.data?.Error || "Failed to approve exception");
+    }
+  };
+
+  const clearExceptionApproval = async (exception) => {
+    try {
+      await axios.put(
+        `${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/clear`,
+      );
+      await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
+      setApprovalMinutes((current) => {
+        const next = { ...current };
+        delete next[exception.id];
+        return next;
+      });
+      setApprovalTimes((current) => {
+        const next = { ...current };
+        delete next[exception.id];
+        return next;
+      });
+      await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
+    } catch (err) {
+      setError(err.response?.data?.Error || "Failed to clear approval");
     }
   };
 
@@ -312,12 +386,21 @@ const DTRBatchView = ({ batch, onBack }) => {
       setComparisonReport(comparison.data);
       const latest = await axios.get(`${ServerIP}/auth/dtr/schedule-exceptions/${batch.id}`);
       if (!latest.data.Status) throw new Error(latest.data.Error);
+      const visibleEntryIds = new Set(sortedEntries.map((entry) => Number(entry.id)));
       const pending = latest.data.Exceptions.filter(
-        (item) => item.status === "PENDING" && (!type || item.exceptionType === type),
+        (item) =>
+          visibleEntryIds.has(Number(item.dtrEntryId)) &&
+          item.status === "PENDING" &&
+          (!type || item.exceptionType === type),
       );
       await Promise.all(pending.map((item) => axios.put(
         `${ServerIP}/auth/dtr/schedule-exceptions/${item.id}/approve`,
-        { approvedMinutes: item.availableMinutes },
+        {
+          approvedMinutes: item.availableMinutes,
+          ...(["NO_SCHEDULE", "REST_DAY_WORK"].includes(item.exceptionType) && ["IN", "OUT"].includes(item.punchSide)
+            ? { approvedTime: formatTime(item.actualTime) }
+            : {}),
+        },
       )));
       await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
       await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
@@ -392,7 +475,10 @@ const DTRBatchView = ({ batch, onBack }) => {
   }, [entries, sortConfig, searchTerm, hideDeleted]);
 
   const sortedScheduleExceptions = React.useMemo(() => {
-    const rows = [...scheduleExceptions];
+    const visibleEntryIds = new Set(sortedEntries.map((entry) => Number(entry.id)));
+    const rows = scheduleExceptions.filter((item) =>
+      visibleEntryIds.has(Number(item.dtrEntryId)),
+    );
     const compareText = (a, b) => String(a ?? "").localeCompare(
       String(b ?? ""),
       undefined,
@@ -431,7 +517,33 @@ const DTRBatchView = ({ batch, onBack }) => {
       return Number(a.id) - Number(b.id);
     });
     return rows;
-  }, [scheduleExceptions, approvalSort]);
+  }, [scheduleExceptions, sortedEntries, approvalSort]);
+
+  const pendingApprovalCount = React.useMemo(
+    () => sortedScheduleExceptions.filter((item) => item.status === "PENDING").length,
+    [sortedScheduleExceptions],
+  );
+
+  const filteredComparisonReport = React.useMemo(() => {
+    if (!comparisonReport) return null;
+    const visibleEntries = sortedEntries.filter((entry) => !entry.deleteRecord);
+    const visibleEntryIds = new Set(visibleEntries.map((entry) => Number(entry.id)));
+    const skippedEntries = (comparisonReport.SkippedEntries || []).filter((entry) =>
+      visibleEntryIds.has(Number(entry.id)),
+    );
+    const entriesWithExceptions = new Set(
+      sortedScheduleExceptions.map((item) => Number(item.dtrEntryId)),
+    );
+    const comparedCount = visibleEntries.length - skippedEntries.length;
+    return {
+      ...comparisonReport,
+      TotalEntries: visibleEntries.length,
+      ComparedCount: comparedCount,
+      NoExceptionCount: Math.max(0, comparedCount - entriesWithExceptions.size),
+      ExceptionCount: sortedScheduleExceptions.length,
+      SkippedEntries: skippedEntries,
+    };
+  }, [comparisonReport, sortedEntries, sortedScheduleExceptions]);
 
   const handleApprovalSort = (key) => {
     setApprovalSort((current) => ({
@@ -466,6 +578,46 @@ const DTRBatchView = ({ batch, onBack }) => {
       ...current,
       [exception.id]: Number(exception.availableMinutes),
     }));
+  };
+
+  const renderApprovalActions = (item) => {
+    const isPunchApproval =
+      ["NO_SCHEDULE", "REST_DAY_WORK"].includes(item.exceptionType) &&
+      ["IN", "OUT"].includes(item.punchSide);
+
+    if (isPunchApproval) {
+      const approvedTime = approvalTimes[item.id] ?? formatTime(item.actualTime);
+      return (
+        <div className="d-flex flex-wrap gap-1 align-items-center">
+          {item.status !== "APPROVED" && (
+            <>
+              <input
+                type="time"
+                className="form-control form-control-sm"
+                style={{ width: 115 }}
+                value={approvedTime}
+                min={item.punchSide === "IN" ? formatTime(item.actualTime) : undefined}
+                max={item.punchSide === "OUT" ? formatTime(item.actualTime) : undefined}
+                onChange={(e) => setApprovalTimes((current) => ({ ...current, [item.id]: e.target.value }))}
+              />
+              <button type="button" className="btn btn-sm btn-success" onClick={() => approveException(item, 0, approvedTime)}>Approve</button>
+            </>
+          )}
+          {item.status === "APPROVED" && <Button variant="delete" size="sm" onClick={() => clearExceptionApproval(item)}>Clear</Button>}
+        </div>
+      );
+    }
+
+    return (
+      <div className="d-flex flex-wrap gap-1 align-items-center">
+        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 30)}>+30m</button>
+        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 60)}>+1hr</button>
+        <button type="button" className="btn btn-sm btn-primary" onClick={() => setAllApprovalMinutes(item)}>All</button>
+        <input type="number" min="1" max={item.availableMinutes} className="form-control form-control-sm" style={{ width: 80 }} placeholder="Minutes" value={approvalMinutes[item.id] || ""} onChange={(e) => setApprovalMinutes({ ...approvalMinutes, [item.id]: e.target.value })} />
+        <button type="button" className="btn btn-sm btn-success" onClick={() => approveException(item, Number(approvalMinutes[item.id]))}>Approve</button>
+        {item.status === "APPROVED" && <Button variant="delete" size="sm" onClick={() => clearExceptionApproval(item)}>Clear</Button>}
+      </div>
+    );
   };
 
   const handleReset = async () => {
@@ -1005,11 +1157,11 @@ const DTRBatchView = ({ batch, onBack }) => {
       <li className="nav-item">
         <button
           className={`nav-link ${activeTab === "approvals" ? "active" : ""}`}
-          onClick={() => { setActiveTab("approvals"); fetchScheduleExceptions(); }}
+          onClick={() => { setActiveTab("approvals"); compareSchedules(); }}
         >
           Approvals
-          {scheduleExceptions.filter((item) => item.status === "PENDING").length > 0 &&
-            <span className="badge text-bg-warning ms-2">{scheduleExceptions.filter((item) => item.status === "PENDING").length}</span>}
+          {pendingApprovalCount > 0 &&
+            <span className="badge text-bg-warning ms-2">{pendingApprovalCount}</span>}
         </button>
       </li>
       <li className="nav-item">
@@ -1060,6 +1212,23 @@ const DTRBatchView = ({ batch, onBack }) => {
       >
         Check Sun/Hol
       </Button>
+      <div className="form-check d-flex align-items-center ms-2">
+        <input
+          type="checkbox"
+          className="form-check-input"
+          id="followSchedule"
+          checked={followSchedule}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setFollowSchedule(checked);
+            localStorage.setItem("dtrFollowSchedule", String(checked));
+            fetchEntries(checked);
+          }}
+        />
+        <label className="form-check-label ms-2" htmlFor="followSchedule">
+          Follow schedule
+        </label>
+      </div>
       <div className="form-check d-flex align-items-center ms-auto">
         <input
           type="checkbox"
@@ -1493,17 +1662,17 @@ const DTRBatchView = ({ batch, onBack }) => {
         </>
       ) : activeTab === "approvals" ? (
         <div className="schedule-approvals">
-          {comparisonReport && (
-            <div className={`alert ${comparisonReport.SkippedEntries?.length ? "alert-warning" : "alert-info"}`}>
-              <p className="mb-1">Last comparison: {comparisonReport.ComparedCount} of {comparisonReport.TotalEntries} non-deleted entries compared; {comparisonReport.NoExceptionCount} had no exception; {comparisonReport.ExceptionCount} exceptions found.</p>
+          {filteredComparisonReport && (
+            <div className={`alert ${filteredComparisonReport.SkippedEntries.length ? "alert-warning" : "alert-info"}`}>
+              <p className="mb-1">Last comparison for the current filter: {filteredComparisonReport.ComparedCount} of {filteredComparisonReport.TotalEntries} non-deleted entries compared; {filteredComparisonReport.NoExceptionCount} had no exception; {filteredComparisonReport.ExceptionCount} exceptions found.</p>
               <p className="mb-0">Only early arrivals, late departures, and work without a work schedule appear in the approval list.</p>
-              {comparisonReport.SkippedEntries?.length > 0 && (
+              {filteredComparisonReport.SkippedEntries.length > 0 && (
                 <details className="mt-2" open>
-                  <summary>{comparisonReport.SkippedEntries.length} skipped entries — correct these and run Compare Schedules again</summary>
+                  <summary>{filteredComparisonReport.SkippedEntries.length} skipped entries — correct these and run Compare Schedules again</summary>
                   <div className="table-responsive mt-2" style={{ maxHeight: 320, overflowY: "auto" }}>
                     <table className="table table-sm mb-0">
                       <thead><tr><th>Entry</th><th>Employee / DTR ID</th><th>Date</th><th>In</th><th>Out</th><th>Reason</th></tr></thead>
-                      <tbody>{comparisonReport.SkippedEntries.map((entry) => (
+                      <tbody>{filteredComparisonReport.SkippedEntries.map((entry) => (
                         <tr key={entry.id}><td>{entry.id}</td><td>{entry.empName} / {entry.empId}</td><td>{formatDate(entry.date)}</td><td>{formatTime(entry.timeIn)}</td><td>{formatTime(entry.timeOut)}</td><td>{entry.reason}</td></tr>
                       ))}</tbody>
                     </table>
@@ -1528,15 +1697,15 @@ const DTRBatchView = ({ batch, onBack }) => {
               <th className="sortable-header" onClick={() => handleApprovalSort("approvalStatus")}>Approved{getApprovalSortIndicator("approvalStatus")}</th>
               <th>Actions</th>
             </tr></thead>
-            <tbody>{scheduleExceptions.length === 0 ? <tr><td colSpan="8" className="text-center text-muted">No schedule exceptions. Run Compare Schedules after analyzing punches.</td></tr> : sortedScheduleExceptions.map((item) => <tr key={item.id}>
-              <td>{item.employeeName || item.empName}</td><td>{formatDate(item.workDate)}</td><td>{item.exceptionType.replaceAll("_", " ")}</td><td>{formatTime(item.scheduledTime)}</td><td>{formatTime(item.actualTime)}</td><td>{Number(item.availableMinutes) === 0 ? "Punch only (no hours)" : `${item.availableMinutes} min`}</td><td>{item.status === "APPROVED" ? <span className="badge bg-success fs-6">{item.approvedMinutes} min</span> : "Pending"}</td>
-              <td><div className="d-flex flex-wrap gap-1 align-items-center">
-                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 30)}>+30m</button>
-                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 60)}>+1hr</button>
-                <button type="button" className="btn btn-sm btn-primary" onClick={() => setAllApprovalMinutes(item)}>All</button>
-                <input type="number" min={Number(item.availableMinutes) === 0 ? 0 : 1} max={item.availableMinutes} className="form-control form-control-sm" style={{ width: 80 }} placeholder="Minutes" value={approvalMinutes[item.id] || ""} onChange={(e) => setApprovalMinutes({ ...approvalMinutes, [item.id]: e.target.value })} />
-                <button type="button" className="btn btn-sm btn-success" onClick={() => approveException(item, Number(approvalMinutes[item.id]))}>Approve</button>
-              </div></td>
+            <tbody>{sortedScheduleExceptions.length === 0 ? <tr><td colSpan="8" className="text-center text-muted">{scheduleExceptions.length === 0 ? "No schedule exceptions. Run Compare Schedules after analyzing punches." : "No schedule exceptions match the current filter."}</td></tr> : sortedScheduleExceptions.map((item) => <tr key={item.id}>
+              <td>{item.employeeName || item.empName}</td>
+              <td>{formatDate(item.workDate)}</td>
+              <td>{formatExceptionType(item)}</td>
+              <td>{formatTime(item.scheduledTime)}</td>
+              <td>{formatApprovalActual(item)}</td>
+              <td>{Number(item.availableMinutes) === 0 ? "Punch only (no hours)" : `${item.availableMinutes} min`}</td>
+              <td>{item.status === "APPROVED" ? <span className="badge bg-success fs-6">{formatApprovedTime(item)}</span> : "Pending"}</td>
+              <td>{renderApprovalActions(item)}</td>
             </tr>)}</tbody>
           </table></div>
           <p className="text-muted">Pending records are ignored when payable hours are calculated. Actual punch times are never changed.</p>

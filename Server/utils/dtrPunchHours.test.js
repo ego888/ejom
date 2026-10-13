@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { calculatePunchHours } from "./dtrPunchHours.js";
-import { getActualWindow } from "./dtrScheduleEngine.js";
+import {
+  getActualWindow,
+  getApprovalPunchWindow,
+  getCreditedWindow,
+  timeToMinutes,
+} from "./dtrScheduleEngine.js";
 
 const run = (timeIn, timeOut) => calculatePunchHours(getActualWindow({ timeIn, timeOut }));
 test("8 AM to 5 PM is eight regular hours after lunch", () => {
@@ -23,7 +28,7 @@ test("missing punches clear stale hours and overtime", () => {
   assert.deepEqual(run("09:00", null), { hours: 0, overtime: 0 });
 });
 
-test("batch calculation reads no scheduling data and includes unprocessed rows", async () => {
+test("batch calculation uses approved schedule boundaries and includes unprocessed rows", async () => {
   const { readFileSync } = await import('node:fs');
   const { runInNewContext } = await import('node:vm');
   const source = readFileSync(new URL('../Routes/DTRRoute.js', import.meta.url), 'utf8');
@@ -32,11 +37,15 @@ test("batch calculation reads no scheduling data and includes unprocessed rows",
   const connection = {
     beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release: () => {},
     query: async (sql, values) => {
-      assert.doesNotMatch(sql, /DTRSchedule|DTRShift|employee|processed\s*=/);
-      if (sql.includes('FROM DTRBatches')) return [[{ id: 1 }]];
+      assert.doesNotMatch(sql, /processed\s*=/);
+      if (sql.includes('FROM DTRBatches')) return [[{ id: 1, periodStart: '2026-09-01', periodEnd: '2026-09-30' }]];
       if (sql.includes('FROM DTREntries')) return [[
-        { id: 1, timeIn: '08:00', timeOut: '21:00', processed: 0 },
-        { id: 2, timeIn: null, timeOut: '18:00' },
+        { id: 1, employeeId: 10, date: '2026-09-01', time: '07:00', origTimeOut: '18:00', timeIn: '08:00', timeOut: '17:00', editedIn: 0, editedOut: 0, processed: 0 },
+        { id: 2, employeeId: null, date: '2026-09-01', timeIn: null, timeOut: '18:00' },
+      ]];
+      if (sql.includes('FROM DTRScheduleExceptions')) return [[
+        { dtrEntryId: 1, exceptionType: 'EARLY_IN', punchSide: 'WINDOW', approvedMinutes: 30 },
+        { dtrEntryId: 1, exceptionType: 'LATE_OUT', punchSide: 'WINDOW', approvedMinutes: 60 },
       ]];
       updates.push(Array.from(values));
       return [{}];
@@ -45,9 +54,14 @@ test("batch calculation reads no scheduling data and includes unprocessed rows",
   let handler;
   runInNewContext(source.slice(start, source.indexOf('// Process Sunday/Holiday hours', start)), {
     router: { post: (_path, fn) => { handler = fn; } }, pool: { getConnection: async () => connection },
-    calculatePunchHours, getActualWindow, console,
+    calculatePunchHours, getApprovalPunchWindow, getCreditedWindow, timeToMinutes,
+    loadSchedulingContext: async () => ({}),
+    resolveSchedule: (_context, employeeId) => employeeId
+      ? { type: 'WORK', shift: { timeIn: '08:00', timeOut: '17:00' } }
+      : null,
+    console,
   });
   await handler({ params: { batchId: 1 } }, { json: (body) => assert.equal(body.UpdatedCount, 2),
     status: () => { throw new Error('Calculation failed'); } });
-  assert.deepEqual(updates.map((row) => row.slice(0, 2)), [[8, 3], [0, 0]]);
+  assert.deepEqual(updates.map((row) => row.slice(0, 2)), [[8, 1.5], [0, 0]]);
 });
