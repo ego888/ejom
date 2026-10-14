@@ -3323,7 +3323,26 @@ router.post("/reset-entries/:batchId", async (req, res) => {
 
     await connection.beginTransaction();
     await connection.query(
-      `UPDATE DTREntries SET time = COALESCE(time, origTimeOut), processed = 0, deleteRecord = 0, timeOut = NULL, timeIn = NULL, dateOut = NULL, remarks = '', hours = 0, overtime = 0, sundayHours = 0, sundayOT = 0, holidayHours = 0, holidayOT = 0, holidayType = '', nightDifferential = 0, editedIn = 0, editedOut = 0 WHERE batchId = ?`,
+      `UPDATE DTREntries
+       SET time = COALESCE(time, origTimeOut),
+           origTimeOut = NULL,
+           processed = 0,
+           deleteRecord = 0,
+           timeOut = NULL,
+           timeIn = NULL,
+           dateOut = NULL,
+           remarks = '',
+           hours = 0,
+           overtime = 0,
+           sundayHours = 0,
+           sundayOT = 0,
+           holidayHours = 0,
+           holidayOT = 0,
+           holidayType = '',
+           nightDifferential = 0,
+           editedIn = 0,
+           editedOut = 0
+       WHERE batchId = ?`,
       [batchId]
     );
     await connection.commit();
