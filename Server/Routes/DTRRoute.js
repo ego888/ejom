@@ -1512,7 +1512,7 @@ router.get("/export-xlsx/:batchId", async (req, res) => {
         remarks, deleteRecord
        FROM DTREntries
        WHERE batchId = ?
-       ORDER BY empId, date, time`,
+       ORDER BY empId, date, time, id`,
       [batchId]
     );
 
@@ -2193,6 +2193,9 @@ router.post("/analyze-time/:batchId", async (req, res) => {
         deleteRecord,
         remarks,
       } = updates;
+      const pairedOriginalTimeOut = !deleteRecord && timeIn && timeOut
+        ? timeOut
+        : null;
 
       await connection.query(
         `
@@ -2206,7 +2209,10 @@ router.post("/analyze-time/:batchId", async (req, res) => {
           processed = ?,
           deleteRecord = ?,
           remarks = ?,
-          origTimeOut = COALESCE(origTimeOut, ?),
+          origTimeOut = CASE
+            WHEN ? IS NOT NULL THEN ?
+            ELSE COALESCE(origTimeOut, ?)
+          END,
           time = ?
         WHERE id = ? AND batchId = ?
       `,
@@ -2219,14 +2225,41 @@ router.post("/analyze-time/:batchId", async (req, res) => {
           processed ?? 0,
           deleteRecord ?? 0,
           remarks ?? null,
+          pairedOriginalTimeOut,
+          pairedOriginalTimeOut,
           deleteRecord ? null : timeOut ?? null,
           !deleteRecord && !timeIn && timeOut ? null : entry.time,
           entry.id,
           batchId,
         ]
       );
-      Object.assign(entry, updates, { origTimeOut: entry.origTimeOut ?? (deleteRecord ? null : timeOut ?? null) });
+      Object.assign(entry, updates, {
+        origTimeOut: pairedOriginalTimeOut ?? entry.origTimeOut ??
+          (deleteRecord ? null : timeOut ?? null),
+      });
     };
+
+    // Remove repeated raw punches before pairing so a duplicate Time In can
+    // never become the Time Out (and vice versa).
+    const seenPunches = new Set();
+    for (const entry of entries) {
+      if (entry.deleteRecord || entry.processed || !entry.time) continue;
+      const punchKey = `${entry.empId}:${entry.date}:${entry.time}`;
+      if (!seenPunches.has(punchKey)) {
+        seenPunches.add(punchKey);
+        continue;
+      }
+      await updateEntry(entry, {
+        dateOut: entry.dateOut ?? null,
+        timeIn: entry.timeIn ?? null,
+        timeOut: entry.timeOut ?? null,
+        editedIn: entry.editedIn ?? 0,
+        editedOut: entry.editedOut ?? 0,
+        processed: entry.processed ?? 0,
+        deleteRecord: 1,
+        remarks: "REPEAT",
+      });
+    }
 
     for (let i = 0; i < entries.length - 1; i++) {
       const current = entries[i];

@@ -36,10 +36,10 @@ async function analyze(times, repeat = false, schedule = null) {
       }
       if (sql.includes("UPDATE DTREntries")) {
         const keys = ["dateOut", "timeIn", "timeOut", "editedIn", "editedOut", "processed", "deleteRecord", "remarks"];
-        const row = rows.find((row) => row.id === values[10]);
+        const row = rows.find((row) => row.id === values.at(-2));
         keys.forEach((key, index) => { row[key] = values[index]; });
-        row.origTimeOut ??= values[8];
-        row.time = values[9];
+        row.origTimeOut = values[8] ?? row.origTimeOut ?? values[10];
+        row.time = values[11];
         return [{}];
       }
       const selected = sql.includes("AND processed = 0")
@@ -76,6 +76,18 @@ test("Analyze Time does not revive the last consumed time-out as an incomplete e
   assert.equal(rows[0].time, "08:00");
   assert.equal(rows[1].deleteRecord, 1);
   assert.equal(rows[1].processed, 1);
+});
+
+test("Analyze Time ignores repeated punches instead of pairing a duplicate as Time Out", async () => {
+  const rows = await analyze(["07:55", "07:55", "18:08", "18:08"]);
+  assert.equal(rows[0].timeIn, "07:55");
+  assert.equal(rows[0].timeOut, "18:08");
+  assert.equal(rows[0].origTimeOut, "18:08");
+  assert.equal(rows[1].deleteRecord, 1);
+  assert.equal(rows[1].remarks, "REPEAT");
+  assert.equal(rows[2].deleteRecord, 1);
+  assert.equal(rows[3].deleteRecord, 1);
+  assert.equal(rows[3].remarks, "REPEAT");
 });
 
 test("Compare Schedules creates approvals independently for incomplete analyzed entries", async () => {
