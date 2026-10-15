@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
 import { buildAdvancedLikeSearchClause } from "../utils/advancedSearch.js";
+import { calculateRevisedQuoteTotals } from "../utils/quoteTotals.js";
 
 const router = express.Router();
 
@@ -566,9 +567,9 @@ router.put("/quote_details/:quoteId/:displayOrder", async (req, res) => {
       [req.params.quoteId]
     );
 
-    // Get current quote data for percentage discount
+    // Preserve the user's entered discount amount when a detail changes.
     const [quoteResults] = await connection.query(
-      "SELECT percentDisc FROM quotes WHERE quoteId = ?",
+      "SELECT amountDiscount FROM quotes WHERE quoteId = ?",
       [req.params.quoteId]
     );
 
@@ -577,33 +578,28 @@ router.put("/quote_details/:quoteId/:displayOrder", async (req, res) => {
       return res.json({ Status: false, Error: "Quote not found" });
     }
 
-    // Calculate final values
-    const totalAmount = parseFloat(detailsResults[0].totalAmount) || 0;
-    const totalHrs = parseFloat(detailsResults[0].totalHours) || 0;
-    const percentDisc = parseFloat(quoteResults[0].percentDisc) || 0;
-    const amountDiscount = (totalAmount * percentDisc) / 100;
-    const grandTotal = totalAmount - amountDiscount;
-
-    // Format numbers to avoid precision issues
-    const formattedTotalAmount = parseFloat(totalAmount.toFixed(2));
-    const formattedAmountDiscount = parseFloat(amountDiscount.toFixed(2));
-    const formattedGrandTotal = parseFloat(grandTotal.toFixed(2));
-    const formattedTotalHrs = parseFloat(totalHrs.toFixed(2));
+    const revisedTotals = calculateRevisedQuoteTotals({
+      totalAmount: detailsResults[0].totalAmount,
+      totalHrs: detailsResults[0].totalHours,
+      amountDiscount: quoteResults[0].amountDiscount,
+    });
 
     // Update quote with new totals
     await connection.query(
       `UPDATE quotes 
        SET totalAmount = ?,
            amountDiscount = ?,
+           percentDisc = ?,
            grandTotal = ?,
            totalHrs = ?,
            lastEdited = CURRENT_TIMESTAMP
        WHERE quoteId = ?`,
       [
-        formattedTotalAmount,
-        formattedAmountDiscount,
-        formattedGrandTotal,
-        formattedTotalHrs,
+        revisedTotals.totalAmount,
+        revisedTotals.amountDiscount,
+        revisedTotals.percentDisc,
+        revisedTotals.grandTotal,
+        revisedTotals.totalHrs,
         req.params.quoteId,
       ]
     );
@@ -613,12 +609,7 @@ router.put("/quote_details/:quoteId/:displayOrder", async (req, res) => {
 
     return res.json({
       Status: true,
-      Result: {
-        totalAmount: formattedTotalAmount,
-        amountDiscount: formattedAmountDiscount,
-        grandTotal: formattedGrandTotal,
-        totalHrs: formattedTotalHrs,
-      },
+      Result: revisedTotals,
     });
   } catch (error) {
     // Rollback transaction on error

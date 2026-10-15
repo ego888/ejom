@@ -1078,6 +1078,18 @@ function AddQuote() {
         }
       }
 
+      // Quantity also affects fixed-price details that have no dimensions or
+      // per-square-foot rate. Always refresh the line amount from the current
+      // unit price after any dimension-based price calculation above.
+      if (field === "quantity") {
+        const amount = calculateAmount(
+          updatedDetail.unitPrice || 0,
+          updatedDetail.discount || 0,
+          value || 0
+        );
+        updatedDetail.amount = amount.toFixed(2);
+      }
+
       // When unit price changes
       if (field === "unitPrice") {
         if (updatedDetail.squareFeet > 0) {
@@ -1276,15 +1288,22 @@ function AddQuote() {
           setQuoteDetails(updatedDetails);
 
           // Update local state with the totals returned from the backend
-          const { totalAmount, amountDiscount, grandTotal, totalHrs } =
+          const {
+            totalAmount, amountDiscount, percentDisc, grandTotal, totalHrs,
+          } =
             response.data.Result;
-          setData((prev) => ({
-            ...prev,
+          const revisedTotals = {
             totalAmount,
             amountDiscount,
+            percentDisc,
             grandTotal,
             totalHrs,
+          };
+          setData((prev) => ({
+            ...prev,
+            ...revisedTotals,
           }));
+          setLastSavedTotals(revisedTotals);
 
           setEditingRowId(null);
           setEditedValues({});
