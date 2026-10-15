@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS DTRScheduleOverrides (
   workDate DATE NOT NULL,
   shiftId INT NULL,
   scheduleType ENUM('WORK', 'REST', 'LEAVE', 'NO_WORK') NOT NULL DEFAULT 'WORK',
+  timeIn TIME NULL,
+  timeOut TIME NULL,
   notes VARCHAR(255) NULL,
   createdBy INT NULL,
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

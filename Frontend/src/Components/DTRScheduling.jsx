@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import axios from "../utils/axiosConfig";
 import { ServerIP } from "../config";
@@ -24,6 +24,11 @@ const DTRScheduling = ({
   const [shifts, setShifts] = useState([]);
   const [month, setMonth] = useState(todayMonth);
   const [calendar, setCalendar] = useState([]);
+  const [overrideTime, setOverrideTime] = useState("");
+  const [overrideSide, setOverrideSide] = useState("early");
+  const [overrideNotes, setOverrideNotes] = useState("");
+  const [savingTime, setSavingTime] = useState(false);
+  const savingTimeRef = useRef(false);
   const [assignments, setAssignments] = useState([]);
   const [overrideRecords, setOverrideRecords] = useState([]);
   const [assignmentPreview, setAssignmentPreview] = useState([]);
@@ -51,6 +56,8 @@ const DTRScheduling = ({
     workDate: today,
     scheduleType: "WORK",
     shiftId: "",
+    timeIn: "",
+    timeOut: "",
     notes: "",
   });
 
@@ -372,6 +379,28 @@ const DTRScheduling = ({
       showError(error);
     }
   };
+  const applyCalendarTime = async (employee, day) => {
+    if (!canManageOverrides || savingTimeRef.current) return;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(overrideTime)) {
+      setMessage({ type: "danger", text: "Enter a valid time in HH:MM format." });
+      return;
+    }
+    savingTimeRef.current = true;
+    setSavingTime(true);
+    try {
+      await axios.post(`${ServerIP}/auth/dtr/schedules/overrides/time`, {
+        employeeId: employee.id, workDate: day.date,
+        side: overrideSide, time: overrideTime, notes: overrideNotes.trim() || undefined,
+      });
+      setMessage({ type: "success", text: `${employee.fullName || employee.name}: ${overrideSide === "early" ? "start" : "end"} time set to ${overrideTime} on ${day.date}.` });
+      await loadCalendar();
+    } catch (error) {
+      showError(error);
+    } finally {
+      savingTimeRef.current = false;
+      setSavingTime(false);
+    }
+  };
   const openOverrideFromCalendar = (employee, day) => {
     if (!canManageOverrides) return;
     const scheduleType = day.type || "WORK";
@@ -381,7 +410,9 @@ const DTRScheduling = ({
       scheduleType,
       shiftId:
         scheduleType === "WORK" && day.shift?.id ? String(day.shift.id) : "",
-      notes: "",
+      timeIn: day.overrideTimeIn || "",
+      timeOut: day.overrideTimeOut || "",
+      notes: day.notes || "",
     });
     setMessage(null);
     setSection("override");
@@ -392,6 +423,8 @@ const DTRScheduling = ({
       workDate: record.workDate,
       scheduleType: record.scheduleType,
       shiftId: record.shiftId ? String(record.shiftId) : "",
+      timeIn: record.timeIn || "",
+      timeOut: record.timeOut || "",
       notes: record.notes || "",
     });
     setMessage(null);
@@ -437,7 +470,7 @@ const DTRScheduling = ({
 
       {section === "calendar" && (
         <>
-          <div className="d-flex align-items-center gap-2 mb-3">
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
             <label htmlFor="schedule-month">Schedule Month</label>
             <input
               id="schedule-month"
@@ -446,7 +479,76 @@ const DTRScheduling = ({
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             />
+            {canManageOverrides && (
+              <>
+                <label htmlFor="schedule-override-time">Time (24-hour)</label>
+                <div className="form-control schedule-time-input" role="group" aria-label="24-hour time">
+                  {["hours", "minutes"].map((part, index) => (
+                    <React.Fragment key={part}>
+                      {index === 1 && <span aria-hidden="true">:</span>}
+                      <input
+                        id={index === 0 ? "schedule-override-time" : "schedule-override-minutes"}
+                        type="number"
+                        min={0}
+                        max={index === 0 ? 23 : 59}
+                        step={1}
+                        placeholder={index === 0 ? "HH" : "MM"}
+                        aria-label={index === 0 ? "Hours (00–23)" : "Minutes (00–59)"}
+                        aria-describedby="schedule-time-help"
+                        value={overrideTime.split(":")[index] || ""}
+                        disabled={savingTime}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          if (!/^\d{0,2}$/.test(value) || Number(value) > (index === 0 ? 23 : 59)) return;
+                          const parts = overrideTime.split(":");
+                          parts[index] = value;
+                          setOverrideTime(`${parts[0] || ""}:${parts[1] || ""}`);
+                        }}
+                        onBlur={() => setOverrideTime((current) => {
+                          const parts = current.split(":");
+                          if (parts[index]) parts[index] = parts[index].padStart(2, "0");
+                          return parts.every((part) => !part) ? "" : parts.join(":");
+                        })}
+                      />
+                    </React.Fragment>
+                  ))}
+                  <i className="bi bi-clock" aria-hidden="true" />
+                </div>
+                {["early", "late"].map((side) => (
+                  <label key={side} className="form-check form-check-inline mb-0">
+                    <input type="radio" className="form-check-input"
+                      name="schedule-override-side" value={side}
+                      checked={overrideSide === side} disabled={savingTime}
+                      onChange={() => setOverrideSide(side)} />
+                    {side === "early" ? "Early" : "Late"}
+                  </label>
+                ))}
+                <label htmlFor="schedule-override-notes">Notes</label>
+                <input
+                  id="schedule-override-notes"
+                  type="text"
+                  className="form-control"
+                  style={{ width: 260 }}
+                  maxLength={255}
+                  placeholder="Optional; blank keeps existing notes"
+                  value={overrideNotes}
+                  disabled={savingTime}
+                  onChange={(event) => setOverrideNotes(event.target.value)}
+                />
+                <button type="button" className="btn btn-outline-secondary btn-sm"
+                  disabled={savingTime || !overrideTime} onClick={() => {
+                    setOverrideTime("");
+                  }}>
+                  Clear
+                </button>
+              </>
+            )}
           </div>
+          {canManageOverrides && (
+            <p id="schedule-time-help" className="text-muted small">
+              {savingTime ? "Saving time override…" : "Enter a time, choose Early (start) or Late (end), add optional notes, then double-click an employee/date cell to save. You can also press Enter on a cell. Clear the time to open the full override form with a click."}
+            </p>
+          )}
           <div className="schedule-board">
             <table className="table table-bordered table-sm">
               <thead>
@@ -475,25 +577,33 @@ const DTRScheduling = ({
                     {employee.days.map((day) => (
                       <td
                         key={day.date}
-                        title={`${day.date} — ${day.group?.name ? `${day.group.name}, ` : ""}${day.source || "Unassigned"}${day.shift ? ` (${day.shift.timeIn}–${day.shift.timeOut})` : ""}.${canManageOverrides ? " Click to override." : ""}`}
+                        title={day.source === "override"
+                          ? day.notes || "No notes"
+                          : `${day.date} — ${day.group?.name ? `${day.group.name}, ` : ""}${day.source || "Unassigned"}${day.shift ? ` (${day.shift.timeIn}–${day.shift.timeOut})` : ""}.${canManageOverrides ? (overrideTime ? " Double-click to apply time override." : " Click to override.") : ""}`}
                         style={
                           day.shift
                             ? { backgroundColor: `${day.group?.color || day.shift.color}33` }
                             : undefined
                         }
-                        className={`schedule-cell ${day.type && day.type !== "WORK" ? "non-work-day" : ""}`}
+                        className={`schedule-cell ${day.type && day.type !== "WORK" ? "non-work-day" : ""} ${day.source === "override" ? "schedule-cell-override" : ""}`}
                         role={canManageOverrides ? "button" : undefined}
                         tabIndex={canManageOverrides ? 0 : undefined}
                         onClick={
-                          canManageOverrides
+                          canManageOverrides && !overrideTime
                             ? () => openOverrideFromCalendar(employee, day)
                             : undefined
                         }
+                        aria-disabled={savingTime || undefined}
+                        onDoubleClick={canManageOverrides && overrideTime
+                          ? () => applyCalendarTime(employee, day) : undefined}
                         onKeyDown={
                           canManageOverrides
                             ? (event) => {
-                                if (event.key === "Enter" || event.key === " ")
-                                  openOverrideFromCalendar(employee, day);
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  if (overrideTime) applyCalendarTime(employee, day);
+                                  else openOverrideFromCalendar(employee, day);
+                                }
                               }
                             : undefined
                         }
@@ -502,15 +612,25 @@ const DTRScheduling = ({
                           <>
                             <span>{day.shift?.name}</span>
                             {day.shift && (
-                              <small className="d-block text-muted">
+                              <small className={`d-block ${day.source === "override" ? "schedule-override-time" : "text-muted"}`}>
                                 {day.shift.timeIn}–{day.shift.timeOut}
                               </small>
                             )}
                             {day.group && (
                               <small className="d-block">{day.group.name}</small>
                             )}
+                            {day.source === "override" && (
+                              <small className="schedule-override-badge">Override</small>
+                            )}
                           </>
-                        ) : day.type || "—"}
+                        ) : (
+                          <>
+                            {day.type || "—"}
+                            {day.source === "override" && (
+                              <small className="schedule-override-badge d-block">Override</small>
+                            )}
+                          </>
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -1071,24 +1191,50 @@ const DTRScheduling = ({
                   </select>
                 </div>
                 {override.scheduleType === "WORK" && (
-                  <div className="col-md-2">
-                    <label>Shift</label>
-                    <select
-                      required
-                      className="form-select"
-                      value={override.shiftId}
-                      onChange={(e) =>
-                        setOverride({ ...override, shiftId: e.target.value })
-                      }
-                    >
-                      <option value="">Select shift</option>
-                      {shifts.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="col-md-2">
+                      <label>Shift</label>
+                      <select
+                        required
+                        className="form-select"
+                        value={override.shiftId}
+                        onChange={(e) =>
+                          setOverride({ ...override, shiftId: e.target.value })
+                        }
+                      >
+                        <option value="">Select shift</option>
+                        {shifts.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-2">
+                      <label>Override start</label>
+                      <input
+                        type="time"
+                        className="form-control"
+                        value={override.timeIn}
+                        onChange={(e) =>
+                          setOverride({ ...override, timeIn: e.target.value })
+                        }
+                      />
+                      <small className="text-muted">Blank uses shift time</small>
+                    </div>
+                    <div className="col-md-2">
+                      <label>Override end</label>
+                      <input
+                        type="time"
+                        className="form-control"
+                        value={override.timeOut}
+                        onChange={(e) =>
+                          setOverride({ ...override, timeOut: e.target.value })
+                        }
+                      />
+                      <small className="text-muted">Blank uses shift time</small>
+                    </div>
+                  </>
                 )}
                 <div className="col-md-3">
                   <label>Notes</label>
@@ -1144,7 +1290,14 @@ const DTRScheduling = ({
                               {record.scheduleType}
                             </span>
                           </td>
-                          <td>{record.shiftName || "—"}</td>
+                          <td>
+                            {record.shiftName || "—"}
+                            {(record.timeIn || record.timeOut) && (
+                              <small className="d-block text-muted">
+                                {[record.timeIn && `Early: ${record.timeIn}`, record.timeOut && `Late: ${record.timeOut}`].filter(Boolean).join(" · ")}
+                              </small>
+                            )}
+                          </td>
                           <td>{record.notes || "—"}</td>
                           <td>
                             <div className="d-flex justify-content-end gap-2">

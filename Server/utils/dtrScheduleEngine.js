@@ -20,7 +20,8 @@ export const loadSchedulingContext = async (connection, dateFrom, dateTo) => {
     connection.query(`SELECT * , DATE_FORMAT(dateFrom,'%Y-%m-%d') dateFrom,
       DATE_FORMAT(dateTo,'%Y-%m-%d') dateTo FROM DTRShiftAssignments
       WHERE dateFrom<=? AND dateTo>=? ORDER BY createdAt, id`, [dateTo, dateFrom]),
-    connection.query(`SELECT employeeId, shiftId, scheduleType,
+    connection.query(`SELECT employeeId, shiftId, scheduleType, notes,
+      TIME_FORMAT(timeIn,'%H:%i') timeIn, TIME_FORMAT(timeOut,'%H:%i') timeOut,
       DATE_FORMAT(workDate,'%Y-%m-%d') workDate FROM DTRScheduleOverrides
       WHERE workDate BETWEEN ? AND ?`, [dateFrom, dateTo]),
   ]);
@@ -36,7 +37,19 @@ export const loadSchedulingContext = async (connection, dateFrom, dateTo) => {
 export const resolveSchedule = (context, employeeId, workDate) => {
   const id = Number(employeeId);
   const override = context.overrides.find((row) => Number(row.employeeId) === id && row.workDate === workDate);
-  if (override) return { type: override.scheduleType, shift: context.shifts.get(Number(override.shiftId)) || null, source: "override" };
+  if (override) {
+    const shift = context.shifts.get(Number(override.shiftId));
+    const base = resolveSchedule({ ...context, overrides: [] }, employeeId, workDate);
+    return {
+      type: override.scheduleType,
+      shift: shift ? { ...shift, timeIn: override.timeIn || shift.timeIn, timeOut: override.timeOut || shift.timeOut } : null,
+      group: base?.group || null,
+      source: "override",
+      notes: override.notes || null,
+      overrideTimeIn: override.timeIn || null,
+      overrideTimeOut: override.timeOut || null,
+    };
+  }
   const weekday = new Date(`${workDate}T00:00:00`).getDay();
   const applies = (row) => workDate >= row.dateFrom && workDate <= row.dateTo && (Number(row.weekdaysMask) & (1 << weekday));
   const individual = context.assignments.filter((row) => Number(row.employeeId) === id && applies(row)).at(-1);

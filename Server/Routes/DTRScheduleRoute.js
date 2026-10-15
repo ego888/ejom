@@ -277,6 +277,7 @@ router.get("/overrides", verifyUser, async (req, res) => {
       `SELECT o.id, o.employeeId,
               DATE_FORMAT(o.workDate, '%Y-%m-%d') workDate,
               o.shiftId, o.scheduleType, o.notes,
+              TIME_FORMAT(o.timeIn, '%H:%i') timeIn, TIME_FORMAT(o.timeOut, '%H:%i') timeOut,
               e.fullName employeeName, e.name employeeShortName,
               s.name shiftName
        FROM DTRScheduleOverrides o
@@ -288,22 +289,60 @@ router.get("/overrides", verifyUser, async (req, res) => {
   } catch (error) { res.status(500).json({ Status: false, Error: error.message }); }
 });
 
+router.post("/overrides/time", ...canManage, async (req, res) => {
+  const { employeeId, workDate, side, time, notes } = req.body;
+  if (notes !== undefined && (typeof notes !== "string" || notes.length > 255)) {
+    return res.status(400).json({ Status: false, Error: "Notes must be text of at most 255 characters." });
+  }
+  if (!Number.isInteger(Number(employeeId)) || Number(employeeId) <= 0 ||
+      !isoDate.test(workDate || "") || !["early", "late"].includes(side) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(time || "")) {
+    return res.status(400).json({ Status: false, Error: "Select an employee, date, Early or Late, and a valid HH:MM time." });
+  }
+  try {
+    const context = await loadSchedulingContext(pool, workDate, workDate);
+    const schedule = resolveSchedule(context, employeeId, workDate);
+    if (schedule?.type !== "WORK" || !schedule.shift) {
+      return res.status(400).json({ Status: false, Error: "Assign a work schedule to this date before overriding its time." });
+    }
+    const column = side === "early" ? "timeIn" : "timeOut";
+    await pool.query(
+      `INSERT INTO DTRScheduleOverrides
+       (employeeId, workDate, shiftId, scheduleType, ${column}, notes, createdBy)
+       VALUES (?, ?, ?, 'WORK', ?, ?, ?)
+       ON DUPLICATE KEY UPDATE ${column}=VALUES(${column}),
+         notes=COALESCE(VALUES(notes), notes), createdBy=VALUES(createdBy)`,
+      [employeeId, workDate, schedule.shift.id, time, notes?.trim() || null, req.user.id]
+    );
+    res.json({ Status: true });
+  } catch (error) { res.status(500).json({ Status: false, Error: error.message }); }
+});
+
 router.post("/overrides", ...canManage, async (req, res) => {
-  const { employeeId, workDate, shiftId, scheduleType = "WORK", notes } = req.body;
+  const {
+    employeeId, workDate, shiftId, scheduleType = "WORK",
+    timeIn = "", timeOut = "", notes = "",
+  } = req.body;
+  const validTime = (value) => !value || /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
   if (!employeeId || !isoDate.test(workDate || "") ||
       !["WORK", "REST", "LEAVE", "NO_WORK"].includes(scheduleType) ||
-      (scheduleType === "WORK" && !shiftId)) {
+      (scheduleType === "WORK" && (!shiftId || !validTime(timeIn) || !validTime(timeOut))) ||
+      typeof notes !== "string" || notes.length > 255) {
     return res.status(400).json({ Status: false, Error: "Complete override details are required" });
   }
   try {
     await pool.query(
       `INSERT INTO DTRScheduleOverrides
-       (employeeId, workDate, shiftId, scheduleType, notes, createdBy)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE shiftId=VALUES(shiftId), scheduleType=VALUES(scheduleType),
-         notes=VALUES(notes), createdBy=VALUES(createdBy)`,
+       (employeeId, workDate, shiftId, scheduleType, timeIn, timeOut, notes, createdBy)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         shiftId=VALUES(shiftId), scheduleType=VALUES(scheduleType),
+         timeIn=VALUES(timeIn), timeOut=VALUES(timeOut), notes=VALUES(notes),
+         createdBy=VALUES(createdBy)`,
       [employeeId, workDate, scheduleType === "WORK" ? shiftId : null,
-       scheduleType, notes || null, req.user.id]
+       scheduleType, scheduleType === "WORK" ? timeIn || null : null,
+       scheduleType === "WORK" ? timeOut || null : null,
+       notes.trim() || null, req.user.id]
     );
     res.json({ Status: true });
   } catch (error) { res.status(500).json({ Status: false, Error: error.message }); }
@@ -344,6 +383,9 @@ router.get("/calendar", verifyUser, async (req, res) => {
           source: resolved?.source || null,
           shift: resolved?.shift || null,
           group: resolved?.group || null,
+          notes: resolved?.notes || null,
+          overrideTimeIn: resolved?.overrideTimeIn || null,
+          overrideTimeOut: resolved?.overrideTimeOut || null,
         });
       }
       return { ...employee, days };
