@@ -52,6 +52,36 @@ const formatTime = (timeString) => {
   return timeString.substring(0, 5); // Takes only HH:MM from HH:MM:SS
 };
 
+const timeToMinuteValue = (timeString) => {
+  if (!timeString) return null;
+  const [hours, minutes] = String(timeString).split(":").map(Number);
+  return Number.isFinite(hours) && Number.isFinite(minutes)
+    ? hours * 60 + minutes
+    : null;
+};
+
+const moveScheduledTime = (exception, approvedMinutes) => {
+  const scheduledMinutes = timeToMinuteValue(exception.scheduledTime);
+  if (scheduledMinutes === null) return "";
+  const adjusted = exception.exceptionType === "EARLY_IN"
+    ? scheduledMinutes - approvedMinutes
+    : scheduledMinutes + approvedMinutes;
+  const normalized = ((adjusted % 1440) + 1440) % 1440;
+  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+};
+
+const getApprovedMinutesFromTime = (exception, selectedTime) => {
+  const scheduledMinutes = timeToMinuteValue(exception.scheduledTime);
+  let selectedMinutes = timeToMinuteValue(selectedTime);
+  if (scheduledMinutes === null || selectedMinutes === null) return null;
+  if (exception.exceptionType === "EARLY_IN") {
+    if (selectedMinutes > scheduledMinutes) selectedMinutes -= 1440;
+    return scheduledMinutes - selectedMinutes;
+  }
+  if (selectedMinutes < scheduledMinutes) selectedMinutes += 1440;
+  return selectedMinutes - scheduledMinutes;
+};
+
 const formatApprovedTime = (exception) => {
   if (exception.status !== "APPROVED") return "Pending";
   if (
@@ -67,15 +97,7 @@ const formatApprovedTime = (exception) => {
   ) {
     return `${approvedMinutes} min`;
   }
-  const [hours, minutes] = String(exception.scheduledTime)
-    .split(":")
-    .map(Number);
-  const scheduledMinutes = hours * 60 + minutes;
-  const adjustedMinutes = exception.exceptionType === "EARLY_IN"
-    ? scheduledMinutes - approvedMinutes
-    : scheduledMinutes + approvedMinutes;
-  const normalized = ((adjustedMinutes % 1440) + 1440) % 1440;
-  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")} (${approvedMinutes} min)`;
+  return moveScheduledTime(exception, approvedMinutes);
 };
 
 const formatApprovalActual = (exception) => {
@@ -198,7 +220,6 @@ const DTRBatchView = ({ batch, onBack }) => {
   const [unlockBatch, setUnlockBatch] = useState(false);
   const [scheduleExceptions, setScheduleExceptions] = useState([]);
   const [comparisonReport, setComparisonReport] = useState(null);
-  const [approvalMinutes, setApprovalMinutes] = useState({});
   const [approvalTimes, setApprovalTimes] = useState({});
   const [updatingApprovalIds, setUpdatingApprovalIds] = useState(() => new Set());
   const [approvalSort, setApprovalSort] = useState({
@@ -373,11 +394,6 @@ const DTRBatchView = ({ batch, onBack }) => {
       await axios.put(
         `${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/clear`,
       );
-      setApprovalMinutes((current) => {
-        const next = { ...current };
-        delete next[exception.id];
-        return next;
-      });
       setApprovalTimes((current) => {
         const next = { ...current };
         delete next[exception.id];
@@ -581,24 +597,13 @@ const DTRBatchView = ({ batch, onBack }) => {
     return approvalSort.direction === "ascending" ? " ↑" : " ↓";
   };
 
-  const addApprovalMinutes = (exception, minutesToAdd) => {
-    setApprovalMinutes((current) => {
-      const currentMinutes = Number.parseInt(current[exception.id], 10) || 0;
-      return {
-        ...current,
-        [exception.id]: Math.min(
-          currentMinutes + minutesToAdd,
-          Number(exception.availableMinutes),
-        ),
-      };
-    });
-  };
-
-  const setAllApprovalMinutes = (exception) => {
-    setApprovalMinutes((current) => ({
-      ...current,
-      [exception.id]: Number(exception.availableMinutes),
-    }));
+  const approveScheduledException = (exception, selectedTime) => {
+    const minutes = getApprovedMinutesFromTime(exception, selectedTime);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > Number(exception.availableMinutes)) {
+      setError(`Select a time between the scheduled ${formatTime(exception.scheduledTime)} and actual ${formatTime(exception.actualTime)}.`);
+      return;
+    }
+    approveException(exception, minutes);
   };
 
   const renderApprovalActions = (item) => {
@@ -630,13 +635,17 @@ const DTRBatchView = ({ batch, onBack }) => {
       );
     }
 
+    const selectedTime = approvalTimes[item.id] ?? (
+      item.status === "APPROVED"
+        ? moveScheduledTime(item, Number(item.approvedMinutes) || 0)
+        : item.exceptionType === "EARLY_IN"
+          ? formatTime(item.actualTime)
+          : formatTime(item.scheduledTime)
+    );
     return (
       <div className="d-flex flex-wrap gap-1 align-items-center">
-        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 30)}>+30m</button>
-        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addApprovalMinutes(item, 60)}>+1hr</button>
-        <button type="button" className="btn btn-sm btn-primary" onClick={() => setAllApprovalMinutes(item)}>All</button>
-        <input type="number" min="1" max={item.availableMinutes} className="form-control form-control-sm" style={{ width: 80 }} placeholder="Minutes" value={approvalMinutes[item.id] || ""} onChange={(e) => setApprovalMinutes({ ...approvalMinutes, [item.id]: e.target.value })} />
-        <button type="button" className="btn btn-sm btn-success" disabled={isUpdating} onClick={() => approveException(item, Number(approvalMinutes[item.id]))}>{isUpdating ? "Approving..." : "Approve"}</button>
+        <input type="time" className="form-control form-control-sm" style={{ width: 115 }} value={selectedTime} onChange={(e) => setApprovalTimes((current) => ({ ...current, [item.id]: e.target.value }))} />
+        <button type="button" className="btn btn-sm btn-success" disabled={isUpdating} onClick={() => approveScheduledException(item, selectedTime)}>{isUpdating ? "Approving..." : "Approve"}</button>
         {item.status === "APPROVED" && <Button variant="delete" size="sm" disabled={isUpdating} onClick={() => clearExceptionApproval(item)}>{isUpdating ? "Clearing..." : "Clear"}</Button>}
       </div>
     );
