@@ -35,7 +35,7 @@ test("split entries share one daily eight-hour regular limit", () => {
   assert.deepEqual(allocation.get(2), { hours: 3.53, overtime: 5.2 });
 });
 
-test("batch calculation uses stored Time In/Out directly and includes unprocessed rows", async () => {
+test("batch calculation uses only the displayed Time In/Out sent by Entries", async () => {
   const { readFileSync } = await import('node:fs');
   const { runInNewContext } = await import('node:vm');
   const source = readFileSync(new URL('../Routes/DTRRoute.js', import.meta.url), 'utf8');
@@ -47,8 +47,8 @@ test("batch calculation uses stored Time In/Out directly and includes unprocesse
       assert.doesNotMatch(sql, /processed\s*=/);
       if (sql.includes('FROM DTRBatches')) return [[{ id: 1, periodStart: '2026-09-01', periodEnd: '2026-09-30' }]];
       if (sql.includes('FROM DTREntries')) return [[
-        { id: 1, empId: '10', date: '2026-09-01', timeIn: '08:00', timeOut: '17:00' },
-        { id: 2, empId: '11', date: '2026-09-01', timeIn: null, timeOut: '18:00' },
+        { id: 1, empId: '10', date: '2026-09-01', dateOut: '2026-09-01' },
+        { id: 2, empId: '11', date: '2026-09-01', dateOut: '2026-09-01' },
       ]];
       updates.push(Array.from(values));
       return [{}];
@@ -60,7 +60,10 @@ test("batch calculation uses stored Time In/Out directly and includes unprocesse
     allocateDailyPunchHours, getActualPunchWindow,
     console,
   });
-  await handler({ params: { batchId: 1 } }, { json: (body) => assert.equal(body.UpdatedCount, 2),
+  await handler({ params: { batchId: 1 }, body: { entries: [
+    { id: 1, timeIn: '07:30', timeOut: '18:00', dateOut: '2026-09-01' },
+    { id: 2, timeIn: '08:25', timeOut: null, dateOut: '2026-09-01' },
+  ] } }, { json: (body) => assert.equal(body.UpdatedCount, 2),
     status: () => { throw new Error('Calculation failed'); } });
-  assert.deepEqual(updates.map((row) => row.slice(0, 2)), [[8, 0], [0, 0]]);
+  assert.deepEqual(updates.map((row) => row.slice(0, 2)), [[8, 1.5], [0, 0]]);
 });

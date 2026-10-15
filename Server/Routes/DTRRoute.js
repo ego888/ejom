@@ -2567,18 +2567,21 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
   let connection;
   try {
     const { batchId } = req.params;
+    const requestedEntries = req.body?.entries;
+    if (!Array.isArray(requestedEntries)) {
+      return res.status(400).json({ Status: false, Error: "Displayed Time In/Out entries are required" });
+    }
+    const calculationInputs = new Map(requestedEntries.map((entry) => [Number(entry.id), entry]));
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    const [batchRows] = await connection.query(
-      "SELECT id FROM DTRBatches WHERE id=?", [batchId]
-    );
+    const [batchRows] = await connection.query("SELECT id FROM DTRBatches WHERE id=?", [batchId]);
     if (!batchRows.length) {
       await connection.rollback();
       return res.status(404).json({ Status: false, Error: "Batch not found" });
     }
     const [entries] = await connection.query(
-      `SELECT d.id, d.empId, d.timeIn, d.timeOut,
+      `SELECT d.id, d.empId,
               DATE_FORMAT(d.date,'%Y-%m-%d') date,
               DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut
        FROM DTREntries d
@@ -2611,7 +2614,15 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
     };
 
     const calculatedEntries = entries.map((entry) => {
-      const credited = getActualPunchWindow(entry);
+      const input = calculationInputs.get(Number(entry.id)) || {};
+      const credited = input.timeIn && input.timeOut
+        ? getActualPunchWindow({
+            date: entry.date,
+            dateOut: input.dateOut || entry.dateOut,
+            timeIn: input.timeIn,
+            timeOut: input.timeOut,
+          })
+        : null;
       const nightDifferentialHours = Number.isFinite(credited?.start) && Number.isFinite(credited?.end)
         ? getNightDifferentialMinutes(credited.start, credited.end) / 60 : 0;
 

@@ -352,7 +352,6 @@ const DTRBatchView = ({ batch, onBack }) => {
         approvedMinutes: approved,
         ...(approvedTime ? { approvedTime } : {}),
       });
-      await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
       await Promise.all([
         fetchScheduleExceptions(),
         fetchEntries(followSchedule, { silent: true }),
@@ -374,7 +373,6 @@ const DTRBatchView = ({ batch, onBack }) => {
       await axios.put(
         `${ServerIP}/auth/dtr/schedule-exceptions/${exception.id}/clear`,
       );
-      await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
       setApprovalMinutes((current) => {
         const next = { ...current };
         delete next[exception.id];
@@ -426,7 +424,6 @@ const DTRBatchView = ({ batch, onBack }) => {
             : {}),
         },
       )));
-      await axios.post(`${ServerIP}/auth/dtr/calculate-hours/${batch.id}`);
       await Promise.all([fetchScheduleExceptions(), fetchEntries()]);
     } catch (err) {
       setError(err.response?.data?.Error || "Failed to approve exceptions");
@@ -818,6 +815,14 @@ const DTRBatchView = ({ batch, onBack }) => {
     try {
       const response = await axios.post(
         `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`,
+        {
+          entries: entries.map((entry) => ({
+            id: entry.id,
+            timeIn: entry.creditedTimeIn || null,
+            timeOut: entry.creditedTimeOut || null,
+            dateOut: entry.dateOut || null,
+          })),
+        },
       );
       if (!response.data.Status) {
         throw new Error(response.data.Error || "Failed to calculate hours.");
