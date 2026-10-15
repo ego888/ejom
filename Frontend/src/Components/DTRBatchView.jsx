@@ -647,9 +647,7 @@ const DTRBatchView = ({ batch, onBack }) => {
     const selectedTime = approvalTimes[item.id] ?? (
       item.status === "APPROVED"
         ? moveScheduledTime(item, Number(item.approvedMinutes) || 0)
-        : item.exceptionType === "EARLY_IN"
-          ? formatTime(item.actualTime)
-          : formatTime(item.scheduledTime)
+        : formatTime(item.actualTime)
     );
     return (
       <div className="d-flex flex-wrap gap-1 align-items-center">
