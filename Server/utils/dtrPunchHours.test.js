@@ -3,9 +3,7 @@ import assert from "node:assert/strict";
 import { allocateDailyPunchHours, calculatePunchHours } from "./dtrPunchHours.js";
 import {
   getActualWindow,
-  getApprovalPunchWindow,
-  getCreditedWindow,
-  timeToMinutes,
+  getActualPunchWindow,
 } from "./dtrScheduleEngine.js";
 
 const run = (timeIn, timeOut) => calculatePunchHours(getActualWindow({ timeIn, timeOut }));
@@ -37,7 +35,7 @@ test("split entries share one daily eight-hour regular limit", () => {
   assert.deepEqual(allocation.get(2), { hours: 3.53, overtime: 5.2 });
 });
 
-test("batch calculation uses approved schedule boundaries and includes unprocessed rows", async () => {
+test("batch calculation uses stored Time In/Out directly and includes unprocessed rows", async () => {
   const { readFileSync } = await import('node:fs');
   const { runInNewContext } = await import('node:vm');
   const source = readFileSync(new URL('../Routes/DTRRoute.js', import.meta.url), 'utf8');
@@ -49,12 +47,8 @@ test("batch calculation uses approved schedule boundaries and includes unprocess
       assert.doesNotMatch(sql, /processed\s*=/);
       if (sql.includes('FROM DTRBatches')) return [[{ id: 1, periodStart: '2026-09-01', periodEnd: '2026-09-30' }]];
       if (sql.includes('FROM DTREntries')) return [[
-        { id: 1, employeeId: 10, date: '2026-09-01', time: '07:00', origTimeOut: '18:00', timeIn: '08:00', timeOut: '17:00', editedIn: 0, editedOut: 0, processed: 0 },
-        { id: 2, employeeId: null, date: '2026-09-01', timeIn: null, timeOut: '18:00' },
-      ]];
-      if (sql.includes('FROM DTRScheduleExceptions')) return [[
-        { dtrEntryId: 1, exceptionType: 'EARLY_IN', punchSide: 'WINDOW', approvedMinutes: 30 },
-        { dtrEntryId: 1, exceptionType: 'LATE_OUT', punchSide: 'WINDOW', approvedMinutes: 60 },
+        { id: 1, empId: '10', date: '2026-09-01', timeIn: '08:00', timeOut: '17:00' },
+        { id: 2, empId: '11', date: '2026-09-01', timeIn: null, timeOut: '18:00' },
       ]];
       updates.push(Array.from(values));
       return [{}];
@@ -63,14 +57,10 @@ test("batch calculation uses approved schedule boundaries and includes unprocess
   let handler;
   runInNewContext(source.slice(start, source.indexOf('// Process Sunday/Holiday hours', start)), {
     router: { post: (_path, fn) => { handler = fn; } }, pool: { getConnection: async () => connection },
-    allocateDailyPunchHours, getApprovalPunchWindow, getCreditedWindow, timeToMinutes,
-    loadSchedulingContext: async () => ({}),
-    resolveSchedule: (_context, employeeId) => employeeId
-      ? { type: 'WORK', shift: { timeIn: '08:00', timeOut: '17:00' } }
-      : null,
+    allocateDailyPunchHours, getActualPunchWindow,
     console,
   });
   await handler({ params: { batchId: 1 } }, { json: (body) => assert.equal(body.UpdatedCount, 2),
     status: () => { throw new Error('Calculation failed'); } });
-  assert.deepEqual(updates.map((row) => row.slice(0, 2)), [[8, 1.5], [0, 0]]);
+  assert.deepEqual(updates.map((row) => row.slice(0, 2)), [[8, 0], [0, 0]]);
 });

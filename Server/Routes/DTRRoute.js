@@ -2571,37 +2571,19 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
     await connection.beginTransaction();
 
     const [batchRows] = await connection.query(
-      `SELECT DATE_FORMAT(periodStart,'%Y-%m-%d') periodStart,
-              DATE_FORMAT(periodEnd,'%Y-%m-%d') periodEnd
-       FROM DTRBatches WHERE id=?`, [batchId]
+      "SELECT id FROM DTRBatches WHERE id=?", [batchId]
     );
     if (!batchRows.length) {
       await connection.rollback();
       return res.status(404).json({ Status: false, Error: "Batch not found" });
     }
     const [entries] = await connection.query(
-      `SELECT d.id, d.empId, d.time, d.origTimeOut, d.timeIn, d.timeOut,
-              d.editedIn, d.editedOut, e.id employeeId,
+      `SELECT d.id, d.empId, d.timeIn, d.timeOut,
               DATE_FORMAT(d.date,'%Y-%m-%d') date,
               DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut
-       FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
+       FROM DTREntries d
        WHERE d.batchId=? AND d.deleteRecord=0`, [batchId]
     );
-    const scheduleContext = await loadSchedulingContext(
-      connection,
-      batchRows[0].periodStart,
-      batchRows[0].periodEnd,
-    );
-    const [approvalRows] = await connection.query(
-      `SELECT dtrEntryId, exceptionType, punchSide, approvedMinutes,
-              TIME_FORMAT(approvedTime,'%H:%i') approvedTime
-       FROM DTRScheduleExceptions WHERE batchId=? AND status='APPROVED'`,
-      [batchId],
-    );
-    const approvals = new Map(approvalRows.map((row) => [
-      `${row.dtrEntryId}:${row.exceptionType}:${row.punchSide}`,
-      { minutes: Number(row.approvedMinutes), approvedTime: row.approvedTime },
-    ]));
 
     const getNightDifferentialMinutes = (timeInMinutes, timeOutMinutes) => {
       let normalizedTimeOutMinutes = timeOutMinutes;
@@ -2629,27 +2611,7 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
     };
 
     const calculatedEntries = entries.map((entry) => {
-      const actual = getApprovalPunchWindow(entry);
-      const schedule = entry.employeeId
-        ? resolveSchedule(scheduleContext, entry.employeeId, entry.date)
-        : null;
-      const unscheduledType = schedule ? "REST_DAY_WORK" : "NO_SCHEDULE";
-      const unscheduledInApproval = approvals.get(`${entry.id}:${unscheduledType}:IN`);
-      const unscheduledOutApproval = approvals.get(`${entry.id}:${unscheduledType}:OUT`);
-      let unscheduledOutTime = timeToMinutes(unscheduledOutApproval?.approvedTime);
-      if (unscheduledOutTime !== null && actual?.end >= 1440) unscheduledOutTime += 1440;
-      const credited = getCreditedWindow({
-        actual,
-        schedule,
-        earlyApproved: approvals.get(`${entry.id}:EARLY_IN:WINDOW`)?.minutes || 0,
-        lateApproved: approvals.get(`${entry.id}:LATE_OUT:WINDOW`)?.minutes || 0,
-        unscheduledApproved: approvals.get(`${entry.id}:${unscheduledType}:WINDOW`)?.minutes || 0,
-        unscheduledPunchApproved: approvals.has(`${entry.id}:${unscheduledType}:WINDOW`),
-        unscheduledInApproved: approvals.has(`${entry.id}:${unscheduledType}:IN`),
-        unscheduledOutApproved: approvals.has(`${entry.id}:${unscheduledType}:OUT`),
-        unscheduledInTime: timeToMinutes(unscheduledInApproval?.approvedTime),
-        unscheduledOutTime,
-      });
+      const credited = getActualPunchWindow(entry);
       const nightDifferentialHours = Number.isFinite(credited?.start) && Number.isFinite(credited?.end)
         ? getNightDifferentialMinutes(credited.start, credited.end) / 60 : 0;
 
@@ -2657,7 +2619,7 @@ router.post("/calculate-hours/:batchId", async (req, res) => {
         ...entry,
         credited,
         nightDifferentialHours,
-        employeeKey: entry.employeeId ?? `dtr:${entry.empId}`,
+        employeeKey: `dtr:${entry.empId}`,
         workDate: entry.date,
       };
     });
