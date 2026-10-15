@@ -816,12 +816,14 @@ const DTRBatchView = ({ batch, onBack }) => {
       const response = await axios.post(
         `${ServerIP}/auth/dtr/calculate-hours/${batch.id}`,
         {
-          entries: entries.map((entry) => ({
-            id: entry.id,
-            timeIn: entry.creditedTimeIn || null,
-            timeOut: entry.creditedTimeOut || null,
-            dateOut: entry.dateOut || null,
-          })),
+          entries: entries
+            .filter((entry) => !entry.deleteRecord)
+            .map((entry) => ({
+              id: entry.id,
+              timeIn: entry.creditedTimeIn || null,
+              timeOut: entry.creditedTimeOut || null,
+              dateOut: entry.dateOut || null,
+            })),
         },
       );
       if (!response.data.Status) {
@@ -829,7 +831,11 @@ const DTRBatchView = ({ batch, onBack }) => {
       }
       await fetchEntries();
     } catch (error) {
-      setError("Failed to calculate hours. Please try again.");
+      const serverMessage =
+        error.response?.data?.Error ||
+        error.response?.data?.message ||
+        error.message;
+      setError(`Failed to calculate hours: ${serverMessage}`);
     } finally {
       setLoading(false);
     }
