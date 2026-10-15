@@ -120,6 +120,15 @@ const formatExceptionType = (exception) => {
     : type;
 };
 
+const getApprovalRowClass = (exception) => {
+  if (exception.exceptionType === "EARLY_IN") return "approval-row-early";
+  if (exception.exceptionType === "LATE_OUT") return "approval-row-late";
+  if (["NO_SCHEDULE", "REST_DAY_WORK"].includes(exception.exceptionType)) {
+    return "approval-row-no-schedule";
+  }
+  return "";
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
 
@@ -1742,7 +1751,7 @@ const DTRBatchView = ({ batch, onBack }) => {
               <th className="sortable-header" onClick={() => handleApprovalSort("approvalStatus")}>Approved{getApprovalSortIndicator("approvalStatus")}</th>
               <th>Actions</th>
             </tr></thead>
-            <tbody>{sortedScheduleExceptions.length === 0 ? <tr><td colSpan="8" className="text-center text-muted">{scheduleExceptions.length === 0 ? "No schedule exceptions. Run Compare Schedules after analyzing punches." : "No schedule exceptions match the current filter."}</td></tr> : sortedScheduleExceptions.map((item) => <tr key={item.id}>
+            <tbody>{sortedScheduleExceptions.length === 0 ? <tr><td colSpan="8" className="text-center text-muted">{scheduleExceptions.length === 0 ? "No schedule exceptions. Run Compare Schedules after analyzing punches." : "No schedule exceptions match the current filter."}</td></tr> : sortedScheduleExceptions.map((item) => <tr key={item.id} className={getApprovalRowClass(item)}>
               <td>{item.employeeName || item.empName}</td>
               <td>{formatDate(item.workDate)}</td>
               <td>{formatExceptionType(item)}</td>

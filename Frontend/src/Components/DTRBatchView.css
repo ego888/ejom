@@ -21,3 +21,27 @@
 .schedule-approvals .sortable-header:hover {
   background-color: #e9ecef;
 }
+
+.schedule-approvals .approval-row-early > td {
+  background-color: #e8f4ff;
+}
+
+.schedule-approvals .approval-row-late > td {
+  background-color: #fff1d6;
+}
+
+.schedule-approvals .approval-row-no-schedule > td {
+  background-color: #f1e8ff;
+}
+
+.schedule-approvals .approval-row-early:hover > td {
+  background-color: #d8ecff;
+}
+
+.schedule-approvals .approval-row-late:hover > td {
+  background-color: #ffe5b3;
+}
+
+.schedule-approvals .approval-row-no-schedule:hover > td {
+  background-color: #e6d6ff;
+}
