@@ -1317,12 +1317,19 @@ const DTRBatchView = ({ batch, onBack }) => {
     );
   }
 
-  if (error) {
-    return <div className="alert alert-danger mt-3">{error}</div>;
-  }
-
   return (
     <div className="dtr-batch-view">
+      {error && (
+        <div className="alert alert-danger alert-dismissible mt-3" role="alert">
+          {error}
+          <button
+            type="button"
+            className="btn-close"
+            aria-label="Close error message"
+            onClick={() => setError(null)}
+          />
+        </div>
+      )}
       {loading && (
         <div className="loading-overlay">
           <div className="spinner-border text-primary" role="status">
