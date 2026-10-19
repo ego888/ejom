@@ -79,10 +79,12 @@ export const getActualWindow = (entry) => {
 };
 
 // Use imported punches for approvals while respecting explicit manual edits.
+// A LACK pass sets editedOut when Time Out is empty; still honor origTimeOut
+// if Analyze already detected the departure punch.
 export const getApprovalPunchWindow = (entry) => getActualPunchWindow({
   ...entry,
-  timeIn: entry.editedIn ? entry.timeIn : entry.time || entry.timeIn,
-  timeOut: entry.editedOut ? entry.timeOut : entry.origTimeOut || entry.timeOut,
+  timeIn: entry.editedIn && entry.timeIn ? entry.timeIn : entry.time || entry.timeIn,
+  timeOut: entry.editedOut && entry.timeOut ? entry.timeOut : entry.origTimeOut || entry.timeOut,
 });
 
 export const getScheduledWindow = (shift) => {
@@ -152,5 +154,9 @@ export const getAnalyzedScheduleTimes = (entry, schedule) => {
   const dateOut = window.end === null ? entry.dateOut : new Date(
     Date.parse(`${entry.date}T00:00:00Z`) + Math.floor(window.end / 1440) * 86400000
   ).toISOString().slice(0, 10);
-  return { timeIn: minutesToTime(window.start), timeOut: minutesToTime(window.end), dateOut };
+  return {
+    timeIn: window.start === null ? null : minutesToTime(window.start),
+    timeOut: window.end === null ? entry.timeOut || null : minutesToTime(window.end),
+    dateOut,
+  };
 };

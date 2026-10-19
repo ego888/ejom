@@ -96,9 +96,9 @@ router.post("/compare-schedules/:batchId", verifyUser, async (req, res) => {
       `SELECT d.id, d.batchId, d.empId, d.empName,
               DATE_FORMAT(d.date,'%Y-%m-%d') date,
               DATE_FORMAT(d.dateOut,'%Y-%m-%d') dateOut,
-              CASE WHEN d.editedIn=1 THEN d.timeIn
+              CASE WHEN d.editedIn=1 AND NULLIF(d.timeIn,'') IS NOT NULL THEN d.timeIn
                    ELSE COALESCE(NULLIF(d.time,''), d.timeIn) END timeIn,
-              CASE WHEN d.editedOut=1 THEN d.timeOut
+              CASE WHEN d.editedOut=1 AND NULLIF(d.timeOut,'') IS NOT NULL THEN d.timeOut
                    ELSE COALESCE(NULLIF(d.origTimeOut,''), d.timeOut) END timeOut,
               d.processed, e.id employeeId
        FROM DTREntries d LEFT JOIN employee e ON e.dtrEmpId=d.empId
@@ -1459,12 +1459,12 @@ router.get("/export/:batchId", async (req, res) => {
       });
       return {
         ...entry,
-        creditedTimeIn: credited
+        creditedTimeIn: credited && credited.start !== null
           ? minutesToTime(credited.start)
           : followSchedule && !hasWorkSchedule ? null : entry.timeIn,
-        creditedTimeOut: credited
+        creditedTimeOut: credited && credited.end !== null
           ? minutesToTime(credited.end)
-          : followSchedule && !hasWorkSchedule ? null : entry.timeOut,
+          : followSchedule && !hasWorkSchedule ? null : entry.timeOut || entry.origTimeOut,
         earlyApprovedMinutes,
         lateApprovedMinutes,
         unscheduledApprovedMinutes,
@@ -2137,10 +2137,11 @@ router.post("/analyze-time/:batchId", async (req, res) => {
       `SELECT id, batchId, empId, empName,
        DATE_FORMAT(date, '%Y-%m-%d') as date,
        DATE_FORMAT(dateOut, '%Y-%m-%d') as dateOut,
-       day, COALESCE(time, origTimeOut) AS time, origTimeOut, timeIn, timeOut, processed, deleteRecord, editedIn, editedOut, remarks
+       day, COALESCE(time, origTimeOut) AS time, origTimeOut, timeIn, timeOut, state,
+       processed, deleteRecord, editedIn, editedOut, remarks
        FROM DTREntries
        WHERE batchId = ?
-       ORDER BY empId, date, time`,
+       ORDER BY empId, date, COALESCE(time, origTimeOut), id`,
       [batchId]
     );
 
@@ -2156,8 +2157,8 @@ router.post("/analyze-time/:batchId", async (req, res) => {
         if (!employeeId) continue;
         const actualEntry = {
           ...entry,
-          timeIn: entry.timeIn && !entry.editedIn ? entry.time || entry.timeIn : entry.timeIn,
-          timeOut: entry.timeOut && !entry.editedOut ? entry.origTimeOut || entry.timeOut : entry.timeOut,
+          timeIn: entry.editedIn && entry.timeIn ? entry.timeIn : entry.time || entry.timeIn,
+          timeOut: entry.editedOut && entry.timeOut ? entry.timeOut : entry.origTimeOut || entry.timeOut,
         };
         const times = getAnalyzedScheduleTimes(actualEntry, resolveSchedule(scheduleContext, employeeId, entry.date));
         if (!times) continue;
@@ -2181,6 +2182,55 @@ router.post("/analyze-time/:batchId", async (req, res) => {
       const [hours] = timeString.split(":").map(Number);
       return Number.isNaN(hours) ? null : hours;
     };
+
+    const toMinutes = (timeString) => {
+      if (!timeString) return null;
+      const [hours, minutes] = String(timeString).split(":").map(Number);
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+      return hours * 60 + minutes;
+    };
+
+    const punchKind = (entry) => {
+      const state = String(entry.state || "").toLowerCase();
+      if (state.includes("out")) return "out";
+      if (state.includes("in")) return "in";
+      return null;
+    };
+
+    const isNearDuplicate = (left, right) => {
+      if (!left || !right || left.empId !== right.empId || left.date !== right.date) return false;
+      const leftMinutes = toMinutes(left.time);
+      const rightMinutes = toMinutes(right.time);
+      return leftMinutes !== null && rightMinutes !== null &&
+        Math.abs(leftMinutes - rightMinutes) <= 3;
+    };
+
+    const incompletePunchUpdate = (entry, remarkPrefix) => {
+      const hours = getHours(entry.time);
+      const timeIn = hours !== null && hours >= 14 ? null : entry.time;
+      const timeOut = hours !== null && hours >= 14 ? entry.time : entry.origTimeOut || null;
+      return {
+        dateOut: entry.date,
+        timeIn,
+        timeOut,
+        editedIn: timeIn ? 0 : 1,
+        editedOut: timeOut ? 0 : 1,
+        processed: timeIn && timeOut ? 1 : 0,
+        deleteRecord: 0,
+        remarks: `${remarkPrefix}, ${entry.remarks || ""}`.trim(),
+      };
+    };
+
+    const repeatUpdate = (entry) => ({
+      dateOut: entry.dateOut ?? null,
+      timeIn: entry.timeIn ?? null,
+      timeOut: entry.timeOut ?? null,
+      editedIn: entry.editedIn ?? 0,
+      editedOut: entry.editedOut ?? 0,
+      processed: entry.processed ?? 0,
+      deleteRecord: 1,
+      remarks: "REPEAT",
+    });
 
     const updateEntry = async (entry, updates) => {
       const {

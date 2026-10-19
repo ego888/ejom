@@ -60,8 +60,9 @@ const ReportArtistIncentiveDetails = ({ data }) => {
             (a.artistIncentive || "Unknown").localeCompare(
               b.artistIncentive || "Unknown"
             ) ||
-            (a.clientName || "").localeCompare(b.clientName || "") ||
-            (a.materialName || "").localeCompare(b.materialName || "")
+            String(a.orderId || "").localeCompare(String(b.orderId || ""), undefined, {
+              numeric: true,
+            })
           );
         default:
           return 0;
