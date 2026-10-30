@@ -305,6 +305,14 @@ router.post("/overrides/time", ...canManage, async (req, res) => {
     if (schedule?.type !== "WORK" || !schedule.shift) {
       return res.status(400).json({ Status: false, Error: "Assign a work schedule to this date before overriding its time." });
     }
+    const resultingTimeIn = side === "early" ? time : schedule.shift.timeIn;
+    const resultingTimeOut = side === "late" ? time : schedule.shift.timeOut;
+    if (resultingTimeIn && resultingTimeOut && resultingTimeOut < resultingTimeIn) {
+      return res.status(400).json({
+        Status: false,
+        Error: "Override end time cannot be earlier than the start time",
+      });
+    }
     const column = side === "early" ? "timeIn" : "timeOut";
     await pool.query(
       `INSERT INTO DTRScheduleOverrides
@@ -329,6 +337,12 @@ router.post("/overrides", ...canManage, async (req, res) => {
       (scheduleType === "WORK" && (!shiftId || !validTime(timeIn) || !validTime(timeOut))) ||
       typeof notes !== "string" || notes.length > 255) {
     return res.status(400).json({ Status: false, Error: "Complete override details are required" });
+  }
+  if (scheduleType === "WORK" && timeIn && timeOut && timeOut < timeIn) {
+    return res.status(400).json({
+      Status: false,
+      Error: "Override end time cannot be earlier than the start time",
+    });
   }
   try {
     await pool.query(

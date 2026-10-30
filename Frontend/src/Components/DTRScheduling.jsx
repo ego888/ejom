@@ -302,6 +302,18 @@ const DTRScheduling = ({
   };
   const saveOverride = async (event) => {
     event.preventDefault();
+    if (
+      override.scheduleType === "WORK" &&
+      override.timeIn &&
+      override.timeOut &&
+      override.timeOut < override.timeIn
+    ) {
+      setMessage({
+        type: "error",
+        text: "Override end time cannot be earlier than the start time.",
+      });
+      return;
+    }
     try {
       await axios.post(`${ServerIP}/auth/dtr/schedules/overrides`, override);
       setMessage({ type: "success", text: "Employee date override saved." });
@@ -383,6 +395,21 @@ const DTRScheduling = ({
     if (!canManageOverrides || savingTimeRef.current) return;
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(overrideTime)) {
       setMessage({ type: "danger", text: "Enter a valid time in HH:MM format." });
+      return;
+    }
+    const resultingTimeIn =
+      overrideSide === "early" ? overrideTime : day.shift?.timeIn;
+    const resultingTimeOut =
+      overrideSide === "late" ? overrideTime : day.shift?.timeOut;
+    if (
+      resultingTimeIn &&
+      resultingTimeOut &&
+      resultingTimeOut < resultingTimeIn
+    ) {
+      setMessage({
+        type: "danger",
+        text: "Override end time cannot be earlier than the start time.",
+      });
       return;
     }
     savingTimeRef.current = true;
@@ -1228,6 +1255,7 @@ const DTRScheduling = ({
                         type="time"
                         className="form-control"
                         value={override.timeOut}
+                        min={override.timeIn || undefined}
                         onChange={(e) =>
                           setOverride({ ...override, timeOut: e.target.value })
                         }
