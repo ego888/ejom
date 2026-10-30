@@ -9,6 +9,8 @@ test("earlier manual OUT becomes IN while the original assumed IN becomes OUT", 
   assert.equal(endpoint, "update-time-in-out");
   assert.equal(payload.timeIn, "09:00");
   assert.equal(payload.timeOut, "13:25");
+  assert.equal(payload.editedIn, 1);
+  assert.equal(payload.editedOut, 0);
   assert.equal(payload.time, undefined);
   assert.equal(payload.origTimeOut, undefined);
   assert.deepEqual(entry, before);
@@ -18,6 +20,26 @@ test("later manual IN becomes OUT and preserves the other credited time", () => 
   const { payload } = manualPunchUpdate({ id: 1, date: "2026-09-01", timeOut: "13:25", creditedTimeOut: "13:00" }, "in", "18:00", "2026-09-01");
   assert.equal(payload.timeIn, "13:00");
   assert.equal(payload.timeOut, "18:00");
+  assert.equal(payload.editedIn, 0);
+  assert.equal(payload.editedOut, 1);
+});
+
+test("swapping two editable times keeps both times editable", () => {
+  const { payload } = manualPunchUpdate(
+    {
+      id: 1,
+      date: "2026-09-01",
+      timeIn: "08:00",
+      timeOut: "17:00",
+      editedIn: 1,
+      editedOut: 1,
+    },
+    "out",
+    "07:00",
+    "2026-09-01"
+  );
+  assert.equal(payload.editedIn, 1);
+  assert.equal(payload.editedOut, 1);
 });
 
 test("next-day OUT is not reversed merely because the clock time is earlier", () => {

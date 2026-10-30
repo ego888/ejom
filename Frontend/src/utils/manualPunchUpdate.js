@@ -1,3 +1,5 @@
+import { canEditDtrTime } from "./dtrManualEditing.js";
+
 export function manualPunchUpdate(entry, type, time, date) {
   const otherTime = type === "in"
     ? entry.creditedTimeOut || entry.timeOut
@@ -15,8 +17,9 @@ export function manualPunchUpdate(entry, type, time, date) {
         timeOut: type === "in" ? time : otherTime,
         date: type === "in" ? otherDate : date,
         dateOut: type === "in" ? date : otherDate,
-        editedIn: 1,
-        editedOut: 1,
+        // The values switch columns, so their existing edit permissions switch too.
+        editedIn: canEditDtrTime(entry, "out") ? 1 : 0,
+        editedOut: canEditDtrTime(entry, "in") ? 1 : 0,
         swapLoneOriginal: true,
       },
     };
