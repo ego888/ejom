@@ -5,6 +5,40 @@ import { buildAdvancedLikeSearchClause } from "../utils/advancedSearch.js";
 
 const router = express.Router();
 
+const getValidatedReferencedOrderId = async (
+  connection,
+  { referencedOrderId, reprint },
+  currentOrderId = null,
+) => {
+  const value = String(referencedOrderId ?? "").trim();
+
+  if (!value) {
+    if (reprint) {
+      throw new Error("Referenced Order is required for a reprint");
+    }
+    return null;
+  }
+
+  if (!/^\d+$/.test(value) || Number(value) < 1) {
+    throw new Error("Referenced Order must be a valid order ID");
+  }
+
+  const normalizedOrderId = Number(value);
+  if (currentOrderId && normalizedOrderId === Number(currentOrderId)) {
+    throw new Error("An order cannot reference itself");
+  }
+
+  const [orders] = await connection.query(
+    "SELECT orderId FROM orders WHERE orderId = ?",
+    [normalizedOrderId],
+  );
+  if (!orders.length) {
+    throw new Error("Referenced Order does not exist");
+  }
+
+  return normalizedOrderId;
+};
+
 // Helper function to calculate squareFeet and materialUsage
 const calculateOrderDetailArea = (
   width,
@@ -1054,6 +1088,11 @@ router.post(
     try {
       await connection.beginTransaction();
 
+      const referencedOrderId = await getValidatedReferencedOrderId(
+        connection,
+        req.body,
+      );
+
       // Set the preparedBy to the current user's ID
       const preparedBy = req.user.id;
 
@@ -1062,9 +1101,9 @@ router.post(
       clientId, projectName, preparedBy, orderDate, 
       orderedBy, orderReference, cellNumber, specialInst, 
       deliveryInst, graphicsBy, dueDate, dueTime, 
-      sample, reprint, totalAmount, amountDisc, 
+      sample, reprint, referencedOrderId, totalAmount, amountDisc,
       percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited, note
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
       const values = [
@@ -1082,6 +1121,7 @@ router.post(
         req.body.dueTime || null,
         req.body.sample ? 1 : 0,
         req.body.reprint ? 1 : 0,
+        referencedOrderId,
         req.body.totalAmount || 0,
         req.body.amountDisc || 0,
         req.body.percentDisc || 0,
@@ -1101,7 +1141,10 @@ router.post(
     } catch (err) {
       await connection.rollback();
       console.log("Insert Error:", err);
-      return res.json({ Status: false, Error: "Failed to create order" });
+      return res.json({
+        Status: false,
+        Error: err.message || "Failed to create order",
+      });
     } finally {
       connection.release();
     }
@@ -1118,6 +1161,12 @@ router.put(
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
+
+      const referencedOrderId = await getValidatedReferencedOrderId(
+        connection,
+        req.body,
+        req.params.id,
+      );
 
       // Verify the user has permission to edit this order
       const [orderCheck] = await connection.query(
@@ -1158,6 +1207,7 @@ router.put(
       dueTime = ?,
       sample = ?,
       reprint = ?,
+      referencedOrderId = ?,
       totalAmount = ?,
       amountDisc = ?,
       percentDisc = ?,
@@ -1187,6 +1237,7 @@ router.put(
         req.body.dueTime || null,
         req.body.sample ? 1 : 0,
         req.body.reprint ? 1 : 0,
+        referencedOrderId,
         req.body.totalAmount || 0,
         req.body.amountDisc || 0,
         req.body.percentDisc || 0,
@@ -1204,7 +1255,10 @@ router.put(
     } catch (err) {
       await connection.rollback();
       console.log("Update Error:", err);
-      return res.json({ Status: false, Error: "Failed to update order" });
+      return res.json({
+        Status: false,
+        Error: err.message || "Failed to update order",
+      });
     } finally {
       connection.release();
     }
@@ -2003,9 +2057,9 @@ router.post("/order-reorder", verifyUser, async (req, res) => {
           clientId, projectName, preparedBy, orderDate, 
           orderedBy, orderReference, cellNumber, specialInst, 
           deliveryInst, graphicsBy, dueDate, dueTime, 
-          sample, reprint, totalAmount, amountDisc, 
+          sample, reprint, referencedOrderId, totalAmount, amountDisc,
           percentDisc, grandTotal, terms, status, totalHrs, editedBy, lastEdited
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const values = [
@@ -2023,6 +2077,7 @@ router.post("/order-reorder", verifyUser, async (req, res) => {
         originalOrder.dueTime,
         originalOrder.sample,
         originalOrder.reprint,
+        originalOrder.referencedOrderId,
         originalOrder.totalAmount,
         originalOrder.amountDisc,
         originalOrder.percentDisc,

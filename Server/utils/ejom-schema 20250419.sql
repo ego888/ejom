@@ -264,6 +264,7 @@ CREATE TABLE `orders` (
   `editedBy` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `sample` tinyint(1) DEFAULT '0',
   `reprint` tinyint(1) DEFAULT '0',
+  `referencedOrderId` int UNSIGNED DEFAULT NULL,
   `goprint` tinyint(1) DEFAULT '0',
   `status` varchar(10) DEFAULT 'Open',
   `totalAmount` decimal(10,2) DEFAULT '0.00',
@@ -622,6 +623,7 @@ ALTER TABLE `orders`
   ADD KEY `idx_orderDate` (`orderDate`),
   ADD KEY `idx_preparedBy` (`preparedBy`),
   ADD KEY `idx_search` (`orderId`,`projectName`,`orderedBy`,`drNum`,`invoiceNum`,`orderReference`),
+  ADD KEY `idx_referencedOrderId` (`referencedOrderId`),
   ADD KEY `fk_orders_terms` (`terms`);
 
 --
@@ -839,7 +841,8 @@ ALTER TABLE `employee`
 -- Constraints for table `orders`
 --
 ALTER TABLE `orders`
-  ADD CONSTRAINT `fk_orders_terms` FOREIGN KEY (`terms`) REFERENCES `paymentTerms` (`terms`) ON DELETE RESTRICT ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_orders_terms` FOREIGN KEY (`terms`) REFERENCES `paymentTerms` (`terms`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_orders_referencedOrderId` FOREIGN KEY (`referencedOrderId`) REFERENCES `orders` (`orderId`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 --
 -- Constraints for table `payments`

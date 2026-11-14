@@ -386,6 +386,7 @@ CREATE TABLE `orders` (
   `editedBy` varchar(50) DEFAULT NULL,
   `sample` tinyint(1) DEFAULT 0,
   `reprint` tinyint(1) DEFAULT 0,
+  `referencedOrderId` int(10) unsigned DEFAULT NULL,
   `goprint` tinyint(1) DEFAULT 0,
   `status` varchar(10) DEFAULT 'Open',
   `totalAmount` decimal(10,2) DEFAULT 0.00,
@@ -415,10 +416,12 @@ CREATE TABLE `orders` (
   KEY `status` (`status`),
   KEY `idx_orderDate` (`orderDate`),
   KEY `idx_preparedBy` (`preparedBy`),
+  KEY `idx_referencedOrderId` (`referencedOrderId`),
   KEY `idx_search` (`orderId`,`projectName`,`orderedBy`,`drNum`,`invoiceNum`,`orderReference`),
   KEY `fk_orders_terms` (`terms`),
   CONSTRAINT `fk_orders_clientId` FOREIGN KEY (`clientId`) REFERENCES `client` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_orders_status` FOREIGN KEY (`status`) REFERENCES `orderStatus` (`statusId`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_orders_referencedOrderId` FOREIGN KEY (`referencedOrderId`) REFERENCES `orders` (`orderId`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_orders_terms` FOREIGN KEY (`terms`) REFERENCES `paymentTerms` (`terms`) ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=191840 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

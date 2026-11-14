@@ -65,6 +65,7 @@ function AddOrder() {
     dueTime: "",
     sample: false,
     reprint: false,
+    referencedOrderId: "",
     note: "",
   });
 
@@ -508,6 +509,7 @@ function AddOrder() {
               totalHrs: orderData.totalHrs || 0, // Set totalHrs from order record
               log: orderData.log || "",
               note: orderData.note || "",
+              referencedOrderId: orderData.referencedOrderId || "",
             }));
             setNoteDraft(orderData.note || "");
             setIsEditingNote(false);
@@ -562,6 +564,9 @@ function AddOrder() {
     if (!data.clientId) newError.clientId = true;
     if (!data.projectName) newError.projectName = true;
     if (!data.graphicsBy) newError.graphicsBy = true;
+    if (data.reprint && !String(data.referencedOrderId || "").trim()) {
+      newError.referencedOrderId = true;
+    }
 
     if (Object.keys(newError).length > 0) {
       setError(newError);
@@ -571,6 +576,7 @@ function AddOrder() {
       if (newError.clientId) errorMessage += "\n• Client";
       if (newError.projectName) errorMessage += "\n• Project Name";
       if (newError.graphicsBy) errorMessage += "\n• Graphics By";
+      if (newError.referencedOrderId) errorMessage += "\n• Referenced Order";
 
       setAlert({
         show: true,
@@ -2506,6 +2512,36 @@ const handleNoPrintToggle = async (orderId, currentNoPrint) => {
                       </label>
                     </div>
                   </div>
+                </div>
+              </div>
+              <div className="col-3">
+                <div className="d-flex flex-column">
+                  <label htmlFor="referencedOrderId" className="form-label">
+                    Referenced Order{data.reprint ? " *" : ""}
+                  </label>
+                  <input
+                    id="referencedOrderId"
+                    type="number"
+                    min="1"
+                    step="1"
+                    className={`form-input ${
+                      error.referencedOrderId ? "is-invalid" : ""
+                    }`}
+                    value={data.referencedOrderId || ""}
+                    onChange={(e) => {
+                      setData({ ...data, referencedOrderId: e.target.value });
+                      setError((prev) => ({
+                        ...prev,
+                        referencedOrderId: false,
+                      }));
+                    }}
+                    disabled={
+                      !isEditMode ||
+                      !(data.sample || (data.reprint && canEdit()))
+                    }
+                    required={data.reprint}
+                    placeholder="Order ID"
+                  />
                 </div>
               </div>
               {/* </div>
